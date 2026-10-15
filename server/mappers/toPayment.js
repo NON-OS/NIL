@@ -16,5 +16,11 @@ export default function toPayment(row) {
     blockNumber: row.block_number,
     createdAt: row.created_at,
     confirmedAt: row.confirmed_at,
+    // private payouts: whether the chain carries the announcement that lets the payee find it alone
+    stealth: Boolean(row.stealth_ephemeral),
+    announced: Boolean(row.announced_at),
+    // already public once announced; the payer needs them to announce a payout that wasn't
+    ephemeralPublicKey: row.stealth_ephemeral ?? null,
+    viewTag: row.stealth_view_tag ?? null,
   };
 }

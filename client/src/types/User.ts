@@ -12,4 +12,6 @@ export default interface User {
   address: string | null;
   lastSeenAt: number | null;
   joinedVia: 'setup' | 'invite' | 'holder' | null;
+  // where private payouts go (admins and yourself only); null when private payouts are off
+  stealthMeta: string | null;
 }

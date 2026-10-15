@@ -5,6 +5,7 @@ import treasury from './treasury.js';
 import rewardToken from '../lib/rewardToken.js';
 import settlePayment from './settlePayment.js';
 import failPayment from './failPayment.js';
+import checkAnnouncement from './checkAnnouncement.js';
 
 const DAY = 86_400_000;
 
@@ -33,7 +34,7 @@ export default async function verifyPayment(id) {
   const allowed = payers(payment.payer_id);
   const toPayee = found.transfers.filter((t) => t.to === payment.to_address);
   const funded = toPayee.filter((t) => allowed.has(t.from));
-  if (!toPayee.length) return failPayment(payment, `This transaction has no ${token.symbol} transfer to the contributor’s wallet.`);
+  if (!toPayee.length) return failPayment(payment, `This transaction has no ${token.symbol} transfer to the contributor’s ${payment.stealth_ephemeral ? 'private address' : 'wallet'}.`);
   if (!funded.length) return failPayment(payment, `The ${token.symbol} came from a wallet that isn’t yours or a treasury address.`);
   if (funded.reduce((sum, t) => sum + t.value, 0n) < BigInt(payment.amount)) return failPayment(payment, `Less ${token.symbol} was sent than the bounty.`);
 
@@ -42,4 +43,5 @@ export default async function verifyPayment(id) {
     return;
   }
   settlePayment(payment, { from: funded[0].from, blockNumber: found.blockNumber });
+  if (payment.stealth_ephemeral) await checkAnnouncement(id);
 }

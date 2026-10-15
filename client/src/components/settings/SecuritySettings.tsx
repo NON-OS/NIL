@@ -8,6 +8,7 @@ import session from '../../actions/session';
 import dates from '../../lib/dates';
 import shortAddress from '../../lib/shortAddress';
 import type SecurityOverview from '../../types/SecurityOverview';
+import PrivatePayouts from './PrivatePayouts';
 
 export default function SecuritySettings() {
   const [data, setData] = useState<SecurityOverview | null>(null);
@@ -69,6 +70,8 @@ export default function SecuritySettings() {
           </ConfirmButton>
         </div>
       </section>
+
+      <PrivatePayouts />
 
       <section className="settings-section">
         <h2>Wallet in proofs of work</h2>

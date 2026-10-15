@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, ExternalLink, XCircle } from 'lucide-react';
+import { CheckCircle2, Clock, ExternalLink, EyeOff, Megaphone, XCircle } from 'lucide-react';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
@@ -30,6 +30,11 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
                 <span>
                   {tokenAmount(p.amount, p.token)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
                 </span>
+                {p.stealth && (
+                  <span className="muted" title={p.announced ? 'Paid to a one-time address and announced on-chain' : 'Paid to a one-time address; not announced on-chain yet'}>
+                    <EyeOff size={12} style={{ verticalAlign: '-1px' }} /> private{p.announced ? '' : ', unannounced'}
+                  </span>
+                )}
               </div>
               <div className="bounty-item-sub">
                 {dates.ago(p.confirmedAt ?? p.createdAt)} · <span className="mono">{shortAddress(p.to)}</span>
@@ -48,6 +53,11 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
               {isAdmin && p.status === 'pending' && (
                 <button type="button" className="btn btn-sm" onClick={() => act(() => bounties.check(p.id))}>
                   Check now
+                </button>
+              )}
+              {isAdmin && p.stealth && !p.announced && p.status === 'confirmed' && (
+                <button type="button" className="btn btn-sm" onClick={() => act(() => bounties.announce(p))} title="Lets the contributor find this payout from the chain alone">
+                  <Megaphone /> Announce
                 </button>
               )}
               {isAdmin && p.status === 'failed' && (

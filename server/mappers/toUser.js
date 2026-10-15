@@ -13,5 +13,7 @@ export default function toUser(row, viewer) {
     address: privileged ? row.address ?? null : null,
     lastSeenAt: privileged ? row.last_seen_at : null,
     joinedVia: privileged ? row.joined_via : null,
+    // where private payouts go; admins need it to pay, nobody else sees it
+    stealthMeta: privileged ? row.stealth_meta ?? null : null,
   };
 }

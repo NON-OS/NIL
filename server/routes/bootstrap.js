@@ -64,6 +64,7 @@ router.get(
         ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer }
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
+      stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei } : null,
       sourceUrl: config.sourceUrl,
     };
   }),

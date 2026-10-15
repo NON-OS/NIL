@@ -17,7 +17,7 @@ router.get('/bounties', route((req) => bountyOverview(req.user)));
 router.post(
   '/tasks/:id/payments',
   requireAdmin,
-  route(async (req) => ({ payment: payment(await recordPayment(req.user, req.params.id, req.body?.txHash)) })),
+  route(async (req) => ({ payment: payment(await recordPayment(req.user, req.params.id, req.body?.txHash, req.body?.stealth ?? null)) })),
 );
 
 router.post(

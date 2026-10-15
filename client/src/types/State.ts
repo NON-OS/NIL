@@ -17,6 +17,7 @@ import type DeckScope from './DeckScope';
 import type RewardToken from './RewardToken';
 import type SharingPolicy from './SharingPolicy';
 import type Plan from './Plan';
+import type StealthInfo from './StealthInfo';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -40,6 +41,7 @@ export default interface State {
   guest: boolean;
   sharing: SharingPolicy;
   plan: Plan;
+  stealth: StealthInfo | null;
   proposalsRev: number;
   timer: TimeEntry | null;
   docsUnlocked: boolean;

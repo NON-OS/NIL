@@ -16,6 +16,8 @@ import type TimeEntry from '../types/TimeEntry';
 import type RewardToken from '../types/RewardToken';
 import type SharingPolicy from '../types/SharingPolicy';
 import type Plan from '../types/Plan';
+import type StealthInfo from '../types/StealthInfo';
+import privateKeys from '../state/privateKeys';
 import keyring from '../state/keyring';
 
 interface Bootstrap {
@@ -34,6 +36,7 @@ interface Bootstrap {
   guest: boolean;
   sharing: SharingPolicy;
   plan: Plan;
+  stealth: StealthInfo | null;
   timer: TimeEntry | null;
   sourceUrl: string | null;
 }
@@ -57,6 +60,7 @@ async function load() {
     guest: b.guest,
     sharing: b.sharing,
     plan: b.plan,
+    stealth: b.stealth,
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });
@@ -66,6 +70,7 @@ async function load() {
 function signedOut(message?: string) {
   socket.disconnect();
   keyring.lock();
+  privateKeys.lock();
   store.reset({ phase: 'auth' });
   history.replaceState(null, '', '/');
   if (message) toast.show(message, { tone: 'error' });

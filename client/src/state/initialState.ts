@@ -21,6 +21,7 @@ const initialState: State = {
   guest: false,
   sharing: { invitePolicy: 'admins', shareLinks: false },
   plan: { unlocked: true },
+  stealth: null,
   proposalsRev: 0,
   timer: null,
   docsUnlocked: false,

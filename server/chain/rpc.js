@@ -23,6 +23,7 @@ export default async function rpc(method, params = []) {
   if (!res.ok) throw unreachable(`HTTP ${res.status}`);
   const reply = await res.json().catch(() => null);
   if (!reply || typeof reply !== 'object') throw unreachable('unreadable reply');
-  if (reply.error) throw unreachable(String(reply.error.message ?? 'error').slice(0, 120));
+  // the node answered but said no (a reverted call, a transaction short of gas): pass its reason on
+  if (reply.error) throw new HttpError(502, `The Ethereum node refused: ${String(reply.error.message ?? 'no reason given').slice(0, 160)}`);
   return reply.result;
 }

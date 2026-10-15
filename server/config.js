@@ -56,6 +56,22 @@ const plan = Object.freeze({
   trialDays: Number(env.PLAN_TRIAL_DAYS ?? 14),
 });
 
+// Private payouts (ERC-5564 stealth addresses). The announcer is the standard's singleton, the
+// same address on every chain it's deployed to. The top-up is ETH the payer sends along so the
+// contributor can move the tokens without first funding the one-time address from a known wallet.
+const stealth = Object.freeze({
+  announcer: (/^0x[0-9a-fA-F]{40}$/.test(env.STEALTH_ANNOUNCER ?? '') ? env.STEALTH_ANNOUNCER : '0x55649E01B5Df198D18D95b5cc5051630cfD45564').toLowerCase(),
+  gasTopUpWei: /^\d+$/.test(env.STEALTH_GAS_TOPUP_WEI ?? '') ? env.STEALTH_GAS_TOPUP_WEI : '300000000000000',
+  // how long a confirmed payout keeps being checked for a late announcement
+  announceCheckDays: Number(env.STEALTH_ANNOUNCE_CHECK_DAYS || 7),
+});
+
+// Anonymous votes (Semaphore). Every proof uses one circuit depth, so one set of circuit files
+// serves every group size up to 2^depth voters; `npm run zk:fetch` downloads the matching files.
+const semaphore = Object.freeze({
+  depth: Number(env.SEMAPHORE_DEPTH || 16),
+});
+
 const config = Object.freeze({
   port: Number(env.PORT || 3000),
   host: env.HOST || '0.0.0.0',
@@ -71,6 +87,8 @@ const config = Object.freeze({
   nox,
   rewards: rewardTokens(env.REWARD_TOKENS, nox),
   plan,
+  stealth,
+  semaphore,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

@@ -11,6 +11,7 @@ import PayButton from '../components/bounty/PayButton';
 import PaymentList from '../components/bounty/PaymentList';
 import TreasuryCard from '../components/bounty/TreasuryCard';
 import PlanNotice from '../components/plan/PlanNotice';
+import StealthPayouts from '../components/bounty/StealthPayouts';
 import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import toast from '../state/toast';
@@ -158,6 +159,8 @@ export default function BountiesView() {
             </div>
           </section>
         )}
+
+        {nox && <StealthPayouts revision={data} />}
 
         {data && data.payments.length > 0 && (
           <section className="settings-section">

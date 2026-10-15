@@ -14,4 +14,8 @@ export default interface Payment {
   blockNumber: number | null;
   createdAt: number;
   confirmedAt: number | null;
+  stealth: boolean;
+  announced: boolean;
+  ephemeralPublicKey: string | null;
+  viewTag: number | null;
 }

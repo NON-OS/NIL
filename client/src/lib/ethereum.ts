@@ -41,11 +41,42 @@ const ethereum = {
     }
   },
 
-  async send(tx: { from: string; to: string; data: string }): Promise<string> {
+  async send(tx: { from: string; to: string; data: string; value?: bigint }): Promise<string> {
     try {
-      return await provider()!.request({ method: 'eth_sendTransaction', params: [{ ...tx, value: '0x0' }] });
+      return await provider()!.request({ method: 'eth_sendTransaction', params: [{ from: tx.from, to: tx.to, data: tx.data, value: `0x${(tx.value ?? 0n).toString(16)}` }] });
     } catch (err) {
       throw friendly(err);
+    }
+  },
+
+  // Sends several calls as one atomic transaction where the wallet supports it (EIP-5792), so a
+  // private payout and its announcement land together or not at all. Returns null when the
+  // wallet can't batch; the caller then sends the calls one by one.
+  async batch(from: string, chainId: number, calls: { to: string; data: string; value?: bigint }[]): Promise<string | null> {
+    const p = provider();
+    const chain = `0x${chainId.toString(16)}`;
+    try {
+      const caps = await p!.request({ method: 'wallet_getCapabilities', params: [from, [chain]] });
+      if (!['supported', 'ready'].includes(caps?.[chain]?.atomic?.status)) return null;
+    } catch {
+      return null;
+    }
+    try {
+      const sent = await p!.request({
+        method: 'wallet_sendCalls',
+        params: [{ version: '2.0.0', chainId: chain, from, atomicRequired: true, calls: calls.map((c) => ({ to: c.to, data: c.data, value: `0x${(c.value ?? 0n).toString(16)}` })) }],
+      });
+      const id = typeof sent === 'string' ? sent : sent?.id;
+      // the wallet reports the bundle's status; wait for it to land (or fail) for up to ten minutes
+      for (let i = 0; i < 300; i++) {
+        const status = await p!.request({ method: 'wallet_getCallsStatus', params: [id] });
+        if (status?.status === 200 && status.receipts?.[0]?.transactionHash) return status.receipts[0].transactionHash;
+        if (status?.status >= 400) throw new Error('Your wallet couldn’t complete the payment, so nothing was sent.');
+        await new Promise((r) => setTimeout(r, 2000));
+      }
+      throw new Error('Your wallet is still working on the payment. Check it, then paste the transaction here.');
+    } catch (err) {
+      throw err instanceof Error && !(err as any).code ? err : friendly(err);
     }
   },
 

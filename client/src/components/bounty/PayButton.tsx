@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Wallet } from 'lucide-react';
+import { EyeOff, Wallet } from 'lucide-react';
+import useStore from '../../state/useStore';
 import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
@@ -13,6 +14,7 @@ const OUTCOME = {
 
 export default function PayButton({ task, name, primary = true, onDone }: { task: Task; name: string; primary?: boolean; onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
+  const privately = useStore((s) => Boolean(task.assigneeId && s.users[task.assigneeId]?.stealthMeta && s.stealth));
 
   const pay = async () => {
     setBusy(true);
@@ -30,7 +32,7 @@ export default function PayButton({ task, name, primary = true, onDone }: { task
 
   return (
     <button type="button" className={primary ? 'btn btn-primary' : 'btn'} onClick={pay} disabled={busy}>
-      {busy ? <Spinner size={14} /> : <Wallet />} Pay {tokenAmount(task.bounty!, task.bountyToken)} to {name}
+      {busy ? <Spinner size={14} /> : privately ? <EyeOff /> : <Wallet />} Pay {tokenAmount(task.bounty!, task.bountyToken)} {privately ? 'privately ' : ''}to {name}
     </button>
   );
 }
