@@ -11,6 +11,7 @@ import breakdownTask from '../ai/breakdownTask.js';
 import describeTask from '../ai/describeTask.js';
 import extractTasks from '../ai/extractTasks.js';
 import weeklyBrief from '../ai/weeklyBrief.js';
+import deckNarrative from '../ai/deckNarrative.js';
 
 const router = express.Router();
 
@@ -49,6 +50,17 @@ router.post(
   ai(async (req) => {
     const notes = check.text(req.body.text, 'Notes', { min: 1, max: 40_000 });
     return { tasks: await extractTasks(notes, todayFrom(req)) };
+  }),
+);
+
+// The browser sends only the facts it put on the slides (no private tasks unless the person
+// chose to include them), capped so a deck can't become a bulk export.
+router.post(
+  '/ai/deck',
+  ai(async (req) => {
+    const facts = req.body?.facts;
+    if (!facts || typeof facts !== 'object' || JSON.stringify(facts).length > 30_000) throw HttpError.badRequest('Those deck facts are missing or too large.');
+    return { narrative: await deckNarrative(facts) };
   }),
 );
 

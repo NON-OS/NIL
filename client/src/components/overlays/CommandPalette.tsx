@@ -1,6 +1,6 @@
 import './CommandPalette.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Presentation, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
 import Modal from '../ui/Modal';
 import StatusIcon from '../ui/StatusIcon';
 import useStore from '../../state/useStore';
@@ -10,6 +10,7 @@ import detail from '../../actions/detail';
 import router from '../../lib/router';
 import fuzzyScore from '../../lib/fuzzyScore';
 import meta from '../../lib/meta';
+import decks from '../../actions/decks';
 
 interface Item {
   id: string;
@@ -63,6 +64,7 @@ export default function CommandPalette() {
 
     add({ id: 'new', group: 'Actions', title: 'Create a task', icon: <Plus />, hint: 'C', run: then(() => ui.quickAdd()) }, 'create new task add');
     if (aiOn) add({ id: 'extract', group: 'Actions', title: 'Turn notes into tasks', icon: <Sparkles />, run: then(() => ui.extract()) }, 'notes meeting extract ai tasks');
+    add({ id: 'deck', group: 'Actions', title: 'Create a status deck (.pptx)', icon: <Presentation />, run: then(() => decks.open()) }, 'deck powerpoint pptx slides presentation status report');
     if (isAdmin) add({ id: 'invite', group: 'Actions', title: 'Invite a teammate', icon: <UserPlus />, run: then(() => router.navigate('/settings?tab=team')) }, 'invite teammate member people');
     for (const v of VIEWS) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
     for (const p of Object.values(projects).filter((p) => !p.archived)) {

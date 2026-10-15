@@ -21,6 +21,7 @@ const initialState: State = {
   timer: null,
   docsUnlocked: false,
   docsRev: 0,
+  deck: { open: false },
   sourceUrl: null,
   presence: [],
   typing: {},

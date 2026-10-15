@@ -1,6 +1,6 @@
 import './InsightsView.css';
 import { useMemo } from 'react';
-import { BarChart3 } from 'lucide-react';
+import { BarChart3, Presentation } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import StatTile from '../components/charts/StatTile';
 import ColumnChart from '../components/charts/ColumnChart';
@@ -14,6 +14,7 @@ import useTasks from '../hooks/useTasks';
 import insightsData from '../lib/insightsData';
 import goalProgress from '../lib/goalProgress';
 import meta from '../lib/meta';
+import decks from '../actions/decks';
 
 const SERIES = [
   { key: 'urgent', label: 'Urgent', color: 'var(--chart-4)' },
@@ -61,7 +62,16 @@ export default function InsightsView() {
 
   return (
     <div className="main">
-      <ViewHeader title="Insights" icon={<BarChart3 size={17} />} subtitle="How the team is moving" />
+      <ViewHeader
+        title="Insights"
+        icon={<BarChart3 size={17} />}
+        subtitle="How the team is moving"
+        actions={
+          <button type="button" className="btn" onClick={() => decks.open({ kind: 'workspace' })}>
+            <Presentation /> Create deck
+          </button>
+        }
+      />
       <div className="page">
         <div className="insights-kpis">
           <StatTile label="Open tasks" value={data.open} sub={`${data.overdue} overdue`} />

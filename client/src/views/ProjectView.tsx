@@ -1,6 +1,6 @@
 import './ProjectView.css';
 import { useMemo, useState } from 'react';
-import { Archive, Kanban, List, Pencil, Plus } from 'lucide-react';
+import { Archive, Kanban, List, Pencil, Plus, Presentation } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import FilterBar from '../components/shell/FilterBar';
 import ListOptions from '../components/shell/ListOptions';
@@ -19,6 +19,7 @@ import filterTasks from '../lib/filterTasks';
 import storage from '../lib/storage';
 import meta from '../lib/meta';
 import dates from '../lib/dates';
+import decks from '../actions/decks';
 
 export default function ProjectView({ projectId }: { projectId: string }) {
   const project = useStore((s) => s.projects[projectId]);
@@ -69,6 +70,9 @@ export default function ProjectView({ projectId }: { projectId: string }) {
                 <List /> List
               </button>
             </div>
+            <button type="button" className="icon-btn" onClick={() => decks.open({ kind: 'project', id: project.id })} aria-label="Create a status deck" title="Create a status deck (.pptx)">
+              <Presentation />
+            </button>
             <button type="button" className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit project" title="Edit project">
               <Pencil />
             </button>

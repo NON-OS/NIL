@@ -13,6 +13,7 @@ import type ToastMessage from './ToastMessage';
 import type NoxInfo from './NoxInfo';
 import type HolderGate from './HolderGate';
 import type TimeEntry from './TimeEntry';
+import type DeckScope from './DeckScope';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -35,6 +36,7 @@ export default interface State {
   timer: TimeEntry | null;
   docsUnlocked: boolean;
   docsRev: number;
+  deck: { open: boolean; preset?: Partial<DeckScope> };
   sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires

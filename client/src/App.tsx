@@ -6,6 +6,7 @@ import QuickAdd from './components/overlays/QuickAdd';
 import CommandPalette from './components/overlays/CommandPalette';
 import ShortcutsHelp from './components/overlays/ShortcutsHelp';
 import ExtractModal from './components/overlays/ExtractModal';
+import DeckModal from './components/decks/DeckModal';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
 import BrandArt from './components/brand/BrandArt';
@@ -74,6 +75,7 @@ export default function App() {
   const palette = useStore((s) => s.palette);
   const shortcuts = useStore((s) => s.shortcuts);
   const extract = useStore((s) => s.extract);
+  const deckOpen = useStore((s) => s.deck.open);
   const { segments, query } = useRoute();
   const [newProject, setNewProject] = useState(false);
   const taskNumber = Number(query.get('task'));
@@ -106,6 +108,7 @@ export default function App() {
       {palette && <CommandPalette />}
       {shortcuts && <ShortcutsHelp />}
       {extract && <ExtractModal />}
+      {deckOpen && <DeckModal />}
       {newProject && <ProjectModal onClose={() => setNewProject(false)} />}
       <Toasts />
     </div>
