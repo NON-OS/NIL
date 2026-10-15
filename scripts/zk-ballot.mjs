@@ -2,10 +2,12 @@
 //
 //   PTAU=path/to/ppot_0080_16.ptau npm run zk:ballot
 //
-// Phase 1 is the Perpetual Powers of Tau (PSE, 80+ contributors). Phase 2 here adds two random
-// contributions and a public beacon (a recent Ethereum block hash), then verifies the chain.
-// The circuit is only as trustworthy as its phase 2: before high-stakes use, rerun this with
-// contributions from people who don't trust each other (CONTRIBUTORS=n prompts for each).
+// Phase 1 is the Perpetual Powers of Tau (PSE, 80+ contributors). Phase 2 here adds random
+// contributions (CONTRIBUTORS, default 2) and a public beacon (a recent Ethereum block hash),
+// then verifies the chain. All of these contributions run on this one machine, which makes it a
+// development setup. Before high-stakes use, run phase 2 as a real ceremony: pass the zkey
+// between people who don't trust each other, each running `snarkjs zkey contribute`, then
+// apply the beacon and verify, and replace the files this script writes.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
