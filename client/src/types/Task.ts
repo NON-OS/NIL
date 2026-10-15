@@ -23,6 +23,8 @@ export default interface Task {
   // in the token's smallest unit, as text
   bounty: string | null;
   bountyState: 'pending' | 'paid' | null;
+  // only the creator and the assignee can see a private task
+  private: boolean;
   position: number;
   commentCount: number;
   attachmentCount: number;

@@ -1,6 +1,6 @@
 import './TaskRow.css';
 import { memo } from 'react';
-import { MessageSquare } from 'lucide-react';
+import { Lock, MessageSquare } from 'lucide-react';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
 import Avatar from '../ui/Avatar';
@@ -59,7 +59,10 @@ function TaskRow({ task, selected, onSelect }: Props) {
           <PriorityIcon priority={task.priority} />
         </PriorityPicker>
       </span>
-      <span className="row-key mono">{taskKey(task)}</span>
+      <span className="row-key mono">
+        {taskKey(task)}
+        {task.private && <Lock size={10} style={{ marginLeft: 3, verticalAlign: '-1px' }} aria-label="Private" />}
+      </span>
       <span onClick={stop}>
         <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn">
           <StatusIcon status={task.status} />

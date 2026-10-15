@@ -1,6 +1,5 @@
 import sql from '../db/sql.js';
-import hub from '../realtime/hub.js';
-import loadTask from './loadTask.js';
+import publishTask from './publishTask.js';
 
 // A payment that can't be verified frees the bounty again so it can be paid properly.
 export default function failPayment(payment, problem) {
@@ -11,5 +10,5 @@ export default function failPayment(payment, problem) {
       if (!busy) sql.run('UPDATE tasks SET bounty_state = NULL WHERE id = ?', payment.task_id);
     }
   });
-  if (payment.task_id) hub.broadcast({ type: 'task', task: loadTask(payment.task_id) });
+  if (payment.task_id) publishTask(payment.task_id);
 }

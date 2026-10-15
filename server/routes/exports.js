@@ -2,6 +2,7 @@ import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import calendar from '../lib/calendar.js';
+import csvCell from '../lib/csvCell.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import toUser from '../mappers/toUser.js';
@@ -12,16 +13,10 @@ import toLabel from '../mappers/toLabel.js';
 import toGoal from '../mappers/toGoal.js';
 import toComment from '../mappers/toComment.js';
 import toActivity from '../mappers/toActivity.js';
+import visibleSql from '../services/visibleSql.js';
 
 const router = express.Router();
 const PRIORITY = ['None', 'Low', 'Medium', 'High', 'Urgent'];
-
-// Leading =, +, - or @ would run as a formula when the CSV is opened in a spreadsheet.
-function cell(value) {
-  const s = value === null || value === undefined ? '' : String(value);
-  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s;
-  return /[",\n\r]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
-}
 
 const nameMap = (rows, key = 'name') => new Map(rows.map((r) => [r.id, r[key]]));
 
@@ -35,7 +30,8 @@ router.get(
     const labels = nameMap(sql.all('SELECT id, name FROM labels'));
     const header = ['Key', 'Title', 'Status', 'Priority', 'Project', 'Goal', 'Assignee', 'Due', 'Start', 'Estimate', 'Labels', 'Created', 'Completed', 'Description'];
     const lines = [header.join(',')];
-    for (const t of sql.all('SELECT * FROM tasks WHERE deleted_at IS NULL ORDER BY number').map(toTask)) {
+    const visible = visibleSql(req.user.id);
+    for (const t of sql.all(`SELECT * FROM tasks WHERE deleted_at IS NULL AND ${visible.where} ORDER BY number`, ...visible.params).map(toTask)) {
       lines.push(
         [
           `${taskPrefix}-${t.number}`, t.title, t.status, PRIORITY[t.priority],
@@ -44,7 +40,7 @@ router.get(
           t.labels.map((id) => labels.get(id)).filter(Boolean).join('; '),
           new Date(t.createdAt).toISOString(), t.completedAt ? new Date(t.completedAt).toISOString() : '',
           t.description,
-        ].map(cell).join(','),
+        ].map(csvCell).join(','),
       );
     }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
@@ -53,12 +49,16 @@ router.get(
   }),
 );
 
-// Full backup for admins. Sessions, invite tokens and keys are never included.
+// Readable backup for admins. Sessions, invite tokens and keys are never included, and
+// neither are other people's private tasks. The encrypted capsule is the complete copy.
 router.get(
   '/export/backup.json',
   requireAdmin,
   route((req, res) => {
     res.setHeader('Content-Disposition', `attachment; filename="nonos-backup-${calendar.today()}.json"`);
+    const visible = visibleSql(req.user.id, 't');
+    const tasks = sql.all(`SELECT t.* FROM tasks t WHERE ${visible.where}`, ...visible.params);
+    const ids = new Set(tasks.map((t) => t.id));
     return {
       exportedAt: new Date().toISOString(),
       workspace: publicWorkspace(),
@@ -66,9 +66,9 @@ router.get(
       projects: sql.all('SELECT * FROM projects').map(toProject),
       labels: sql.all('SELECT * FROM labels').map(toLabel),
       goals: sql.all('SELECT * FROM goals').map(toGoal),
-      tasks: sql.all('SELECT * FROM tasks').map(toTask),
-      comments: sql.all('SELECT * FROM comments').map(toComment),
-      activity: sql.all('SELECT * FROM activity ORDER BY id').map(toActivity),
+      tasks: tasks.map(toTask),
+      comments: sql.all('SELECT * FROM comments').filter((c) => ids.has(c.task_id)).map(toComment),
+      activity: sql.all('SELECT * FROM activity ORDER BY id').filter((a) => ids.has(a.task_id)).map(toActivity),
     };
   }),
 );

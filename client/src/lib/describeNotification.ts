@@ -16,6 +16,8 @@ export default function describeNotification(n: InboxItem) {
       return `moved to ${meta.status[n.data.to as keyof typeof meta.status] ?? n.data.to}`;
     case 'due':
       return n.data.to ? `set the due date to ${dates.short(n.data.to)} on` : 'removed the due date on';
+    case 'reminder':
+      return 'reminder:';
     case 'proposal':
       return 'started a vote:';
     case 'bounty_paid':

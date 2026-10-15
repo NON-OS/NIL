@@ -37,6 +37,11 @@ export default function createApp() {
   app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : json(req, res, next)), csrfGuard, api);
 
   if (fs.existsSync(DIST)) {
+    // the service worker must always be fresh, or a stale one could pin an old app forever
+    app.get('/sw.js', (req, res) => {
+      res.setHeader('Cache-Control', 'no-cache');
+      res.sendFile(path.join(DIST, 'sw.js'));
+    });
     app.use('/assets', express.static(path.join(DIST, 'assets'), { immutable: true, maxAge: '1y', index: false }));
     app.use(express.static(DIST, { index: false, maxAge: '1h' }));
     app.get('*', (req, res) => {

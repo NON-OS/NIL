@@ -7,8 +7,8 @@ import newId from '../lib/newId.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
-import loadTask from '../services/loadTask.js';
+import visibleTask from '../services/visibleTask.js';
+import toTaskViewers from '../services/toTaskViewers.js';
 import publishTask from '../services/publishTask.js';
 import logActivity from '../services/logActivity.js';
 import toAttachment from '../mappers/toAttachment.js';
@@ -37,8 +37,7 @@ router.post(
   '/tasks/:id/attachments',
   express.raw({ type: () => true, limit: config.maxUploadBytes }),
   route((req) => {
-    const task = loadTask(req.params.id);
-    if (!task || task.deletedAt) throw HttpError.notFound('That task');
+    const task = visibleTask(req.params.id, req.user);
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw HttpError.badRequest('That file is empty.');
 
     const id = newId();
@@ -50,7 +49,7 @@ router.post(
       id, task.id, req.user.id, filename, mime, req.body.length, Date.now(),
     );
     const attachment = toAttachment(sql.get('SELECT * FROM attachments WHERE id = ?', id));
-    hub.broadcast({ type: 'attachment', attachment });
+    toTaskViewers(task.id, { type: 'attachment', attachment });
     logActivity(task.id, req.user.id, 'attachment', { filename });
     syncCount(task.id);
     return { attachment };
@@ -63,6 +62,7 @@ router.get(
     const row = sql.get('SELECT * FROM attachments WHERE id = ?', req.params.id);
     const file = row && path.join(uploadDir, row.id);
     if (!row || !fs.existsSync(file)) throw HttpError.notFound('That file');
+    visibleTask(row.task_id, req.user, { allowDeleted: true });
     const inline = INLINE.has(row.mime) && req.query.download === undefined;
     res.setHeader('Content-Type', INLINE.has(row.mime) ? row.mime : 'application/octet-stream');
     res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(row.filename)}`);
@@ -77,10 +77,11 @@ router.delete(
   route((req) => {
     const row = sql.get('SELECT * FROM attachments WHERE id = ?', req.params.id);
     if (!row) return { ok: true };
+    visibleTask(row.task_id, req.user, { allowDeleted: true });
     if (row.uploader_id !== req.user.id && !req.user.isAdmin) throw HttpError.forbidden('Only the uploader or an admin can remove this file.');
     sql.run('DELETE FROM attachments WHERE id = ?', row.id);
     fs.rm(path.join(uploadDir, row.id), { force: true }, () => {});
-    hub.broadcast({ type: 'attachment.delete', id: row.id, taskId: row.task_id });
+    toTaskViewers(row.task_id, { type: 'attachment.delete', id: row.id, taskId: row.task_id });
     syncCount(row.task_id);
     return { ok: true };
   }),

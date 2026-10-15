@@ -11,7 +11,7 @@ function patchDetail(taskId: string, fn: (d: TaskDetail) => Partial<TaskDetail>)
 
 // Applies one server push to the local store. Unknown event types are ignored
 // so an older tab keeps working after a server upgrade.
-export default function applyEvent(event: any) {
+export default function applyEvent(event: any): void {
   const s = store.get();
   switch (event.type) {
     case 'hello':
@@ -20,6 +20,10 @@ export default function applyEvent(event: any) {
       break;
     case 'task':
       putTask(event.task);
+      break;
+    // the task went private (or was reassigned away) and we're no longer allowed to see it
+    case 'task.gone':
+      store.set({ tasks: records.drop(s.tasks, event.id) });
       break;
     case 'project':
       store.set({ projects: records.put(s.projects, event.project) });
@@ -52,7 +56,11 @@ export default function applyEvent(event: any) {
       store.set({ workspace: event.workspace });
       break;
     case 'proposals':
-      return { proposalsRev: s.proposalsRev + 1 };
+      store.set({ proposalsRev: s.proposalsRev + 1 });
+      break;
+    case 'timer':
+      store.set({ timer: event.timer });
+      break;
     case 'notification':
       store.set({ unread: s.unread + 1, inbox: s.inbox ? [event.notification, ...s.inbox] : null });
       window.dispatchEvent(new CustomEvent('nonos:notification', { detail: event.notification }));

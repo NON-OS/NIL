@@ -2,6 +2,8 @@ import { WebSocketServer } from 'ws';
 import hub from './hub.js';
 import currentUser from '../auth/currentUser.js';
 import originAllowed from '../security/originAllowed.js';
+import loadTask from '../services/loadTask.js';
+import canSeeTask from '../services/canSeeTask.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -21,7 +23,9 @@ function handleMessage(ws, raw) {
     return;
   }
   if (msg?.type === 'presence') {
-    const viewing = typeof msg.viewing === 'string' ? msg.viewing.slice(0, 32) : null;
+    // Presence goes to everyone, so looking at a private task shows up as looking at nothing.
+    const id = typeof msg.viewing === 'string' ? msg.viewing.slice(0, 32) : null;
+    const viewing = id && !loadTask(id)?.private ? id : null;
     if (viewing !== client.viewing) {
       client.viewing = viewing;
       hub.presenceChanged();
@@ -30,7 +34,9 @@ function handleMessage(ws, raw) {
     const now = Date.now();
     if (now - client.lastTyping < TYPING_INTERVAL_MS) return;
     client.lastTyping = now;
-    hub.broadcast({ type: 'typing', taskId: msg.taskId.slice(0, 32), userId: client.userId }, { except: ws });
+    const task = loadTask(msg.taskId.slice(0, 32));
+    if (!canSeeTask(task, { id: client.userId })) return;
+    hub.broadcast((viewer) => (canSeeTask(task, viewer) ? { type: 'typing', taskId: task.id, userId: client.userId } : null), { except: ws });
   }
 }
 

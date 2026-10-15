@@ -1,6 +1,6 @@
 import './TaskCard.css';
 import { memo, useMemo, type CSSProperties, type Ref } from 'react';
-import { MessageSquare, Paperclip } from 'lucide-react';
+import { Lock, MessageSquare, Paperclip } from 'lucide-react';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
 import Avatar from '../ui/Avatar';
@@ -58,6 +58,7 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
       )}
       <div className="card-top">
         <span className="card-key mono">{taskKey(task)}</span>
+        {task.private && <Lock size={11} className="muted" aria-label="Private" />}
         {showProject && project && (
           <span className="card-project">
             <i style={{ background: project.color }} />

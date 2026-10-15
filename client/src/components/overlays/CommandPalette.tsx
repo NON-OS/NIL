@@ -1,6 +1,6 @@
 import './CommandPalette.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Search, Settings, Sparkles, Target, UserPlus, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
 import Modal from '../ui/Modal';
 import StatusIcon from '../ui/StatusIcon';
 import useStore from '../../state/useStore';
@@ -29,6 +29,7 @@ const VIEWS = [
   { title: 'Calendar', to: '/calendar', icon: <CalendarDays />, keys: 'g c' },
   { title: 'Goals', to: '/goals', icon: <Target />, keys: 'g g' },
   { title: 'Insights', to: '/insights', icon: <BarChart3 />, keys: 'g s' },
+  { title: 'Time', to: '/time', icon: <Timer />, keys: 'g m' },
   { title: 'Bounties', to: '/bounties', icon: <Coins />, keys: 'g n' },
   { title: 'Votes', to: '/votes', icon: <Vote />, keys: 'g v' },
   { title: 'Proof of work', to: '/proofs', icon: <BadgeCheck />, keys: 'g p' },

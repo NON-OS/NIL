@@ -3,8 +3,9 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
 import loadTask from '../services/loadTask.js';
+import visibleTask from '../services/visibleTask.js';
+import toTaskViewers from '../services/toTaskViewers.js';
 import createTask from '../services/createTask.js';
 import updateTask from '../services/updateTask.js';
 import setTaskDeleted from '../services/setTaskDeleted.js';
@@ -67,8 +68,7 @@ router.post(
 router.get(
   '/tasks/:id/detail',
   route((req) => {
-    const task = loadTask(req.params.id);
-    if (!task) throw HttpError.notFound('That task');
+    const task = visibleTask(req.params.id, req.user, { allowDeleted: true });
     return {
       task,
       comments: sql.all('SELECT * FROM comments WHERE task_id = ? ORDER BY created_at', task.id).map(toComment),
@@ -80,11 +80,11 @@ router.get(
 );
 
 function setWatching(req, on) {
-  if (!loadTask(req.params.id)) throw HttpError.notFound('That task');
+  visibleTask(req.params.id, req.user);
   if (on) watchers.add(req.params.id, req.user.id);
   else watchers.remove(req.params.id, req.user.id);
   const list = watchers.of(req.params.id);
-  hub.broadcast({ type: 'watchers', taskId: req.params.id, watchers: list });
+  toTaskViewers(req.params.id, { type: 'watchers', taskId: req.params.id, watchers: list });
   return { watchers: list };
 }
 

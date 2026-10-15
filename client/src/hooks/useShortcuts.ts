@@ -4,7 +4,7 @@ import router from '../lib/router';
 import store from '../state/store';
 import ui from '../actions/ui';
 
-const GOTO: Record<string, string> = { h: '/', i: '/inbox', b: '/board', l: '/list', c: '/calendar', g: '/goals', s: '/insights', n: '/bounties', v: '/votes', p: '/proofs', t: '/settings' };
+const GOTO: Record<string, string> = { h: '/', i: '/inbox', b: '/board', l: '/list', c: '/calendar', g: '/goals', s: '/insights', n: '/bounties', v: '/votes', m: '/time', p: '/proofs', t: '/settings' };
 
 // Global keys. "g" starts a two-key jump (g then b = board), like Gmail and Linear.
 export default function useShortcuts() {

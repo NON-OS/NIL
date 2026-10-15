@@ -4,6 +4,7 @@ import route from '../lib/route.js';
 import check from '../lib/check.js';
 import calendar from '../lib/calendar.js';
 import HttpError from '../lib/HttpError.js';
+import visibleTask from '../services/visibleTask.js';
 
 const router = express.Router();
 
@@ -14,6 +15,7 @@ router.post(
   route((req) => {
     const taskId = check.ref('tasks', req.body.taskId, 'Task');
     if (!taskId) throw HttpError.badRequest('Pick a task.');
+    visibleTask(taskId, req.user);
     const day = check.date(req.body.day, 'Day') ?? calendar.today();
     const position = (sql.get('SELECT MAX(position) AS m FROM focus WHERE user_id = ?', req.user.id).m ?? 0) + 1;
     sql.run(

@@ -1,6 +1,6 @@
 import sql from '../db/sql.js';
-import hub from '../realtime/hub.js';
 import loadTask from './loadTask.js';
+import publishTask from './publishTask.js';
 import logActivity from './logActivity.js';
 import notify from './notify.js';
 import issuePaymentReceipt from '../proofs/issuePaymentReceipt.js';
@@ -25,7 +25,7 @@ export default function settlePayment(payment, { from, blockNumber }) {
 
   if (payment.task_id) {
     logActivity(payment.task_id, payment.payer_id, 'bounty_paid', { amount: payment.amount });
-    hub.broadcast({ type: 'task', task: loadTask(payment.task_id) });
+    publishTask(payment.task_id);
   }
   notify([payment.payee_id], 'bounty_paid', payment.task_id, payment.payer_id, { amount: payment.amount, ref: payment.task_ref });
 }

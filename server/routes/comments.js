@@ -4,8 +4,8 @@ import route from '../lib/route.js';
 import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
-import loadTask from '../services/loadTask.js';
+import visibleTask from '../services/visibleTask.js';
+import toTaskViewers from '../services/toTaskViewers.js';
 import publishTask from '../services/publishTask.js';
 import logActivity from '../services/logActivity.js';
 import watchers from '../services/watchers.js';
@@ -24,6 +24,7 @@ function syncCount(taskId) {
 function ownComment(req, { allowAdmin = false } = {}) {
   const row = sql.get('SELECT * FROM comments WHERE id = ?', req.params.id);
   if (!row) throw HttpError.notFound('That comment');
+  visibleTask(row.task_id, req.user, { allowDeleted: true });
   if (row.author_id !== req.user.id && !(allowAdmin && req.user.isAdmin)) throw HttpError.forbidden('You can only change your own comments.');
   return row;
 }
@@ -31,13 +32,12 @@ function ownComment(req, { allowAdmin = false } = {}) {
 router.post(
   '/tasks/:id/comments',
   route((req) => {
-    const task = loadTask(req.params.id);
-    if (!task || task.deletedAt) throw HttpError.notFound('That task');
+    const task = visibleTask(req.params.id, req.user);
     const body = check.text(req.body.body, 'Comment', { min: 1, max: 10_000 });
     const id = newId();
     sql.run('INSERT INTO comments (id, task_id, author_id, body, created_at) VALUES (?, ?, ?, ?, ?)', id, task.id, req.user.id, body, Date.now());
     const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', id));
-    hub.broadcast({ type: 'comment', comment });
+    toTaskViewers(task.id, { type: 'comment', comment });
 
     watchers.add(task.id, req.user.id);
     logActivity(task.id, req.user.id, 'comment', { commentId: id });
@@ -59,7 +59,7 @@ router.patch(
     const row = ownComment(req);
     sql.run('UPDATE comments SET body = ?, edited_at = ? WHERE id = ?', check.text(req.body.body, 'Comment', { min: 1, max: 10_000 }), Date.now(), row.id);
     const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', row.id));
-    hub.broadcast({ type: 'comment', comment });
+    toTaskViewers(row.task_id, { type: 'comment', comment });
     return { comment };
   }),
 );
@@ -69,7 +69,7 @@ router.delete(
   route((req) => {
     const row = ownComment(req, { allowAdmin: true });
     sql.run('DELETE FROM comments WHERE id = ?', row.id);
-    hub.broadcast({ type: 'comment.delete', id: row.id, taskId: row.task_id });
+    toTaskViewers(row.task_id, { type: 'comment.delete', id: row.id, taskId: row.task_id });
     syncCount(row.task_id);
     return { ok: true };
   }),

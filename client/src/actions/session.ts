@@ -12,6 +12,7 @@ import type Task from '../types/Task';
 import type FocusItem from '../types/FocusItem';
 import type NoxInfo from '../types/NoxInfo';
 import type HolderGate from '../types/HolderGate';
+import type TimeEntry from '../types/TimeEntry';
 
 interface Bootstrap {
   me: User;
@@ -25,6 +26,7 @@ interface Bootstrap {
   unread: number;
   ai: boolean;
   nox: NoxInfo | null;
+  timer: TimeEntry | null;
   sourceUrl: string | null;
 }
 
@@ -43,6 +45,7 @@ async function load() {
     unread: b.unread,
     ai: b.ai,
     nox: b.nox,
+    timer: b.timer,
     sourceUrl: b.sourceUrl,
   });
   socket.connect(() => load().catch(() => {}));

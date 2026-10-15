@@ -37,8 +37,11 @@ const hub = {
       for (const ws of clients.keys()) if (ws !== except) send(ws, data);
       return;
     }
+    // returning nothing for someone means they don't get this event at all
     for (const [ws, c] of clients) {
-      if (ws !== except) send(ws, JSON.stringify(event({ id: c.userId, isAdmin: c.isAdmin })));
+      if (ws === except) continue;
+      const tailored = event({ id: c.userId, isAdmin: c.isAdmin });
+      if (tailored) send(ws, JSON.stringify(tailored));
     }
   },
 

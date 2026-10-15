@@ -18,6 +18,7 @@ const initialState: State = {
   ai: false,
   nox: null,
   proposalsRev: 0,
+  timer: null,
   sourceUrl: null,
   presence: [],
   typing: {},

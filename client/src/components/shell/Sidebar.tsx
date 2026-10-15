@@ -1,9 +1,10 @@
 import './Sidebar.css';
 import { useMemo } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, Home, Inbox, Kanban, List, Plus, Search, Target, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, Home, Inbox, Kanban, List, Plus, Search, Target, Timer, Vote } from 'lucide-react';
 import Wordmark from '../ui/Wordmark';
 import Avatar from '../ui/Avatar';
 import UserMenu from './UserMenu';
+import RunningTimer from '../time/RunningTimer';
 import useStore from '../../state/useStore';
 import useRoute from '../../hooks/useRoute';
 import ui from '../../actions/ui';
@@ -19,6 +20,7 @@ const NAV = [
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, key: 'c' },
   { to: '/goals', label: 'Goals', icon: Target, key: 'g' },
   { to: '/insights', label: 'Insights', icon: BarChart3, key: 's' },
+  { to: '/time', label: 'Time', icon: Timer, key: 'm' },
   { to: '/bounties', label: 'Bounties', icon: Coins, key: 'n' },
   { to: '/votes', label: 'Votes', icon: Vote, key: 'v' },
   { to: '/proofs', label: 'Proof of work', icon: BadgeCheck, key: 'p' },
@@ -114,6 +116,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
           )}
         </div>
 
+        <RunningTimer />
         <div className="sidebar-foot">
           <UserMenu />
         </div>

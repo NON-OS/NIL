@@ -1,7 +1,8 @@
 import sql from '../db/sql.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
 import loadTask from './loadTask.js';
+import visibleTask from './visibleTask.js';
+import publishTask from './publishTask.js';
 import parseTaskPatch from './parseTaskPatch.js';
 import watchers from './watchers.js';
 import logTaskChanges from './logTaskChanges.js';
@@ -26,26 +27,29 @@ const COLUMNS = {
   recurrence: 'recurrence',
   position: 'position',
   bounty: 'bounty',
+  private: 'private',
 };
 
 const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 
 export default function updateTask(actor, id, body, { today } = {}) {
-  const existing = loadTask(id);
-  if (!existing || existing.deletedAt) throw HttpError.notFound('That task');
+  const existing = visibleTask(id, actor);
 
   const patch = parseTaskPatch(body);
   const changes = Object.entries(patch)
     .filter(([key, value]) => !same(existing[key], value))
     .map(([key, value]) => ({ key, before: existing[key], after: value }));
   if (!changes.length) return { task: existing, spawned: null };
+  if (changes.some((c) => c.key === 'private') && actor.id !== existing.creatorId && actor.id !== existing.assigneeId) {
+    throw HttpError.forbidden('Only the person who created this task or its assignee can change who sees it.');
+  }
   if (changes.some((c) => c.key === 'bounty')) {
     if (!actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
     if (existing.bountyState) throw new HttpError(409, 'This bounty is already paid or being paid, so it can’t change.');
   }
 
   const sets = changes.map((c) => `${COLUMNS[c.key]} = ?`);
-  const params = changes.map((c) => (Array.isArray(c.after) ? JSON.stringify(c.after) : c.after));
+  const params = changes.map((c) => (Array.isArray(c.after) ? JSON.stringify(c.after) : typeof c.after === 'boolean' ? Number(c.after) : c.after));
   const now = Date.now();
 
   const statusChange = changes.find((c) => c.key === 'status');
@@ -66,6 +70,13 @@ export default function updateTask(actor, id, body, { today } = {}) {
   sql.tx(() => {
     sql.run(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
     if (patch.assigneeId) watchers.add(id, patch.assigneeId);
+    // Once private, nobody else keeps following it or holds notifications that quote its title.
+    const now = loadTask(id);
+    if (now.private) {
+      sql.run('DELETE FROM watchers WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
+      sql.run('DELETE FROM notifications WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
+      sql.run('DELETE FROM focus WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
+    }
   });
 
   const task = loadTask(id);
@@ -73,7 +84,7 @@ export default function updateTask(actor, id, body, { today } = {}) {
   else if (statusChange?.before === 'done') revokeReceipts(id);
   logTaskChanges(id, actor.id, changes);
   notifyTaskChanges(task, actor.id, changes);
-  hub.broadcast({ type: 'task', task });
+  publishTask(id, existing);
 
   const spawned = recurs ? scheduleNext(actor, task, recurrence, today) : null;
   return { task, spawned };

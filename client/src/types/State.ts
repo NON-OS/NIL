@@ -12,6 +12,7 @@ import type TaskDetail from './TaskDetail';
 import type ToastMessage from './ToastMessage';
 import type NoxInfo from './NoxInfo';
 import type HolderGate from './HolderGate';
+import type TimeEntry from './TimeEntry';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -31,6 +32,7 @@ export default interface State {
   ai: boolean;
   nox: NoxInfo | null;
   proposalsRev: number;
+  timer: TimeEntry | null;
   sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires

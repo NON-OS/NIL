@@ -99,7 +99,7 @@ export default function InboxView() {
                         <Avatar user={actor} size={28} />
                         <span className="inbox-text">
                           <span>
-                            <strong>{actor?.name ?? 'Someone'}</strong> {describeNotification(n)}{' '}
+                            <strong>{n.type === 'reminder' ? 'Reminder' : actor?.name ?? 'Someone'}</strong> {n.type === 'reminder' ? '' : describeNotification(n)}{' '}
                           </span>
                           <span className="task">
                             {task && <span className="key mono">{prefix}-{task.number}</span>}

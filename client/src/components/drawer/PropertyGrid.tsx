@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus, Coins, Flag, FolderKanban, Gauge, Repeat, Tag, Target, UserRound, CircleDot } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Coins, Flag, Globe2, Lock, FolderKanban, Gauge, Repeat, Tag, Target, UserRound, CircleDot } from 'lucide-react';
 import type { ReactNode } from 'react';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
@@ -40,6 +40,8 @@ export default function PropertyGrid({ task }: { task: Task }) {
   const project = useStore((s) => (task.projectId ? s.projects[task.projectId] : undefined));
   const goal = useStore((s) => (task.goalId ? s.goals[task.goalId] : undefined));
   const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const meId = useStore((s) => s.me?.id);
+  const canSetPrivacy = meId === task.creatorId || meId === task.assigneeId;
   const update = (patch: Parameters<typeof taskActions.update>[1]) => taskActions.update(task.id, patch);
   const empty = (text: string) => <span className="placeholder-text">{text}</span>;
 
@@ -100,6 +102,24 @@ export default function PropertyGrid({ task }: { task: Task }) {
         <LabelPicker value={task.labels} onChange={(labels) => update({ labels })}>
           {task.labels.length ? <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}><LabelChips ids={task.labels} max={6} /></span> : empty('Add labels')}
         </LabelPicker>
+      </Row>
+      <Row icon={task.private ? <Lock size={14} /> : <Globe2 size={14} />} label="Visible to">
+        {canSetPrivacy ? (
+          <Picker
+            title="Who can see this"
+            options={[
+              { value: 'team', label: 'Everyone in the workspace' },
+              { value: 'private', label: 'Only the creator and assignee' },
+            ]}
+            value={task.private ? 'private' : 'team'}
+            onChange={(v) => update({ private: v === 'private' })}
+            width={260}
+          >
+            <span>{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
+          </Picker>
+        ) : (
+          <span>{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
+        )}
       </Row>
       {(task.bounty || isAdmin) && (
         <Row icon={<Coins size={14} />} label="Bounty">

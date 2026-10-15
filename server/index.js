@@ -6,12 +6,14 @@ import attachRealtime from './realtime/attachRealtime.js';
 import purge from './jobs/purge.js';
 import checkPayments from './jobs/checkPayments.js';
 import closeProposals from './jobs/closeProposals.js';
+import sendReminders from './jobs/sendReminders.js';
 
 migrate();
 purge();
 setInterval(purge, 60 * 60_000).unref();
 setInterval(checkPayments, 60_000).unref();
 setInterval(closeProposals, 60_000).unref();
+setInterval(sendReminders, 60_000).unref();
 
 const server = http.createServer(createApp());
 attachRealtime(server);

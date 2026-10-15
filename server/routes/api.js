@@ -26,6 +26,8 @@ import ai from './ai.js';
 import bounties from './bounties.js';
 import proposals from './proposals.js';
 import holderGate from './holderGate.js';
+import time from './time.js';
+import reminders from './reminders.js';
 
 const api = express.Router();
 
@@ -36,7 +38,7 @@ api.use(capsules);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders]) {
   api.use(router);
 }
 

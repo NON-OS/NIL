@@ -1,8 +1,8 @@
 import sql from '../db/sql.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
 import loadTask from './loadTask.js';
+import publishTask from './publishTask.js';
 import parseTaskPatch from './parseTaskPatch.js';
 import logActivity from './logActivity.js';
 import watchers from './watchers.js';
@@ -24,12 +24,12 @@ export default function createTask(actor, input) {
 
     sql.run(
       `INSERT INTO tasks (id, number, title, description, status, priority, project_id, goal_id, assignee_id, creator_id,
-         due_date, start_date, estimate, labels, checklist, recurrence, bounty, position, created_at, updated_at, completed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         due_date, start_date, estimate, labels, checklist, recurrence, bounty, private, position, created_at, updated_at, completed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id, number, p.title, p.description ?? '', p.status, p.priority,
       p.projectId ?? null, p.goalId ?? null, p.assigneeId ?? null, actor.id,
       p.dueDate ?? null, p.startDate ?? null, p.estimate ?? null,
-      JSON.stringify(p.labels ?? []), JSON.stringify(p.checklist ?? []), p.recurrence ?? null, p.bounty ?? null,
+      JSON.stringify(p.labels ?? []), JSON.stringify(p.checklist ?? []), p.recurrence ?? null, p.bounty ?? null, p.private ? 1 : 0,
       position, now, now, p.status === 'done' ? now : null,
     );
     watchers.add(id, actor.id);
@@ -40,6 +40,6 @@ export default function createTask(actor, input) {
   logActivity(id, actor.id, 'created');
   if (task.status === 'done') issueReceipt(task, actor.id);
   if (task.assigneeId) notify([task.assigneeId], 'assigned', id, actor.id, { title: task.title });
-  hub.broadcast({ type: 'task', task });
+  publishTask(id);
   return task;
 }

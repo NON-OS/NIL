@@ -10,6 +10,7 @@ import { createRoot } from 'react-dom/client';
 import App from './App';
 import session from './actions/session';
 import './hooks/useTheme';
+import registerServiceWorker from './lib/registerServiceWorker';
 
 session.boot();
 
@@ -18,3 +19,5 @@ createRoot(document.getElementById('root')!).render(
     <App />
   </StrictMode>,
 );
+
+registerServiceWorker();

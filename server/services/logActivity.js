@@ -1,5 +1,5 @@
 import sql from '../db/sql.js';
-import hub from '../realtime/hub.js';
+import toTaskViewers from './toTaskViewers.js';
 import toActivity from '../mappers/toActivity.js';
 
 export default function logActivity(taskId, actorId, type, data = {}) {
@@ -12,6 +12,6 @@ export default function logActivity(taskId, actorId, type, data = {}) {
     Date.now(),
   );
   const activity = toActivity(sql.get('SELECT * FROM activity WHERE id = ?', lastInsertRowid));
-  hub.broadcast({ type: 'activity', activity });
+  toTaskViewers(taskId, { type: 'activity', activity });
   return activity;
 }

@@ -12,7 +12,8 @@ export default async function weeklyBrief(today) {
   const ws = publicWorkspace();
   const people = new Map(sql.all('SELECT id, name FROM users WHERE deactivated = 0').map((u) => [u.id, u.name]));
   const projects = new Map(sql.all('SELECT id, name FROM projects').map((p) => [p.id, p.name]));
-  const tasks = sql.all('SELECT * FROM tasks WHERE deleted_at IS NULL').map(toTask);
+  // private tasks are never sent to the AI, whoever asks for the brief
+  const tasks = sql.all('SELECT * FROM tasks WHERE deleted_at IS NULL AND private = 0').map(toTask);
   const goals = sql.all('SELECT id, title, status, target_date FROM goals');
   const now = Date.now();
 

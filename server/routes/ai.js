@@ -5,7 +5,7 @@ import config from '../config.js';
 import calendar from '../lib/calendar.js';
 import HttpError from '../lib/HttpError.js';
 import rateLimit from '../auth/rateLimit.js';
-import loadTask from '../services/loadTask.js';
+import visibleTask from '../services/visibleTask.js';
 import friendlyError from '../ai/friendlyError.js';
 import breakdownTask from '../ai/breakdownTask.js';
 import describeTask from '../ai/describeTask.js';
@@ -34,8 +34,7 @@ function ai(handler) {
 }
 
 function taskFrom(req) {
-  const task = loadTask(String(req.body.taskId || ''));
-  if (!task || task.deletedAt) throw HttpError.notFound('That task');
+  const task = visibleTask(String(req.body.taskId || ''), req.user);
   return task;
 }
 

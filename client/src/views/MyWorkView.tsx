@@ -15,6 +15,7 @@ import dates from '../lib/dates';
 import meta from '../lib/meta';
 import cx from '../lib/cx';
 import type Task from '../types/Task';
+import RemindersPanel from '../components/time/RemindersPanel';
 
 const WEEK = 7 * 86_400_000;
 
@@ -146,6 +147,7 @@ export default function MyWorkView() {
             </div>
           </div>
 
+          <div style={{ display: 'grid', gap: 16 }}>
           <div className="panel myday">
             <div className="panel-head">
               <h2>
@@ -174,6 +176,8 @@ export default function MyWorkView() {
                 </div>
               )}
             </div>
+          </div>
+          <RemindersPanel />
           </div>
         </div>
       </div>

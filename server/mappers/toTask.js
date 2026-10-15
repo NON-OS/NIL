@@ -21,6 +21,7 @@ export default function toTask(row) {
     recurrence: row.recurrence,
     bounty: row.bounty,
     bountyState: row.bounty_state,
+    private: Boolean(row.private),
     position: row.position,
     commentCount: row.comment_count,
     attachmentCount: row.attachment_count,

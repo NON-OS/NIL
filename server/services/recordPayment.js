@@ -1,8 +1,8 @@
 import sql from '../db/sql.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
-import hub from '../realtime/hub.js';
-import loadTask from './loadTask.js';
+import visibleTask from './visibleTask.js';
+import publishTask from './publishTask.js';
 import userRows from './userRows.js';
 import publicWorkspace from './publicWorkspace.js';
 import verifyPayment from './verifyPayment.js';
@@ -16,8 +16,7 @@ export default async function recordPayment(actor, taskId, txHash) {
   const hash = String(txHash ?? '').trim().toLowerCase();
   if (!TX.test(hash)) throw HttpError.badRequest('That doesn’t look like a transaction hash (0x followed by 64 hex characters).');
 
-  const task = loadTask(taskId);
-  if (!task || task.deletedAt) throw HttpError.notFound('That task');
+  const task = visibleTask(taskId, actor);
   if (!task.bounty) throw HttpError.badRequest('This task has no bounty.');
   if (task.bountyState === 'paid') throw new HttpError(409, 'This bounty is already paid.');
   if (task.bountyState === 'pending') throw new HttpError(409, 'A payment for this bounty is already being confirmed.');
@@ -34,7 +33,7 @@ export default async function recordPayment(actor, taskId, txHash) {
     );
     sql.run("UPDATE tasks SET bounty_state = 'pending' WHERE id = ?", task.id);
   });
-  hub.broadcast({ type: 'task', task: loadTask(task.id) });
+  publishTask(task.id);
 
   try {
     await verifyPayment(id);

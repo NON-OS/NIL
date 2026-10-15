@@ -49,6 +49,7 @@ export default function parseTaskPatch(body) {
   if (has('labels')) out.labels = labels(body.labels);
   if (has('checklist')) out.checklist = checklist(body.checklist);
   if (has('recurrence')) out.recurrence = body.recurrence ? check.oneOf(body.recurrence, domain.recurrences, 'Repeat') : null;
+  if (has('private')) out.private = Boolean(body.private);
   if (has('bounty')) out.bounty = check.amount(body.bounty, 'Bounty');
   if (has('position')) out.position = check.number(body.position, 'Position') ?? 0;
   return out;

@@ -18,8 +18,10 @@ export default async function startServer({ chain } = {}) {
   }
   const { default: migrate } = await import('../../db/migrate.js');
   const { default: createApp } = await import('../../app.js');
+  const { default: attachRealtime } = await import('../../realtime/attachRealtime.js');
   migrate();
   const server = createApp().listen(0);
+  attachRealtime(server);
   await once(server, 'listening');
   return {
     base: `http://127.0.0.1:${server.address().port}`,

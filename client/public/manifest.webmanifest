@@ -1,0 +1,20 @@
+{
+  "name": "NONOS",
+  "short_name": "NONOS",
+  "description": "Private, self-hosted work for teams. Tasks, bounties, votes and proof of work, signed in with your wallet.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0c0f1d",
+  "theme_color": "#3346d3",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "My work", "url": "/" },
+    { "name": "Bounties", "url": "/bounties" },
+    { "name": "Time", "url": "/time" }
+  ]
+}
