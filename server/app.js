@@ -4,6 +4,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import config from './config.js';
 import api from './routes/api.js';
+import mcp from './routes/mcp.js';
 import csrfGuard from './security/csrfGuard.js';
 import securityHeaders from './security/securityHeaders.js';
 import signingKey from './proofs/signingKey.js';
@@ -30,6 +31,9 @@ export default function createApp() {
     if (!ws) return res.status(404).json({ error: 'Not set up yet.' });
     res.set('Access-Control-Allow-Origin', '*').json({ name: ws.name, algorithm: 'Ed25519', key: signingKey.publicKey(), fingerprint: signingKey.fingerprint() });
   });
+
+  // AI assistants connect here with a personal access key (Model Context Protocol).
+  app.use('/mcp', noStore, mcp);
 
   // Uploads stream as raw bytes; everything else in the API is JSON.
   const json = express.json({ limit: '1mb' });

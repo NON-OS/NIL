@@ -1,9 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, Eye, History, Pencil, Printer, ShieldCheck, Trash2, Users } from 'lucide-react';
+import { ArrowLeft, Download, Eye, History, Pencil, Printer, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react';
 import Markdown from '../ui/Markdown';
 import ConfirmButton from '../ui/ConfirmButton';
 import ShareDocModal from './ShareDocModal';
 import DocHistory from './DocHistory';
+import DraftModal from './DraftModal';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import docs from '../../actions/docs';
@@ -24,6 +25,8 @@ interface Props {
 // so what leaves this tab is already ciphertext.
 export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }: Props) {
   const me = useStore((s) => s.me)!;
+  const aiOn = useStore((s) => s.ai);
+  const [drafting, setDrafting] = useState(false);
   const [title, setTitle] = useState(doc.title);
   const [body, setBody] = useState(doc.body ?? '');
   const [status, setStatus] = useState<Status>('saved');
@@ -93,6 +96,11 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
         <button type="button" className="btn btn-sm" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>
           {preview ? <Pencil /> : <Eye />} {preview ? 'Write' : 'Preview'}
         </button>
+        {aiOn && (
+          <button type="button" className="btn btn-sm" onClick={() => setDrafting(true)}>
+            <Sparkles /> Draft
+          </button>
+        )}
         <button type="button" className="btn btn-sm" onClick={() => setSharing(true)}>
           <Users /> {doc.audience === 'team' ? 'Team' : `${doc.readers.length}`}
         </button>
@@ -129,6 +137,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
         </div>
       </div>
       {sharing && <ShareDocModal doc={doc} canManage={canManage} onClose={() => setSharing(false)} onDone={onReload} />}
+      {drafting && <DraftModal title={title} body={body} onClose={() => setDrafting(false)} onDraft={(text) => edit(title, body.trim() ? `${body.trimEnd()}\n\n${text}` : text)} />}
       {history && <DocHistory doc={doc} onClose={() => setHistory(false)} onRestore={(t, b) => edit(t, b)} />}
     </section>
   );

@@ -12,6 +12,7 @@ import describeTask from '../ai/describeTask.js';
 import extractTasks from '../ai/extractTasks.js';
 import weeklyBrief from '../ai/weeklyBrief.js';
 import deckNarrative from '../ai/deckNarrative.js';
+import draftDoc from '../ai/draftDoc.js';
 
 const router = express.Router();
 
@@ -62,6 +63,17 @@ router.post(
     if (!facts || typeof facts !== 'object' || JSON.stringify(facts).length > 30_000) throw HttpError.badRequest('Those deck facts are missing or too large.');
     return { narrative: await deckNarrative(facts) };
   }),
+);
+
+router.post(
+  '/ai/draft',
+  ai(async (req) => ({
+    text: await draftDoc({
+      instruction: check.text(req.body?.instruction, 'Instruction', { min: 1, max: 4000 }),
+      title: check.text(req.body?.title, 'Title', { max: 200 }),
+      context: check.text(req.body?.context, 'Doc text', { max: 40_000 }),
+    }),
+  })),
 );
 
 router.post('/ai/brief', ai(async (req) => ({ text: await weeklyBrief(todayFrom(req)) })));

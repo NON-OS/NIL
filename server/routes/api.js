@@ -30,6 +30,7 @@ import time from './time.js';
 import reminders from './reminders.js';
 import docs from './docs.js';
 import encryptionKeys from './encryptionKeys.js';
+import tokens from './tokens.js';
 
 const api = express.Router();
 
@@ -40,7 +41,7 @@ api.use(capsules);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens]) {
   api.use(router);
 }
 

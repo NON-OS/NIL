@@ -2,15 +2,11 @@ import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
-import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import visibleTask from '../services/visibleTask.js';
 import toTaskViewers from '../services/toTaskViewers.js';
+import addComment from '../services/addComment.js';
 import publishTask from '../services/publishTask.js';
-import logActivity from '../services/logActivity.js';
-import watchers from '../services/watchers.js';
-import notify from '../services/notify.js';
-import findMentions from '../services/findMentions.js';
 import toComment from '../mappers/toComment.js';
 
 const router = express.Router();
@@ -29,29 +25,7 @@ function ownComment(req, { allowAdmin = false } = {}) {
   return row;
 }
 
-router.post(
-  '/tasks/:id/comments',
-  route((req) => {
-    const task = visibleTask(req.params.id, req.user);
-    const body = check.text(req.body.body, 'Comment', { min: 1, max: 10_000 });
-    const id = newId();
-    sql.run('INSERT INTO comments (id, task_id, author_id, body, created_at) VALUES (?, ?, ?, ?, ?)', id, task.id, req.user.id, body, Date.now());
-    const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', id));
-    toTaskViewers(task.id, { type: 'comment', comment });
-
-    watchers.add(task.id, req.user.id);
-    logActivity(task.id, req.user.id, 'comment', { commentId: id });
-
-    const mentioned = findMentions(body);
-    const preview = { title: task.title, excerpt: body.slice(0, 140) };
-    notify(mentioned, 'mention', task.id, req.user.id, preview);
-    notify([...watchers.of(task.id), task.assigneeId].filter((u) => !mentioned.includes(u)), 'comment', task.id, req.user.id, preview);
-    for (const userId of mentioned) watchers.add(task.id, userId);
-
-    syncCount(task.id);
-    return { comment };
-  }),
-);
+router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body) })));
 
 router.patch(
   '/comments/:id',
