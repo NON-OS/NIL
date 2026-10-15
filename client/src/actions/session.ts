@@ -22,6 +22,7 @@ interface Bootstrap {
   focus: FocusItem[];
   unread: number;
   ai: boolean;
+  sourceUrl: string | null;
 }
 
 async function load() {
@@ -38,6 +39,7 @@ async function load() {
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
+    sourceUrl: b.sourceUrl,
   });
   socket.connect(() => load().catch(() => {}));
 }
@@ -54,6 +56,8 @@ http.onSessionEnded(() => {
 });
 
 const session = {
+  enter: load,
+
   async boot() {
     try {
       const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null }>('/auth/state');

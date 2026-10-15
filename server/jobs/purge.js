@@ -1,26 +1,42 @@
-import fs from 'node:fs';
-import path from 'node:path';
 import sql from '../db/sql.js';
 import config from '../config.js';
-import uploadDir from '../lib/uploadDir.js';
+import retention from '../services/retention.js';
+import eraseTasks from '../services/eraseTasks.js';
 
 const DAY = 86_400_000;
 
-// Retention: trashed tasks after TRASH_DAYS, read notifications after 90 days,
-// dead sessions and invites as soon as they expire.
+// Runs hourly. Trash and dead sessions always go; the workspace's zero-state policies
+// decide how long finished work, comments and history stay.
 export default function purge() {
   const now = Date.now();
-  const cutoff = now - config.trashDays * DAY;
+  const policy = retention.get();
 
-  const files = sql.all(
-    'SELECT a.id FROM attachments a JOIN tasks t ON t.id = a.task_id WHERE t.deleted_at IS NOT NULL AND t.deleted_at < ?',
-    cutoff,
-  );
+  eraseTasks(sql.all('SELECT id FROM tasks WHERE deleted_at IS NOT NULL AND deleted_at < ?', now - config.trashDays * DAY).map((r) => r.id));
+
+  if (policy.doneDays) {
+    const cutoff = now - policy.doneDays * DAY;
+    const finished = sql.all(
+      "SELECT id FROM tasks WHERE (status = 'done' AND completed_at < ?) OR (status = 'canceled' AND updated_at < ?)",
+      cutoff,
+      cutoff,
+    );
+    eraseTasks(finished.map((r) => r.id));
+  }
+
+  if (policy.commentDays) {
+    const cutoff = now - policy.commentDays * DAY;
+    const touched = sql.all('SELECT DISTINCT task_id FROM comments WHERE created_at < ?', cutoff).map((r) => r.task_id);
+    sql.tx(() => {
+      sql.run('DELETE FROM comments WHERE created_at < ?', cutoff);
+      for (const id of touched) sql.run('UPDATE tasks SET comment_count = (SELECT COUNT(*) FROM comments WHERE task_id = ?) WHERE id = ?', id, id);
+    });
+  }
+
+  if (policy.activityDays) sql.run('DELETE FROM activity WHERE created_at < ?', now - policy.activityDays * DAY);
+
   sql.tx(() => {
-    sql.run('DELETE FROM tasks WHERE deleted_at IS NOT NULL AND deleted_at < ?', cutoff);
     sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - 90 * DAY);
     sql.run('DELETE FROM sessions WHERE expires_at < ?', now);
     sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - 30 * DAY);
   });
-  for (const { id } of files) fs.rm(path.join(uploadDir, id), { force: true }, () => {});
 }

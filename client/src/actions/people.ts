@@ -19,8 +19,6 @@ const people = {
     }
   },
 
-  changePassword: (current: string, next: string) => http.post('/me/password', { current, next }),
-
   async update(id: string, patch: { role?: Role; deactivated?: boolean }) {
     try {
       const { user } = await http.patch<{ user: User }>(`/users/${id}`, patch);

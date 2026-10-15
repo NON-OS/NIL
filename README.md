@@ -2,7 +2,9 @@
 
 A self-hosted task system for small teams that want to move fast and grow. Projects, a drag-and-drop board, lists, a calendar, goals, insights and a personal My Day, all updating live for everyone on the team.
 
-Your data stays on your server: no analytics, no trackers, no third-party scripts.
+Your data stays on your server: no analytics, no trackers, no third-party scripts. People can join with a **passkey or an Ethereum wallet**, with no email needed. Every finished task earns a **signed, verifiable receipt** that contributors can take anywhere.
+
+Free and open source under the [GNU AGPL v3](LICENSE).
 
 ## What's inside
 
@@ -20,6 +22,11 @@ Your data stays on your server: no analytics, no trackers, no third-party script
 - **Quick add that understands you.** For example, `Send investor update friday !high +GE @me every week` sets the due date, priority, project, assignee and repeat schedule in one line.
 - **Command palette.** Press `⌘K` / `Ctrl+K` to jump to any task, project or view. Keyboard shortcuts are everywhere (press `?`).
 - **Light and dark themes.** It follows your system or your choice, and works on phones.
+- **Sign in without passwords.** Use passkeys (Face ID, Touch ID, Windows Hello, security keys) or Sign-In with Ethereum. Email and password still work, and everyone can mix methods.
+- **Proof of Contribution.** Every finished task gets an Ed25519-signed, hash-chained receipt. Contributors download a proof file, choosing which task titles to reveal. Anyone can check it at `/verify`, offline, without an account. The format is [documented](docs/PROOFS.md) so others can build verifiers.
+- **Encrypted capsules.** Your whole workspace, including files and the proof key, in one AES-256-GCM file locked with a passphrase. Restore it on any fresh server.
+- **Zero-state controls.** Auto-erase finished work, comments and history after a number of days you choose. An owner can erase everything. A memory-only mode keeps nothing on disk. See [docs/ZERO-STATE.md](docs/ZERO-STATE.md).
+- **Tor-ready.** Run as an onion service with one compose file. See [docs/TOR.md](docs/TOR.md).
 - **Optional AI assist.** Break a task into steps, draft a description, turn meeting notes into tasks, or write a weekly team brief. It's off unless you add an API key.
 
 ## Quick start (local)
@@ -81,6 +88,8 @@ All settings are environment variables. Every one is optional (see `.env.example
 | `SESSION_DAYS` | `30` | How long a sign-in lasts |
 | `TRASH_DAYS` | `30` | How long deleted tasks stay recoverable |
 | `MAX_UPLOAD_MB` | `25` | Largest attachment |
+| `SOURCE_URL` | — | Link to your source code, shown in the app (the AGPL asks you to offer it) |
+| `MAX_CAPSULE_MB` | `4096` | Largest capsule accepted for restore |
 | `ANTHROPIC_API_KEY` | — | Turns on AI assist |
 | `ANTHROPIC_MODEL` | `claude-opus-5-5` | Model used by AI assist |
 
@@ -92,10 +101,11 @@ Everything lives in `DATA_DIR`: `nonos.db` (plus its `-wal` file) and the `uploa
 sqlite3 /data/nonos.db ".backup '/backups/nonos-$(date +%F).db'"
 ```
 
-Admins can also download a JSON backup and a CSV of all tasks from **Settings → Data & privacy**.
+Admins can also download an **encrypted capsule** (everything, restorable on a fresh server), a readable JSON backup, and a CSV of all tasks from **Settings → Data & privacy**.
 
 ## Security and privacy
 
+- Passkeys use WebAuthn with attestation off. Wallet sign-in uses server-written EIP-4361 messages with single-use nonces. Nobody has to give an email.
 - Passwords are hashed with scrypt, with a 10-character minimum and a check against common passwords.
 - Session and invite tokens are random 256-bit and 192-bit values. Only their SHA-256 hashes are stored, so a leaked database can't be used to sign in.
 - Session cookies are `HttpOnly`, `SameSite=Lax`, and `Secure` with the `__Host-` prefix over HTTPS.
@@ -107,6 +117,8 @@ Admins can also download a JSON backup and a CSV of all tasks from **Settings �
 - Deleted tasks are purged after `TRASH_DAYS`. SQLite `secure_delete` overwrites deleted content. Read notifications are dropped after 90 days.
 - Admins can remove a person's access and then permanently delete their account.
 - CSV exports neutralise spreadsheet formulas.
+- Receipts are signed with an Ed25519 key kept outside the database. Task titles are salted commitments, revealed only by choice.
+- Capsules use AES-256-GCM with a key derived by scrypt (N=2^17). Restore only works on an empty server.
 - AI assist is opt-in per server. Data goes to Anthropic only when someone clicks an AI button, and only the text that feature needs.
 
 ## Keyboard shortcuts
@@ -115,7 +127,7 @@ Admins can also download a JSON backup and a CSV of all tasks from **Settings �
 |---|---|
 | `C` | New task |
 | `⌘K` / `Ctrl+K` or `/` | Search and commands |
-| `G` then `H` `I` `B` `L` `C` `G` `S` `T` | My work, Inbox, Board, List, Calendar, Goals, Insights, Settings |
+| `G` then `H` `I` `B` `L` `C` `G` `S` `P` `T` | My work, Inbox, Board, List, Calendar, Goals, Insights, Proofs, Settings |
 | `X` | Select the focused row in a list |
 | `⌘ Enter` | Send a comment or save a description |
 | `?` | Show all shortcuts |
@@ -142,6 +154,8 @@ server/
   realtime/           WebSocket hub and presence
   services/           task logic, notifications, activity, mentions
   routes/             one router per resource
+  proofs/             receipt signing key, issuing, revocation
+  capsules/           encrypted export and restore
   ai/                 optional Claude-powered helpers
   jobs/               retention purge
   mappers/            database rows → API objects
@@ -160,4 +174,16 @@ client/src/
 
 Every module has a single export and stays small.
 
-**Stack:** Node 22 (built-in SQLite), Express, ws, React 18, TypeScript, Vite, dnd-kit, lucide icons. Fonts are bundled locally.
+**Stack:** Node 22 (built-in SQLite), Express, ws, SimpleWebAuthn, @noble/curves and @noble/hashes, React 18, TypeScript, Vite, dnd-kit, lucide icons. Fonts are bundled locally.
+
+## Documentation
+
+- [Proof of Contribution format](docs/PROOFS.md)
+- [Zero-state and memory-only mode](docs/ZERO-STATE.md)
+- [Tor onion service](docs/TOR.md)
+- [Security policy](SECURITY.md)
+- [Contributing](CONTRIBUTING.md)
+
+## License
+
+NONOS is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. If you run a modified version for others over a network, offer them its source (set `SOURCE_URL`). See [LICENSE](LICENSE).

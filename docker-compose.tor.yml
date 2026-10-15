@@ -1,0 +1,13 @@
+# Adds a Tor onion service in front of NONOS. Use together with docker-compose.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.tor.yml up -d
+services:
+  tor:
+    build: ./deploy/tor
+    restart: unless-stopped
+    depends_on:
+      - nonos
+    volumes:
+      - tor-keys:/var/lib/tor
+
+volumes:
+  tor-keys:

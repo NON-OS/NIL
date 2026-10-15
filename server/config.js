@@ -21,6 +21,8 @@ const config = Object.freeze({
   dataDir: path.resolve(env.DATA_DIR || './data'),
   dbFile: env.DB_FILE || null,
   trustProxy: trustProxy(env.TRUST_PROXY),
+  appUrl: env.APP_URL ? env.APP_URL.replace(/\/$/, '') : null,
+  sourceUrl: env.SOURCE_URL || null,
   allowedOrigins: Object.freeze(origins),
   maxUploadBytes: Number(env.MAX_UPLOAD_MB || 25) * 1024 * 1024,
   sessionDays: Number(env.SESSION_DAYS || 30),

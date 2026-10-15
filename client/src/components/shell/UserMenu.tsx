@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Keyboard, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react';
+import { Code2, Keyboard, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Popover from '../ui/Popover';
 import useStore from '../../state/useStore';
@@ -10,6 +10,7 @@ import router from '../../lib/router';
 
 export default function UserMenu() {
   const me = useStore((s) => s.me);
+  const sourceUrl = useStore((s) => s.sourceUrl);
   const [theme, setTheme] = useTheme();
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
@@ -37,6 +38,11 @@ export default function UserMenu() {
           <button type="button" className="menu-item" onClick={go(() => ui.shortcuts())}>
             <Keyboard size={14} /> Keyboard shortcuts
           </button>
+          {sourceUrl && (
+            <a className="menu-item" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+              <Code2 size={14} /> Source code (AGPL)
+            </a>
+          )}
           <div className="menu-divider" />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, padding: 4 }} role="radiogroup" aria-label="Theme">
             {([['light', Sun, 'Light'], ['dark', Moon, 'Dark'], ['system', Monitor, 'Auto']] as const).map(([value, Icon, label]) => (

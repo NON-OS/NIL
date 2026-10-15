@@ -1,6 +1,13 @@
 import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import auth from './auth.js';
+import passkeys from './passkeys.js';
+import wallet from './wallet.js';
+import credentials from './credentials.js';
+import proofKey from './proofKey.js';
+import proofs from './proofs.js';
+import capsules from './capsules.js';
+import privacy from './privacy.js';
 import bootstrap from './bootstrap.js';
 import me from './me.js';
 import workspace from './workspace.js';
@@ -21,10 +28,14 @@ import ai from './ai.js';
 const api = express.Router();
 
 api.use(auth);
+api.use(passkeys);
+api.use(wallet);
+api.use(proofKey);
+api.use(capsules);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
-for (const router of [bootstrap, me, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai]) {
   api.use(router);
 }
 

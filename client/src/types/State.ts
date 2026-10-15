@@ -26,6 +26,7 @@ export default interface State {
   inbox: InboxItem[] | null;
   feed: Activity[] | null;
   ai: boolean;
+  sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires
   typing: Record<string, Record<string, number>>;

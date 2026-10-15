@@ -7,6 +7,8 @@ import watchers from './watchers.js';
 import logTaskChanges from './logTaskChanges.js';
 import notifyTaskChanges from './notifyTaskChanges.js';
 import scheduleNext from './scheduleNext.js';
+import issueReceipt from '../proofs/issueReceipt.js';
+import revokeReceipts from '../proofs/revokeReceipts.js';
 
 const COLUMNS = {
   title: 'title',
@@ -62,6 +64,8 @@ export default function updateTask(actor, id, body, { today } = {}) {
   });
 
   const task = loadTask(id);
+  if (statusChange?.after === 'done') issueReceipt(task, actor.id);
+  else if (statusChange?.before === 'done') revokeReceipts(id);
   logTaskChanges(id, actor.id, changes);
   notifyTaskChanges(task, actor.id, changes);
   hub.broadcast({ type: 'task', task });

@@ -15,6 +15,7 @@ const initialState: State = {
   inbox: null,
   feed: null,
   ai: false,
+  sourceUrl: null,
   presence: [],
   typing: {},
   connected: false,

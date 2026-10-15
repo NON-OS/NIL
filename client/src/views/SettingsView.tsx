@@ -1,7 +1,8 @@
 import '../components/settings/Settings.css';
-import { Building2, Database, FolderKanban, Tag, UserRound, Users } from 'lucide-react';
+import { Building2, Database, FolderKanban, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import ProfileSettings from '../components/settings/ProfileSettings';
+import SecuritySettings from '../components/settings/SecuritySettings';
 import WorkspaceSettings from '../components/settings/WorkspaceSettings';
 import TeamSettings from '../components/settings/TeamSettings';
 import LabelSettings from '../components/settings/LabelSettings';
@@ -12,6 +13,7 @@ import router from '../lib/router';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: UserRound, view: ProfileSettings },
+  { id: 'security', label: 'Sign-in & security', icon: ShieldCheck, view: SecuritySettings },
   { id: 'team', label: 'Team', icon: Users, view: TeamSettings },
   { id: 'workspace', label: 'Workspace', icon: Building2, view: WorkspaceSettings },
   { id: 'projects', label: 'Projects', icon: FolderKanban, view: ProjectSettings },

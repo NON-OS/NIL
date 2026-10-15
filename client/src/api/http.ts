@@ -37,6 +37,7 @@ const http = {
   put: <T>(url: string, body: unknown = {}) => request<T>('PUT', url, body),
   patch: <T>(url: string, body: unknown = {}) => request<T>('PATCH', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
+  send: <T>(url: string, body: Blob, headers: Record<string, string>) => request<T>('POST', url, body, { 'Content-Type': 'application/octet-stream', ...headers }),
   upload: <T>(url: string, file: File) =>
     request<T>('POST', url, file, { 'Content-Type': file.type || 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }),
   onSessionEnded(handler: () => void) {

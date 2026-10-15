@@ -6,6 +6,8 @@ import config from './config.js';
 import api from './routes/api.js';
 import csrfGuard from './security/csrfGuard.js';
 import securityHeaders from './security/securityHeaders.js';
+import signingKey from './proofs/signingKey.js';
+import publicWorkspace from './services/publicWorkspace.js';
 
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
@@ -22,9 +24,16 @@ export default function createApp() {
 
   app.get('/healthz', (req, res) => res.json({ ok: true }));
 
+  // Lets anyone confirm, from this domain, which key signs this workspace's proofs.
+  app.get('/.well-known/nonos-proof-key', (req, res) => {
+    const ws = publicWorkspace();
+    if (!ws) return res.status(404).json({ error: 'Not set up yet.' });
+    res.set('Access-Control-Allow-Origin', '*').json({ name: ws.name, algorithm: 'Ed25519', key: signingKey.publicKey(), fingerprint: signingKey.fingerprint() });
+  });
+
   // Uploads stream as raw bytes; everything else in the API is JSON.
   const json = express.json({ limit: '1mb' });
-  const isUpload = (req) => req.method === 'POST' && /^\/tasks\/[^/]+\/attachments$/.test(req.path);
+  const isUpload = (req) => req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore');
   app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : json(req, res, next)), csrfGuard, api);
 
   if (fs.existsSync(DIST)) {

@@ -79,6 +79,10 @@ export default function applyEvent(event: any) {
     case 'watchers':
       patchDetail(event.taskId, () => ({ watchers: event.watchers }));
       break;
+    case 'wiped':
+      // the workspace was erased; reload into the fresh-install screen
+      location.replace('/');
+      break;
     case 'typing': {
       const forTask = { ...(s.typing[event.taskId] ?? {}), [event.userId]: Date.now() + 4000 };
       store.set({ typing: { ...s.typing, [event.taskId]: forTask } });

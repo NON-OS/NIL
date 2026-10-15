@@ -20,7 +20,9 @@ const password = {
     return `scrypt$${PARAMS.N}$${PARAMS.r}$${PARAMS.p}$${salt.toString('base64')}$${key.toString('base64')}`;
   },
 
-  verify(plain, stored = DUMMY) {
+  // Accounts without a password (passkey or wallet only) still pay the full hashing cost.
+  verify(plain, stored) {
+    stored ??= DUMMY;
     const parts = String(stored).split('$');
     if (parts.length !== 6 || parts[0] !== 'scrypt') return false;
     const [, N, r, p, salt, key] = parts;

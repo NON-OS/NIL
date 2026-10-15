@@ -27,16 +27,19 @@ router.patch(
   }),
 );
 
-// Changing the password signs out every other device.
+// Changing the password signs out every other device. People who joined with a passkey
+// or wallet can add an email and password here as a second way in.
 router.post(
   '/me/password',
   passwordLimit,
   route((req, res) => {
     const row = sql.get('SELECT * FROM users WHERE id = ?', req.user.id);
-    if (!password.verify(String(req.body.current || ''), row.password_hash)) throw HttpError.badRequest('Your current password is incorrect.');
-    const problem = passwordProblem(req.body.next, { email: row.email, name: row.name });
+    if (row.password_hash && !password.verify(String(req.body.current || ''), row.password_hash)) throw HttpError.badRequest('Your current password is incorrect.');
+    const email = row.email ?? check.email(req.body.email);
+    if (!row.email && sql.get('SELECT 1 FROM users WHERE email = ?', email)) throw HttpError.badRequest('That email already belongs to another account.');
+    const problem = passwordProblem(req.body.next, { email, name: row.name });
     if (problem) throw HttpError.badRequest(problem);
-    sql.run('UPDATE users SET password_hash = ? WHERE id = ?', password.hash(req.body.next), req.user.id);
+    sql.run('UPDATE users SET password_hash = ?, email = ? WHERE id = ?', password.hash(req.body.next), email, req.user.id);
     sessions.revokeAll(req.user.id);
     hub.disconnect(req.user.id);
     sessionCookie.write(req, res, sessions.create(req.user.id));

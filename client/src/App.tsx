@@ -21,6 +21,8 @@ import InsightsView from './views/InsightsView';
 import ProjectView from './views/ProjectView';
 import SettingsView from './views/SettingsView';
 import NotFoundView from './views/NotFoundView';
+import ProofsView from './views/ProofsView';
+import VerifyView from './views/VerifyView';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 
@@ -43,6 +45,10 @@ function Screen({ segments }: { segments: string[] }) {
       return <InsightsView />;
     case 'settings':
       return <SettingsView />;
+    case 'proofs':
+      return <ProofsView />;
+    case 'verify':
+      return <VerifyView />;
     case 'projects':
       return second ? <ProjectView key={second} projectId={second} /> : <NotFoundView />;
     default:
@@ -72,7 +78,7 @@ export default function App() {
   if (phase === 'auth') {
     return (
       <>
-        <AuthView />
+        {segments[0] === 'verify' ? <VerifyView standalone /> : <AuthView />}
         <Toasts />
       </>
     );

@@ -1,0 +1,179 @@
+.proof-intro {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding: 18px 20px;
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line));
+  border-radius: var(--r-lg);
+  background: linear-gradient(135deg, var(--accent-soft), var(--surface) 70%);
+}
+
+.proof-intro h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  letter-spacing: -0.01em;
+}
+
+.proof-intro p {
+  max-width: 62ch;
+  margin-top: 6px;
+  color: var(--ink-2);
+}
+
+.proof-key {
+  display: grid;
+  gap: 2px;
+  text-align: right;
+}
+
+.proof-key code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  color: var(--ink);
+}
+
+.proof-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 18px;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.proof-row {
+  display: grid;
+  grid-template-columns: 22px 84px minmax(0, 1fr) auto 32px;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 0 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.proof-row:last-child {
+  border-bottom: 0;
+}
+
+.proof-row input[type='checkbox'] {
+  width: 15px;
+  height: 15px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.proof-row .title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.proof-row .title.hidden-title {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.proof-row .icon-only[aria-pressed='true'] {
+  color: var(--accent-text);
+}
+
+.verify-drop {
+  display: grid;
+  place-items: center;
+  gap: 10px;
+  padding: 36px 16px;
+  border: 2px dashed var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--muted);
+  text-align: center;
+  cursor: pointer;
+}
+
+.verify-drop.over {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.verify-result {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.verdict {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: var(--r-lg);
+  font-weight: 600;
+}
+
+.verdict svg {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.verdict.good {
+  background: var(--success-soft);
+  color: var(--success);
+}
+
+.verdict.bad {
+  background: var(--danger-soft);
+  color: var(--danger);
+}
+
+.verify-facts {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.verify-facts dt {
+  color: var(--muted);
+}
+
+.verify-facts dd {
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.verify-standalone {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.verify-standalone header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+}
+
+@media (max-width: 640px) {
+  .proof-intro {
+    grid-template-columns: 1fr;
+  }
+
+  .proof-key {
+    text-align: left;
+  }
+
+  .proof-row {
+    grid-template-columns: 22px minmax(0, 1fr) 32px;
+  }
+
+  .proof-row .ref,
+  .proof-row .date {
+    display: none;
+  }
+}

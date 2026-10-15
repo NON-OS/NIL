@@ -7,6 +7,7 @@ import parseTaskPatch from './parseTaskPatch.js';
 import logActivity from './logActivity.js';
 import watchers from './watchers.js';
 import notify from './notify.js';
+import issueReceipt from '../proofs/issueReceipt.js';
 
 export default function createTask(actor, input) {
   const p = parseTaskPatch({ status: 'todo', priority: 0, ...input });
@@ -36,6 +37,7 @@ export default function createTask(actor, input) {
   });
 
   logActivity(id, actor.id, 'created');
+  if (task.status === 'done') issueReceipt(task, actor.id);
   if (task.assigneeId) notify([task.assigneeId], 'assigned', id, actor.id, { title: task.title });
   hub.broadcast({ type: 'task', task });
   return task;
