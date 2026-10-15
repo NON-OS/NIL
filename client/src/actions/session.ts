@@ -1,0 +1,102 @@
+import http from '../api/http';
+import store from '../state/store';
+import records from '../state/records';
+import toast from '../state/toast';
+import socket from '../realtime/socket';
+import type User from '../types/User';
+import type Workspace from '../types/Workspace';
+import type Project from '../types/Project';
+import type Label from '../types/Label';
+import type Goal from '../types/Goal';
+import type Task from '../types/Task';
+import type FocusItem from '../types/FocusItem';
+
+interface Bootstrap {
+  me: User;
+  workspace: Workspace;
+  users: User[];
+  projects: Project[];
+  labels: Label[];
+  goals: Goal[];
+  tasks: Task[];
+  focus: FocusItem[];
+  unread: number;
+  ai: boolean;
+}
+
+async function load() {
+  const b = await http.get<Bootstrap>('/bootstrap');
+  store.set({
+    phase: 'ready',
+    me: b.me,
+    workspace: b.workspace,
+    users: records.fromList(b.users),
+    projects: records.fromList(b.projects),
+    labels: records.fromList(b.labels),
+    goals: records.fromList(b.goals),
+    tasks: records.fromList(b.tasks),
+    focus: b.focus,
+    unread: b.unread,
+    ai: b.ai,
+  });
+  socket.connect(() => load().catch(() => {}));
+}
+
+function signedOut(message?: string) {
+  socket.disconnect();
+  store.reset({ phase: 'auth' });
+  history.replaceState(null, '', '/');
+  if (message) toast.show(message, { tone: 'error' });
+}
+
+http.onSessionEnded(() => {
+  if (store.get().phase === 'ready') signedOut('Your session ended. Sign in again.');
+});
+
+const session = {
+  async boot() {
+    try {
+      const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null }>('/auth/state');
+      if (s.workspace) store.set({ workspace: s.workspace });
+      if (s.user) await load();
+      else store.set({ phase: 'auth', needsSetup: s.needsSetup });
+    } catch (err) {
+      store.set({ phase: 'auth' });
+      toast.error(err);
+    }
+  },
+
+  async setup(input: { workspaceName: string; name: string; email: string; password: string }) {
+    await http.post('/auth/setup', input);
+    await load();
+  },
+
+  async login(email: string, password: string) {
+    await http.post('/auth/login', { email, password });
+    await load();
+  },
+
+  async acceptInvite(input: { token: string; name: string; email: string; password: string }) {
+    await http.post('/auth/accept-invite', input);
+    history.replaceState(null, '', '/');
+    await load();
+  },
+
+  async logout() {
+    try {
+      await http.post('/auth/logout');
+    } finally {
+      signedOut();
+    }
+  },
+
+  async signOutEverywhere() {
+    try {
+      await http.post('/me/sign-out-everywhere');
+    } finally {
+      signedOut('Signed out on every device.');
+    }
+  },
+};
+
+export default session;

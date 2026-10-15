@@ -1,0 +1,30 @@
+import type State from '../types/State';
+
+const initialState: State = {
+  phase: 'loading',
+  needsSetup: false,
+  me: null,
+  workspace: { name: 'NONOS', taskPrefix: 'NON' },
+  users: {},
+  projects: {},
+  labels: {},
+  goals: {},
+  tasks: {},
+  focus: [],
+  unread: 0,
+  inbox: null,
+  feed: null,
+  ai: false,
+  presence: [],
+  typing: {},
+  connected: false,
+  detail: null,
+  quickAdd: { open: false },
+  palette: false,
+  shortcuts: false,
+  extract: false,
+  sidebarOpen: false,
+  toasts: [],
+};
+
+export default initialState;

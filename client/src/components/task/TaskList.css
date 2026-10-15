@@ -1,0 +1,53 @@
+.rows {
+  padding-bottom: 96px;
+}
+
+.group-head {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  border-bottom: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.group-head button.collapse {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-weight: 600;
+}
+
+.group-head .chev {
+  color: var(--muted);
+  transition: transform 0.15s;
+}
+
+.group-head.collapsed .chev {
+  transform: rotate(-90deg);
+}
+
+.group-head .count {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.group-head .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 3px;
+}
+
+.group-head .icon-only {
+  margin-left: auto;
+  color: var(--muted);
+}

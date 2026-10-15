@@ -1,0 +1,157 @@
+/* Layout: fixed sidebar + fluid main column; task detail slides over from the right.
+   Palette: cool paper neutrals biased toward the ultramarine accent. */
+:root {
+  --bg: #f3f4f8;
+  --surface: #ffffff;
+  --surface-2: #f7f8fb;
+  --surface-3: #eef0f6;
+  --sidebar: #eceef5;
+  --ink: #121628;
+  --ink-2: #464d6a;
+  --muted: #7a809c;
+  --faint: #a3a8bf;
+  --line: #e1e4ee;
+  --line-strong: #cfd3e1;
+  --accent: #3346d3;
+  --accent-hover: #2838b6;
+  --accent-ink: #ffffff;
+  --accent-soft: #e7eafc;
+  --accent-text: #2c3dc0;
+  --focus: #3346d3;
+
+  --danger: #c93636;
+  --danger-soft: #fbe9e9;
+  --warning: #a86f00;
+  --warning-soft: #fdf1d8;
+  --success: #17844a;
+  --success-soft: #e2f4ea;
+
+  --st-backlog: #a3a8bf;
+  --st-todo: #7a809c;
+  --st-progress: #d99500;
+  --st-review: #7c4ddb;
+  --st-done: #17844a;
+  --st-canceled: #a3a8bf;
+  --p-urgent: #d13f3f;
+
+  --chart-1: #86b6ef;
+  --chart-2: #3987e5;
+  --chart-3: #1c5cab;
+  --chart-4: #0d366b;
+  --chart-grid: #e6e8f0;
+  --chart-axis: #cfd3e1;
+
+  --shadow-1: 0 1px 2px rgba(18, 22, 40, 0.06);
+  --shadow-2: 0 2px 6px rgba(18, 22, 40, 0.06), 0 10px 28px rgba(18, 22, 40, 0.08);
+  --shadow-3: 0 12px 48px rgba(18, 22, 40, 0.18), 0 2px 8px rgba(18, 22, 40, 0.08);
+  --scrim: rgba(18, 22, 40, 0.32);
+
+  --font-display: 'Bricolage Grotesque Variable', 'Instrument Sans Variable', system-ui, sans-serif;
+  --font-body: 'Instrument Sans Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-md: 13.5px;
+  --text-lg: 15px;
+  --text-xl: 19px;
+  --text-2xl: 26px;
+
+  --r-sm: 5px;
+  --r-md: 7px;
+  --r-lg: 11px;
+  --sidebar-w: 248px;
+  --topbar-h: 52px;
+  --drawer-w: min(620px, 100vw);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --bg: #0c0f1d;
+    --surface: #131729;
+    --surface-2: #171b2f;
+    --surface-3: #1d2238;
+    --sidebar: #0f1324;
+    --ink: #e8eaf6;
+    --ink-2: #b2b7d0;
+    --muted: #7f86a3;
+    --faint: #5a6080;
+    --line: #232840;
+    --line-strong: #2f3552;
+    --accent: #8191ff;
+    --accent-hover: #9aa6ff;
+    --accent-ink: #0c0f1d;
+    --accent-soft: #1e254d;
+    --accent-text: #a3aeff;
+    --focus: #8191ff;
+    --danger: #f07171;
+    --danger-soft: #3a1c22;
+    --warning: #e8b54a;
+    --warning-soft: #33290f;
+    --success: #4cc584;
+    --success-soft: #133024;
+    --st-backlog: #5a6080;
+    --st-todo: #8a90ad;
+    --st-progress: #f0b429;
+    --st-review: #a585f5;
+    --st-done: #4cc584;
+    --st-canceled: #5a6080;
+    --p-urgent: #f07171;
+    --chart-1: #184f95;
+    --chart-2: #2a78d6;
+    --chart-3: #6da7ec;
+    --chart-4: #b7d3f6;
+    --chart-grid: #20253b;
+    --chart-axis: #2f3552;
+    --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+    --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+    --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+    --scrim: rgba(4, 6, 14, 0.6);
+    color-scheme: dark;
+  }
+}
+
+:root[data-theme='dark'] {
+  --bg: #0c0f1d;
+  --surface: #131729;
+  --surface-2: #171b2f;
+  --surface-3: #1d2238;
+  --sidebar: #0f1324;
+  --ink: #e8eaf6;
+  --ink-2: #b2b7d0;
+  --muted: #7f86a3;
+  --faint: #5a6080;
+  --line: #232840;
+  --line-strong: #2f3552;
+  --accent: #8191ff;
+  --accent-hover: #9aa6ff;
+  --accent-ink: #0c0f1d;
+  --accent-soft: #1e254d;
+  --accent-text: #a3aeff;
+  --focus: #8191ff;
+  --danger: #f07171;
+  --danger-soft: #3a1c22;
+  --warning: #e8b54a;
+  --warning-soft: #33290f;
+  --success: #4cc584;
+  --success-soft: #133024;
+  --st-backlog: #5a6080;
+  --st-todo: #8a90ad;
+  --st-progress: #f0b429;
+  --st-review: #a585f5;
+  --st-done: #4cc584;
+  --st-canceled: #5a6080;
+  --p-urgent: #f07171;
+  --chart-1: #184f95;
+  --chart-2: #2a78d6;
+  --chart-3: #6da7ec;
+  --chart-4: #b7d3f6;
+  --chart-grid: #20253b;
+  --chart-axis: #2f3552;
+  --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-2: 0 2px 6px rgba(0, 0, 0, 0.3), 0 10px 28px rgba(0, 0, 0, 0.35);
+  --shadow-3: 0 12px 48px rgba(0, 0, 0, 0.55), 0 2px 8px rgba(0, 0, 0, 0.4);
+  --scrim: rgba(4, 6, 14, 0.6);
+  color-scheme: dark;
+}

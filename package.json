@@ -1,0 +1,41 @@
+{
+  "name": "nonos",
+  "version": "1.0.0",
+  "private": true,
+  "description": "NONOS — the team task system. Projects, boards, goals, insights, real-time collaboration.",
+  "type": "module",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "concurrently -k -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
+    "dev:server": "node --disable-warning=ExperimentalWarning --watch-path=server server/index.js",
+    "dev:web": "vite",
+    "build": "vite build",
+    "start": "node --disable-warning=ExperimentalWarning server/index.js",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "node --disable-warning=ExperimentalWarning --test server/test/api.test.js"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "0.134.0",
+    "express": "4.21.2",
+    "ws": "8.18.0"
+  },
+  "devDependencies": {
+    "@dnd-kit/core": "6.3.1",
+    "@dnd-kit/sortable": "10.0.0",
+    "@dnd-kit/utilities": "3.2.2",
+    "@fontsource-variable/bricolage-grotesque": "5.1.0",
+    "@fontsource-variable/instrument-sans": "5.1.0",
+    "@fontsource-variable/jetbrains-mono": "5.1.0",
+    "@types/react": "18.3.12",
+    "@types/react-dom": "18.3.1",
+    "@vitejs/plugin-react": "4.3.4",
+    "concurrently": "9.1.0",
+    "lucide-react": "0.460.0",
+    "react": "18.3.1",
+    "react-dom": "18.3.1",
+    "typescript": "5.6.3",
+    "vite": "5.4.11"
+  }
+}

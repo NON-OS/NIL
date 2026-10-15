@@ -1,0 +1,146 @@
+.card {
+  position: relative;
+  display: grid;
+  gap: 8px;
+  padding: 10px 11px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  box-shadow: var(--shadow-1);
+  cursor: pointer;
+  transition: border-color 0.12s, box-shadow 0.12s, transform 0.12s;
+  touch-action: manipulation;
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-2);
+}
+
+.card:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+}
+
+.card.dragging {
+  opacity: 0.4;
+}
+
+.card.overlay {
+  box-shadow: var(--shadow-3);
+  transform: rotate(1.5deg);
+  cursor: grabbing;
+}
+
+.card.closed .card-title {
+  color: var(--muted);
+}
+
+.card-top {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 18px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.card-key {
+  color: var(--muted);
+}
+
+.card-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.card-project i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.card-top .spacer {
+  flex: 1;
+}
+
+.card-title {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  font-weight: 550;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+
+.card-title .status-btn {
+  margin-top: 1px;
+}
+
+.card-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.card-foot .meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.card-foot .grow {
+  flex: 1;
+}
+
+.card-viewers {
+  position: absolute;
+  top: -7px;
+  right: 8px;
+}
+
+.status-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  flex: none;
+}
+
+.status-btn:hover {
+  background: var(--surface-3);
+}
+
+.progress-mini {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.progress-mini b {
+  display: block;
+  width: 26px;
+  height: 4px;
+  border-radius: 2px;
+  background: var(--line);
+  overflow: hidden;
+}
+
+.progress-mini b i {
+  display: block;
+  height: 100%;
+  background: var(--st-done);
+}

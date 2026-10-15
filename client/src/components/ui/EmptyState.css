@@ -1,0 +1,40 @@
+.empty {
+  display: grid;
+  justify-items: center;
+  gap: 10px;
+  max-width: 380px;
+  margin: 48px auto;
+  padding: 0 16px;
+  text-align: center;
+}
+
+.empty-art {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.empty-art svg {
+  width: 24px;
+  height: 24px;
+}
+
+.empty h3 {
+  font-size: var(--text-lg);
+}
+
+.empty p {
+  color: var(--muted);
+}
+
+.empty-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 4px;
+}

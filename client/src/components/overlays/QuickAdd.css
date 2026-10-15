@@ -1,0 +1,71 @@
+.quickadd-input {
+  width: 100%;
+  padding: 6px 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.quickadd-input::placeholder {
+  color: var(--faint);
+  font-weight: 500;
+}
+
+.quickadd-desc {
+  width: 100%;
+  min-height: 70px;
+  margin-top: 4px;
+  padding: 4px 0;
+  border: 0;
+  background: transparent;
+  outline: none;
+  resize: vertical;
+  color: var(--ink-2);
+}
+
+.quickadd-tokens {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 24px;
+  margin: 6px 0 2px;
+}
+
+.quickadd-tokens .chip {
+  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.quickadd-props {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.quickadd-props .prop-btn {
+  height: 28px;
+  border: 1px solid var(--line);
+}
+
+.quickadd-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  border-top: 1px solid var(--line);
+}
+
+.quickadd-foot .hint {
+  flex: 1;
+  min-width: 200px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}

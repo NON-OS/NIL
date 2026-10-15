@@ -1,0 +1,93 @@
+.filterbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 10px max(20px, env(safe-area-inset-right)) 10px 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.filter-search {
+  position: relative;
+  flex: 0 1 240px;
+  min-width: 150px;
+}
+
+.filter-search svg {
+  position: absolute;
+  top: 50%;
+  left: 9px;
+  width: 14px;
+  height: 14px;
+  color: var(--faint);
+  transform: translateY(-50%);
+}
+
+.filter-search input {
+  height: 30px;
+  min-height: 30px;
+  padding: 4px 8px 4px 28px;
+  font-size: var(--text-sm);
+}
+
+.filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+}
+
+.filter-btn:hover {
+  border-style: solid;
+  background: var(--surface);
+}
+
+.filter-btn.active {
+  border-style: solid;
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.filter-btn svg {
+  width: 14px;
+  height: 14px;
+}
+
+.filterbar .spacer {
+  flex: 1;
+}
+
+.filter-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+@media (max-width: 900px) {
+  .filterbar {
+    padding-left: max(14px, env(safe-area-inset-left));
+    padding-right: max(14px, env(safe-area-inset-right));
+  }
+
+  .filterbar {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+
+  .filter-search {
+    flex: 0 0 170px;
+  }
+}

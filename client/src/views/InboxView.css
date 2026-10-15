@@ -1,0 +1,106 @@
+.inbox-tabs {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 14px;
+}
+
+.inbox-tabs button {
+  height: 30px;
+  padding: 0 12px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  background: transparent;
+  color: var(--ink-2);
+  font-weight: 550;
+}
+
+.inbox-tabs button[aria-selected='true'] {
+  border-color: var(--line-strong);
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow-1);
+}
+
+.inbox-day {
+  margin: 18px 0 6px 4px;
+}
+
+.inbox-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.inbox-item {
+  display: grid;
+  grid-template-columns: 10px 30px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px 12px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  text-align: left;
+}
+
+.inbox-list li:last-child .inbox-item {
+  border-bottom: 0;
+}
+
+.inbox-item:hover {
+  background: var(--surface-2);
+}
+
+.inbox-item .unread-dot {
+  width: 8px;
+  height: 8px;
+  margin-top: 10px;
+  border-radius: 50%;
+  background: var(--accent);
+}
+
+.inbox-item.read .unread-dot {
+  visibility: hidden;
+}
+
+.inbox-item.read .inbox-text {
+  color: var(--ink-2);
+}
+
+.inbox-text {
+  min-width: 0;
+}
+
+.inbox-text .task {
+  font-weight: 600;
+}
+
+.inbox-text .key {
+  margin-right: 4px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.inbox-excerpt {
+  margin-top: 3px;
+  padding-left: 8px;
+  border-left: 2px solid var(--line-strong);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.inbox-item time {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}

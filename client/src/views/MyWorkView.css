@@ -1,0 +1,112 @@
+.mywork-hello {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.mywork-hello h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  letter-spacing: -0.02em;
+}
+
+.mywork-hello p {
+  color: var(--muted);
+}
+
+.mywork-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.mywork-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.45fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.mywork-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 10px;
+  margin-bottom: 8px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  color: var(--muted);
+}
+
+.mywork-add:focus-within {
+  border-style: solid;
+  border-color: var(--accent);
+}
+
+.mywork-add input {
+  flex: 1;
+  height: 34px;
+  border: 0;
+  background: transparent;
+  outline: none;
+}
+
+.task-section + .task-section {
+  margin-top: 14px;
+}
+
+.task-section h3 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 10px 4px;
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.task-section h3 .num {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.task-section.overdue h3 {
+  color: var(--danger);
+}
+
+.myday .panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.myday .panel-head svg {
+  color: var(--warning);
+}
+
+.carry {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 960px) {
+  .mywork-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 520px) {
+  .mywork-stats {
+    grid-template-columns: 1fr 1fr;
+  }
+}
