@@ -29,6 +29,7 @@ const VIEWS = [
   { title: 'Calendar', to: '/calendar', icon: <CalendarDays />, keys: 'g c' },
   { title: 'Goals', to: '/goals', icon: <Target />, keys: 'g g' },
   { title: 'Insights', to: '/insights', icon: <BarChart3 />, keys: 'g s' },
+  { title: 'Docs', to: '/docs', icon: <FileText />, keys: 'g d' },
   { title: 'Time', to: '/time', icon: <Timer />, keys: 'g m' },
   { title: 'Bounties', to: '/bounties', icon: <Coins />, keys: 'g n' },
   { title: 'Votes', to: '/votes', icon: <Vote />, keys: 'g v' },

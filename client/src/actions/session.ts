@@ -13,6 +13,7 @@ import type FocusItem from '../types/FocusItem';
 import type NoxInfo from '../types/NoxInfo';
 import type HolderGate from '../types/HolderGate';
 import type TimeEntry from '../types/TimeEntry';
+import keyring from '../state/keyring';
 
 interface Bootstrap {
   me: User;
@@ -53,6 +54,7 @@ async function load() {
 
 function signedOut(message?: string) {
   socket.disconnect();
+  keyring.lock();
   store.reset({ phase: 'auth' });
   history.replaceState(null, '', '/');
   if (message) toast.show(message, { tone: 'error' });

@@ -19,6 +19,8 @@ const initialState: State = {
   nox: null,
   proposalsRev: 0,
   timer: null,
+  docsUnlocked: false,
+  docsRev: 0,
   sourceUrl: null,
   presence: [],
   typing: {},

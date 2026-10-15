@@ -33,6 +33,8 @@ export default interface State {
   nox: NoxInfo | null;
   proposalsRev: number;
   timer: TimeEntry | null;
+  docsUnlocked: boolean;
+  docsRev: number;
   sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires

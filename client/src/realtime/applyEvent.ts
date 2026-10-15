@@ -58,6 +58,9 @@ export default function applyEvent(event: any): void {
     case 'proposals':
       store.set({ proposalsRev: s.proposalsRev + 1 });
       break;
+    case 'docs':
+      store.set({ docsRev: s.docsRev + 1 });
+      break;
     case 'timer':
       store.set({ timer: event.timer });
       break;
