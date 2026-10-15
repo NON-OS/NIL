@@ -18,7 +18,7 @@ export default function BountyField({ task }: { task: Task }) {
   useEffect(() => setText(shown), [shown]);
 
   if (!isAdmin || task.bountyState) {
-    return task.bounty ? <span className="num">{formatUnits(task.bounty, decimals)} {symbol}</span> : <span className="placeholder-text">No bounty</span>;
+    return task.bounty ? <span className="prop-static num">{formatUnits(task.bounty, decimals)} {symbol}</span> : <span className="prop-static placeholder-text">No bounty</span>;
   }
 
   const save = () => {

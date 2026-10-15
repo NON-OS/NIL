@@ -259,3 +259,11 @@
 .icon-only:hover {
   background: var(--surface-3);
 }
+
+/* read-only values line up with the clickable ones above and below */
+.prop-static {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 8px;
+}

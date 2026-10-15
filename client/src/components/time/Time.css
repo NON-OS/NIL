@@ -126,7 +126,6 @@
 
 .timesheet-day .bar i {
   width: 14px;
-  min-height: 2px;
   border-radius: 4px 4px 0 0;
   background: var(--accent);
 }
@@ -162,11 +161,26 @@
   white-space: nowrap;
 }
 
-.time-log {
-  display: flex;
-  flex-wrap: wrap;
+.settings-card.time-log {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
   align-items: end;
-  gap: 8px;
+  gap: 10px;
+}
+
+.settings-card.time-log > :nth-child(-n + 3) {
+  grid-column: span 2;
+}
+
+.settings-card.time-log > :nth-child(4) {
+  grid-column: span 3;
+}
+
+.settings-card.time-log > :nth-child(5) {
+  grid-column: span 2;
+}
+
+.time-log .input {
+  height: 36px;
 }
 
 .time-log .field {
@@ -176,6 +190,17 @@
 @media (max-width: 760px) {
   .timesheet-week {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .settings-card.time-log > :nth-child(n) {
+    grid-column: span 3;
+  }
+
+  .settings-card.time-log > :nth-child(1),
+  .settings-card.time-log > :nth-child(4),
+  .settings-card.time-log > :nth-child(5),
+  .settings-card.time-log > :last-child {
+    grid-column: 1 / -1;
   }
 
   .time-entry {

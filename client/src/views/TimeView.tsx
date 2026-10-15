@@ -47,7 +47,8 @@ export default function TimeView() {
     return list;
   }, [entries, week]);
   const weekTotal = days.reduce((sum, d) => sum + d.total, 0);
-  const longest = Math.max(...days.map((d) => d.total), 1);
+  // an hour is the smallest full bar, so a short day doesn't look like a long one
+  const longest = Math.max(...days.map((d) => d.total), 3600_000);
   const mine = useMemo(() => tasks.filter((t) => t.assigneeId === me.id && !meta.isClosed(t.status)), [tasks, me.id]);
 
   const log = async (e: FormEvent) => {
@@ -104,7 +105,7 @@ export default function TimeView() {
             <div key={d.iso} className={cx('timesheet-day', d.iso === dates.today() && 'today')}>
               <small>{dates.DAYS[dates.parse(d.iso).getDay()]}</small>
               <div className="bar" aria-hidden="true">
-                <i style={{ height: `${(d.total / longest) * 100}%` }} />
+                {d.total > 0 && <i style={{ height: `${Math.max(4, (d.total / longest) * 100)}%` }} />}
               </div>
               <strong>{d.total ? formatDuration(d.total) : '–'}</strong>
             </div>
@@ -126,7 +127,7 @@ export default function TimeView() {
               <span>To</span>
               <input className="input" type="time" value={form.end} onChange={(e) => setForm({ ...form, end: e.target.value })} />
             </label>
-            <label className="field" style={{ flex: '1 1 180px' }}>
+            <label className="field">
               <span>Task</span>
               <select className="input" value={form.taskId} onChange={(e) => setForm({ ...form, taskId: e.target.value })}>
                 <option value="">No task</option>
@@ -137,7 +138,7 @@ export default function TimeView() {
                 ))}
               </select>
             </label>
-            <label className="field" style={{ flex: '1 1 160px' }}>
+            <label className="field">
               <span>Note</span>
               <input className="input" value={form.note} maxLength={300} onChange={(e) => setForm({ ...form, note: e.target.value })} />
             </label>

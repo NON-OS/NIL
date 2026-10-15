@@ -31,11 +31,13 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  max-width: 220px;
+  max-width: 200px;
+  padding-left: 2px;
 }
 
-.bounty-input input {
+.bounty-input .input {
   height: 28px;
+  padding: 0 8px;
   font-variant-numeric: tabular-nums;
 }
 
@@ -125,6 +127,11 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+}
+
+.bounty-item-title .mono {
+  flex: none;
+  white-space: nowrap;
 }
 
 .bounty-item-title span:last-child {

@@ -118,7 +118,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
             <span>{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
           </Picker>
         ) : (
-          <span>{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
+          <span className="prop-static">{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
         )}
       </Row>
       {(task.bounty || isAdmin) && (
