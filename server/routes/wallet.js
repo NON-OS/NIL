@@ -84,6 +84,9 @@ router.post(
 
     if (pending.mode === 'login') {
       const row = sql.get("SELECT c.id, c.user_id, u.deactivated, u.joined_via FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.kind = 'wallet' AND c.external_id = ?", pending.address);
+      if (!row && sql.get("SELECT 1 FROM applications WHERE address = ? AND status = 'pending'", pending.address)) {
+        throw HttpError.forbidden('Your bounty application is still waiting for the team. Sign in here again once they accept it.');
+      }
       if (!row || row.deactivated) throw new HttpError(404, 'No account here uses this wallet. Ask an admin for an invite, then join with your wallet.');
       // People who came in through the open door have to keep holding to keep coming in.
       const gate = holderGate.get();

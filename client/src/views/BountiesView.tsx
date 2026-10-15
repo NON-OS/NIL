@@ -45,6 +45,7 @@ export default function BountiesView() {
   }, [tasks]);
   const paidOut = amountsByToken((data?.people ?? []).filter((p) => p.paid !== '0').map((p) => ({ amount: p.paid, token: p.token })));
   const unclaimed = open.filter((t) => !t.assigneeId).length;
+  const listedCount = open.filter((t) => t.listedAt).length;
 
   const row = (t: Task, action?: React.ReactNode) => {
     const person = t.assigneeId ? users[t.assigneeId] : undefined;
@@ -66,7 +67,16 @@ export default function BountiesView() {
 
   return (
     <div className="main">
-      <ViewHeader title="Bounties" icon={<Coins size={17} />} subtitle={`${rewards.map((r) => r.symbol).join(' or ') || 'NOX'} rewards, paid wallet to wallet`} />
+      <ViewHeader
+        title="Bounties"
+        icon={<Coins size={17} />}
+        subtitle={`${rewards.map((r) => r.symbol).join(' or ') || 'NOX'} rewards, paid wallet to wallet`}
+        actions={
+          <a className="btn" href="/open" target="_blank" rel="noopener noreferrer">
+            Public board{listedCount ? ` · ${listedCount}` : ''}
+          </a>
+        }
+      />
       <div className="page page-narrow">
         <div className="bounty-kpis">
           <StatTile label="Open bounties" value={sum(open)} sub={`${open.length} task${open.length === 1 ? '' : 's'}`} />

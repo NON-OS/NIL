@@ -38,6 +38,7 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
         ) : (
           <span className="muted">New here? Ask an admin for an invite link.</span>
         )}
+        <a href="/open" onClick={router.link('/open')}>Open bounties</a>
         <a href="/verify" onClick={router.link('/verify')}>Verify a proof of work</a>
       </div>
     </div>

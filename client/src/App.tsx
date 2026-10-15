@@ -29,6 +29,7 @@ import VotesView from './views/VotesView';
 import TimeView from './views/TimeView';
 import DocsView from './views/DocsView';
 import SharePage from './views/SharePage';
+import OpenBountiesPage from './views/OpenBountiesPage';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 
@@ -83,6 +84,7 @@ export default function App() {
 
   // public pages work signed in or out, outside the app shell
   if (segments[0] === 's' && segments[1]) return <SharePage token={segments[1]} />;
+  if (segments[0] === 'open') return <OpenBountiesPage />;
 
   if (phase === 'loading') {
     return (

@@ -26,6 +26,8 @@ export default interface Task {
   bountyState: 'pending' | 'paid' | null;
   // only the creator and the assignee can see a private task
   private: boolean;
+  // set while the bounty is on the public board
+  listedAt: number | null;
   position: number;
   commentCount: number;
   attachmentCount: number;

@@ -27,6 +27,9 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
       if (!invite) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
       role = ['admin', 'guest'].includes(invite.role) ? invite.role : 'member';
       guestProjects = role === 'guest' ? parseJSON(invite.project_ids, []) : [];
+    } else if (mode === 'bounty') {
+      // an accepted outside applicant: a guest who sees only the tasks given to them
+      role = 'guest';
     }
     if (sql.get('SELECT 1 FROM credentials WHERE external_id = ?', address)) throw HttpError.badRequest('That wallet already has an account here. Sign in with it instead.');
     sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, Date.now());

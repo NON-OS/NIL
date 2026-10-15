@@ -34,11 +34,14 @@ import encryptionKeys from './encryptionKeys.js';
 import tokens from './tokens.js';
 import shareLinks from './shareLinks.js';
 import publicPages from './publicPages.js';
+import publicBounties from './publicBounties.js';
+import applications from './applications.js';
 
 const api = express.Router();
 
 api.use(auth);
 api.use(publicPages);
+api.use(publicBounties);
 api.use(wallet);
 api.use(proofKey);
 api.use(capsules);
@@ -49,7 +52,7 @@ api.use(requireAuth);
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
 api.use(['/proposals', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications]) {
   api.use(router);
 }
 

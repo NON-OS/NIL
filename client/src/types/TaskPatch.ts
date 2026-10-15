@@ -1,6 +1,6 @@
 import type Task from './Task';
 
-type TaskPatch = Partial<
+type TaskPatch = { listed?: boolean } & Partial<
   Pick<
     Task,
     | 'title'

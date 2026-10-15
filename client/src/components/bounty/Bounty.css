@@ -222,3 +222,76 @@
     padding: 8px 6px;
   }
 }
+
+.open-bounties {
+  display: grid;
+  gap: 12px;
+}
+
+.open-bounty {
+  display: grid;
+  gap: 10px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.open-bounty-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 10px;
+}
+
+.open-bounty-head h2 {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: var(--text-lg);
+  font-weight: 500;
+}
+
+.open-bounty-summary {
+  margin: 0;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.open-bounty-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: var(--text-sm);
+}
+
+.apply-form {
+  display: grid;
+  gap: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line);
+}
+
+.applications {
+  display: grid;
+  gap: 8px;
+}
+
+.application {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  font-size: var(--text-sm);
+}
+
+.application p {
+  margin: 4px 0 0;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}

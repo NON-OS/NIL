@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { CheckCircle2, Coins } from 'lucide-react';
 import PayButton from './PayButton';
 import PastePayment from './PastePayment';
+import Applications from './Applications';
+import taskActions from '../../actions/tasks';
 import useStore from '../../state/useStore';
 import router from '../../lib/router';
 import tokenAmount from '../../lib/tokenAmount';
@@ -31,7 +33,23 @@ export default function BountyPanel({ task }: { task: Task }) {
   } else if (!nox) {
     body = <p>On-chain features are turned off on this server, so bounties can’t be paid from here.</p>;
   } else if (!assignee) {
-    body = <p>Assign someone to pay this bounty to their wallet.</p>;
+    body = (
+      <>
+        <p>Assign someone to pay this bounty to their wallet, or list it publicly so anyone can apply with a wallet.</p>
+        {!task.private && (
+          <label className="filter-toggle">
+            <button type="button" className="toggle" role="switch" aria-checked={!!task.listedAt} onClick={() => taskActions.update(task.id, { listed: !task.listedAt })} aria-label="List on the public bounty board" />
+            List on the public bounty board
+            {task.listedAt && (
+              <a href={`/open#${task.id}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6 }}>
+                View
+              </a>
+            )}
+          </label>
+        )}
+        {task.listedAt && <Applications taskId={task.id} />}
+      </>
+    );
   } else if (!assignee.address) {
     body = <p>{assignee.name} has no wallet linked, so there’s nowhere to send it yet.</p>;
   } else {

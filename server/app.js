@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import config from './config.js';
 import api from './routes/api.js';
 import mcp from './routes/mcp.js';
+import listedBounties from './services/listedBounties.js';
 import csrfGuard from './security/csrfGuard.js';
 import securityHeaders from './security/securityHeaders.js';
 import signingKey from './proofs/signingKey.js';
@@ -30,6 +31,12 @@ export default function createApp() {
     const ws = publicWorkspace();
     if (!ws) return res.status(404).json({ error: 'Not set up yet.' });
     res.set('Access-Control-Allow-Origin', '*').json({ name: ws.name, algorithm: 'Ed25519', key: signingKey.publicKey(), fingerprint: signingKey.fingerprint() });
+  });
+
+  // An open feed of publicly listed bounties, for anyone to index: other NØNOS servers,
+  // aggregators, bots. Only tasks a team explicitly listed ever appear here.
+  app.get('/.well-known/nonos-bounties.json', (req, res) => {
+    res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'public, max-age=60').json(listedBounties());
   });
 
   // AI assistants connect here with a personal access key (Model Context Protocol).

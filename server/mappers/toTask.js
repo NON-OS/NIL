@@ -24,6 +24,7 @@ export default function toTask(row) {
     bountyToken: row.bounty ? row.bounty_token || config.nox.symbol : null,
     bountyState: row.bounty_state,
     private: Boolean(row.private),
+    listedAt: row.listed_at ?? null,
     position: row.position,
     commentCount: row.comment_count,
     attachmentCount: row.attachment_count,

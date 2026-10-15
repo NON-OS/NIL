@@ -30,6 +30,7 @@ const COLUMNS = {
   bounty: 'bounty',
   bountyToken: 'bounty_token',
   private: 'private',
+  listedAt: 'listed_at',
 };
 
 const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -48,6 +49,13 @@ export default function updateTask(actor, id, body, { today } = {}) {
   if (changes.some((c) => c.key === 'private') && actor.id !== existing.creatorId && actor.id !== existing.assigneeId) {
     throw HttpError.forbidden('Only the person who created this task or its assignee can change who sees it.');
   }
+  const listing = changes.find((c) => c.key === 'listedAt');
+  if (listing) {
+    if (!actor.isAdmin) throw HttpError.forbidden('Only admins can list bounties publicly.');
+    if (listing.after && listing.before) changes.splice(changes.indexOf(listing), 1);
+    const next = { ...existing, ...patch };
+    if (listing.after && (!next.bounty || next.private)) throw HttpError.badRequest('Only tasks with a bounty that aren’t private can be listed publicly.');
+  }
   if (changes.some((c) => c.key === 'bounty' || c.key === 'bountyToken')) {
     if (!actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
     if (existing.bountyState) throw new HttpError(409, 'This bounty is already paid or being paid, so it can’t change.');
@@ -61,6 +69,11 @@ export default function updateTask(actor, id, body, { today } = {}) {
   if (statusChange) {
     sets.push('completed_at = ?');
     params.push(statusChange.after === 'done' ? now : null);
+  }
+
+  // Making a task private or giving it away takes it off the public board.
+  if ((patch.private || patch.assigneeId) && existing.listedAt && !('listedAt' in patch)) {
+    sets.push('listed_at = NULL');
   }
 
   // A finished recurring task hands its schedule to the next copy, so toggling it
