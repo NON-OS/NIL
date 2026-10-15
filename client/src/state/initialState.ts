@@ -17,6 +17,7 @@ const initialState: State = {
   feed: null,
   ai: false,
   nox: null,
+  rewards: [],
   proposalsRev: 0,
   timer: null,
   docsUnlocked: false,

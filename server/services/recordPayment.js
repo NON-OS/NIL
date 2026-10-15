@@ -28,8 +28,8 @@ export default async function recordPayment(actor, taskId, txHash) {
   const id = newId();
   sql.tx(() => {
     sql.run(
-      'INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, tx_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, payee.id, payee.address.toLowerCase(), task.bounty, hash, Date.now(),
+      'INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, token, tx_hash, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, payee.id, payee.address.toLowerCase(), task.bounty, task.bountyToken, hash, Date.now(),
     );
     sql.run("UPDATE tasks SET bounty_state = 'pending' WHERE id = ?", task.id);
   });

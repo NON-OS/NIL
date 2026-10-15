@@ -24,8 +24,8 @@ export default function settlePayment(payment, { from, blockNumber }) {
   if (!settled) return;
 
   if (payment.task_id) {
-    logActivity(payment.task_id, payment.payer_id, 'bounty_paid', { amount: payment.amount });
+    logActivity(payment.task_id, payment.payer_id, 'bounty_paid', { amount: payment.amount, token: payment.token });
     publishTask(payment.task_id);
   }
-  notify([payment.payee_id], 'bounty_paid', payment.task_id, payment.payer_id, { amount: payment.amount, ref: payment.task_ref });
+  notify([payment.payee_id], 'bounty_paid', payment.task_id, payment.payer_id, { amount: payment.amount, token: payment.token, ref: payment.task_ref });
 }

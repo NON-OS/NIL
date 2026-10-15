@@ -118,15 +118,15 @@ export default async function buildDeck(facts: DeckFacts, story: DeckNarrative |
 
   if (facts.bounties) {
     const b = facts.bounties;
-    const bounty = frame(pptx, ++n, 'Bounties', `${b.paid} ${b.symbol} paid on-chain`);
-    const header = ['Person', `Paid (${b.symbol})`, `Owed (${b.symbol})`].map((text) => ({ text, options: { fontFace: MONO, fontSize: 10, color: MUTED, bold: false } }));
+    const bounty = frame(pptx, ++n, 'Bounties', b.paid === '0' ? 'Nothing paid yet' : `${b.paid} paid on-chain`);
+    const header = ['Person', 'Paid', 'Owed'].map((text) => ({ text, options: { fontFace: MONO, fontSize: 10, color: MUTED, bold: false } }));
     const rows = b.rows.map((r) => [
       { text: r.name, options: { fontFace: SANS, fontSize: 14, color: INK } },
       { text: r.paid, options: { fontFace: MONO, fontSize: 13, color: INK, align: 'right' as const } },
       { text: r.owed, options: { fontFace: MONO, fontSize: 13, color: INK, align: 'right' as const } },
     ]);
     bounty.addTable([header, ...rows], { x: 0.6, y: 2.0, w: 12.1, colW: [6.1, 3, 3], rowH: 0.4, border: { type: 'solid', pt: 0.5, color: LINE }, margin: [0.05, 0.1, 0.05, 0.1] });
-    bounty.addNotes(note('bounties', `Bounties are paid wallet to wallet in ${b.symbol} and checked on-chain. ${b.owed} ${b.symbol} is owed for finished work.`));
+    bounty.addNotes(note('bounties', `Bounties are paid wallet to wallet and checked on-chain. Owed for finished work: ${b.owed}.`));
   }
 
   const next = frame(pptx, ++n, 'Next', 'Next steps');

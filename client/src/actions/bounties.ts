@@ -18,12 +18,13 @@ async function recorded(taskId: string, txHash: string) {
 const bounties = {
   overview: () => http.get<BountyOverview>('/bounties'),
 
-  // The payer's own wallet sends NOX straight to the contributor. NONOS only builds the
-  // transfer and afterwards checks the result on-chain; it never touches the funds.
+  // The payer's own wallet sends the reward token straight to the contributor. NØNOS only
+  // builds the transfer and afterwards checks the result on-chain; it never touches the funds.
   async pay(task: Task) {
-    const { nox, users } = store.get();
+    const { nox, users, rewards } = store.get();
+    const token = rewards.find((t) => t.symbol === task.bountyToken);
     const payee = task.assigneeId ? users[task.assigneeId] : undefined;
-    if (!nox || !task.bounty) throw new Error('This task has no bounty.');
+    if (!nox || !task.bounty || !token) throw new Error('This task has no bounty this server can pay.');
     if (!payee?.address) throw new Error('The assignee has no wallet linked yet.');
 
     const [{ address }, mine, overview] = await Promise.all([ethereum.account(), identity.overview(), bounties.overview()]);
@@ -32,7 +33,7 @@ const bounties = {
       throw new Error('Your wallet is on an account that isn’t linked to NØNOS. Switch accounts, or link this wallet under Settings → Security first.');
     }
     await ethereum.useChain(nox.chainId);
-    const txHash = await ethereum.send({ from: address, to: nox.token, data: encodeTransfer(payee.address, BigInt(task.bounty)) });
+    const txHash = await ethereum.send({ from: address, to: token.address, data: encodeTransfer(payee.address, BigInt(task.bounty)) });
     return recorded(task.id, txHash);
   },
 

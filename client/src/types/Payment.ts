@@ -7,6 +7,7 @@ export default interface Payment {
   to: string;
   from: string | null;
   amount: string;
+  token: string;
   txHash: string;
   status: 'pending' | 'confirmed' | 'failed';
   problem: string | null;

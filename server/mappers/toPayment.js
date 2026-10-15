@@ -9,6 +9,7 @@ export default function toPayment(row) {
     to: row.to_address,
     from: row.from_address,
     amount: row.amount,
+    token: row.token,
     txHash: row.tx_hash,
     status: row.status,
     problem: row.problem,

@@ -130,3 +130,30 @@ test('the overview shows promised, owed and paid; members see only their own pay
   assert.equal((await member('POST', `/api/tasks/${ids.task}/payments`, { txHash: tx() })).status, 403);
   assert.equal((await owner('POST', `/api/tasks/${ids.task}/payments`, { txHash: 'nonsense' })).status, 400);
 });
+
+test('bounties can be paid in USDC, checked against the USDC contract only', async () => {
+  const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
+  const amount = (100n * 10n ** 6n).toString();
+  assert.equal((await owner('POST', '/api/tasks', { title: 'Bad token', assigneeId: ids.member, bounty: amount, bountyToken: 'DOGE' })).status, 400);
+  const t = (await owner('POST', '/api/tasks', { title: 'Design the landing page', assigneeId: ids.member, bounty: amount, bountyToken: 'USDC' })).data.task;
+  assert.equal(t.bountyToken, 'USDC');
+  assert.equal((await owner('GET', '/api/bootstrap')).data.rewards.map((r) => r.symbol).join(','), 'NOX,USDC');
+
+  // the right amount, but in NOX: not a USDC payment
+  const wrong = tx();
+  chain.addTransfer({ hash: wrong, token: NOX, from: ownerWallet.address, to: memberWallet.address, value: amount });
+  const refused = await pay(t.id, wrong);
+  assert.match(refused.data.payment.problem, /no USDC transfer/);
+  await owner('DELETE', `/api/payments/${refused.data.payment.id}`);
+
+  const right = tx();
+  chain.addTransfer({ hash: right, token: USDC, from: ownerWallet.address, to: memberWallet.address, value: amount });
+  const paid = await pay(t.id, right);
+  assert.equal(paid.data.payment.status, 'confirmed');
+  assert.equal(paid.data.payment.token, 'USDC');
+  const receipt = (await member('GET', '/api/proofs/mine')).data.receipts.find((r) => JSON.parse(r.body).payment?.tx === right);
+  const body = JSON.parse(receipt.body).payment;
+  assert.deepEqual([body.symbol, body.decimals, body.token], ['USDC', 6, USDC]);
+  const rows = (await member('GET', '/api/bounties')).data.people.filter((p) => p.userId === ids.member);
+  assert.equal(rows.find((r) => r.token === 'USDC').paid, amount);
+});

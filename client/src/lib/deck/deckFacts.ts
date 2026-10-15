@@ -2,7 +2,8 @@ import dates from '../dates';
 import meta from '../meta';
 import taskKey from '../taskKey';
 import goalProgress from '../goalProgress';
-import formatUnits from '../formatUnits';
+import tokenAmount from '../tokenAmount';
+import amountsByToken from '../amountsByToken';
 import type State from '../../types/State';
 import type Task from '../../types/Task';
 import type DeckScope from '../../types/DeckScope';
@@ -38,17 +39,18 @@ export default function deckFacts(s: State, scope: DeckScope): DeckFacts {
   let bounties: DeckFacts['bounties'] = null;
   const withBounty = inScope.filter((t) => t.bounty);
   if (s.nox && withBounty.length) {
-    const rows = new Map<string, { paid: bigint; owed: bigint }>();
+    const rows = new Map<string, { name: string; token: string; paid: bigint; owed: bigint }>();
     for (const t of withBounty) {
       const name = who(t) ?? 'Unclaimed';
-      const row = rows.get(name) ?? { paid: 0n, owed: 0n };
+      const token = t.bountyToken ?? s.nox.symbol;
+      const row = rows.get(`${name}|${token}`) ?? { name, token, paid: 0n, owed: 0n };
       if (t.bountyState === 'paid') row.paid += BigInt(t.bounty!);
       else if (t.status === 'done') row.owed += BigInt(t.bounty!);
-      rows.set(name, row);
+      rows.set(`${name}|${token}`, row);
     }
-    const fmt = (v: bigint) => formatUnits(v, s.nox!.decimals, 2);
-    const total = [...rows.values()].reduce((a, r) => ({ paid: a.paid + r.paid, owed: a.owed + r.owed }), { paid: 0n, owed: 0n });
-    bounties = { symbol: s.nox.symbol, paid: fmt(total.paid), owed: fmt(total.owed), rows: [...rows].map(([name, r]) => ({ name, paid: fmt(r.paid), owed: fmt(r.owed) })) };
+    const list = [...rows.values()];
+    const total = (key: 'paid' | 'owed') => amountsByToken(list.filter((r) => r[key] > 0n).map((r) => ({ amount: String(r[key]), token: r.token })));
+    bounties = { paid: total('paid'), owed: total('owed'), rows: list.map((r) => ({ name: r.name, token: r.token, paid: tokenAmount(r.paid, r.token, 2), owed: tokenAmount(r.owed, r.token, 2) })) };
   }
 
   const title = scope.kind === 'project' ? s.projects[scope.id!]?.name ?? 'Project' : scope.kind === 'goal' ? s.goals[scope.id!]?.title ?? 'Goal' : s.workspace.name;

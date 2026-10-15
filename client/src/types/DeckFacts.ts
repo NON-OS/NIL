@@ -13,5 +13,6 @@ export default interface DeckFacts {
   nextUp: Line[];
   goals: { title: string; pct: number }[];
   people: { name: string; shipped: number }[];
-  bounties: { symbol: string; paid: string; owed: string; rows: { name: string; paid: string; owed: string }[] } | null;
+  // per person and token, already written as "250 NOX"
+  bounties: { paid: string; owed: string; rows: { name: string; token: string; paid: string; owed: string }[] } | null;
 }

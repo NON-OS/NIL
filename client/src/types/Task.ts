@@ -22,6 +22,7 @@ export default interface Task {
   recurrence: Recurrence | null;
   // in the token's smallest unit, as text
   bounty: string | null;
+  bountyToken: string | null;
   bountyState: 'pending' | 'paid' | null;
   // only the creator and the assignee can see a private task
   private: boolean;

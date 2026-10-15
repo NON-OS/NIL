@@ -1,4 +1,5 @@
 import parseJSON from '../lib/parseJSON.js';
+import config from '../config.js';
 
 export default function toTask(row) {
   if (!row) return null;
@@ -20,6 +21,7 @@ export default function toTask(row) {
     checklist: parseJSON(row.checklist, []),
     recurrence: row.recurrence,
     bounty: row.bounty,
+    bountyToken: row.bounty ? row.bounty_token || config.nox.symbol : null,
     bountyState: row.bounty_state,
     private: Boolean(row.private),
     position: row.position,

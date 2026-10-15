@@ -3,6 +3,7 @@ import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import domain from '../lib/domain.js';
 import HttpError from '../lib/HttpError.js';
+import rewardToken from '../lib/rewardToken.js';
 
 function checklist(value) {
   if (!Array.isArray(value)) throw HttpError.badRequest('Checklist must be a list.');
@@ -51,6 +52,7 @@ export default function parseTaskPatch(body) {
   if (has('recurrence')) out.recurrence = body.recurrence ? check.oneOf(body.recurrence, domain.recurrences, 'Repeat') : null;
   if (has('private')) out.private = Boolean(body.private);
   if (has('bounty')) out.bounty = check.amount(body.bounty, 'Bounty');
+  if (has('bountyToken')) out.bountyToken = rewardToken(body.bountyToken).symbol;
   if (has('position')) out.position = check.number(body.position, 'Position') ?? 0;
   return out;
 }

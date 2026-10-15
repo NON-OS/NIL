@@ -3,7 +3,7 @@ import { Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
-import noxAmount from '../../lib/noxAmount';
+import tokenAmount from '../../lib/tokenAmount';
 import type Task from '../../types/Task';
 
 const OUTCOME = {
@@ -30,7 +30,7 @@ export default function PayButton({ task, name, primary = true, onDone }: { task
 
   return (
     <button type="button" className={primary ? 'btn btn-primary' : 'btn'} onClick={pay} disabled={busy}>
-      {busy ? <Spinner size={14} /> : <Wallet />} Pay {noxAmount(task.bounty!)} to {name}
+      {busy ? <Spinner size={14} /> : <Wallet />} Pay {tokenAmount(task.bounty!, task.bountyToken)} to {name}
     </button>
   );
 }

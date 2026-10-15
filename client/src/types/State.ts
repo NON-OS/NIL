@@ -14,6 +14,7 @@ import type NoxInfo from './NoxInfo';
 import type HolderGate from './HolderGate';
 import type TimeEntry from './TimeEntry';
 import type DeckScope from './DeckScope';
+import type RewardToken from './RewardToken';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -32,6 +33,7 @@ export default interface State {
   feed: Activity[] | null;
   ai: boolean;
   nox: NoxInfo | null;
+  rewards: RewardToken[];
   proposalsRev: number;
   timer: TimeEntry | null;
   docsUnlocked: boolean;

@@ -2,7 +2,7 @@ import { CheckCircle2, Clock, ExternalLink, XCircle } from 'lucide-react';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
-import noxAmount from '../../lib/noxAmount';
+import tokenAmount from '../../lib/tokenAmount';
 import dates from '../../lib/dates';
 import shortAddress from '../../lib/shortAddress';
 import type Payment from '../../types/Payment';
@@ -27,7 +27,7 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
               <div className="bounty-item-title">
                 <span className="mono muted">{p.taskRef}</span>
                 <span>
-                  {noxAmount(p.amount)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
+                  {tokenAmount(p.amount, p.token)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
                 </span>
               </div>
               <div className="bounty-item-sub">

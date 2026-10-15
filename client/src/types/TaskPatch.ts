@@ -17,6 +17,7 @@ type TaskPatch = Partial<
     | 'checklist'
     | 'recurrence'
     | 'bounty'
+    | 'bountyToken'
     | 'private'
     | 'position'
   >

@@ -32,6 +32,7 @@ router.get(
     nox: config.nox.enabled
       ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer }
       : null,
+    rewards: config.nox.enabled ? config.rewards : [],
     sourceUrl: config.sourceUrl,
   })),
 );

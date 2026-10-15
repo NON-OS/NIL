@@ -5,7 +5,7 @@ import PayButton from './PayButton';
 import PastePayment from './PastePayment';
 import useStore from '../../state/useStore';
 import router from '../../lib/router';
-import noxAmount from '../../lib/noxAmount';
+import tokenAmount from '../../lib/tokenAmount';
 import cx from '../../lib/cx';
 import type Task from '../../types/Task';
 
@@ -17,7 +17,7 @@ export default function BountyPanel({ task }: { task: Task }) {
   const [pasting, setPasting] = useState(false);
   if (!task.bounty) return null;
 
-  const amount = noxAmount(task.bounty);
+  const amount = tokenAmount(task.bounty, task.bountyToken);
   const paid = task.bountyState === 'paid';
 
   let body;

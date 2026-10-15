@@ -1,10 +1,10 @@
 import meta from './meta';
 import dates from './dates';
-import noxAmount from './noxAmount';
+import tokenAmount from './tokenAmount';
 import type Activity from '../types/Activity';
 import type State from '../types/State';
 
-type Lookup = Pick<State, 'users' | 'projects' | 'goals' | 'labels' | 'workspace'>;
+type Lookup = Pick<State, 'users' | 'projects' | 'goals' | 'labels' | 'workspace' | 'tasks'>;
 
 // Turns an activity row into a short sentence fragment: "moved this to Done".
 export default function describeActivity(a: Activity, s: Lookup): string {
@@ -52,9 +52,9 @@ export default function describeActivity(a: Activity, s: Lookup): string {
     case 'restored':
       return 'restored this from the trash';
     case 'bounty':
-      return to ? `set a bounty of ${noxAmount(to)}` : 'removed the bounty';
+      return to ? `set a bounty of ${tokenAmount(to, a.taskId ? s.tasks[a.taskId]?.bountyToken : null)}` : 'removed the bounty';
     case 'bounty_paid':
-      return `paid the ${noxAmount(String(a.data.amount))} bounty, confirmed on-chain`;
+      return `paid the ${tokenAmount(String(a.data.amount), a.data.token)} bounty, confirmed on-chain`;
     case 'comment':
       return 'commented';
     default:

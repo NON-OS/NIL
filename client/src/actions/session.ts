@@ -13,6 +13,7 @@ import type FocusItem from '../types/FocusItem';
 import type NoxInfo from '../types/NoxInfo';
 import type HolderGate from '../types/HolderGate';
 import type TimeEntry from '../types/TimeEntry';
+import type RewardToken from '../types/RewardToken';
 import keyring from '../state/keyring';
 
 interface Bootstrap {
@@ -27,6 +28,7 @@ interface Bootstrap {
   unread: number;
   ai: boolean;
   nox: NoxInfo | null;
+  rewards: RewardToken[];
   timer: TimeEntry | null;
   sourceUrl: string | null;
 }
@@ -46,6 +48,7 @@ async function load() {
     unread: b.unread,
     ai: b.ai,
     nox: b.nox,
+    rewards: b.rewards ?? [],
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });

@@ -16,17 +16,19 @@ import toast from '../state/toast';
 import bounties from '../actions/bounties';
 import taskActions from '../actions/tasks';
 import detail from '../actions/detail';
-import noxAmount from '../lib/noxAmount';
+import tokenAmount from '../lib/tokenAmount';
+import amountsByToken from '../lib/amountsByToken';
 import taskKey from '../lib/taskKey';
 import type BountyOverview from '../types/BountyOverview';
 import type Task from '../types/Task';
 
-const sum = (tasks: Task[]) => tasks.reduce((total, t) => total + BigInt(t.bounty!), 0n);
+const sum = (tasks: Task[]) => amountsByToken(tasks.map((t) => ({ amount: t.bounty!, token: t.bountyToken })));
 
 export default function BountiesView() {
   const me = useStore((s) => s.me)!;
   const users = useStore((s) => s.users);
   const nox = useStore((s) => s.nox);
+  const rewards = useStore((s) => s.rewards);
   const tasks = useTasks();
   const isAdmin = me.role !== 'member';
   const [data, setData] = useState<BountyOverview | null>(null);
@@ -40,7 +42,7 @@ export default function BountiesView() {
     const live = tasks.filter((t) => t.bounty && t.bountyState !== 'paid' && t.status !== 'canceled');
     return { open: live.filter((t) => t.status !== 'done'), owed: live.filter((t) => t.status === 'done') };
   }, [tasks]);
-  const paidOut = (data?.people ?? []).reduce((total, p) => total + BigInt(p.paid), 0n);
+  const paidOut = amountsByToken((data?.people ?? []).filter((p) => p.paid !== '0').map((p) => ({ amount: p.paid, token: p.token })));
   const unclaimed = open.filter((t) => !t.assigneeId).length;
 
   const row = (t: Task, action?: React.ReactNode) => {
@@ -63,12 +65,12 @@ export default function BountiesView() {
 
   return (
     <div className="main">
-      <ViewHeader title="Bounties" icon={<Coins size={17} />} subtitle={`${nox?.symbol ?? 'NOX'} rewards, paid wallet to wallet`} />
+      <ViewHeader title="Bounties" icon={<Coins size={17} />} subtitle={`${rewards.map((r) => r.symbol).join(' or ') || 'NOX'} rewards, paid wallet to wallet`} />
       <div className="page page-narrow">
         <div className="bounty-kpis">
-          <StatTile label="Open bounties" value={noxAmount(sum(open))} sub={`${open.length} task${open.length === 1 ? '' : 's'}`} />
-          <StatTile label="Ready to pay" value={noxAmount(sum(owed))} sub={owed.length ? `${owed.length} finished` : 'Nothing owed'} />
-          <StatTile label={isAdmin ? 'Paid out' : 'You earned'} value={noxAmount(paidOut)} sub="Confirmed on-chain" />
+          <StatTile label="Open bounties" value={sum(open)} sub={`${open.length} task${open.length === 1 ? '' : 's'}`} />
+          <StatTile label="Ready to pay" value={sum(owed)} sub={owed.length ? `${owed.length} finished` : 'Nothing owed'} />
+          <StatTile label={isAdmin ? 'Paid out' : 'You earned'} value={paidOut} sub="Confirmed on-chain" />
           <StatTile label="Up for grabs" value={unclaimed} sub="Unclaimed bounties" />
         </div>
 
@@ -126,16 +128,16 @@ export default function BountiesView() {
                 </thead>
                 <tbody>
                   {data.people.map((p) => (
-                    <tr key={p.userId}>
+                    <tr key={`${p.userId}-${p.token}`}>
                       <td>
                         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
                           <Avatar user={users[p.userId]} size={20} />
                           {users[p.userId]?.name ?? 'A former member'}
                         </span>
                       </td>
-                      <td>{noxAmount(p.promised)}</td>
-                      <td>{noxAmount(p.owed)}</td>
-                      <td>{noxAmount(p.paid)}</td>
+                      <td>{tokenAmount(p.promised, p.token, 2)}</td>
+                      <td>{tokenAmount(p.owed, p.token, 2)}</td>
+                      <td>{tokenAmount(p.paid, p.token, 2)}</td>
                     </tr>
                   ))}
                 </tbody>

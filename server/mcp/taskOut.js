@@ -1,6 +1,6 @@
 import sql from '../db/sql.js';
 import publicWorkspace from '../services/publicWorkspace.js';
-import nox from '../lib/nox.js';
+import tokenAmount from '../lib/tokenAmount.js';
 
 const name = (table, id, column = 'name') => (id ? sql.get(`SELECT ${column} AS v FROM ${table} WHERE id = ?`, id)?.v ?? null : null);
 
@@ -15,7 +15,7 @@ export default function taskOut(task, { full = false } = {}) {
     project: name('projects', task.projectId),
     due: task.dueDate,
     private: task.private,
-    bounty: task.bounty ? `${nox(task.bounty)}${task.bountyState === 'paid' ? ' (paid)' : ''}` : null,
+    bounty: task.bounty ? `${tokenAmount(task.bounty, task.bountyToken)}${task.bountyState === 'paid' ? ' (paid)' : ''}` : null,
   };
   if (!full) return out;
   return {

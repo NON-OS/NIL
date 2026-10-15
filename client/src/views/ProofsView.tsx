@@ -13,7 +13,13 @@ import saveBlob from '../lib/saveBlob';
 import router from '../lib/router';
 import dates from '../lib/dates';
 import type Receipt from '../types/Receipt';
-import noxAmount from '../lib/noxAmount';
+import formatUnits from '../lib/formatUnits';
+
+// A payment receipt carries its own token details, so the label never depends on settings.
+function paidLabel(body: string) {
+  const p = JSON.parse(body).payment;
+  return `${formatUnits(p.amount, p.decimals)} ${p.symbol}`;
+}
 
 export default function ProofsView() {
   const me = useStore((s) => s.me)!;
@@ -106,7 +112,7 @@ export default function ProofsView() {
                 <input type="checkbox" checked={picked.has(r.id)} onChange={() => setPicked(toggle(picked, r.id))} aria-label={`Include ${r.ref}`} />
                 <span className="ref mono muted">{r.ref}</span>
                 <span className={`title${reveal.has(r.id) ? '' : ' hidden-title'}`}>
-                  {r.kind === 'payment' && r.amount && <span className="bounty-chip paid" style={{ marginRight: 8, fontStyle: 'normal' }}>Paid {noxAmount(r.amount)}</span>}
+                  {r.kind === 'payment' && r.amount && <span className="bounty-chip paid" style={{ marginRight: 8, fontStyle: 'normal' }}>Paid {paidLabel(r.body)}</span>}
                   {r.title ?? 'Title erased by a retention policy'}
                 </span>
                 <span className="date muted num" style={{ fontSize: 'var(--text-sm)' }}>{dates.short(r.completedAt.slice(0, 10))}</span>

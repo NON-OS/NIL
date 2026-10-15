@@ -9,7 +9,7 @@ import toast from '../../state/toast';
 import votes from '../../actions/votes';
 import dates from '../../lib/dates';
 import timeLeft from '../../lib/timeLeft';
-import noxAmount from '../../lib/noxAmount';
+import tokenAmount from '../../lib/tokenAmount';
 import cx from '../../lib/cx';
 import type Proposal from '../../types/Proposal';
 
@@ -20,7 +20,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
   const author = useStore((s) => (proposal.createdBy ? s.users[proposal.createdBy] : undefined));
   const [busy, setBusy] = useState<number | 'close' | null>(null);
   const open = !proposal.closedAt && proposal.closesAt > Date.now();
-  const weight = (w: string) => (proposal.weighting === 'nox' ? noxAmount(w) : `${w} vote${w === '1' ? '' : 's'}`);
+  const weight = (w: string) => (proposal.weighting === 'nox' ? tokenAmount(w, null) : `${w} vote${w === '1' ? '' : 's'}`);
 
   const run = async (key: number | 'close', fn: () => Promise<unknown>, done?: string) => {
     setBusy(key);
