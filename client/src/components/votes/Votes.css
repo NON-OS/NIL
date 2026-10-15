@@ -85,14 +85,18 @@
 }
 
 .proposal-anon {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 6px;
   margin: 0;
   font-size: var(--text-sm);
+  line-height: 1.55;
 }
 
 .proposal-anon svg {
+  margin-right: 4px;
+  vertical-align: -2px;
   color: var(--accent-line);
+}
+
+.proposal-anon .btn {
+  margin-left: 8px;
+  vertical-align: middle;
 }

@@ -14,6 +14,7 @@ import cx from '../../lib/cx';
 import type Proposal from '../../types/Proposal';
 import isAdminUser from '../../lib/isAdmin';
 import AnonymousBallot from './AnonymousBallot';
+import EncryptedBallot from './EncryptedBallot';
 
 const percent = (part: bigint, whole: bigint) => (whole ? Number((part * 1000n) / whole) / 10 : 0);
 
@@ -57,7 +58,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
       </div>
       {proposal.body && <p className="proposal-body">{proposal.body}</p>}
 
-      {proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
+      {proposal.encrypted ? <EncryptedBallot proposal={proposal} open={open} onChange={onChange} /> : proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
 
       {open && !proposal.anonymous && (
         <div className="proposal-options" role="group" aria-label="Your vote">
@@ -75,7 +76,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
             <Meter key={option} label={<>{option}{proposal.myVote?.choice === i && <span className="muted"> · your vote</span>}</>} value={percent(totals[i], sum)} total={100} color={i === 0 ? 'var(--accent-line)' : 'var(--chart-2)'} caption={`${weight(String(totals[i]))} · ${percent(totals[i], sum)}%`} />
           ))}
         </div>
-      ) : (
+      ) : proposal.encrypted ? null : (
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
           <Lock size={13} style={{ verticalAlign: '-2px' }} /> Results stay sealed until the vote closes.
         </p>

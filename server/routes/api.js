@@ -41,6 +41,7 @@ import planRoutes from './plan.js';
 import stealth from './stealth.js';
 import anonymousBallots from './anonymousBallots.js';
 import votingKey from './votingKey.js';
+import trustees from './trustees.js';
 
 const api = express.Router();
 
@@ -61,7 +62,7 @@ api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-key
 api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
 api.use('/proposals', (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/close') ? requirePlan(req, res, next) : next()));
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
   api.use(router);
 }
 

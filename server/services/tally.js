@@ -5,6 +5,8 @@ import parseJSON from '../lib/parseJSON.js';
 // erasing an account later can't rewrite a decision that was already made.
 export default function tally(proposal) {
   if (proposal.result) return parseJSON(proposal.result, null);
+  // encrypted ballots have no running totals: only the trustees' joint decryption reveals them
+  if (proposal.anonymous && proposal.weighting === 'power') return { totals: null, voters: sql.get('SELECT COUNT(*) AS n FROM encrypted_ballots WHERE proposal_id = ?', proposal.id).n };
   const options = parseJSON(proposal.options, []);
   const totals = options.map(() => 0n);
   // anonymous ballots count one each: they carry no weight because they carry no identity

@@ -2,7 +2,7 @@
   "name": "nonos",
   "version": "1.0.0",
   "private": true,
-  "description": "NONOS \u2014 the team task system. Projects, boards, goals, insights, real-time collaboration.",
+  "description": "NONOS — the team task system. Projects, boards, goals, insights, real-time collaboration.",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
@@ -15,7 +15,8 @@
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js",
-    "zk:fetch": "node scripts/zk-fetch.mjs"
+    "zk:fetch": "node scripts/zk-fetch.mjs",
+    "zk:ballot": "node scripts/zk-ballot.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.134.0",
@@ -23,7 +24,10 @@
     "@noble/hashes": "1.8.0",
     "@semaphore-protocol/group": "4.14.3",
     "@semaphore-protocol/proof": "4.14.3",
+    "@zk-kit/baby-jubjub": "1.0.3",
     "express": "4.22.3",
+    "poseidon-lite": "0.3.0",
+    "snarkjs": "0.7.5",
     "ws": "8.22.0"
   },
   "devDependencies": {
@@ -36,6 +40,10 @@
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
+    "@zk-kit/binary-merkle-root.circom": "2.0.0",
+    "@zk-kit/utils": "1.3.0",
+    "circom2": "0.2.23",
+    "circomlib": "2.0.5",
     "concurrently": "9.1.0",
     "lucide-react": "0.460.0",
     "pptxgenjs": "4.0.1",

@@ -11,6 +11,8 @@ interface NewProposal {
   sealed: boolean;
   anonymous: boolean;
   days: number;
+  // three members who hold the decryption key together (encrypted, weighted votes only)
+  trustees?: string[];
 }
 
 const votes = {

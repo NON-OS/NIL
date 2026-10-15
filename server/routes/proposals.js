@@ -21,6 +21,7 @@ import toProposal from '../mappers/toProposal.js';
 import config from '../config.js';
 import voterGroups from '../votes/voterGroups.js';
 import voteScope from '../votes/voteScope.js';
+import fieldHash from '../votes/fieldHash.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
@@ -48,14 +49,20 @@ router.post(
     if (weighting === 'power' && !config.nox.enabled) throw HttpError.badRequest('Votes weighted by voting power need on-chain features, which are off on this server.');
     const days = check.number(b.days ?? 7, 'Duration', { min: 1, max: 60, integer: true });
     const anonymous = Boolean(b.anonymous);
-    if (anonymous && weighting !== 'equal') throw HttpError.badRequest('Anonymous votes count one person, one vote: a weight would need to know who voted.');
+    // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three trustees
+    const trustees = anonymous && weighting === 'power' ? b.trustees : null;
+    if (trustees) {
+      const valid = Array.isArray(trustees) && trustees.length === 3 && new Set(trustees).size === 3 && trustees.every((t) => typeof t === 'string');
+      const eligible = valid && trustees.every((t) => sql.get("SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0 AND u.role != 'guest'", t));
+      if (!eligible) throw HttpError.badRequest('Pick three different members who have unlocked encrypted docs as trustees.');
+      if (options.length > 8) throw HttpError.badRequest('Encrypted votes can have at most 8 options.');
+    }
     const id = newId();
     const now = Date.now();
     sql.run(
       'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
       id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
     );
-    if (anonymous) voterGroups.start(id);
     if (weighting === 'power') {
       try {
         await snapshotPower(id);
@@ -65,6 +72,9 @@ router.post(
         throw err;
       }
     }
+    // the census of an anonymous vote needs the snapshot first when it's weighted
+    if (anonymous) voterGroups.start(id);
+    if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
     const everyone = sql.all('SELECT id FROM users WHERE deactivated = 0').map((u) => u.id);
     notify(everyone, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
     hub.broadcast({ type: 'proposals' });
@@ -136,6 +146,20 @@ router.get(
     if (!row) throw HttpError.notFound('That vote');
     // anyone can recount an anonymous vote: check each proof against an accepted root, that
     // every nullifier appears once, and the scope. Names never appear because they're never known.
+    if (row.anonymous && row.weighting === 'power') {
+      return {
+        type: 'nonos.encrypted-vote-audit',
+        v: 1,
+        proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
+        circuit: { name: 'circuits/ballot.circom', depth: 16, scope: fieldHash(voteScope(row.id)) },
+        power: { block: row.snapshot_block, zspPower: row.zsp_power, unit: 'whole NOX' },
+        census: voterGroups.members(row.id),
+        roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
+        publicKey: parseJSON(row.public_key, null),
+        trustees: sql.all('SELECT position, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => ({ position: t.position, commitments: parseJSON(t.dealing, {}).commitments ?? null, partial: parseJSON(t.partial, null) })),
+        ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY created_at', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: new Date(b.created_at).toISOString() })),
+      };
+    }
     if (row.anonymous) {
       return {
         type: 'nonos.anonymous-vote-audit',

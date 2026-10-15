@@ -5,12 +5,13 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import votes from '../../actions/votes';
+import TrusteePicker from './TrusteePicker';
 
 const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d === 1 ? '1 day' : `${d} days` }));
 
 export default function NewProposalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const nox = useStore((s) => s.nox);
-  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, days: 7 });
+  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, days: 7, trustees: [] as string[] });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
@@ -18,7 +19,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
   const create = async () => {
     setBusy(true);
     try {
-      await votes.create({ ...form, options });
+      await votes.create({ ...form, options, trustees: form.anonymous && form.weighting === 'power' ? form.trustees : undefined });
       toast.show('Vote started. Everyone was notified.', { tone: 'success' });
       onCreated();
       onClose();
@@ -39,7 +40,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
           <button type="button" className="btn" onClick={onClose}>
             Cancel
           </button>
-          <button type="button" className="btn btn-primary" onClick={create} disabled={busy || !form.title.trim() || options.length < 2}>
+          <button type="button" className="btn btn-primary" onClick={create} disabled={busy || !form.title.trim() || options.length < 2 || (form.anonymous && form.weighting === 'power' && form.trustees.length !== 3)}>
             {busy && <Spinner size={14} />} Start vote
           </button>
         </>
@@ -78,14 +79,22 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             Seal results until it closes
           </label>
           <label className="filter-toggle">
-            <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous, weighting: 'equal' })} aria-label="Anonymous ballots" />
+            <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous })} aria-label="Anonymous ballots" />
             Anonymous ballots
           </label>
         </div>
-        {form.anonymous && (
+        {form.anonymous && form.weighting === 'equal' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Each ballot is a zero-knowledge proof (Semaphore) that some member voted, without saying who. Nobody can see who chose what, not even admins or this server, and each member still gets exactly one vote. One person, one vote only: a weight would need to know who voted.
+            Each ballot is a zero-knowledge proof (Semaphore) that some member voted, without saying who. Nobody can see who chose what, not even admins or this server, and each member still gets exactly one vote.
           </p>
+        )}
+        {form.anonymous && form.weighting === 'power' && (
+          <>
+            <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+              Each ballot carries the voter’s power encrypted, with a zero-knowledge proof that it’s their real snapshotted power and a real option. Nobody sees who voted, what they chose or how much weight they carry; three trustees decrypt only the final totals. Encrypted ballots use NØNOS’s own circuit, which is in beta until it has been audited.
+            </p>
+            <TrusteePicker value={form.trustees} onChange={(trustees) => set({ trustees })} />
+          </>
         )}
         {form.weighting === 'power' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>

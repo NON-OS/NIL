@@ -1,4 +1,5 @@
 import type AnonymousVote from './AnonymousVote';
+import type EncryptedVote from './EncryptedVote';
 
 export default interface Proposal {
   id: string;
@@ -18,4 +19,6 @@ export default interface Proposal {
   myVote: { choice: number; weight: string } | null;
   // set for anonymous votes, whose ballots are Semaphore proofs instead of signatures
   anonymous: AnonymousVote | null;
+  // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three trustees
+  encrypted: EncryptedVote | null;
 }

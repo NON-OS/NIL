@@ -1,0 +1,27 @@
+{
+  "circuit": "circuits/ballot.circom",
+  "phase1": {
+    "file": "ppot_0080_16.ptau",
+    "sha256": "ed3622a7c79b0b49aadd134ebbc5b77df8c8c59bccebdfd0d9bf2c1a51561cf9"
+  },
+  "phase2": [
+    {
+      "contribution": 1,
+      "hash": "a576fddee3bc48eef258974c9decd485c8ee2e34c9268131fe82fdca4e76977adec094bfdb03509db7a74ee3a586f14597e9ed607ccdc4c57c4296db588c1688"
+    },
+    {
+      "contribution": 2,
+      "hash": "24a3c2d3a9e045c4af1c9f11e442b56b4e2db97da7945e9cdb8ea77d1c41d0d4bb7b90a3f14259016eff9a4ec8f26272a58db37504239fab837daef7b17abe2a"
+    }
+  ],
+  "beacon": {
+    "blockNumber": 26198456,
+    "blockHash": "0x22d06ab87e87ab81aa9e7adb05cdcc0ba6c855100dc7fcb206181d4ae3d9ce37",
+    "iterationsExp": 10
+  },
+  "artifacts": {
+    "wasm": "3f5a50a3b147b2543116f42b84452059809edb90742f7c6e8c3c8cc77b967b67",
+    "zkey": "945fca2b17f1252a892b2c735b18bf103ffdbbed8718688a03b6c208e38f92d4"
+  },
+  "at": "2026-10-15T14:17:45.891Z"
+}

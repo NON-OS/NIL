@@ -7,7 +7,9 @@ import tally from './tally.js';
 export default async function closeProposal(id) {
   const proposal = sql.get('SELECT * FROM proposals WHERE id = ? AND closed_at IS NULL', id);
   if (!proposal) return;
-  const result = tally({ ...proposal, result: null });
-  sql.run('UPDATE proposals SET closed_at = ?, result = ? WHERE id = ? AND closed_at IS NULL', Date.now(), JSON.stringify(result), id);
+  // an encrypted vote closes without a result; it arrives when two trustees decrypt the totals
+  const encrypted = proposal.anonymous && proposal.weighting === 'power';
+  const result = encrypted ? null : JSON.stringify(tally({ ...proposal, result: null }));
+  sql.run('UPDATE proposals SET closed_at = ?, result = ? WHERE id = ? AND closed_at IS NULL', Date.now(), result, id);
   hub.broadcast({ type: 'proposals' });
 }
