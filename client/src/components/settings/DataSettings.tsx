@@ -42,7 +42,7 @@ export default function DataSettings() {
         <div className="settings-card">
           <ul className="privacy-list">
             <li><ShieldCheck /> Everything lives on your own server. No analytics, trackers or third-party scripts, and no fonts or code loaded from other sites.</li>
-            <li><ShieldCheck /> People sign in with an Ethereum wallet. NONOS never asks for an email, a phone number or a password.</li>
+            <li><ShieldCheck /> People sign in with an Ethereum wallet. NØNOS never asks for an email, a phone number or a password.</li>
             <li><ShieldCheck /> Sessions and invite links are stored only as hashes, so a copied database can’t be used to sign in.</li>
             <li><ShieldCheck /> Only admins see wallet addresses. Teammates see the name each person picked.</li>
             <li><ShieldCheck /> Proofs of work hide task titles unless the contributor reveals them, and are checked without uploading anything.</li>
@@ -56,7 +56,7 @@ export default function DataSettings() {
         <h2>Free software</h2>
         <div className="settings-card">
           <p style={{ color: 'var(--ink-2)' }}>
-            NONOS is free and open source under the GNU Affero General Public License v3. You can run, study, change and share it. If you offer a modified version to others over a network, you must share your changes too.
+            NØNOS is free and open source under the GNU Affero General Public License v3. You can run, study, change and share it. If you offer a modified version to others over a network, you must share your changes too.
           </p>
           {sourceUrl && (
             <a className="btn" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ justifySelf: 'start' }}>

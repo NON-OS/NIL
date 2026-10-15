@@ -44,7 +44,7 @@
   display: block;
   height: 100%;
   border-radius: 4px;
-  background: var(--accent);
+  background: var(--accent-line);
   transition: width 0.4s ease;
 }
 

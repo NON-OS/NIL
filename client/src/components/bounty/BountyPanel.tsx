@@ -37,7 +37,7 @@ export default function BountyPanel({ task }: { task: Task }) {
     body = (
       <>
         <p>
-          Your wallet sends {amount} straight to {assignee.name}. NONOS never holds funds; it checks the transfer on-chain and signs a receipt.
+          Your wallet sends {amount} straight to {assignee.name}. NØNOS never holds funds; it checks the transfer on-chain and signs a receipt.
           {task.status !== 'done' && ' Most teams pay once the task is done.'}
         </p>
         <div className="bounty-actions">

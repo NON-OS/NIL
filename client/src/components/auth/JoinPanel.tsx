@@ -21,7 +21,7 @@ const LEAD = {
 };
 
 export default function JoinPanel({ mode, inviteToken, workspaceName, requirement, onRestore, onBack }: Props) {
-  const [form, setForm] = useState({ workspaceName: 'NONOS', name: '' });
+  const [form, setForm] = useState({ workspaceName: 'NØNOS', name: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -52,7 +52,7 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
       <label className="field">
         <span>Your name</span>
         <input className="input" required maxLength={80} autoComplete="nickname" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-        <small>A nickname is fine. NONOS never asks for your email or real identity.</small>
+        <small>A nickname is fine. NØNOS never asks for your email or real identity.</small>
       </label>
       {requirement && <p className="method-hint">{requirement}</p>}
       <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim()}>

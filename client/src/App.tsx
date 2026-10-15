@@ -8,7 +8,7 @@ import ShortcutsHelp from './components/overlays/ShortcutsHelp';
 import ExtractModal from './components/overlays/ExtractModal';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
-import Wordmark from './components/ui/Wordmark';
+import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import AuthView from './views/AuthView';
 import MyWorkView from './views/MyWorkView';
@@ -81,7 +81,7 @@ export default function App() {
   if (phase === 'loading') {
     return (
       <div className="loading-screen">
-        <Wordmark size={26} />
+        <BrandArt kind="mark" height={40} />
         <Spinner size={18} />
       </div>
     );

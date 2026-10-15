@@ -51,7 +51,7 @@
 
 .filter-btn.active {
   border-style: solid;
-  border-color: color-mix(in srgb, var(--accent) 45%, var(--line-strong));
+  border-color: color-mix(in srgb, var(--accent-line) 45%, var(--line-strong));
   background: var(--accent-soft);
   color: var(--accent-text);
 }

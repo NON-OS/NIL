@@ -30,7 +30,7 @@ export default function CapsuleCard() {
       <div>
         <strong>Encrypted capsule</strong>
         <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 4 }}>
-          One file with everything: tasks, people, comments, files and the workspace’s proof key, locked with your passphrase (AES-256-GCM). Restore it on any fresh NONOS server to move or recover the workspace. Without the passphrase, nobody can open it, including you.
+          One file with everything: tasks, people, comments, files and the workspace’s proof key, locked with your passphrase (AES-256-GCM). Restore it on any fresh NØNOS server to move or recover the workspace. Without the passphrase, nobody can open it, including you.
         </p>
       </div>
       <div className="settings-row">

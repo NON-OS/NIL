@@ -70,7 +70,7 @@
 
 .datepicker-grid button.today {
   color: var(--accent-text);
-  font-weight: 700;
+  font-weight: 600;
 }
 
 .datepicker-grid button.selected {

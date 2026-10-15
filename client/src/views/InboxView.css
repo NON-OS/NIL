@@ -61,7 +61,7 @@
   height: 8px;
   margin-top: 10px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--accent-line);
 }
 
 .inbox-item.read .unread-dot {

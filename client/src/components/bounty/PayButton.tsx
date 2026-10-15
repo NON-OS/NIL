@@ -8,7 +8,7 @@ import type Task from '../../types/Task';
 
 const OUTCOME = {
   confirmed: 'Paid and confirmed on-chain. A signed receipt was added to their proof of work.',
-  pending: 'Sent. NONOS will confirm it on-chain in a minute or two.',
+  pending: 'Sent. NØNOS will confirm it on-chain in a minute or two.',
 };
 
 export default function PayButton({ task, name, primary = true, onDone }: { task: Task; name: string; primary?: boolean; onDone?: () => void }) {

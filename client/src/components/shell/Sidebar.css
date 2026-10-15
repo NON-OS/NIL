@@ -10,16 +10,32 @@
   padding: max(12px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   border-right: 1px solid var(--line);
   background: var(--sidebar);
+  color: var(--ink);
 }
 
 .sidebar-brand {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 32px;
+  gap: 10px;
+  height: 46px;
   padding: 0 8px;
-  margin-bottom: 10px;
+  margin-bottom: 12px;
   color: var(--ink);
+}
+
+.sidebar-brand .ws-mark {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  font-weight: 600;
+  font-size: var(--text-lg);
+}
+
+.sidebar-brand .ws-mark span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-brand .ws-name {
@@ -110,11 +126,45 @@
   text-decoration: none;
 }
 
+.nav a,
+.nav-project {
+  position: relative;
+}
+
+/* the current page: a cyan fill and a thin rule, the brand's graphic language, instead of a raised card */
 .nav a[aria-current='page'],
 .nav-project[aria-current='page'] {
-  background: var(--surface);
+  background: var(--accent-soft);
   color: var(--ink);
-  box-shadow: var(--shadow-1);
+}
+
+.nav a[aria-current='page']::before,
+.nav-project[aria-current='page']::before {
+  position: absolute;
+  top: 7px;
+  bottom: 7px;
+  left: -10px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--accent-line);
+  content: '';
+  transform-origin: top;
+  animation: draw-in 0.24s var(--ease);
+}
+
+.nav .nav-key {
+  margin-left: auto;
+  color: var(--faint);
+  font-family: var(--font-mono);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+
+.nav a:hover .nav-key,
+.nav a:focus-visible .nav-key {
+  opacity: 1;
 }
 
 .nav a svg {
@@ -137,7 +187,7 @@
   background: var(--accent);
   color: var(--accent-ink);
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 18px;
   text-align: center;
 }
@@ -210,11 +260,41 @@
   background: var(--surface-3);
 }
 
-.me-btn span {
+.me-btn {
+  height: 44px;
+}
+
+.me-who {
+  display: grid;
+  min-width: 0;
+  line-height: 1.2;
+}
+
+.me-who b,
+.me-who small {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.me-who b {
   font-weight: 550;
+}
+
+.me-who small {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  color: var(--muted);
+  font-family: var(--font-mono);
+  font-size: 10.5px;
+}
+
+.me-who small i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--accent-line);
 }
 
 .sidebar-scrim {
@@ -224,8 +304,7 @@
 @media (max-width: 900px) {
   .sidebar {
     transform: translateX(-102%);
-    transition: transform 0.2s ease;
-    box-shadow: var(--shadow-3);
+    transition: transform 0.2s var(--ease);
   }
 
   .sidebar.open {

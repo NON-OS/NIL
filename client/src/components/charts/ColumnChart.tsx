@@ -23,7 +23,7 @@ function niceMax(v: number) {
 }
 
 // Single-series columns: one baseline, capped width, rounded tops, labels only on the last and the peak.
-export default function ColumnChart({ data, height = 200, color = 'var(--accent)', unit }: Props) {
+export default function ColumnChart({ data, height = 200, color = 'var(--accent-line)', unit }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   const host = useRef<HTMLDivElement>(null);
   const [W, setW] = useState(640);

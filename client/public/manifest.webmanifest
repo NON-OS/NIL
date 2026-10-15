@@ -1,20 +1,42 @@
 {
-  "name": "NONOS",
-  "short_name": "NONOS",
-  "description": "Private, self-hosted work for teams. Tasks, bounties, votes and proof of work, signed in with your wallet.",
+  "name": "NØNOS",
+  "short_name": "NØNOS",
+  "description": "Private, self-hosted work for teams: tasks, encrypted docs, NOX bounties, signed votes and proof of work. Sign in with your wallet.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
-  "background_color": "#0c0f1d",
-  "theme_color": "#3346d3",
+  "background_color": "#FFFFFF",
+  "theme_color": "#FFFFFF",
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png" },
-    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    },
+    {
+      "src": "/icons/maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ],
   "shortcuts": [
-    { "name": "My work", "url": "/" },
-    { "name": "Bounties", "url": "/bounties" },
-    { "name": "Time", "url": "/time" }
+    {
+      "name": "My work",
+      "url": "/"
+    },
+    {
+      "name": "Bounties",
+      "url": "/bounties"
+    },
+    {
+      "name": "Time",
+      "url": "/time"
+    }
   ]
 }

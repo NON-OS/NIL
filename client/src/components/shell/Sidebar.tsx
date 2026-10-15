@@ -1,7 +1,7 @@
 import './Sidebar.css';
 import { useMemo } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Search, Target, Timer, Vote } from 'lucide-react';
-import Wordmark from '../ui/Wordmark';
+import { Plus, Search } from 'lucide-react';
+import BrandArt from '../brand/BrandArt';
 import Avatar from '../ui/Avatar';
 import UserMenu from './UserMenu';
 import RunningTimer from '../time/RunningTimer';
@@ -11,21 +11,8 @@ import ui from '../../actions/ui';
 import router from '../../lib/router';
 import meta from '../../lib/meta';
 import cx from '../../lib/cx';
+import NAV from '../../lib/navItems';
 
-const NAV = [
-  { to: '/', label: 'My work', icon: Home, key: 'h' },
-  { to: '/inbox', label: 'Inbox', icon: Inbox, key: 'i' },
-  { to: '/board', label: 'Board', icon: Kanban, key: 'b' },
-  { to: '/list', label: 'All tasks', icon: List, key: 'l' },
-  { to: '/calendar', label: 'Calendar', icon: CalendarDays, key: 'c' },
-  { to: '/docs', label: 'Docs', icon: FileText, key: 'd' },
-  { to: '/goals', label: 'Goals', icon: Target, key: 'g' },
-  { to: '/insights', label: 'Insights', icon: BarChart3, key: 's' },
-  { to: '/time', label: 'Time', icon: Timer, key: 'm' },
-  { to: '/bounties', label: 'Bounties', icon: Coins, key: 'n' },
-  { to: '/votes', label: 'Votes', icon: Vote, key: 'v' },
-  { to: '/proofs', label: 'Proof of work', icon: BadgeCheck, key: 'p' },
-];
 
 export default function Sidebar({ onNewProject }: { onNewProject: () => void }) {
   const { path } = useRoute();
@@ -57,8 +44,14 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
       <div className={cx('sidebar-scrim', open && 'open')} onClick={() => ui.sidebar(false)} />
       <nav className={cx('sidebar', open && 'open')} aria-label="Main">
         <div className="sidebar-brand">
-          <Wordmark size={17} />
-          {workspace.name.toUpperCase() !== 'NONOS' && <span className="ws-name">{workspace.name}</span>}
+          {/^N[OØ]NOS$/i.test(workspace.name) ? (
+            <BrandArt kind="logo" height={42} />
+          ) : (
+            <span className="ws-mark">
+              <BrandArt kind="mark" height={26} label="" />
+              <span>{workspace.name}</span>
+            </span>
+          )}
           <span className={cx('conn-dot', !connected && 'off')} title={connected ? 'Live: changes sync instantly' : 'Reconnecting…'} />
         </div>
 
@@ -73,11 +66,11 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
 
         <div className="sidebar-scroll">
           <div className="nav">
-            {NAV.map(({ to, label, icon: Icon }) => (
-              <a key={to} href={to} onClick={link(to)} aria-current={path === to ? 'page' : undefined}>
+            {NAV.map(({ to, label, icon: Icon, key }) => (
+              <a key={to} href={to} onClick={link(to)} aria-current={path === to || (to !== '/' && path.startsWith(`${to}/`)) ? 'page' : undefined}>
                 <Icon />
                 {label}
-                {to === '/inbox' && unread > 0 && <span className="badge num">{unread > 99 ? '99+' : unread}</span>}
+                {to === '/inbox' && unread > 0 ? <span className="badge num">{unread > 99 ? '99+' : unread}</span> : <span className="nav-key" aria-hidden="true">G {key.toUpperCase()}</span>}
               </a>
             ))}
           </div>

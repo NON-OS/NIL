@@ -18,7 +18,7 @@ const ethereum = {
 
   async account(): Promise<{ address: string; chainId: number }> {
     const p = provider();
-    if (!p) throw new Error('No wallet found. Install a wallet extension like MetaMask or Rabby, or open NONOS in your wallet’s browser.');
+    if (!p) throw new Error('No wallet found. Install a wallet extension like MetaMask or Rabby, or open NØNOS in your wallet’s browser.');
     try {
       const [address] = await p.request({ method: 'eth_requestAccounts' });
       const chainId = parseInt(await p.request({ method: 'eth_chainId' }), 16) || 1;

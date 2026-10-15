@@ -66,7 +66,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
       {totals ? (
         <div className="proposal-results">
           {proposal.options.map((option, i) => (
-            <Meter key={option} label={<>{option}{proposal.myVote?.choice === i && <span className="muted"> · your vote</span>}</>} value={percent(totals[i], sum)} total={100} color={i === 0 ? 'var(--accent)' : 'var(--chart-2)'} caption={`${weight(String(totals[i]))} · ${percent(totals[i], sum)}%`} />
+            <Meter key={option} label={<>{option}{proposal.myVote?.choice === i && <span className="muted"> · your vote</span>}</>} value={percent(totals[i], sum)} total={100} color={i === 0 ? 'var(--accent-line)' : 'var(--chart-2)'} caption={`${weight(String(totals[i]))} · ${percent(totals[i], sum)}%`} />
           ))}
         </div>
       ) : (

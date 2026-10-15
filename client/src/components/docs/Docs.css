@@ -235,7 +235,7 @@
 }
 
 .share-person input {
-  accent-color: var(--accent);
+  accent-color: var(--accent-line);
 }
 
 .revision {

@@ -25,7 +25,7 @@ export default function verifyProof(text: string): ProofCheck {
     throw new Error('That file isn’t valid JSON.');
   }
   if (bundle?.type !== 'nonos.proof' || !Array.isArray(bundle.receipts) || typeof bundle.workspace?.key !== 'string') {
-    throw new Error('That isn’t a NONOS proof file.');
+    throw new Error('That isn’t a NØNOS proof file.');
   }
 
   const key = bundle.workspace.key as string;

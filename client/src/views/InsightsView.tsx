@@ -117,7 +117,7 @@ export default function InsightsView() {
               {Object.values(goals).length ? (
                 Object.values(goals).map((g) => {
                   const p = goalProgress(g, tasks);
-                  return <Meter key={g.id} label={g.title} value={p.pct} total={100} color="var(--accent)" caption={`${p.pct}% · ${meta.goalStatus[g.status]}`} />;
+                  return <Meter key={g.id} label={g.title} value={p.pct} total={100} color="var(--accent-line)" caption={`${p.pct}% · ${meta.goalStatus[g.status]}`} />;
                 })
               ) : (
                 <p className="muted">Set goals to see progress toward them here.</p>

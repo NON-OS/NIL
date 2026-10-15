@@ -36,7 +36,7 @@
 }
 
 .quickadd-tokens .chip {
-  border-color: color-mix(in srgb, var(--accent) 35%, var(--line));
+  border-color: color-mix(in srgb, var(--accent-line) 35%, var(--line));
   background: var(--accent-soft);
   color: var(--accent-text);
 }

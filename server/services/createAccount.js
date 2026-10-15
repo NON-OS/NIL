@@ -5,8 +5,10 @@ import HttpError from '../lib/HttpError.js';
 
 const randomColor = () => domain.colors[Math.floor(Math.random() * domain.colors.length)];
 
+// "NØNOS" becomes NON: letters like Ø fold to their closest plain letter before trimming.
 function workspacePrefix(name) {
-  return (name.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'NON').slice(0, 3);
+  const plain = name.toUpperCase().replace(/Ø/g, 'O').normalize('NFD').replace(/[^A-Z0-9]/g, '');
+  return (plain || 'NON').slice(0, 3);
 }
 
 // Creates a person with their wallet: the first owner during setup, someone holding an

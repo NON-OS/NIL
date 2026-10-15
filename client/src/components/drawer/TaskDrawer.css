@@ -90,7 +90,7 @@
 
 .drawer-title:focus {
   outline: none;
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   background: var(--surface);
 }
 
@@ -238,7 +238,7 @@
 }
 
 .dropzone.over {
-  outline: 2px dashed var(--accent);
+  outline: 2px dashed var(--accent-line);
   outline-offset: 4px;
   border-radius: var(--r-md);
 }
@@ -390,7 +390,7 @@
 }
 
 .composer-box:focus-within {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   box-shadow: 0 0 0 3px var(--accent-soft);
 }
 

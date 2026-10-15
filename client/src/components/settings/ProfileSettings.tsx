@@ -71,7 +71,7 @@ export default function ProfileSettings() {
             <span>
               <strong>Desktop notifications</strong>
               <br />
-              <span className="muted">Show a system notification when you’re mentioned or assigned while NONOS is in the background.</span>
+              <span className="muted">Show a system notification when you’re mentioned or assigned while NØNOS is in the background.</span>
             </span>
             <button type="button" className="toggle" role="switch" aria-checked={desktop} onClick={toggleDesktop} aria-label="Desktop notifications" />
           </label>

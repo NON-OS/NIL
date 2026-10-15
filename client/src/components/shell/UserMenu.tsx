@@ -1,9 +1,8 @@
 import { useRef, useState } from 'react';
-import { Code2, Keyboard, LogOut, Monitor, Moon, Settings, Sun } from 'lucide-react';
+import { Code2, Keyboard, LogOut, Settings } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Popover from '../ui/Popover';
 import useStore from '../../state/useStore';
-import useTheme from '../../hooks/useTheme';
 import session from '../../actions/session';
 import ui from '../../actions/ui';
 import router from '../../lib/router';
@@ -12,7 +11,6 @@ import shortAddress from '../../lib/shortAddress';
 export default function UserMenu() {
   const me = useStore((s) => s.me);
   const sourceUrl = useStore((s) => s.sourceUrl);
-  const [theme, setTheme] = useTheme();
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const go = (fn: () => void) => () => {
@@ -23,8 +21,15 @@ export default function UserMenu() {
   return (
     <>
       <button ref={anchor} type="button" className="me-btn" onClick={() => setOpen((o) => !o)} aria-expanded={open} aria-label="Account menu">
-        <Avatar user={me} size={24} />
-        <span>{me?.name}</span>
+        <Avatar user={me} size={26} />
+        <span className="me-who">
+          <b>{me?.name}</b>
+          {me?.address && (
+            <small title={me.address}>
+              <i aria-hidden="true" /> {shortAddress(me.address)}
+            </small>
+          )}
+        </span>
       </button>
       <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} width={230}>
         <div className="menu-list">
@@ -44,14 +49,6 @@ export default function UserMenu() {
               <Code2 size={14} /> Source code (AGPL)
             </a>
           )}
-          <div className="menu-divider" />
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 4, padding: 4 }} role="radiogroup" aria-label="Theme">
-            {([['light', Sun, 'Light'], ['dark', Moon, 'Dark'], ['system', Monitor, 'Auto']] as const).map(([value, Icon, label]) => (
-              <button key={value} type="button" role="radio" aria-checked={theme === value} className={`btn btn-sm${theme === value ? '' : ' btn-ghost'}`} onClick={() => setTheme(value)}>
-                <Icon /> {label}
-              </button>
-            ))}
-          </div>
           <div className="menu-divider" />
           <button type="button" className="menu-item" onClick={go(session.logout)}>
             <LogOut size={14} /> Sign out

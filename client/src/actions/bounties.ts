@@ -29,7 +29,7 @@ const bounties = {
     const [{ address }, mine, overview] = await Promise.all([ethereum.account(), identity.overview(), bounties.overview()]);
     const allowed = new Set([...mine.credentials.map((c) => c.address.toLowerCase()), ...overview.treasury]);
     if (!allowed.has(address.toLowerCase())) {
-      throw new Error('Your wallet is on an account that isn’t linked to NONOS. Switch accounts, or link this wallet under Settings → Security first.');
+      throw new Error('Your wallet is on an account that isn’t linked to NØNOS. Switch accounts, or link this wallet under Settings → Security first.');
     }
     await ethereum.useChain(nox.chainId);
     const txHash = await ethereum.send({ from: address, to: nox.token, data: encodeTransfer(payee.address, BigInt(task.bounty)) });

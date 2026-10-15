@@ -114,7 +114,7 @@
 }
 
 .timesheet-day.today {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
 }
 
 .timesheet-day .bar {
@@ -127,7 +127,7 @@
 .timesheet-day .bar i {
   width: 14px;
   border-radius: 4px 4px 0 0;
-  background: var(--accent);
+  background: var(--accent-line);
 }
 
 .timesheet-day small {

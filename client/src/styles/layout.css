@@ -27,6 +27,7 @@
   max-width: 1080px;
   margin: 0 auto;
   padding: 24px max(24px, env(safe-area-inset-right)) 80px max(24px, env(safe-area-inset-left));
+  animation: settle 0.28s var(--ease) both;
 }
 
 .page-narrow {
@@ -48,6 +49,9 @@
 }
 
 .panel-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   font-size: var(--text-md);
 }
 

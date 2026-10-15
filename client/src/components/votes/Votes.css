@@ -57,7 +57,7 @@
 }
 
 .proposal-options .btn[aria-pressed='true'] {
-  border-color: var(--accent);
+  border-color: var(--accent-line);
   background: var(--accent-soft);
   color: var(--accent-text);
 }
