@@ -1,6 +1,7 @@
 const CSP = [
   "default-src 'self'",
-  "script-src 'self'",
+  // wasm-unsafe-eval lets the browser compile WebAssembly (the zero-knowledge prover) and nothing else: no eval of JavaScript
+  "script-src 'self' 'wasm-unsafe-eval'",
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self'",

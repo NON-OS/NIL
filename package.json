@@ -2,7 +2,7 @@
   "name": "nonos",
   "version": "1.0.0",
   "private": true,
-  "description": "NONOS — the team task system. Projects, boards, goals, insights, real-time collaboration.",
+  "description": "NONOS \u2014 the team task system. Projects, boards, goals, insights, real-time collaboration.",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
@@ -14,12 +14,15 @@
     "build": "vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js"
+    "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js",
+    "zk:fetch": "node scripts/zk-fetch.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "0.134.0",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
+    "@semaphore-protocol/group": "4.14.3",
+    "@semaphore-protocol/proof": "4.14.3",
     "express": "4.22.3",
     "ws": "8.22.0"
   },
@@ -29,6 +32,7 @@
     "@dnd-kit/utilities": "3.2.2",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.1.0",
+    "@semaphore-protocol/identity": "4.14.3",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",
     "@vitejs/plugin-react": "4.3.4",
@@ -40,5 +44,10 @@
     "typescript": "5.6.3",
     "vite": "5.4.21"
   },
-  "license": "AGPL-3.0-or-later"
+  "license": "AGPL-3.0-or-later",
+  "overrides": {
+    "ws": "8.22.0",
+    "snarkjs": "0.7.5",
+    "underscore": "1.13.8"
+  }
 }

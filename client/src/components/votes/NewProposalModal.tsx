@@ -10,7 +10,7 @@ const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d ===
 
 export default function NewProposalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const nox = useStore((s) => s.nox);
-  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'nox', sealed: false, days: 7 });
+  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'nox', sealed: false, anonymous: false, days: 7 });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
@@ -64,7 +64,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             title="Who counts how much"
             options={[{ value: 'equal', label: 'One person, one vote' }, ...(nox ? [{ value: 'nox', label: `Weighted by ${nox.symbol} held` }] : [])]}
             value={form.weighting}
-            onChange={(v) => set({ weighting: v as 'equal' | 'nox' })}
+            onChange={(v) => set({ weighting: v as 'equal' | 'nox', anonymous: v === 'nox' ? false : form.anonymous })}
             className="btn"
             width={240}
           >
@@ -77,7 +77,16 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             <button type="button" className="toggle" role="switch" aria-checked={form.sealed} onClick={() => set({ sealed: !form.sealed })} aria-label="Seal results until it closes" />
             Seal results until it closes
           </label>
+          <label className="filter-toggle">
+            <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous, weighting: 'equal' })} aria-label="Anonymous ballots" />
+            Anonymous ballots
+          </label>
         </div>
+        {form.anonymous && (
+          <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+            Each ballot is a zero-knowledge proof (Semaphore) that some member voted, without saying who. Nobody can see who chose what, not even admins or this server, and each member still gets exactly one vote. One person, one vote only: a weight would need to know who voted.
+          </p>
+        )}
         {form.weighting === 'nox' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
             Each vote counts the {nox?.symbol ?? 'NOX'} in the voter’s linked wallets: the smaller of their balance when they vote and when the vote closes, so tokens passed around mid-vote count only once.

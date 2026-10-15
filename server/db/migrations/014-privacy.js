@@ -11,11 +11,12 @@ const privacy = `
 
   ALTER TABLE proposals ADD COLUMN anonymous INTEGER NOT NULL DEFAULT 0;
 
-  -- the voter group of an anonymous vote, in tree order; a removed voter's leaf becomes '0'
+  -- the voter group of an anonymous vote, in tree order; a removed voter's leaf becomes empty
   CREATE TABLE proposal_voters (
     proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,
     position INTEGER NOT NULL,
     commitment TEXT NOT NULL,
+    removed INTEGER NOT NULL DEFAULT 0,
     PRIMARY KEY (proposal_id, position)
   );
 

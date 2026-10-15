@@ -14,4 +14,6 @@ export default interface User {
   joinedVia: 'setup' | 'invite' | 'holder' | null;
   // where private payouts go (admins and yourself only); null when private payouts are off
   stealthMeta: string | null;
+  // your anonymous-voting key (Semaphore commitment); admins and yourself only
+  semaphoreCommitment: string | null;
 }

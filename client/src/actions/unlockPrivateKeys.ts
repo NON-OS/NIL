@@ -16,10 +16,13 @@ async function sign() {
 }
 
 // Derives your private keys from a wallet signature. Setting them up for the first time signs
-// twice, because a wallet that signs non-deterministically would lose every payout sent to it.
-export default async function unlockPrivateKeys({ firstTime = false } = {}): Promise<PrivateKeys> {
+// twice, because a wallet that signs non-deterministically would lose every payout sent to it
+// and every vote cast with it.
+export default async function unlockPrivateKeys(): Promise<PrivateKeys> {
   const held = privateKeys.get();
   if (held) return held;
+  const me = store.get().me;
+  const firstTime = !me?.stealthMeta && !me?.semaphoreCommitment;
   const keys = privateKeysFromSignature(await sign());
   if (firstTime) {
     const again = privateKeysFromSignature(await sign());
@@ -27,8 +30,8 @@ export default async function unlockPrivateKeys({ firstTime = false } = {}): Pro
       throw new Error('Your wallet signs the same message differently each time, so it can’t hold private keys. Wallets like MetaMask, Rabby, Ledger and Trezor work.');
     }
   }
-  const registered = store.get().me?.stealthMeta;
-  if (!firstTime && registered && registered !== fingerprint(keys)) {
+  const registered = me?.stealthMeta;
+  if (registered && registered !== fingerprint(keys)) {
     throw new Error('This wallet unlocks different keys than the ones your private payouts use. Switch to the wallet you turned them on with.');
   }
   privateKeys.set(keys);

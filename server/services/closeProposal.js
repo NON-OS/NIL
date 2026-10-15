@@ -16,7 +16,9 @@ export default async function closeProposal(id) {
     }
   }
   sql.tx(() => {
-    const votes = sql.all('SELECT choice, COALESCE(final_weight, weight) AS weight FROM votes WHERE proposal_id = ?', id);
+    const votes = proposal.anonymous
+      ? sql.all('SELECT choice, \'1\' AS weight FROM anonymous_ballots WHERE proposal_id = ?', id)
+      : sql.all('SELECT choice, COALESCE(final_weight, weight) AS weight FROM votes WHERE proposal_id = ?', id);
     const result = tally({ ...proposal, result: null });
     result.totals = result.totals.map(() => 0n);
     for (const v of votes) result.totals[v.choice] += BigInt(v.weight);

@@ -17,6 +17,8 @@ import closeProposal from '../services/closeProposal.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import toProposal from '../mappers/toProposal.js';
 import config from '../config.js';
+import voterGroups from '../votes/voterGroups.js';
+import voteScope from '../votes/voteScope.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
@@ -43,12 +45,15 @@ router.post(
     const weighting = check.oneOf(b.weighting ?? 'equal', ['equal', 'nox'], 'Weighting');
     if (weighting === 'nox' && !config.nox.enabled) throw HttpError.badRequest(`${config.nox.symbol}-weighted votes need on-chain features, which are off on this server.`);
     const days = check.number(b.days ?? 7, 'Duration', { min: 1, max: 60, integer: true });
+    const anonymous = Boolean(b.anonymous);
+    if (anonymous && weighting !== 'equal') throw HttpError.badRequest('Anonymous votes count one person, one vote: a weight would need to know who voted.');
     const id = newId();
     const now = Date.now();
     sql.run(
-      'INSERT INTO proposals (id, title, body, options, weighting, sealed, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, req.user.id, now, now + days * DAY,
+      'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
     );
+    if (anonymous) voterGroups.start(id);
     const everyone = sql.all('SELECT id FROM users WHERE deactivated = 0').map((u) => u.id);
     notify(everyone, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
     hub.broadcast({ type: 'proposals' });
@@ -61,6 +66,7 @@ router.post(
   '/proposals/:id/ballot',
   route((req) => {
     const proposal = openProposal(req.params.id);
+    if (proposal.anonymous) throw HttpError.badRequest('This vote is anonymous: ballots are proofs, not signatures.');
     const options = parseJSON(proposal.options, []);
     const choice = check.number(req.body?.choice, 'Choice', { min: 0, max: options.length - 1, integer: true });
     if (choice === null) throw HttpError.badRequest('Pick an option.');
@@ -117,6 +123,19 @@ router.get(
   route((req) => {
     const row = sql.get('SELECT * FROM proposals WHERE id = ?', req.params.id);
     if (!row) throw HttpError.notFound('That vote');
+    // anyone can recount an anonymous vote: check each proof against an accepted root, that
+    // every nullifier appears once, and the scope. Names never appear because they're never known.
+    if (row.anonymous) {
+      return {
+        type: 'nonos.anonymous-vote-audit',
+        v: 1,
+        proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
+        semaphore: { version: '4', depth: config.semaphore.depth, scope: voteScope(row.id) },
+        group: voterGroups.members(row.id),
+        roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
+        ballots: sql.all('SELECT choice, proof, created_at FROM anonymous_ballots WHERE proposal_id = ? ORDER BY created_at', row.id).map((b) => ({ choice: b.choice, proof: JSON.parse(b.proof), castAt: new Date(b.created_at).toISOString() })),
+      };
+    }
     return {
       type: 'nonos.vote-audit',
       v: 1,

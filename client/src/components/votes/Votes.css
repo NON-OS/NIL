@@ -83,3 +83,16 @@
 .proposal.closed {
   background: var(--surface-2);
 }
+
+.proposal-anon {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.proposal-anon svg {
+  color: var(--accent-line);
+}

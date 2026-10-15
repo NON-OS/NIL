@@ -1,6 +1,6 @@
 import './Votes.css';
 import { useState } from 'react';
-import { Clock, Coins, Download, EyeOff, Lock, Users } from 'lucide-react';
+import { Clock, Coins, Download, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
 import Meter from '../charts/Meter';
 import ConfirmButton from '../ui/ConfirmButton';
 import Spinner from '../ui/Spinner';
@@ -13,6 +13,7 @@ import tokenAmount from '../../lib/tokenAmount';
 import cx from '../../lib/cx';
 import type Proposal from '../../types/Proposal';
 import isAdminUser from '../../lib/isAdmin';
+import AnonymousBallot from './AnonymousBallot';
 
 const percent = (part: bigint, whole: bigint) => (whole ? Number((part * 1000n) / whole) / 10 : 0);
 
@@ -49,12 +50,15 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
           </span>
           <span>{proposal.weighting === 'nox' ? <><Coins /> weighted by NOX</> : <><Users /> one person, one vote</>}</span>
           {proposal.sealed && <span><EyeOff /> sealed until it closes</span>}
+          {proposal.anonymous && <span><ShieldCheck /> anonymous</span>}
           {author && <span>by {author.name}</span>}
         </div>
       </div>
       {proposal.body && <p className="proposal-body">{proposal.body}</p>}
 
-      {open && (
+      {proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
+
+      {open && !proposal.anonymous && (
         <div className="proposal-options" role="group" aria-label="Your vote">
           {proposal.options.map((option, i) => (
             <button key={option} type="button" className="btn" aria-pressed={proposal.myVote?.choice === i} disabled={busy !== null} onClick={() => run(i, () => votes.cast(proposal.id, i), 'Vote signed and counted.')}>
@@ -84,7 +88,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
         <span className="grow" />
         {isAdmin && (
           <>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title="Every signed ballot, so anyone can recount">
+            <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title={proposal.anonymous ? 'Every ballot’s proof, so anyone can recount without learning who voted' : 'Every signed ballot, so anyone can recount'}>
               <Download /> Audit file
             </button>
             {open && (

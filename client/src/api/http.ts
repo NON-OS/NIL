@@ -2,7 +2,7 @@ import ApiError from './ApiError';
 
 let onSessionEnded: (() => void) | null = null;
 
-async function request<T>(method: string, url: string, body?: unknown, extraHeaders: Record<string, string> = {}): Promise<T> {
+async function request<T>(method: string, url: string, body?: unknown, extraHeaders: Record<string, string> = {}, credentials: RequestCredentials = 'same-origin'): Promise<T> {
   // X-NONOS is the server's CSRF check; same-origin fetches are the only ones that can send it.
   const headers: Record<string, string> = { 'X-NONOS': '1', ...extraHeaders };
   let payload: BodyInit | undefined;
@@ -14,7 +14,7 @@ async function request<T>(method: string, url: string, body?: unknown, extraHead
 
   let res: Response;
   try {
-    res = await fetch(`/api${url}`, { method, headers, body: payload, credentials: 'same-origin', cache: 'no-store' });
+    res = await fetch(`/api${url}`, { method, headers, body: payload, credentials, cache: 'no-store' });
   } catch {
     throw new ApiError(0, 'You seem to be offline. Check your connection and try again.');
   }
@@ -37,6 +37,8 @@ const http = {
   put: <T>(url: string, body: unknown = {}) => request<T>('PUT', url, body),
   patch: <T>(url: string, body: unknown = {}) => request<T>('PATCH', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
+  // sent without the session cookie, so the server can't tell whose request it is
+  anonymous: <T>(url: string, body: unknown) => request<T>('POST', url, body, {}, 'omit'),
   send: <T>(url: string, body: Blob, headers: Record<string, string>) => request<T>('POST', url, body, { 'Content-Type': 'application/octet-stream', ...headers }),
   upload: <T>(url: string, file: File) =>
     request<T>('POST', url, file, { 'Content-Type': file.type || 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }),

@@ -10,6 +10,7 @@ import hub from '../realtime/hub.js';
 import publishUser from '../services/publishUser.js';
 import eraseUser from '../services/eraseUser.js';
 import toUser from '../mappers/toUser.js';
+import voterGroups from '../votes/voterGroups.js';
 import guestScope from '../services/guestScope.js';
 
 const router = express.Router();
@@ -31,6 +32,9 @@ router.patch(
       const role = check.oneOf(req.body.role, domain.roles, 'Role');
       if (role === 'owner' && req.user.role !== 'owner') throw HttpError.forbidden('Only an owner can make someone an owner.');
       sql.run('UPDATE users SET role = ? WHERE id = ?', role, row.id);
+      // guests don't vote: becoming one empties your seat in open anonymous votes, and back again
+      if (role === 'guest') voterGroups.leave(row.id);
+      else voterGroups.join(row.id);
       if (role !== 'guest') sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
       guestScope.forget(row.id);
       hub.setAdmin(row.id, role === 'owner' || role === 'admin');
@@ -49,6 +53,8 @@ router.patch(
     if ('deactivated' in req.body) {
       const off = Boolean(req.body.deactivated);
       sql.run('UPDATE users SET deactivated = ? WHERE id = ?', off ? 1 : 0, row.id);
+      if (off) voterGroups.leave(row.id);
+      else voterGroups.join(row.id);
       if (off) {
         sessions.revokeAll(row.id);
         hub.disconnect(row.id);

@@ -9,6 +9,7 @@ interface NewProposal {
   options: string[];
   weighting: 'equal' | 'nox';
   sealed: boolean;
+  anonymous: boolean;
   days: number;
 }
 

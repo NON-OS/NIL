@@ -1,3 +1,5 @@
+import type AnonymousVote from './AnonymousVote';
+
 export default interface Proposal {
   id: string;
   title: string;
@@ -13,4 +15,6 @@ export default interface Proposal {
   // null while a sealed vote is still open
   totals: string[] | null;
   myVote: { choice: number; weight: string } | null;
+  // set for anonymous votes, whose ballots are Semaphore proofs instead of signatures
+  anonymous: AnonymousVote | null;
 }

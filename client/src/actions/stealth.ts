@@ -33,7 +33,7 @@ async function keyFor(payout: StealthPayout) {
 
 const stealth = {
   async enable() {
-    const keys = await unlockPrivateKeys({ firstTime: !store.get().me?.stealthMeta });
+    const keys = await unlockPrivateKeys();
     saveMe((await http.put<{ user: User }>('/me/stealth', { metaAddress: metaAddress(keys.spendingKey, keys.viewingKey) })).user);
   },
 

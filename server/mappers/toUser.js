@@ -15,5 +15,6 @@ export default function toUser(row, viewer) {
     joinedVia: privileged ? row.joined_via : null,
     // where private payouts go; admins need it to pay, nobody else sees it
     stealthMeta: privileged ? row.stealth_meta ?? null : null,
+    semaphoreCommitment: privileged ? row.semaphore_commitment ?? null : null,
   };
 }

@@ -32,7 +32,7 @@ export default function VotesView() {
 
   return (
     <div className="main">
-      <ViewHeader title="Votes" icon={<Vote size={17} />} subtitle="Decide together. Every ballot is signed by a wallet." actions={start} />
+      <ViewHeader title="Votes" icon={<Vote size={17} />} subtitle="Decide together, with signed or anonymous ballots anyone can recount." actions={start} />
       <div className="page page-narrow">
         <PlanNotice what="New votes" />
         {!list ? (
@@ -45,7 +45,7 @@ export default function VotesView() {
           </div>
         ) : (
           <EmptyState icon={<Vote />} title="No votes yet" actions={start}>
-            Ask the team a question and let everyone answer with a signed ballot. Choose one person one vote, or weight it by NOX held. Who voted what stays private.
+            Ask the team a question. Signed ballots can be weighted by NOX held; anonymous ballots are zero-knowledge proofs, so nobody, not even this server, learns who voted what.
           </EmptyState>
         )}
       </div>
