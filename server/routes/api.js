@@ -23,6 +23,7 @@ import notifications from './notifications.js';
 import activity from './activity.js';
 import exportRoutes from './exports.js';
 import ai from './ai.js';
+import bounties from './bounties.js';
 
 const api = express.Router();
 
@@ -33,7 +34,7 @@ api.use(capsules);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties]) {
   api.use(router);
 }
 

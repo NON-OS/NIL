@@ -26,6 +26,9 @@ router.get(
     focus: sql.all('SELECT task_id AS taskId, day, position FROM focus WHERE user_id = ? ORDER BY position', req.user.id),
     unread: sql.get('SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL', req.user.id).n,
     ai: config.ai.enabled,
+    nox: config.nox.enabled
+      ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer }
+      : null,
     sourceUrl: config.sourceUrl,
   })),
 );

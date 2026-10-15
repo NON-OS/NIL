@@ -20,6 +20,9 @@ export default interface Task {
   labels: string[];
   checklist: ChecklistItem[];
   recurrence: Recurrence | null;
+  // in the token's smallest unit, as text
+  bounty: string | null;
+  bountyState: 'pending' | 'paid' | null;
   position: number;
   commentCount: number;
   attachmentCount: number;

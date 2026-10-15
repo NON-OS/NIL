@@ -9,6 +9,7 @@ import PriorityPicker from '../pickers/PriorityPicker';
 import AssigneePicker from '../pickers/AssigneePicker';
 import DueBadge from './DueBadge';
 import LabelChips from './LabelChips';
+import BountyChip from '../bounty/BountyChip';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import detail from '../../actions/detail';
@@ -67,6 +68,7 @@ function TaskRow({ task, selected, onSelect }: Props) {
       <span className="row-title">
         <span>{task.title}</span>
         <span className="row-labels">
+          <BountyChip task={task} />
           <LabelChips ids={task.labels} max={2} />
         </span>
         {task.commentCount > 0 && (

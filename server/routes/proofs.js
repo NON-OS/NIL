@@ -15,7 +15,7 @@ router.get(
       .all('SELECT * FROM receipts WHERE user_id = ? AND revoked_at IS NULL ORDER BY seq DESC', req.user.id)
       .map((r) => {
         const body = JSON.parse(r.body);
-        return { id: r.id, seq: r.seq, ref: body.task.ref, completedAt: body.completedAt, title: r.title, salt: r.salt, body: r.body, signature: r.signature };
+        return { id: r.id, seq: r.seq, kind: r.kind, ref: body.task.ref, completedAt: body.completedAt ?? body.paidAt, amount: body.payment?.amount ?? null, title: r.title, salt: r.salt, body: r.body, signature: r.signature };
       }),
   })),
 );

@@ -25,6 +25,7 @@ const COLUMNS = {
   checklist: 'checklist',
   recurrence: 'recurrence',
   position: 'position',
+  bounty: 'bounty',
 };
 
 const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
@@ -38,6 +39,10 @@ export default function updateTask(actor, id, body, { today } = {}) {
     .filter(([key, value]) => !same(existing[key], value))
     .map(([key, value]) => ({ key, before: existing[key], after: value }));
   if (!changes.length) return { task: existing, spawned: null };
+  if (changes.some((c) => c.key === 'bounty')) {
+    if (!actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
+    if (existing.bountyState) throw new HttpError(409, 'This bounty is already paid or being paid, so it can’t change.');
+  }
 
   const sets = changes.map((c) => `${COLUMNS[c.key]} = ?`);
   const params = changes.map((c) => (Array.isArray(c.after) ? JSON.stringify(c.after) : c.after));

@@ -16,6 +16,7 @@ type TaskPatch = Partial<
     | 'labels'
     | 'checklist'
     | 'recurrence'
+    | 'bounty'
     | 'position'
   >
 >;

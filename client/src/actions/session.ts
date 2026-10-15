@@ -10,6 +10,7 @@ import type Label from '../types/Label';
 import type Goal from '../types/Goal';
 import type Task from '../types/Task';
 import type FocusItem from '../types/FocusItem';
+import type NoxInfo from '../types/NoxInfo';
 
 interface Bootstrap {
   me: User;
@@ -22,6 +23,7 @@ interface Bootstrap {
   focus: FocusItem[];
   unread: number;
   ai: boolean;
+  nox: NoxInfo | null;
   sourceUrl: string | null;
 }
 
@@ -39,6 +41,7 @@ async function load() {
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
+    nox: b.nox,
     sourceUrl: b.sourceUrl,
   });
   socket.connect(() => load().catch(() => {}));

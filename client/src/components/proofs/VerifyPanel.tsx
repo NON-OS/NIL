@@ -1,3 +1,4 @@
+import '../bounty/Bounty.css';
 import './Proofs.css';
 import { useEffect, useRef, useState } from 'react';
 import { CheckCircle2, FileCheck2, XCircle } from 'lucide-react';
@@ -6,6 +7,7 @@ import verifyProof from '../../lib/verifyProof';
 import dates from '../../lib/dates';
 import cx from '../../lib/cx';
 import type ProofCheck from '../../types/ProofCheck';
+import formatUnits from '../../lib/formatUnits';
 
 export default function VerifyPanel() {
   const [result, setResult] = useState<ProofCheck | null>(null);
@@ -65,6 +67,7 @@ export default function VerifyPanel() {
           <div className={cx('verdict', result.ok ? 'good' : 'bad')}>
             {result.ok ? <CheckCircle2 /> : <XCircle />}
             {result.ok ? `Authentic: ${valid} receipt${valid === 1 ? '' : 's'} signed by “${result.workspace.name}”` : 'This proof failed verification'}
+            {result.ok && result.paidTotals.length > 0 && ` · ${result.paidTotals.map((t) => `${formatUnits(t.amount, t.decimals)} ${t.symbol}`).join(' + ')} paid`}
           </div>
           {result.problems.length > 0 && (
             <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--danger)' }}>
@@ -102,7 +105,14 @@ export default function VerifyPanel() {
               <div key={`${item.seq}-${item.ref}`} className="proof-row" style={{ gridTemplateColumns: '22px 84px minmax(0, 1fr) auto' }}>
                 {item.valid ? <CheckCircle2 size={16} color="var(--success)" /> : <XCircle size={16} color="var(--danger)" />}
                 <span className="ref mono muted">{item.ref}</span>
-                <span className={cx('title', !item.title && 'hidden-title')}>{item.title ?? 'Title not revealed'}</span>
+                <span className={cx('title', !item.title && !item.paid && 'hidden-title')}>
+                  {item.paid && (
+                    <a className="bounty-chip paid" href={item.paid.chainId === 1 ? `https://etherscan.io/tx/${item.paid.tx}` : undefined} target="_blank" rel="noopener noreferrer" title={`Transaction ${item.paid.tx}`} style={{ marginRight: 8 }}>
+                      Paid {formatUnits(item.paid.amount, item.paid.decimals)} {item.paid.symbol}
+                    </a>
+                  )}
+                  {item.title ?? (item.paid ? '' : 'Title not revealed')}
+                </span>
                 <span className="date muted num" style={{ fontSize: 'var(--text-sm)' }}>{item.completedAt ? dates.short(item.completedAt.slice(0, 10)) : ''}</span>
               </div>
             ))}

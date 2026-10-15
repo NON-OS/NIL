@@ -22,6 +22,8 @@ const GROUPS = [
       ['G C', 'Calendar'],
       ['G G', 'Goals'],
       ['G S', 'Insights'],
+      ['G N', 'Bounties'],
+      ['G P', 'Proof of work'],
       ['G T', 'Settings'],
     ],
   },

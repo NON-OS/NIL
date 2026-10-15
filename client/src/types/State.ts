@@ -10,6 +10,7 @@ import type Activity from './Activity';
 import type PresenceEntry from './PresenceEntry';
 import type TaskDetail from './TaskDetail';
 import type ToastMessage from './ToastMessage';
+import type NoxInfo from './NoxInfo';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -26,6 +27,7 @@ export default interface State {
   inbox: InboxItem[] | null;
   feed: Activity[] | null;
   ai: boolean;
+  nox: NoxInfo | null;
   sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires

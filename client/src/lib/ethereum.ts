@@ -11,7 +11,8 @@ function friendly(err: any): Error {
 }
 
 // Talks to an injected EIP-1193 wallet (MetaMask, Rabby, Coinbase Wallet, Brave…).
-// Nothing here can move funds: we only ask for an address and a text signature.
+// Signing in only asks for an address and a text signature. Paying a bounty sends a
+// transaction, which the wallet always shows to its owner for approval first.
 const ethereum = {
   available: () => provider() !== null,
 
@@ -22,6 +23,27 @@ const ethereum = {
       const [address] = await p.request({ method: 'eth_requestAccounts' });
       const chainId = parseInt(await p.request({ method: 'eth_chainId' }), 16) || 1;
       return { address, chainId };
+    } catch (err) {
+      throw friendly(err);
+    }
+  },
+
+  // Asks the wallet to move to the network NOX lives on before sending anything.
+  async useChain(chainId: number) {
+    const p = provider();
+    if (!p) throw new Error('No wallet found.');
+    const current = parseInt(await p.request({ method: 'eth_chainId' }), 16);
+    if (current === chainId) return;
+    try {
+      await p.request({ method: 'wallet_switchEthereumChain', params: [{ chainId: `0x${chainId.toString(16)}` }] });
+    } catch (err) {
+      throw friendly(err);
+    }
+  },
+
+  async send(tx: { from: string; to: string; data: string }): Promise<string> {
+    try {
+      return await provider()!.request({ method: 'eth_sendTransaction', params: [{ ...tx, value: '0x0' }] });
     } catch (err) {
       throw friendly(err);
     }

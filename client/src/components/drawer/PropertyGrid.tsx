@@ -1,4 +1,4 @@
-import { CalendarDays, CalendarPlus, Flag, FolderKanban, Gauge, Repeat, Tag, Target, UserRound, CircleDot } from 'lucide-react';
+import { CalendarDays, CalendarPlus, Coins, Flag, FolderKanban, Gauge, Repeat, Tag, Target, UserRound, CircleDot } from 'lucide-react';
 import type { ReactNode } from 'react';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
@@ -13,6 +13,7 @@ import GoalPicker from '../pickers/GoalPicker';
 import RecurrencePicker from '../pickers/RecurrencePicker';
 import Picker from '../ui/Picker';
 import LabelChips from '../task/LabelChips';
+import BountyField from '../bounty/BountyField';
 import DueBadge from '../task/DueBadge';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
@@ -38,6 +39,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
   const assignee = useStore((s) => (task.assigneeId ? s.users[task.assigneeId] : undefined));
   const project = useStore((s) => (task.projectId ? s.projects[task.projectId] : undefined));
   const goal = useStore((s) => (task.goalId ? s.goals[task.goalId] : undefined));
+  const isAdmin = useStore((s) => s.me?.role !== 'member');
   const update = (patch: Parameters<typeof taskActions.update>[1]) => taskActions.update(task.id, patch);
   const empty = (text: string) => <span className="placeholder-text">{text}</span>;
 
@@ -99,6 +101,11 @@ export default function PropertyGrid({ task }: { task: Task }) {
           {task.labels.length ? <span style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}><LabelChips ids={task.labels} max={6} /></span> : empty('Add labels')}
         </LabelPicker>
       </Row>
+      {(task.bounty || isAdmin) && (
+        <Row icon={<Coins size={14} />} label="Bounty">
+          <BountyField task={task} />
+        </Row>
+      )}
       <Row icon={<Gauge size={14} />} label="Estimate">
         <Picker title="Estimate" options={ESTIMATES} value={String(task.estimate ?? 0)} onChange={(v) => update({ estimate: Number(v) || null })} width={180}>
           {task.estimate ? <span className="num">{task.estimate} pts</span> : empty('No estimate')}

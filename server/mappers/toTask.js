@@ -19,6 +19,8 @@ export default function toTask(row) {
     labels: parseJSON(row.labels, []),
     checklist: parseJSON(row.checklist, []),
     recurrence: row.recurrence,
+    bounty: row.bounty,
+    bountyState: row.bounty_state,
     position: row.position,
     commentCount: row.comment_count,
     attachmentCount: row.attachment_count,

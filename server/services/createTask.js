@@ -12,6 +12,7 @@ import issueReceipt from '../proofs/issueReceipt.js';
 export default function createTask(actor, input) {
   const p = parseTaskPatch({ status: 'todo', priority: 0, ...input });
   if (!p.title) throw HttpError.badRequest('Title can’t be empty.');
+  if (p.bounty && !actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
   const id = newId();
   const now = Date.now();
 
@@ -23,12 +24,12 @@ export default function createTask(actor, input) {
 
     sql.run(
       `INSERT INTO tasks (id, number, title, description, status, priority, project_id, goal_id, assignee_id, creator_id,
-         due_date, start_date, estimate, labels, checklist, recurrence, position, created_at, updated_at, completed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         due_date, start_date, estimate, labels, checklist, recurrence, bounty, position, created_at, updated_at, completed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id, number, p.title, p.description ?? '', p.status, p.priority,
       p.projectId ?? null, p.goalId ?? null, p.assigneeId ?? null, actor.id,
       p.dueDate ?? null, p.startDate ?? null, p.estimate ?? null,
-      JSON.stringify(p.labels ?? []), JSON.stringify(p.checklist ?? []), p.recurrence ?? null,
+      JSON.stringify(p.labels ?? []), JSON.stringify(p.checklist ?? []), p.recurrence ?? null, p.bounty ?? null,
       position, now, now, p.status === 'done' ? now : null,
     );
     watchers.add(id, actor.id);

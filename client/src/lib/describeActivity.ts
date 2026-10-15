@@ -1,5 +1,6 @@
 import meta from './meta';
 import dates from './dates';
+import noxAmount from './noxAmount';
 import type Activity from '../types/Activity';
 import type State from '../types/State';
 
@@ -50,6 +51,10 @@ export default function describeActivity(a: Activity, s: Lookup): string {
       return 'moved this to the trash';
     case 'restored':
       return 'restored this from the trash';
+    case 'bounty':
+      return to ? `set a bounty of ${noxAmount(to)}` : 'removed the bounty';
+    case 'bounty_paid':
+      return `paid the ${noxAmount(String(a.data.amount))} bounty, confirmed on-chain`;
     case 'comment':
       return 'commented';
     default:

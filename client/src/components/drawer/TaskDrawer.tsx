@@ -5,6 +5,7 @@ import { SearchX } from 'lucide-react';
 import DrawerHeader from './DrawerHeader';
 import TitleEditor from './TitleEditor';
 import PropertyGrid from './PropertyGrid';
+import BountyPanel from '../bounty/BountyPanel';
 import DescriptionEditor from './DescriptionEditor';
 import Checklist from './Checklist';
 import Attachments from './Attachments';
@@ -44,6 +45,7 @@ export default function TaskDrawer({ number }: { number: number }) {
             <div className="drawer-body">
               <TitleEditor task={task} />
               <PropertyGrid task={task} />
+              <BountyPanel task={task} />
               <DescriptionEditor task={task} />
               <Checklist task={task} />
               <Attachments taskId={task.id} />

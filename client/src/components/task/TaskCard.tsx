@@ -9,6 +9,7 @@ import StatusPicker from '../pickers/StatusPicker';
 import AssigneePicker from '../pickers/AssigneePicker';
 import DueBadge from './DueBadge';
 import LabelChips from './LabelChips';
+import BountyChip from '../bounty/BountyChip';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import detail from '../../actions/detail';
@@ -76,6 +77,7 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
       </div>
       <div className="card-foot">
         <DueBadge task={task} />
+        <BountyChip task={task} />
         <LabelChips ids={task.labels} max={2} />
         {task.checklist.length > 0 && (
           <span className="progress-mini num" title={`${done} of ${task.checklist.length} steps done`}>

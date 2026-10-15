@@ -1,3 +1,4 @@
+import '../components/bounty/Bounty.css';
 import '../components/proofs/Proofs.css';
 import { useEffect, useMemo, useState } from 'react';
 import { BadgeCheck, Download, Eye, EyeOff, ShieldCheck } from 'lucide-react';
@@ -12,6 +13,7 @@ import saveBlob from '../lib/saveBlob';
 import router from '../lib/router';
 import dates from '../lib/dates';
 import type Receipt from '../types/Receipt';
+import noxAmount from '../lib/noxAmount';
 
 export default function ProofsView() {
   const me = useStore((s) => s.me)!;
@@ -66,7 +68,7 @@ export default function ProofsView() {
           <div>
             <h2>Your work, provable anywhere</h2>
             <p>
-              Every task you finish gets a receipt signed by this workspace. Download a proof for a DAO, a grant, a client or your next job. Task titles stay hidden unless you reveal them, and anyone can check the file at <a href="/verify" onClick={router.link('/verify')}>/verify</a> without signing in or uploading anything.
+              Every task you finish gets a receipt signed by this workspace, and every bounty paid to you adds a payment receipt that points to the on-chain transfer. Download a proof for a DAO, a grant, a client or your next job. Task titles stay hidden unless you reveal them, and anyone can check the file at <a href="/verify" onClick={router.link('/verify')}>/verify</a> without signing in or uploading anything.
             </p>
           </div>
           {data && (
@@ -103,7 +105,10 @@ export default function ProofsView() {
               <div key={r.id} className="proof-row">
                 <input type="checkbox" checked={picked.has(r.id)} onChange={() => setPicked(toggle(picked, r.id))} aria-label={`Include ${r.ref}`} />
                 <span className="ref mono muted">{r.ref}</span>
-                <span className={`title${reveal.has(r.id) ? '' : ' hidden-title'}`}>{r.title ?? 'Title erased by a retention policy'}</span>
+                <span className={`title${reveal.has(r.id) ? '' : ' hidden-title'}`}>
+                  {r.kind === 'payment' && r.amount && <span className="bounty-chip paid" style={{ marginRight: 8, fontStyle: 'normal' }}>Paid {noxAmount(r.amount)}</span>}
+                  {r.title ?? 'Title erased by a retention policy'}
+                </span>
                 <span className="date muted num" style={{ fontSize: 'var(--text-sm)' }}>{dates.short(r.completedAt.slice(0, 10))}</span>
                 <button type="button" className="icon-only" aria-pressed={reveal.has(r.id)} disabled={r.title === null} onClick={() => setReveal(toggle(reveal, r.id))} aria-label={reveal.has(r.id) ? `Hide title of ${r.ref}` : `Reveal title of ${r.ref}`} title={reveal.has(r.id) ? 'Title will be revealed' : 'Title stays hidden'}>
                   {reveal.has(r.id) ? <Eye size={15} /> : <EyeOff size={15} />}

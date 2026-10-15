@@ -50,6 +50,14 @@ const check = {
     return value.toLowerCase();
   },
 
+  // Token amounts travel as whole numbers of the smallest unit (wei) written as text,
+  // because 18-decimal values don't fit in a JavaScript number.
+  amount(value, field) {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string' || !/^\d{1,40}$/.test(value) || BigInt(value) === 0n) fail(`${field} must be a positive token amount.`);
+    return BigInt(value).toString();
+  },
+
   isColor: (value) => typeof value === 'string' && COLOR.test(value),
 };
 

@@ -8,6 +8,7 @@ export default function mockChain() {
   const balances = new Map();
   const receipts = new Map();
   let block = 1000;
+  let chainId = 1;
 
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -15,7 +16,7 @@ export default function mockChain() {
     req.on('end', () => {
       const { id, method, params } = JSON.parse(raw);
       let result = null;
-      if (method === 'eth_chainId') result = '0x1';
+      if (method === 'eth_chainId') result = `0x${chainId.toString(16)}`;
       else if (method === 'eth_blockNumber') result = `0x${block.toString(16)}`;
       else if (method === 'eth_call') {
         const data = params[0].data;
@@ -31,12 +32,14 @@ export default function mockChain() {
   return {
     server,
     setBalance: (address, wei) => balances.set(address.toLowerCase(), BigInt(wei)),
-    // Records a confirmed ERC-20 Transfer the server can later verify.
-    addTransfer({ hash, token, from, to, value, status = '0x1' }) {
+    setChainId: (id) => (chainId = id),
+    mine: (blocks) => (block += blocks),
+    // Records a mined ERC-20 Transfer, `depth` blocks below the current head.
+    addTransfer({ hash, token, from, to, value, status = '0x1', depth = 6 }) {
       receipts.set(hash.toLowerCase(), {
         transactionHash: hash,
         status,
-        blockNumber: `0x${(block - 5).toString(16)}`,
+        blockNumber: `0x${(block - depth + 1).toString(16)}`,
         logs: [{ address: token, topics: [TRANSFER_TOPIC, `0x${pad(from)}`, `0x${pad(to)}`], data: `0x${pad(BigInt(value).toString(16))}` }],
       });
     },
