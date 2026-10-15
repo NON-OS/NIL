@@ -41,7 +41,7 @@ export default function CapsuleCard() {
         </button>
       </div>
       {mismatch && <small style={{ color: 'var(--danger)' }}>The passphrases don’t match.</small>}
-      <small className="muted">Passkeys belong to a web address. If you restore on a different domain, sign in with your password or wallet there and add a new passkey.</small>
+      <small className="muted">Wallets work on any domain, so everyone signs in exactly as before after a restore.</small>
     </form>
   );
 }

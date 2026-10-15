@@ -1,7 +1,6 @@
 import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import auth from './auth.js';
-import passkeys from './passkeys.js';
 import wallet from './wallet.js';
 import credentials from './credentials.js';
 import proofKey from './proofKey.js';
@@ -28,7 +27,6 @@ import ai from './ai.js';
 const api = express.Router();
 
 api.use(auth);
-api.use(passkeys);
 api.use(wallet);
 api.use(proofKey);
 api.use(capsules);

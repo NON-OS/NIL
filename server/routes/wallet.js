@@ -73,7 +73,6 @@ router.post(
     const pending = challenges.take(req.body.challengeId, 'wallet');
     if (!pending) throw HttpError.badRequest('That wallet request expired. Try again.');
     if (siwe.recover(pending.message, req.body.signature) !== pending.address) throw new HttpError(401, 'That signature doesn’t match the wallet.');
-    const credential = { kind: 'wallet', externalId: pending.address, label: 'Ethereum wallet' };
 
     if (pending.mode === 'login') {
       const row = sql.get("SELECT c.id, c.user_id, u.deactivated FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.kind = 'wallet' AND c.external_id = ?", pending.address);
@@ -84,11 +83,10 @@ router.post(
     if (pending.mode === 'add') {
       const user = currentUser(req);
       if (!user || user.id !== pending.userId) throw new HttpError(401, 'Sign in again to link a wallet.');
-      addCredential(user.id, credential);
+      addCredential(user.id, pending.address);
       return { ok: true };
     }
-    if (sql.get('SELECT 1 FROM credentials WHERE external_id = ?', pending.address)) throw HttpError.badRequest('That wallet already has an account here. Sign in with it instead.');
-    const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, inviteHash: pending.inviteHash, credential });
+    const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, inviteHash: pending.inviteHash, address: pending.address });
     if (pending.mode === 'invite') publishUser(id);
     return signIn(req, res, id);
   }),

@@ -30,7 +30,7 @@ const hub = {
 
   entries: () => clients.entries(),
 
-  // Pass a function to tailor the payload per recipient (e.g. hide emails from non-admins).
+  // Pass a function to tailor the payload per recipient (e.g. hide wallet addresses from non-admins, or private tasks from everyone but their owner).
   broadcast(event, { except } = {}) {
     if (typeof event !== 'function') {
       const data = JSON.stringify(event);

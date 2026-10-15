@@ -70,22 +70,6 @@ const session = {
     }
   },
 
-  async setup(input: { workspaceName: string; name: string; email: string; password: string }) {
-    await http.post('/auth/setup', input);
-    await load();
-  },
-
-  async login(email: string, password: string) {
-    await http.post('/auth/login', { email, password });
-    await load();
-  },
-
-  async acceptInvite(input: { token: string; name: string; email: string; password: string }) {
-    await http.post('/auth/accept-invite', input);
-    history.replaceState(null, '', '/');
-    await load();
-  },
-
   async logout() {
     try {
       await http.post('/auth/logout');

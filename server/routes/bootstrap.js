@@ -3,6 +3,7 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import config from '../config.js';
 import toUser from '../mappers/toUser.js';
+import userRows from '../services/userRows.js';
 import toTask from '../mappers/toTask.js';
 import toProject from '../mappers/toProject.js';
 import toLabel from '../mappers/toLabel.js';
@@ -17,7 +18,7 @@ router.get(
   route((req) => ({
     me: req.user,
     workspace: publicWorkspace(),
-    users: sql.all('SELECT * FROM users ORDER BY name COLLATE NOCASE').map((row) => toUser(row, req.viewer)),
+    users: userRows.all().map((row) => toUser(row, req.viewer)),
     projects: sql.all('SELECT * FROM projects ORDER BY position, created_at').map(toProject),
     labels: sql.all('SELECT * FROM labels ORDER BY name COLLATE NOCASE').map(toLabel),
     goals: sql.all('SELECT * FROM goals ORDER BY position, created_at').map(toGoal),

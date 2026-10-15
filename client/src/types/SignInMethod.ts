@@ -1,8 +1,8 @@
 export default interface SignInMethod {
   id: string;
-  kind: 'passkey' | 'wallet';
+  kind: 'wallet';
   label: string;
-  address: string | null;
+  address: string;
   createdAt: number;
   lastUsedAt: number | null;
 }

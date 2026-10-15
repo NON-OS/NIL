@@ -10,6 +10,7 @@ import meta from '../../lib/meta';
 import dates from '../../lib/dates';
 import type Invite from '../../types/Invite';
 import type Role from '../../types/Role';
+import shortAddress from '../../lib/shortAddress';
 
 const ROLE_OPTIONS = (['member', 'admin', 'owner'] as Role[]).map((r) => ({ value: r, label: meta.role[r], hint: r === 'member' ? 'Works on tasks' : r === 'admin' ? 'Manages people' : 'Full control' }));
 
@@ -29,7 +30,6 @@ export default function TeamSettings() {
   const users = useMemo(() => Object.values(userMap).sort((a, b) => Number(a.deactivated) - Number(b.deactivated) || a.name.localeCompare(b.name)), [userMap]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [role, setRole] = useState<Role>('member');
-  const [email, setEmail] = useState('');
   const [link, setLink] = useState('');
 
   const refresh = useCallback(() => {
@@ -39,10 +39,9 @@ export default function TeamSettings() {
 
   const createInvite = async () => {
     try {
-      const { token } = await people.invite({ role, email: email.trim() || undefined });
+      const { token } = await people.invite({ role });
       const url = `${location.origin}/invite/${token}`;
       setLink(url);
-      setEmail('');
       refresh();
       copy(url);
     } catch (err) {
@@ -55,10 +54,9 @@ export default function TeamSettings() {
       {isAdmin && (
         <section className="settings-section">
           <h2>Invite people</h2>
-          <p>Invite links work once and expire after 7 days. Only people with the link can join.</p>
+          <p>Invite links work once and expire after 7 days. Send one privately; whoever opens it first joins with their wallet.</p>
           <div className="settings-card">
             <div className="settings-row">
-              <input className="input" style={{ flex: '1 1 220px' }} type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Their email (optional, locks the link to it)" aria-label="Email" />
               <Picker title="Role" options={ROLE_OPTIONS.filter((o) => o.value !== 'owner')} value={role} onChange={(v) => setRole(v as Role)} className="btn" width={220}>
                 {meta.role[role]}
               </Picker>
@@ -81,7 +79,7 @@ export default function TeamSettings() {
                   <div key={inv.id} className="member">
                     <Avatar user={null} size={28} />
                     <div>
-                      <div className="member-name">{inv.email ?? 'Anyone with the link'}</div>
+                      <div className="member-name">Single-use link</div>
                       <div className="member-sub">
                         {meta.role[inv.role]} · expires {dates.short(dates.toISO(new Date(inv.expiresAt)))}
                       </div>
@@ -110,7 +108,7 @@ export default function TeamSettings() {
                   {u.name} {u.id === me.id && <span className="muted">(you)</span>}
                 </div>
                 <div className="member-sub">
-                  {[u.deactivated ? 'Access removed' : meta.role[u.role], u.title, u.email].filter(Boolean).join(' · ')}
+                  {[u.deactivated ? 'Access removed' : meta.role[u.role], u.title, u.address && shortAddress(u.address)].filter(Boolean).join(' · ')}
                 </div>
               </div>
               {isAdmin && u.id !== me.id && (u.role !== 'owner' || me.role === 'owner') && (

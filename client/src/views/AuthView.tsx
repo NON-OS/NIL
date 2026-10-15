@@ -10,7 +10,6 @@ import http from '../api/http';
 
 interface InviteInfo {
   valid: boolean;
-  email?: string | null;
   workspace?: { name: string };
 }
 
@@ -32,7 +31,7 @@ export default function AuthView() {
   let panel;
   if (inviteToken) {
     panel = !invite ? null : invite.valid ? (
-      <JoinPanel mode="invite" inviteToken={inviteToken} lockedEmail={invite.email} workspaceName={invite.workspace?.name} />
+      <JoinPanel mode="invite" inviteToken={inviteToken} workspaceName={invite.workspace?.name} />
     ) : (
       <div className="auth-card">
         <h1>This invite can’t be used</h1>

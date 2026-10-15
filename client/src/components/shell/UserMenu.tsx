@@ -7,6 +7,7 @@ import useTheme from '../../hooks/useTheme';
 import session from '../../actions/session';
 import ui from '../../actions/ui';
 import router from '../../lib/router';
+import shortAddress from '../../lib/shortAddress';
 
 export default function UserMenu() {
   const me = useStore((s) => s.me);
@@ -29,7 +30,7 @@ export default function UserMenu() {
         <div className="menu-list">
           <div style={{ padding: '6px 8px 8px' }}>
             <div style={{ fontWeight: 600 }}>{me?.name}</div>
-            <div className="muted" style={{ fontSize: 'var(--text-xs)' }}>{me?.email}</div>
+            {me?.address && <div className="muted mono" style={{ fontSize: 'var(--text-xs)' }}>{shortAddress(me.address)}</div>}
           </div>
           <div className="menu-divider" />
           <button type="button" className="menu-item" onClick={go(() => router.navigate('/settings'))}>

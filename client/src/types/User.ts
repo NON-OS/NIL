@@ -9,6 +9,6 @@ export default interface User {
   deactivated: boolean;
   createdAt: number;
   // only filled in for admins and for your own account
-  email: string | null;
+  address: string | null;
   lastSeenAt: number | null;
 }

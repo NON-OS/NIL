@@ -2,7 +2,7 @@ import config from '../config.js';
 import originAllowed from '../security/originAllowed.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 
-// Who the browser thinks it's talking to. Passkeys and wallet messages are bound to this.
+// Who the browser thinks it's talking to. Wallet sign-in messages are bound to this domain.
 export default function relyingParty(req) {
   let origin = config.appUrl;
   if (!origin && req.headers.origin && originAllowed(req)) origin = req.headers.origin.replace(/\/$/, '');

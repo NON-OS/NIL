@@ -2,7 +2,6 @@ import HttpError from './HttpError.js';
 import sql from '../db/sql.js';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 const TABLES = new Set(['users', 'projects', 'goals', 'labels', 'tasks']);
 
@@ -44,12 +43,6 @@ const check = {
   oneOf(value, allowed, field) {
     if (!allowed.includes(value)) fail(`${field} isn’t valid.`);
     return value;
-  },
-
-  email(value) {
-    const s = check.text(value, 'Email', { min: 3, max: 200 }).toLowerCase();
-    if (!EMAIL.test(s)) fail('Enter a valid email address.');
-    return s;
   },
 
   color(value) {

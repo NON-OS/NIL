@@ -14,7 +14,7 @@ export default function AuthPitch() {
           <div><StatusIcon status="done" size={16} /> Hire first sales lead</div>
         </div>
       </div>
-      <small style={{ opacity: 0.7 }}>Self-hosted, open source, no trackers. Sign in with a passkey or wallet, no email needed.</small>
+      <small style={{ opacity: 0.7 }}>Self-hosted, open source, no trackers. Sign in with your Ethereum wallet. No email, no password.</small>
     </aside>
   );
 }

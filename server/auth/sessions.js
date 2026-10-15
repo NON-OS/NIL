@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import sql from '../db/sql.js';
 import config from '../config.js';
 import tokenHash from './tokenHash.js';
+import userRows from '../services/userRows.js';
 
 const sessions = {
   create(userId) {
@@ -27,12 +28,9 @@ const sessions = {
 
   userRow(token) {
     if (!token) return null;
-    return sql.get(
-      `SELECT u.* FROM sessions s JOIN users u ON u.id = s.user_id
-       WHERE s.token_hash = ? AND s.expires_at > ? AND u.deactivated = 0`,
-      tokenHash(token),
-      Date.now(),
-    );
+    const session = sql.get('SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > ?', tokenHash(token), Date.now());
+    const row = session && userRows.one(session.user_id);
+    return row && !row.deactivated ? row : null;
   },
 };
 

@@ -5,6 +5,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import people from '../../actions/people';
 import storage from '../../lib/storage';
+import shortAddress from '../../lib/shortAddress';
 
 export default function ProfileSettings() {
   const me = useStore((s) => s.me)!;
@@ -39,13 +40,13 @@ export default function ProfileSettings() {
           <div className="settings-row">
             <Avatar user={me} size={44} />
             <div>
-              <div style={{ fontWeight: 600 }}>{me.email ?? 'No email on file'}</div>
-              <div className="muted" style={{ fontSize: 'var(--text-sm)' }}>{me.email ? 'Only admins can see your email.' : 'You sign in with a passkey or wallet.'}</div>
+              <div className="mono" style={{ fontWeight: 600 }} title={me.address ?? undefined}>{me.address ? shortAddress(me.address) : 'No wallet linked'}</div>
+              <div className="muted" style={{ fontSize: 'var(--text-sm)' }}>Your sign-in wallet. Only admins can see it.</div>
             </div>
           </div>
           <label className="field">
             <span>Name</span>
-            <input className="input" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} autoComplete="name" />
+            <input className="input" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} autoComplete="nickname" />
           </label>
           <label className="field">
             <span>Role on the team</span>

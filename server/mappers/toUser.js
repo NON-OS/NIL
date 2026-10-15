@@ -1,4 +1,4 @@
-// Emails and last-seen times are only shown to admins and to the person themselves.
+// Wallet addresses and last-seen times are only shown to admins and to the person themselves.
 export default function toUser(row, viewer) {
   if (!row) return null;
   const privileged = viewer?.isAdmin || viewer?.id === row.id;
@@ -10,7 +10,7 @@ export default function toUser(row, viewer) {
     color: row.color,
     deactivated: !!row.deactivated,
     createdAt: row.created_at,
-    email: privileged ? row.email : null,
+    address: privileged ? row.address ?? null : null,
     lastSeenAt: privileged ? row.last_seen_at : null,
   };
 }

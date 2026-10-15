@@ -10,7 +10,7 @@ function prune(now) {
   while (pending.size >= MAX_PENDING) pending.delete(pending.keys().next().value);
 }
 
-// Single-use, short-lived challenges for passkey and wallet ceremonies.
+// Single-use, short-lived challenges for wallet signatures and votes.
 const challenges = {
   issue(purpose, data = {}) {
     const now = Date.now();

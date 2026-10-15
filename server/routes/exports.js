@@ -5,6 +5,7 @@ import calendar from '../lib/calendar.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import toUser from '../mappers/toUser.js';
+import userRows from '../services/userRows.js';
 import toTask from '../mappers/toTask.js';
 import toProject from '../mappers/toProject.js';
 import toLabel from '../mappers/toLabel.js';
@@ -52,7 +53,7 @@ router.get(
   }),
 );
 
-// Full backup for admins. Password hashes, sessions and invite tokens are never included.
+// Full backup for admins. Sessions, invite tokens and keys are never included.
 router.get(
   '/export/backup.json',
   requireAdmin,
@@ -61,7 +62,7 @@ router.get(
     return {
       exportedAt: new Date().toISOString(),
       workspace: publicWorkspace(),
-      users: sql.all('SELECT * FROM users').map((row) => toUser(row, req.viewer)),
+      users: userRows.all().map((row) => toUser(row, req.viewer)),
       projects: sql.all('SELECT * FROM projects').map(toProject),
       labels: sql.all('SELECT * FROM labels').map(toLabel),
       goals: sql.all('SELECT * FROM goals').map(toGoal),

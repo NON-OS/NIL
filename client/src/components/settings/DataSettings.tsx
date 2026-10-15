@@ -25,7 +25,7 @@ export default function DataSettings() {
               </a>
             )}
           </div>
-          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>The CSV opens in any spreadsheet. The JSON backup is human-readable and never includes passwords, sessions or keys.</p>
+          <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>The CSV opens in any spreadsheet. The JSON backup is human-readable and never includes sessions or keys.</p>
         </div>
         {isAdmin && <CapsuleCard />}
       </section>
@@ -42,9 +42,9 @@ export default function DataSettings() {
         <div className="settings-card">
           <ul className="privacy-list">
             <li><ShieldCheck /> Everything lives on your own server. No analytics, trackers or third-party scripts, and no fonts or code loaded from other sites.</li>
-            <li><ShieldCheck /> Passkeys and wallets let people join without an email. Passwords are hashed with scrypt.</li>
+            <li><ShieldCheck /> People sign in with an Ethereum wallet. NONOS never asks for an email, a phone number or a password.</li>
             <li><ShieldCheck /> Sessions and invite links are stored only as hashes, so a copied database can’t be used to sign in.</li>
-            <li><ShieldCheck /> Only admins see email addresses and wallet addresses. Teammates see names.</li>
+            <li><ShieldCheck /> Only admins see wallet addresses. Teammates see the name each person picked.</li>
             <li><ShieldCheck /> Proofs of work hide task titles unless the contributor reveals them, and are checked without uploading anything.</li>
             <li><ShieldCheck /> Deleted data is overwritten in the database file. Trash is erased after 30 days.</li>
             <li><ShieldCheck />{aiOn ? 'AI assist is on. When someone clicks an AI button, only the text that feature needs goes to Anthropic’s API.' : 'AI assist is off. No task data leaves your server.'}</li>

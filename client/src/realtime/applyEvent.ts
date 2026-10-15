@@ -40,8 +40,8 @@ export default function applyEvent(event: any) {
       store.set({ goals: records.drop(s.goals, event.id) });
       break;
     case 'user': {
-      // broadcasts never carry our own email, so keep the one we already have
-      const me = s.me && s.me.id === event.user.id ? { ...s.me, ...event.user, email: s.me.email } : s.me;
+      // broadcasts may hide our own address from the payload, so keep the one we already have
+      const me = s.me && s.me.id === event.user.id ? { ...s.me, ...event.user, address: event.user.address ?? s.me.address } : s.me;
       store.set({ users: records.put(s.users, event.user), me });
       break;
     }

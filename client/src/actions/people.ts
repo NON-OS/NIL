@@ -49,7 +49,7 @@ const people = {
   },
 
   invites: () => http.get<Invite[]>('/invites'),
-  invite: (input: { role: Role; email?: string; days?: number }) => http.post<{ token: string; invite: Invite }>('/invites', input),
+  invite: (input: { role: Role; days?: number }) => http.post<{ token: string; invite: Invite }>('/invites', input),
   revokeInvite: (id: string) => http.del(`/invites/${encodeURIComponent(id)}`),
 };
 
