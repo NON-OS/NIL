@@ -1,6 +1,6 @@
 import './Sidebar.css';
 import { useMemo } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, Home, Inbox, Kanban, List, Plus, Search, Target } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, Home, Inbox, Kanban, List, Plus, Search, Target, Vote } from 'lucide-react';
 import Wordmark from '../ui/Wordmark';
 import Avatar from '../ui/Avatar';
 import UserMenu from './UserMenu';
@@ -20,6 +20,7 @@ const NAV = [
   { to: '/goals', label: 'Goals', icon: Target, key: 'g' },
   { to: '/insights', label: 'Insights', icon: BarChart3, key: 's' },
   { to: '/bounties', label: 'Bounties', icon: Coins, key: 'n' },
+  { to: '/votes', label: 'Votes', icon: Vote, key: 'v' },
   { to: '/proofs', label: 'Proof of work', icon: BadgeCheck, key: 'p' },
 ];
 

@@ -51,6 +51,8 @@ export default function applyEvent(event: any) {
     case 'workspace':
       store.set({ workspace: event.workspace });
       break;
+    case 'proposals':
+      return { proposalsRev: s.proposalsRev + 1 };
     case 'notification':
       store.set({ unread: s.unread + 1, inbox: s.inbox ? [event.notification, ...s.inbox] : null });
       window.dispatchEvent(new CustomEvent('nonos:notification', { detail: event.notification }));

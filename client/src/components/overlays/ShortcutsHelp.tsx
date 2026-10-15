@@ -23,6 +23,7 @@ const GROUPS = [
       ['G G', 'Goals'],
       ['G S', 'Insights'],
       ['G N', 'Bounties'],
+      ['G V', 'Votes'],
       ['G P', 'Proof of work'],
       ['G T', 'Settings'],
     ],

@@ -11,4 +11,5 @@ export default interface User {
   // only filled in for admins and for your own account
   address: string | null;
   lastSeenAt: number | null;
+  joinedVia: 'setup' | 'invite' | 'holder' | null;
 }

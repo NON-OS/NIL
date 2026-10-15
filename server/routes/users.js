@@ -32,6 +32,8 @@ router.patch(
       sql.run('UPDATE users SET role = ? WHERE id = ?', role, row.id);
       hub.setAdmin(row.id, role !== 'member');
     }
+    // Lets someone who joined by holding NOX stay without the balance check.
+    if (req.body.keepWithoutNox === true) sql.run("UPDATE users SET joined_via = 'invite' WHERE id = ? AND joined_via = 'holder'", row.id);
     if ('deactivated' in req.body) {
       const off = Boolean(req.body.deactivated);
       sql.run('UPDATE users SET deactivated = ? WHERE id = ?', off ? 1 : 0, row.id);

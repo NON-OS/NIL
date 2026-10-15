@@ -13,6 +13,7 @@ import describeNotification from '../lib/describeNotification';
 import dates from '../lib/dates';
 import cx from '../lib/cx';
 import type InboxItem from '../types/InboxItem';
+import router from '../lib/router';
 
 type Tab = 'all' | 'unread' | 'mentions';
 
@@ -50,6 +51,7 @@ export default function InboxView() {
     if (!n.readAt) inbox.markRead([n.id]);
     const task = n.taskId ? tasks[n.taskId] : undefined;
     if (task) detail.open(task);
+    else if (n.type === 'proposal') router.navigate('/votes');
   };
 
   return (

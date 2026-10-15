@@ -24,6 +24,7 @@ import NotFoundView from './views/NotFoundView';
 import ProofsView from './views/ProofsView';
 import VerifyView from './views/VerifyView';
 import BountiesView from './views/BountiesView';
+import VotesView from './views/VotesView';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 
@@ -46,6 +47,8 @@ function Screen({ segments }: { segments: string[] }) {
       return <InsightsView />;
     case 'settings':
       return <SettingsView />;
+    case 'votes':
+      return <VotesView />;
     case 'bounties':
       return <BountiesView />;
     case 'proofs':

@@ -19,7 +19,7 @@ const people = {
     }
   },
 
-  async update(id: string, patch: { role?: Role; deactivated?: boolean }) {
+  async update(id: string, patch: { role?: Role; deactivated?: boolean; keepWithoutNox?: boolean }) {
     try {
       const { user } = await http.patch<{ user: User }>(`/users/${id}`, patch);
       store.set((s) => ({ users: records.put(s.users, user) }));

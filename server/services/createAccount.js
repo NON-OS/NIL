@@ -24,7 +24,7 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
       role = invite.role === 'admin' ? 'admin' : 'member';
     }
     if (sql.get('SELECT 1 FROM credentials WHERE external_id = ?', address)) throw HttpError.badRequest('That wallet already has an account here. Sign in with it instead.');
-    sql.run('INSERT INTO users (id, name, role, color, created_at) VALUES (?, ?, ?, ?, ?)', id, name, role, randomColor(), Date.now());
+    sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, Date.now());
     if (mode === 'invite') sql.run('UPDATE invites SET used_by = ?, used_at = ? WHERE token_hash = ?', id, Date.now(), inviteHash);
     sql.run(
       "INSERT INTO credentials (id, user_id, kind, external_id, label, created_at) VALUES (?, ?, 'wallet', ?, 'Ethereum wallet', ?)",

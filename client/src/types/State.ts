@@ -11,10 +11,12 @@ import type PresenceEntry from './PresenceEntry';
 import type TaskDetail from './TaskDetail';
 import type ToastMessage from './ToastMessage';
 import type NoxInfo from './NoxInfo';
+import type HolderGate from './HolderGate';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
   needsSetup: boolean;
+  holderGate: HolderGate | null;
   me: User | null;
   workspace: Workspace;
   users: Record<string, User>;
@@ -28,6 +30,7 @@ export default interface State {
   feed: Activity[] | null;
   ai: boolean;
   nox: NoxInfo | null;
+  proposalsRev: number;
   sourceUrl: string | null;
   presence: PresenceEntry[];
   // taskId -> userId -> when their "typing" hint expires

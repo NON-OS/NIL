@@ -12,5 +12,6 @@ export default function toUser(row, viewer) {
     createdAt: row.created_at,
     address: privileged ? row.address ?? null : null,
     lastSeenAt: privileged ? row.last_seen_at : null,
+    joinedVia: privileged ? row.joined_via : null,
   };
 }

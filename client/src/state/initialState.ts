@@ -3,6 +3,7 @@ import type State from '../types/State';
 const initialState: State = {
   phase: 'loading',
   needsSetup: false,
+  holderGate: null,
   me: null,
   workspace: { name: 'NONOS', taskPrefix: 'NON' },
   users: {},
@@ -16,6 +17,7 @@ const initialState: State = {
   feed: null,
   ai: false,
   nox: null,
+  proposalsRev: 0,
   sourceUrl: null,
   presence: [],
   typing: {},

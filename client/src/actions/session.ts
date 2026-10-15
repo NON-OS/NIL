@@ -11,6 +11,7 @@ import type Goal from '../types/Goal';
 import type Task from '../types/Task';
 import type FocusItem from '../types/FocusItem';
 import type NoxInfo from '../types/NoxInfo';
+import type HolderGate from '../types/HolderGate';
 
 interface Bootstrap {
   me: User;
@@ -63,10 +64,10 @@ const session = {
 
   async boot() {
     try {
-      const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null }>('/auth/state');
+      const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null; holderGate: HolderGate | null }>('/auth/state');
       if (s.workspace) store.set({ workspace: s.workspace });
       if (s.user) await load();
-      else store.set({ phase: 'auth', needsSetup: s.needsSetup });
+      else store.set({ phase: 'auth', needsSetup: s.needsSetup, holderGate: s.holderGate });
     } catch (err) {
       store.set({ phase: 'auth' });
       toast.error(err);
