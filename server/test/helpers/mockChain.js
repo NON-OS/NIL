@@ -3,11 +3,15 @@ import http from 'node:http';
 const pad = (hex) => hex.replace(/^0x/, '').padStart(64, '0');
 const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef';
 // keccak256("Announcement(uint256,address,address,bytes,bytes)"), the ERC-5564 event
+// the Zero-State Pass contract: it holds no NOX balances, so only explicit ZSP balances answer for it
+const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
 const ANNOUNCEMENT_TOPIC = '0x5f0eab8057630ba7676c49b4f21a0231414e79474595be8e4c432fbf6bf0f4e7';
 
 // A tiny fake Ethereum JSON-RPC node: token balances and transaction receipts you control.
 export default function mockChain() {
   const balances = new Map();
+  const tokenBalances = new Map();
+  const stakes = new Map();
   const ethBalances = new Map();
   const nonces = new Map();
   const receipts = new Map();
@@ -25,7 +29,13 @@ export default function mockChain() {
       else if (method === 'eth_blockNumber') result = `0x${block.toString(16)}`;
       else if (method === 'eth_call') {
         const data = params[0].data;
-        if (data.startsWith('0x70a08231')) result = `0x${pad((balances.get(`0x${data.slice(-40)}`) ?? 0n).toString(16))}`;
+        const holder = `0x${data.slice(-40)}`;
+        const contract = params[0].to?.toLowerCase();
+        if (data.startsWith('0x70a08231') && tokenBalances.has(`${contract}:${holder}`)) result = `0x${pad(tokenBalances.get(`${contract}:${holder}`).toString(16))}`;
+        else if (data.startsWith('0x70a08231') && contract === ZSP) result = `0x${pad('0')}`;
+        else if (data.startsWith('0x70a08231')) result = `0x${pad((balances.get(holder) ?? 0n).toString(16))}`;
+        // getStakeInfo(address): staked amount first, six more words after it
+        else if (data.startsWith('0xc3453153')) result = `0x${pad((stakes.get(holder) ?? 0n).toString(16))}${pad('0').repeat(6)}`;
         else if (data === '0x313ce567') result = `0x${pad('12')}`;
         else result = '0x';
       } else if (method === 'eth_getTransactionReceipt') result = receipts.get(params[0].toLowerCase()) ?? null;
@@ -47,6 +57,9 @@ export default function mockChain() {
     server,
     setBalance: (address, wei) => balances.set(address.toLowerCase(), BigInt(wei)),
     setEthBalance: (address, wei) => ethBalances.set(address.toLowerCase(), BigInt(wei)),
+    // a balance in one specific token contract (ZSPs, for instance), separate from NOX
+    setTokenBalance: (token, address, amount) => tokenBalances.set(`${token.toLowerCase()}:${address.toLowerCase()}`, BigInt(amount)),
+    setStake: (address, wei) => stakes.set(address.toLowerCase(), BigInt(wei)),
     sent,
     setChainId: (id) => (chainId = id),
     mine: (blocks) => (block += blocks),

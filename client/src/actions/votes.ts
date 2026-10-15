@@ -7,7 +7,7 @@ interface NewProposal {
   title: string;
   body: string;
   options: string[];
-  weighting: 'equal' | 'nox';
+  weighting: 'equal' | 'power';
   sealed: boolean;
   anonymous: boolean;
   days: number;

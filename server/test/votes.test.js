@@ -59,28 +59,38 @@ test('one person, one vote: signed ballots, changeable until closed, sealed tota
   assert.equal((await vote(ben, wallets.ben, proposal.id, 0)).status, 400);
 });
 
-test('NOX-weighted votes count tokens once, even if they move mid-vote', async () => {
+test('weighted votes count NOX held, NOX staked and ZSPs, snapshotted when the vote opens', async () => {
   const unit = 10n ** 18n;
+  const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
+  assert.equal((await ana('PUT', '/api/vote-power', { zspPower: '500' })).status, 403);
+  assert.equal((await owner('PUT', '/api/vote-power', { zspPower: '1.5' })).status, 400);
+  assert.equal((await owner('PUT', '/api/vote-power', { zspPower: '500' })).data.zspPower, '500');
   chain.setBalance(wallets.ana.address, 100n * unit);
-  const { proposal } = (await owner('POST', '/api/proposals', { title: 'Fund the grants round', options: ['Fund', 'Wait'], weighting: 'nox' })).data;
+  chain.setStake(wallets.ana.address, 50n * unit);
+  chain.setTokenBalance(ZSP, wallets.ana.address, 2);
+  const { proposal } = (await owner('POST', '/api/proposals', { title: 'Fund the grants round', options: ['Fund', 'Wait'], weighting: 'power' })).data;
 
   const empty = await vote(ben, wallets.ben, proposal.id, 1);
   assert.equal(empty.status, 403);
-  assert.match(empty.data.error, /hold none/);
+  assert.match(empty.data.error, /you had none then/);
 
-  assert.equal((await vote(ana, wallets.ana, proposal.id, 0)).data.proposal.myVote.weight, (100n * unit).toString());
-  // Ana hands her tokens to Ben, who votes the other way with the same 100 NOX
+  // 100 held + 50 staked + 2 ZSPs × 500
+  const anaPower = (1150n * unit).toString();
+  assert.equal((await vote(ana, wallets.ana, proposal.id, 0)).data.proposal.myVote.weight, anaPower);
+  // Ana hands her tokens to Ben after the snapshot: Ben still has no power in this vote
   chain.setBalance(wallets.ana.address, 0n);
   chain.setBalance(wallets.ben.address, 100n * unit);
-  await vote(ben, wallets.ben, proposal.id, 1);
+  assert.equal((await vote(ben, wallets.ben, proposal.id, 1)).status, 403);
 
   const closed = (await owner('POST', `/api/proposals/${proposal.id}/close`)).data.proposal;
-  assert.deepEqual(closed.totals, ['0', (100n * unit).toString()]);
+  assert.deepEqual(closed.totals, [anaPower, '0']);
 
   const audit = (await owner('GET', `/api/proposals/${proposal.id}/audit`)).data;
-  assert.equal(audit.ballots.length, 2);
+  assert.equal(audit.power.zspPower, '500');
+  assert.ok(audit.power.block > 0);
+  const snap = audit.power.members.find((m) => m.wallets.includes(wallets.ana.address.toLowerCase()));
+  assert.deepEqual([snap.nox, snap.staked, snap.zsp, snap.power], [(100n * unit).toString(), (50n * unit).toString(), 2, anaPower]);
   for (const b of audit.ballots) assert.equal(siwe.recover(b.message, b.signature), b.address);
-  assert.equal(audit.ballots.find((b) => b.address === wallets.ana.address.toLowerCase()).weightCounted, '0');
   assert.equal((await ana('GET', `/api/proposals/${proposal.id}/audit`)).status, 403);
 });
 

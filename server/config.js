@@ -66,6 +66,16 @@ const stealth = Object.freeze({
   announceCheckDays: Number(env.STEALTH_ANNOUNCE_CHECK_DAYS || 7),
 });
 
+// Voting power: NOX in linked wallets, plus NOX staked in the official staking contract, plus a
+// fixed amount of power per Zero-State Pass (ZSP). Admins can change the ZSP power per workspace;
+// this is the default. "off" leaves a source out.
+const contract = (value, fallback) => (value === 'off' ? null : (/^0x[0-9a-fA-F]{40}$/.test(value ?? '') ? value : fallback).toLowerCase());
+const power = Object.freeze({
+  staking: contract(env.NOX_STAKING, '0xa94d6009790Ba13597A1E1b7cF4e1531eA513613'),
+  zsp: contract(env.ZSP_CONTRACT, '0x7b575dd8e8b111c52ab1e872924d4efd4df403df'),
+  zspPower: /^\d+$/.test(env.VOTE_ZSP_POWER ?? '') ? env.VOTE_ZSP_POWER : '100000',
+});
+
 // Anonymous votes (Semaphore). Every proof uses one circuit depth, so one set of circuit files
 // serves every group size up to 2^depth voters; `npm run zk:fetch` downloads the matching files.
 const semaphore = Object.freeze({
@@ -89,6 +99,7 @@ const config = Object.freeze({
   plan,
   stealth,
   semaphore,
+  power,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

@@ -10,7 +10,7 @@ const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d ===
 
 export default function NewProposalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const nox = useStore((s) => s.nox);
-  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'nox', sealed: false, anonymous: false, days: 7 });
+  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, days: 7 });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
@@ -62,13 +62,13 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <Picker
             title="Who counts how much"
-            options={[{ value: 'equal', label: 'One person, one vote' }, ...(nox ? [{ value: 'nox', label: `Weighted by ${nox.symbol} held` }] : [])]}
+            options={[{ value: 'equal', label: 'One person, one vote' }, ...(nox ? [{ value: 'power', label: 'Voting power', hint: `${nox.symbol} held or staked, plus ZSPs` }] : [])]}
             value={form.weighting}
-            onChange={(v) => set({ weighting: v as 'equal' | 'nox', anonymous: v === 'nox' ? false : form.anonymous })}
+            onChange={(v) => set({ weighting: v as 'equal' | 'power' })}
             className="btn"
             width={240}
           >
-            {form.weighting === 'nox' ? `Weighted by ${nox?.symbol ?? 'NOX'}` : 'One person, one vote'}
+            {form.weighting === 'power' ? 'Voting power' : 'One person, one vote'}
           </Picker>
           <Picker title="Open for" options={DURATIONS} value={String(form.days)} onChange={(v) => set({ days: Number(v) })} className="btn" width={160}>
             Open {form.days === 1 ? '1 day' : `${form.days} days`}
@@ -87,9 +87,9 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             Each ballot is a zero-knowledge proof (Semaphore) that some member voted, without saying who. Nobody can see who chose what, not even admins or this server, and each member still gets exactly one vote. One person, one vote only: a weight would need to know who voted.
           </p>
         )}
-        {form.weighting === 'nox' && (
+        {form.weighting === 'power' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Each vote counts the {nox?.symbol ?? 'NOX'} in the voter’s linked wallets: the smaller of their balance when they vote and when the vote closes, so tokens passed around mid-vote count only once.
+            Each member’s power is read from the chain when the vote opens, all at the same block: {nox?.symbol ?? 'NOX'} in their linked wallets, {nox?.symbol ?? 'NOX'} staked in the official staking contract, and their Zero-State Passes at the workspace’s power per ZSP. Tokens moved afterwards don’t change it.
           </p>
         )}
       </div>

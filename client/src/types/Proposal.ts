@@ -5,7 +5,8 @@ export default interface Proposal {
   title: string;
   body: string;
   options: string[];
-  weighting: 'equal' | 'nox';
+  // 'power' counts the voting power snapshotted when the vote opened: NOX held, staked, and ZSPs
+  weighting: 'equal' | 'power';
   sealed: boolean;
   createdBy: string | null;
   createdAt: number;

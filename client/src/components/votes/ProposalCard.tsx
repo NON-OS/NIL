@@ -9,7 +9,7 @@ import toast from '../../state/toast';
 import votes from '../../actions/votes';
 import dates from '../../lib/dates';
 import timeLeft from '../../lib/timeLeft';
-import tokenAmount from '../../lib/tokenAmount';
+import formatUnits from '../../lib/formatUnits';
 import cx from '../../lib/cx';
 import type Proposal from '../../types/Proposal';
 import isAdminUser from '../../lib/isAdmin';
@@ -20,9 +20,10 @@ const percent = (part: bigint, whole: bigint) => (whole ? Number((part * 1000n) 
 export default function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: () => void }) {
   const isAdmin = useStore((s) => isAdminUser(s.me));
   const author = useStore((s) => (proposal.createdBy ? s.users[proposal.createdBy] : undefined));
+  const decimals = useStore((s) => s.nox?.decimals ?? 18);
   const [busy, setBusy] = useState<number | 'close' | null>(null);
   const open = !proposal.closedAt && proposal.closesAt > Date.now();
-  const weight = (w: string) => (proposal.weighting === 'nox' ? tokenAmount(w, null) : `${w} vote${w === '1' ? '' : 's'}`);
+  const weight = (w: string) => (proposal.weighting === 'power' ? `${formatUnits(w, decimals, 2)} power` : `${w} vote${w === '1' ? '' : 's'}`);
 
   const run = async (key: number | 'close', fn: () => Promise<unknown>, done?: string) => {
     setBusy(key);
@@ -48,7 +49,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
           <span>
             <Clock /> {open ? timeLeft(proposal.closesAt) : `closed ${dates.ago(proposal.closedAt ?? proposal.closesAt)}`}
           </span>
-          <span>{proposal.weighting === 'nox' ? <><Coins /> weighted by NOX</> : <><Users /> one person, one vote</>}</span>
+          <span>{proposal.weighting === 'power' ? <><Coins /> weighted by voting power</> : <><Users /> one person, one vote</>}</span>
           {proposal.sealed && <span><EyeOff /> sealed until it closes</span>}
           {proposal.anonymous && <span><ShieldCheck /> anonymous</span>}
           {author && <span>by {author.name}</span>}

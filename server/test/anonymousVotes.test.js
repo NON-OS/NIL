@@ -58,7 +58,7 @@ test('voting keys are checked, unique, and member-only', async () => {
 });
 
 test('anonymous votes are one person, one vote, and start with every member who has a key', async () => {
-  assert.equal((await owner('POST', '/api/proposals', { title: 'Weighted', weighting: 'nox', anonymous: true })).status, 400);
+  assert.equal((await owner('POST', '/api/proposals', { title: 'Weighted', weighting: 'power', anonymous: true })).status, 400);
   const res = await owner('POST', '/api/proposals', { title: 'Ship v3 on Friday?', anonymous: true });
   assert.equal(res.status, 200);
   const vote = res.data.proposal;

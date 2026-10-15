@@ -13,6 +13,8 @@ import hub from '../realtime/hub.js';
 import notify from '../services/notify.js';
 import voteMessage from '../services/voteMessage.js';
 import voteWeight from '../services/voteWeight.js';
+import snapshotPower from '../services/snapshotPower.js';
+import zspPower from '../services/zspPower.js';
 import closeProposal from '../services/closeProposal.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import toProposal from '../mappers/toProposal.js';
@@ -38,12 +40,12 @@ router.get(
 router.post(
   '/proposals',
   requireAdmin,
-  route((req) => {
+  route(async (req) => {
     const b = req.body ?? {};
     const options = (Array.isArray(b.options) && b.options.length ? b.options : ['Yes', 'No', 'Abstain']).map((o) => check.text(o, 'Option', { min: 1, max: 80 }));
     if (options.length < 2 || options.length > 8) throw HttpError.badRequest('A vote needs between 2 and 8 options.');
-    const weighting = check.oneOf(b.weighting ?? 'equal', ['equal', 'nox'], 'Weighting');
-    if (weighting === 'nox' && !config.nox.enabled) throw HttpError.badRequest(`${config.nox.symbol}-weighted votes need on-chain features, which are off on this server.`);
+    const weighting = check.oneOf(b.weighting ?? 'equal', ['equal', 'power'], 'Weighting');
+    if (weighting === 'power' && !config.nox.enabled) throw HttpError.badRequest('Votes weighted by voting power need on-chain features, which are off on this server.');
     const days = check.number(b.days ?? 7, 'Duration', { min: 1, max: 60, integer: true });
     const anonymous = Boolean(b.anonymous);
     if (anonymous && weighting !== 'equal') throw HttpError.badRequest('Anonymous votes count one person, one vote: a weight would need to know who voted.');
@@ -54,6 +56,15 @@ router.post(
       id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
     );
     if (anonymous) voterGroups.start(id);
+    if (weighting === 'power') {
+      try {
+        await snapshotPower(id);
+      } catch (err) {
+        // no snapshot, no vote: a weighted vote without one couldn't be counted fairly
+        sql.run('DELETE FROM proposals WHERE id = ?', id);
+        throw err;
+      }
+    }
     const everyone = sql.all('SELECT id FROM users WHERE deactivated = 0').map((u) => u.id);
     notify(everyone, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
     hub.broadcast({ type: 'proposals' });
@@ -93,8 +104,8 @@ router.post(
     if (!address || !sql.get("SELECT 1 FROM credentials WHERE user_id = ? AND kind = 'wallet' AND external_id = ?", req.user.id, address)) {
       throw new HttpError(401, 'Sign the vote with a wallet linked to your account.');
     }
-    const weight = await voteWeight(req.user.id, proposal.weighting);
-    if (weight === '0') throw HttpError.forbidden(`This vote is weighted by ${config.nox.symbol}, and your linked wallets hold none.`);
+    const weight = voteWeight(req.user.id, proposal);
+    if (weight === '0') throw HttpError.forbidden(`This vote counts voting power from when it opened (${config.nox.symbol} held or staked, and ZSPs), and you had none then.`);
     sql.run(
       `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
@@ -140,17 +151,40 @@ router.get(
       type: 'nonos.vote-audit',
       v: 1,
       proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), weighting: row.weighting, closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
-      token: row.weighting === 'nox' ? { chainId: config.nox.chainId, address: config.nox.token, symbol: config.nox.symbol, decimals: config.nox.decimals } : null,
-      ballots: sql.all('SELECT address, choice, weight, final_weight, message, signature, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({
+      power:
+        row.weighting === 'power'
+          ? {
+              chainId: config.nox.chainId,
+              block: row.snapshot_block,
+              token: { address: config.nox.token, symbol: config.nox.symbol, decimals: config.nox.decimals },
+              staking: config.power.staking,
+              zsp: config.power.zsp,
+              zspPower: row.zsp_power,
+              members: sql.all('SELECT u.id, (SELECT group_concat(external_id) FROM credentials c WHERE c.user_id = u.id AND c.kind = \'wallet\') AS wallets, p.nox, p.staked, p.zsp, p.power FROM proposal_power p JOIN users u ON u.id = p.user_id WHERE p.proposal_id = ?', row.id)
+                .map((m) => ({ wallets: (m.wallets ?? '').split(',').filter(Boolean), nox: m.nox, staked: m.staked, zsp: m.zsp, power: m.power })),
+            }
+          : null,
+      ballots: sql.all('SELECT address, choice, weight, message, signature, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({
         address: v.address,
         choice: v.choice,
-        weightWhenCast: v.weight,
-        weightCounted: v.final_weight ?? v.weight,
+        weight: v.weight,
         message: v.message,
         signature: v.signature,
         castAt: new Date(v.created_at).toISOString(),
       })),
     };
+  }),
+);
+
+// How much voting power one ZSP carries, in whole NOX. New votes snapshot the value in force.
+router.get('/vote-power', route(() => ({ zspPower: zspPower.get(), staking: config.power.staking, zsp: config.power.zsp })));
+router.put(
+  '/vote-power',
+  requireAdmin,
+  route((req) => {
+    const value = String(req.body?.zspPower ?? '').trim();
+    if (!/^\d{1,15}$/.test(value)) throw HttpError.badRequest('Power per ZSP must be a whole number of NOX.');
+    return { zspPower: zspPower.set(value) };
   }),
 );
 

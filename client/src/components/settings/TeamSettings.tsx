@@ -15,6 +15,7 @@ import HolderGateCard from './HolderGateCard';
 import '../bounty/Bounty.css';
 import isAdminUser from '../../lib/isAdmin';
 import GuestProjects from './GuestProjects';
+import VotePowerCard from './VotePowerCard';
 
 const HINT: Record<Role, string> = { guest: 'Sees only chosen projects', member: 'Works on tasks', admin: 'Manages people', owner: 'Full control' };
 const ROLE_OPTIONS = (['guest', 'member', 'admin', 'owner'] as Role[]).map((r) => ({ value: r, label: meta.role[r], hint: HINT[r] }));
@@ -141,6 +142,13 @@ export default function TeamSettings() {
         <section className="settings-section">
           <h2>Token holders</h2>
           <HolderGateCard />
+        </section>
+      )}
+
+      {isAdmin && (
+        <section className="settings-section">
+          <h2>Voting power</h2>
+          <VotePowerCard />
         </section>
       )}
 

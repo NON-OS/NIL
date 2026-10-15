@@ -45,7 +45,7 @@ export default function VotesView() {
           </div>
         ) : (
           <EmptyState icon={<Vote />} title="No votes yet" actions={start}>
-            Ask the team a question. Signed ballots can be weighted by NOX held; anonymous ballots are zero-knowledge proofs, so nobody, not even this server, learns who voted what.
+            Ask the team a question. Weigh votes by voting power (NOX held or staked, plus ZSPs) or count one per person. Anonymous ballots are zero-knowledge proofs, so nobody, not even this server, learns who voted what.
           </EmptyState>
         )}
       </div>

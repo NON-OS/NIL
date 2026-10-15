@@ -56,7 +56,7 @@ api.use(anonymousBallots);
 api.use(requireAuth);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
-api.use(['/proposals', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
+api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
 // The subscription unlocks votes, the holder door and every AI feature.
 api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
 api.use('/proposals', (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/close') ? requirePlan(req, res, next) : next()));
