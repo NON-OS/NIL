@@ -15,6 +15,7 @@ import type HolderGate from '../types/HolderGate';
 import type TimeEntry from '../types/TimeEntry';
 import type RewardToken from '../types/RewardToken';
 import type SharingPolicy from '../types/SharingPolicy';
+import type Plan from '../types/Plan';
 import keyring from '../state/keyring';
 
 interface Bootstrap {
@@ -32,6 +33,7 @@ interface Bootstrap {
   rewards: RewardToken[];
   guest: boolean;
   sharing: SharingPolicy;
+  plan: Plan;
   timer: TimeEntry | null;
   sourceUrl: string | null;
 }
@@ -54,6 +56,7 @@ async function load() {
     rewards: b.rewards ?? [],
     guest: b.guest,
     sharing: b.sharing,
+    plan: b.plan,
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });

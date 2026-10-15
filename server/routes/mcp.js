@@ -3,6 +3,7 @@ import apiToken from '../auth/apiToken.js';
 import rateLimit from '../auth/rateLimit.js';
 import originAllowed from '../security/originAllowed.js';
 import handleMessage from '../mcp/handleMessage.js';
+import plan from '../services/plan.js';
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.use((req, res, next) => {
     res.setHeader('WWW-Authenticate', 'Bearer realm="nonos", error="invalid_token"');
     return res.status(401).json({ error: 'Send a NØNOS personal access key as "Authorization: Bearer nonos_pat_…".' });
   }
+  if (!plan.status().unlocked) return res.status(402).json({ error: 'Connecting AI assistants needs an active NØNOS subscription.' });
   req.mcp = auth;
   next();
 });

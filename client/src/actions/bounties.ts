@@ -1,7 +1,7 @@
 import http from '../api/http';
 import store from '../state/store';
 import putTask from '../state/putTask';
-import identity from './identity';
+import payerWallet from '../lib/payerWallet';
 import ethereum from '../lib/ethereum';
 import encodeTransfer from '../lib/encodeTransfer';
 import type Task from '../types/Task';
@@ -27,12 +27,7 @@ const bounties = {
     if (!nox || !task.bounty || !token) throw new Error('This task has no bounty this server can pay.');
     if (!payee?.address) throw new Error('The assignee has no wallet linked yet.');
 
-    const [{ address }, mine, overview] = await Promise.all([ethereum.account(), identity.overview(), bounties.overview()]);
-    const allowed = new Set([...mine.credentials.map((c) => c.address.toLowerCase()), ...overview.treasury]);
-    if (!allowed.has(address.toLowerCase())) {
-      throw new Error('Your wallet is on an account that isn’t linked to NØNOS. Switch accounts, or link this wallet under Settings → Security first.');
-    }
-    await ethereum.useChain(nox.chainId);
+    const address = await payerWallet(nox.chainId);
     const txHash = await ethereum.send({ from: address, to: token.address, data: encodeTransfer(payee.address, BigInt(task.bounty)) });
     return recorded(task.id, txHash);
   },

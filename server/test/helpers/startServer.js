@@ -5,9 +5,10 @@ import { once } from 'node:events';
 
 // Boots a private NONOS instance for one test file. Must run before anything imports the
 // server, because configuration is read from the environment at import time.
-export default async function startServer({ chain } = {}) {
+export default async function startServer({ chain, env = {} } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nonos-test-'));
   process.env.DATA_DIR = dataDir;
+  Object.assign(process.env, env);
   if (chain) {
     chain.server.listen(0);
     await once(chain.server, 'listening');

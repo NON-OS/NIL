@@ -20,6 +20,7 @@ const initialState: State = {
   rewards: [],
   guest: false,
   sharing: { invitePolicy: 'admins', shareLinks: false },
+  plan: { unlocked: true },
   proposalsRev: 0,
   timer: null,
   docsUnlocked: false,

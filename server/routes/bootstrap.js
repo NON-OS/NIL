@@ -13,6 +13,7 @@ import visibleSql from '../services/visibleSql.js';
 import guestScope from '../services/guestScope.js';
 import guestView from '../services/guestView.js';
 import sharingPolicy from '../services/sharingPolicy.js';
+import plan from '../services/plan.js';
 import toTimeEntry from '../mappers/toTimeEntry.js';
 
 const router = express.Router();
@@ -56,6 +57,8 @@ router.get(
       unread: sql.get('SELECT COUNT(*) AS n FROM notifications WHERE user_id = ? AND read_at IS NULL', req.user.id).n,
       guest: Boolean(guestScope.of(req.user.id)),
       sharing: sharingPolicy.get(),
+      // guests work inside someone else's subscription; they don't need its details
+      plan: guestScope.of(req.user.id) ? { unlocked: plan.status().unlocked } : plan.status(),
       ai: config.ai.enabled,
       nox: config.nox.enabled
         ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer }

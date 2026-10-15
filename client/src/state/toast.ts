@@ -1,5 +1,7 @@
 import type ToastMessage from '../types/ToastMessage';
 import store from './store';
+import ApiError from '../api/ApiError';
+import router from '../lib/router';
 
 let nextId = 1;
 
@@ -17,7 +19,9 @@ const toast = {
   },
 
   error(err: unknown) {
-    return toast.show(err instanceof Error ? err.message : 'Something went wrong.', { tone: 'error', timeout: 5000 });
+    // a lapsed subscription isn't a failure to fix, so point straight at where it's renewed
+    const action = err instanceof ApiError && err.status === 402 ? { label: 'See plan', run: () => router.navigate('/settings?tab=plan') } : undefined;
+    return toast.show(err instanceof Error ? err.message : 'Something went wrong.', { tone: 'error', timeout: action ? 8000 : 5000, action });
   },
 
   dismiss(id: number) {

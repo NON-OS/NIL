@@ -19,6 +19,8 @@ import holderGate from '../services/holderGate.js';
 import holdings from '../services/holdings.js';
 import balanceOf from '../chain/balanceOf.js';
 import nox from '../lib/nox.js';
+import planGate from '../services/planGate.js';
+import seatGate from '../services/seatGate.js';
 
 const router = express.Router();
 router.use('/auth/wallet', rateLimit({ windowMs: 15 * 60_000, max: 60 }));
@@ -106,6 +108,8 @@ router.post(
     if (pending.mode === 'holder') {
       const gate = holderGate.get();
       if (!gate.enabled) throw HttpError.forbidden('This workspace is invite-only.');
+      planGate('Joining as a holder');
+      seatGate('member');
       const held = await balanceOf(pending.address);
       if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)}. Joining without an invite needs at least ${nox(gate.minimum)}.`);
     }

@@ -7,6 +7,7 @@ import HttpError from '../lib/HttpError.js';
 import tokenHash from '../auth/tokenHash.js';
 import guestScope from '../services/guestScope.js';
 import sharingPolicy from '../services/sharingPolicy.js';
+import seatGate from '../services/seatGate.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
@@ -39,6 +40,7 @@ router.post(
     const who = inviter(req);
     const role = ['admin', 'member', 'guest'].includes(req.body.role) ? req.body.role : 'member';
     if (role === 'admin' && who !== 'admin') throw HttpError.forbidden('Only admins can invite admins.');
+    seatGate(role);
     const projectIds = role === 'guest' ? [...new Set((Array.isArray(req.body.projectIds) ? req.body.projectIds : []).filter((id) => typeof id === 'string'))] : [];
     if (role === 'guest' && !projectIds.length) throw HttpError.badRequest('Pick at least one project to share with the guest.');
     for (const id of projectIds) if (!sql.get('SELECT 1 FROM projects WHERE id = ?', id)) throw HttpError.badRequest('One of those projects no longer exists.');

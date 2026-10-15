@@ -5,6 +5,7 @@ import EmptyState from '../components/ui/EmptyState';
 import Spinner from '../components/ui/Spinner';
 import ProposalCard from '../components/votes/ProposalCard';
 import NewProposalModal from '../components/votes/NewProposalModal';
+import PlanNotice from '../components/plan/PlanNotice';
 import useStore from '../state/useStore';
 import toast from '../state/toast';
 import votes from '../actions/votes';
@@ -33,6 +34,7 @@ export default function VotesView() {
     <div className="main">
       <ViewHeader title="Votes" icon={<Vote size={17} />} subtitle="Decide together. Every ballot is signed by a wallet." actions={start} />
       <div className="page page-narrow">
+        <PlanNotice what="New votes" />
         {!list ? (
           <Spinner size={20} />
         ) : list.length ? (

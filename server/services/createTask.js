@@ -9,11 +9,13 @@ import logActivity from './logActivity.js';
 import watchers from './watchers.js';
 import notify from './notify.js';
 import issueReceipt from '../proofs/issueReceipt.js';
+import planGate from './planGate.js';
 
 export default function createTask(actor, input) {
   const p = parseTaskPatch({ status: 'todo', priority: 0, ...input });
   if (!p.title) throw HttpError.badRequest('Title can’t be empty.');
   if (p.bounty && !actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
+  if (p.bounty) planGate('A new bounty');
   const scope = guestScope.of(actor.id);
   if (scope && !scope.has(p.projectId)) throw HttpError.forbidden('Guests can add tasks only to projects shared with them.');
   const id = newId();

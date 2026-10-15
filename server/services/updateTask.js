@@ -11,6 +11,7 @@ import notifyTaskChanges from './notifyTaskChanges.js';
 import scheduleNext from './scheduleNext.js';
 import issueReceipt from '../proofs/issueReceipt.js';
 import revokeReceipts from '../proofs/revokeReceipts.js';
+import planGate from './planGate.js';
 
 const COLUMNS = {
   title: 'title',
@@ -55,10 +56,12 @@ export default function updateTask(actor, id, body, { today } = {}) {
     if (listing.after && listing.before) changes.splice(changes.indexOf(listing), 1);
     const next = { ...existing, ...patch };
     if (listing.after && (!next.bounty || next.private)) throw HttpError.badRequest('Only tasks with a bounty that aren’t private can be listed publicly.');
+    if (listing.after) planGate('Listing on the public bounty board');
   }
   if (changes.some((c) => c.key === 'bounty' || c.key === 'bountyToken')) {
     if (!actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
     if (existing.bountyState) throw new HttpError(409, 'This bounty is already paid or being paid, so it can’t change.');
+    if (patch.bounty) planGate('A new bounty');
   }
 
   const sets = changes.map((c) => `${COLUMNS[c.key]} = ?`);

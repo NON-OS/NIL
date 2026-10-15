@@ -1,6 +1,7 @@
 import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import requireMember from '../auth/requireMember.js';
+import requirePlan from '../auth/requirePlan.js';
 import auth from './auth.js';
 import wallet from './wallet.js';
 import credentials from './credentials.js';
@@ -36,6 +37,7 @@ import shareLinks from './shareLinks.js';
 import publicPages from './publicPages.js';
 import publicBounties from './publicBounties.js';
 import applications from './applications.js';
+import planRoutes from './plan.js';
 
 const api = express.Router();
 
@@ -51,8 +53,11 @@ api.use(requireAuth);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
 api.use(['/proposals', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
+// The subscription unlocks votes, the holder door and every AI feature.
+api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
+api.use('/proposals', (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/close') ? requirePlan(req, res, next) : next()));
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes]) {
   api.use(router);
 }
 

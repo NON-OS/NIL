@@ -6,6 +6,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import accessKeys from '../../actions/accessKeys';
 import dates from '../../lib/dates';
+import PlanNotice from '../plan/PlanNotice';
 import type AccessKey from '../../types/AccessKey';
 
 const EXPIRY = [
@@ -136,6 +137,7 @@ export default function AiSettings() {
 
       <section className="settings-section">
         <h2>Built-in AI</h2>
+        <PlanNotice what="AI tools" />
         <div className="settings-card">
           <p style={{ margin: 0 }}>
             {aiOn

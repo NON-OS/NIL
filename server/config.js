@@ -38,6 +38,24 @@ const nox = Object.freeze({
   explorer: (env.NOX_EXPLORER || 'https://etherscan.io').replace(/\/$/, ''),
 });
 
+// The NOX subscription. With no treasury set the server runs in community mode: every utility
+// is on, as the AGPL lets anyone choose anyway. Hosted and official servers set a treasury.
+function planPrice(value, decimals) {
+  if (!value || !/^\d+(\.\d+)?$/.test(value)) return null;
+  const [whole, fraction = ''] = value.split('.');
+  return (BigInt(whole) * 10n ** BigInt(decimals) + BigInt((fraction + '0'.repeat(decimals)).slice(0, decimals) || '0')).toString();
+}
+
+const plan = Object.freeze({
+  treasury: /^0x[0-9a-fA-F]{40}$/.test(env.PLAN_TREASURY ?? '') ? env.PLAN_TREASURY.toLowerCase() : null,
+  price: planPrice(env.PLAN_PRICE || '1000', nox.decimals),
+  periodDays: Number(env.PLAN_PERIOD_DAYS || 30),
+  graceDays: Number(env.PLAN_GRACE_DAYS || 7),
+  freeSeats: Number(env.PLAN_FREE_SEATS || 5),
+  maxPeriods: Number(env.PLAN_MAX_PERIODS || 24),
+  trialDays: Number(env.PLAN_TRIAL_DAYS ?? 14),
+});
+
 const config = Object.freeze({
   port: Number(env.PORT || 3000),
   host: env.HOST || '0.0.0.0',
@@ -52,6 +70,7 @@ const config = Object.freeze({
   trashDays: Number(env.TRASH_DAYS || 30),
   nox,
   rewards: rewardTokens(env.REWARD_TOKENS, nox),
+  plan,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
