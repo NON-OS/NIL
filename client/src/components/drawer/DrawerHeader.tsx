@@ -1,5 +1,5 @@
 import { useMemo, useRef, useState } from 'react';
-import { Bell, BellOff, Copy, Link2, MoreHorizontal, Sun, Trash2, X } from 'lucide-react';
+import { Bell, BellOff, Copy, Link2, MoreHorizontal, Share2, Sun, Trash2, X } from 'lucide-react';
 import AvatarStack from '../ui/AvatarStack';
 import Popover from '../ui/Popover';
 import useStore from '../../state/useStore';
@@ -11,6 +11,7 @@ import taskKey from '../../lib/taskKey';
 import TimerButton from '../time/TimerButton';
 import ReminderButton from '../time/ReminderButton';
 import type Task from '../../types/Task';
+import ShareLinkModal from '../share/ShareLinkModal';
 
 async function copy(text: string, message: string) {
   try {
@@ -28,6 +29,8 @@ export default function DrawerHeader({ task }: { task: Task }) {
   const watchers = useStore((s) => (s.detail?.taskId === task.id ? s.detail.watchers : []));
   const inMyDay = useStore((s) => s.focus.some((f) => f.taskId === task.id));
   const [menu, setMenu] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const canShare = useStore((s) => s.sharing.shareLinks && !s.guest);
   const moreRef = useRef<HTMLButtonElement>(null);
 
   const viewers = useMemo(() => presence.filter((p) => p.userId !== me?.id && p.viewing.includes(task.id)).map((p) => users[p.userId]).filter(Boolean), [presence, users, me?.id, task.id]);
@@ -69,6 +72,11 @@ export default function DrawerHeader({ task }: { task: Task }) {
           <button type="button" className="menu-item" onClick={() => (setMenu(false), copy(link, 'Link copied'))}>
             <Link2 size={14} /> Copy link
           </button>
+          {canShare && !task.private && (
+            <button type="button" className="menu-item" onClick={() => (setMenu(false), setSharing(true))}>
+              <Share2 size={14} /> Share read-only link
+            </button>
+          )}
           <button type="button" className="menu-item" onClick={duplicate}>
             <Copy size={14} /> Duplicate
           </button>
@@ -78,6 +86,7 @@ export default function DrawerHeader({ task }: { task: Task }) {
           </button>
         </div>
       </Popover>
+      {sharing && <ShareLinkModal kind="task" targetId={task.id} name={taskKey(task)} onClose={() => setSharing(false)} />}
       <button type="button" className="icon-btn" onClick={detail.close} aria-label="Close task" title="Close (Esc)">
         <X />
       </button>

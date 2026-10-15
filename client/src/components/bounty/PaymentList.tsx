@@ -6,6 +6,7 @@ import tokenAmount from '../../lib/tokenAmount';
 import dates from '../../lib/dates';
 import shortAddress from '../../lib/shortAddress';
 import type Payment from '../../types/Payment';
+import isAdminUser from '../../lib/isAdmin';
 
 const ICON = { confirmed: CheckCircle2, pending: Clock, failed: XCircle };
 const LABEL = { confirmed: 'Confirmed', pending: 'Confirming', failed: 'Not accepted' };
@@ -13,7 +14,7 @@ const LABEL = { confirmed: 'Confirmed', pending: 'Confirming', failed: 'Not acce
 export default function PaymentList({ payments, onChange }: { payments: Payment[]; onChange: () => void }) {
   const users = useStore((s) => s.users);
   const nox = useStore((s) => s.nox);
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
 
   const act = (fn: () => Promise<unknown>) => fn().then(onChange).catch(toast.error);
 

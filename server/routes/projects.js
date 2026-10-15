@@ -9,6 +9,7 @@ import requireAdmin from '../auth/requireAdmin.js';
 import hub from '../realtime/hub.js';
 import publishTask from '../services/publishTask.js';
 import toProject from '../mappers/toProject.js';
+import guestScope from '../services/guestScope.js';
 
 const router = express.Router();
 
@@ -23,7 +24,7 @@ const cleanKey = (value) => String(value ?? '').toUpperCase().replace(/[^A-Z0-9]
 
 function publish(id) {
   const project = toProject(sql.get('SELECT * FROM projects WHERE id = ?', id));
-  hub.broadcast({ type: 'project', project });
+  hub.broadcast((viewer) => (guestScope.of(viewer.id)?.has(project.id) === false ? null : { type: 'project', project }));
   return { project };
 }
 
@@ -81,6 +82,7 @@ router.delete(
     const affected = sql.all('SELECT id FROM tasks WHERE project_id = ?', req.params.id);
     sql.run('DELETE FROM projects WHERE id = ?', req.params.id);
     hub.broadcast({ type: 'project.delete', id: req.params.id });
+    guestScope.forget();
     for (const { id } of affected) publishTask(id);
     return { ok: true };
   }),

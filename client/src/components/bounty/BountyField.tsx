@@ -8,11 +8,12 @@ import formatUnits from '../../lib/formatUnits';
 import parseUnits from '../../lib/parseUnits';
 import tokenAmount from '../../lib/tokenAmount';
 import type Task from '../../types/Task';
+import isAdminUser from '../../lib/isAdmin';
 
 // Admins type a plain amount like "250" or "12.5" and pick the token (NOX, USDC…); it's stored
 // in that token's smallest unit.
 export default function BountyField({ task }: { task: Task }) {
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const rewards = useStore((s) => s.rewards);
   const [symbol, setSymbol] = useState(task.bountyToken ?? rewards[0]?.symbol ?? 'NOX');
   const token = rewards.find((t) => t.symbol === symbol);

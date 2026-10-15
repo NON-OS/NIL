@@ -1,10 +1,11 @@
 import { useState, type FormEvent } from 'react';
 import useStore from '../../state/useStore';
 import people from '../../actions/people';
+import isAdminUser from '../../lib/isAdmin';
 
 export default function WorkspaceSettings() {
   const workspace = useStore((s) => s.workspace);
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [name, setName] = useState(workspace.name);
   const [prefix, setPrefix] = useState(workspace.taskPrefix);
 

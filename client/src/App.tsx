@@ -28,6 +28,7 @@ import BountiesView from './views/BountiesView';
 import VotesView from './views/VotesView';
 import TimeView from './views/TimeView';
 import DocsView from './views/DocsView';
+import SharePage from './views/SharePage';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 
@@ -79,6 +80,9 @@ export default function App() {
   const { segments, query } = useRoute();
   const [newProject, setNewProject] = useState(false);
   const taskNumber = Number(query.get('task'));
+
+  // public pages work signed in or out, outside the app shell
+  if (segments[0] === 's' && segments[1]) return <SharePage token={segments[1]} />;
 
   if (phase === 'loading') {
     return (

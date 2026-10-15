@@ -33,7 +33,7 @@ const meta = {
   goalStatuses: ['on_track', 'at_risk', 'off_track', 'done'] as GoalStatus[],
   goalStatus: { on_track: 'On track', at_risk: 'At risk', off_track: 'Off track', done: 'Achieved' } as Record<GoalStatus, string>,
 
-  role: { owner: 'Owner', admin: 'Admin', member: 'Member' } as Record<Role, string>,
+  role: { owner: 'Owner', admin: 'Admin', member: 'Member', guest: 'Guest' } as Record<Role, string>,
 
   palette: [
     { name: 'Ultramarine', value: '#3b4fe0' },

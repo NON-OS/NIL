@@ -10,6 +10,7 @@ import toast from '../../state/toast';
 import docs from '../../actions/docs';
 import saveBlob from '../../lib/saveBlob';
 import type DocItem from '../../types/DocItem';
+import isAdminUser from '../../lib/isAdmin';
 
 type Status = 'saved' | 'dirty' | 'saving' | 'conflict';
 
@@ -36,7 +37,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
   const timer = useRef<ReturnType<typeof setTimeout>>();
   const latest = useRef(doc);
   latest.current = doc;
-  const canManage = doc.createdBy === me.id || me.role !== 'member';
+  const canManage = doc.createdBy === me.id || isAdminUser(me);
 
   useEffect(() => {
     if (status === 'dirty' || status === 'saving') return;

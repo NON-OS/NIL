@@ -8,7 +8,7 @@ export default function DataSettings() {
   const role = useStore((s) => s.me?.role);
   const aiOn = useStore((s) => s.ai);
   const sourceUrl = useStore((s) => s.sourceUrl);
-  const isAdmin = role !== 'member';
+  const isAdmin = role === 'owner' || role === 'admin';
 
   return (
     <>

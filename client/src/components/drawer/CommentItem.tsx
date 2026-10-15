@@ -5,6 +5,7 @@ import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
 import dates from '../../lib/dates';
 import type Comment from '../../types/Comment';
+import isAdminUser from '../../lib/isAdmin';
 
 export default function CommentItem({ comment }: { comment: Comment }) {
   const author = useStore((s) => (comment.authorId ? s.users[comment.authorId] : undefined));
@@ -12,7 +13,7 @@ export default function CommentItem({ comment }: { comment: Comment }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   const mine = comment.authorId === me?.id;
-  const canDelete = mine || me?.role !== 'member';
+  const canDelete = mine || isAdminUser(me);
 
   return (
     <li className="comment">

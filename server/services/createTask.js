@@ -2,6 +2,7 @@ import sql from '../db/sql.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import loadTask from './loadTask.js';
+import guestScope from './guestScope.js';
 import publishTask from './publishTask.js';
 import parseTaskPatch from './parseTaskPatch.js';
 import logActivity from './logActivity.js';
@@ -13,6 +14,8 @@ export default function createTask(actor, input) {
   const p = parseTaskPatch({ status: 'todo', priority: 0, ...input });
   if (!p.title) throw HttpError.badRequest('Title can’t be empty.');
   if (p.bounty && !actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
+  const scope = guestScope.of(actor.id);
+  if (scope && !scope.has(p.projectId)) throw HttpError.forbidden('Guests can add tasks only to projects shared with them.');
   const id = newId();
   const now = Date.now();
 

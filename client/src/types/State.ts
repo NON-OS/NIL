@@ -15,6 +15,7 @@ import type HolderGate from './HolderGate';
 import type TimeEntry from './TimeEntry';
 import type DeckScope from './DeckScope';
 import type RewardToken from './RewardToken';
+import type SharingPolicy from './SharingPolicy';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -34,6 +35,9 @@ export default interface State {
   ai: boolean;
   nox: NoxInfo | null;
   rewards: RewardToken[];
+  // true when you're a guest who can see only the projects shared with you
+  guest: boolean;
+  sharing: SharingPolicy;
   proposalsRev: number;
   timer: TimeEntry | null;
   docsUnlocked: boolean;

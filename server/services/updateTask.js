@@ -2,6 +2,7 @@ import sql from '../db/sql.js';
 import HttpError from '../lib/HttpError.js';
 import loadTask from './loadTask.js';
 import visibleTask from './visibleTask.js';
+import guestScope from './guestScope.js';
 import publishTask from './publishTask.js';
 import parseTaskPatch from './parseTaskPatch.js';
 import watchers from './watchers.js';
@@ -41,6 +42,9 @@ export default function updateTask(actor, id, body, { today } = {}) {
     .filter(([key, value]) => !same(existing[key], value))
     .map(([key, value]) => ({ key, before: existing[key], after: value }));
   if (!changes.length) return { task: existing, spawned: null };
+  if (patch.projectId !== undefined && guestScope.of(actor.id) && !guestScope.of(actor.id).has(patch.projectId)) {
+    throw HttpError.forbidden('Guests can move tasks only between projects shared with them.');
+  }
   if (changes.some((c) => c.key === 'private') && actor.id !== existing.creatorId && actor.id !== existing.assigneeId) {
     throw HttpError.forbidden('Only the person who created this task or its assignee can change who sees it.');
   }

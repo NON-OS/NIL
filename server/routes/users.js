@@ -10,6 +10,7 @@ import hub from '../realtime/hub.js';
 import publishUser from '../services/publishUser.js';
 import eraseUser from '../services/eraseUser.js';
 import toUser from '../mappers/toUser.js';
+import guestScope from '../services/guestScope.js';
 
 const router = express.Router();
 
@@ -30,7 +31,18 @@ router.patch(
       const role = check.oneOf(req.body.role, domain.roles, 'Role');
       if (role === 'owner' && req.user.role !== 'owner') throw HttpError.forbidden('Only an owner can make someone an owner.');
       sql.run('UPDATE users SET role = ? WHERE id = ?', role, row.id);
-      hub.setAdmin(row.id, role !== 'member');
+      if (role !== 'guest') sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
+      guestScope.forget(row.id);
+      hub.setAdmin(row.id, role === 'owner' || role === 'admin');
+    }
+    // The projects a guest can see. Changing them takes effect on their next request.
+    if (Array.isArray(req.body.projects)) {
+      if (sql.get('SELECT role FROM users WHERE id = ?', row.id).role !== 'guest') throw HttpError.badRequest('Only guests are limited to projects.');
+      sql.tx(() => {
+        sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
+        for (const id of req.body.projects.filter((p) => typeof p === 'string')) sql.run('INSERT OR IGNORE INTO project_guests (project_id, user_id) SELECT id, ? FROM projects WHERE id = ?', row.id, id);
+      });
+      guestScope.forget(row.id);
     }
     // Lets someone who joined by holding NOX stay without the balance check.
     if (req.body.keepWithoutNox === true) sql.run("UPDATE users SET joined_via = 'invite' WHERE id = ? AND joined_via = 'holder'", row.id);
@@ -44,6 +56,12 @@ router.patch(
     }
     return { user: toUser(publishUser(row.id), req.viewer) };
   }),
+);
+
+router.get(
+  '/users/:id/projects',
+  requireAdmin,
+  route((req) => ({ projectIds: sql.all('SELECT project_id FROM project_guests WHERE user_id = ?', req.params.id).map((r) => r.project_id) })),
 );
 
 router.delete(

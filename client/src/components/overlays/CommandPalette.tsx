@@ -11,6 +11,7 @@ import router from '../../lib/router';
 import fuzzyScore from '../../lib/fuzzyScore';
 import meta from '../../lib/meta';
 import decks from '../../actions/decks';
+import isAdminUser from '../../lib/isAdmin';
 
 interface Item {
   id: string;
@@ -44,7 +45,7 @@ export default function CommandPalette() {
   const goals = useStore((s) => s.goals);
   const prefix = useStore((s) => s.workspace.taskPrefix);
   const aiOn = useStore((s) => s.ai);
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);

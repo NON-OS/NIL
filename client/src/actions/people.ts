@@ -6,6 +6,7 @@ import type User from '../types/User';
 import type Workspace from '../types/Workspace';
 import type Invite from '../types/Invite';
 import type Role from '../types/Role';
+import type SharingPolicy from '../types/SharingPolicy';
 
 const people = {
   async updateMe(patch: Partial<Pick<User, 'name' | 'title' | 'color'>>) {
@@ -19,7 +20,7 @@ const people = {
     }
   },
 
-  async update(id: string, patch: { role?: Role; deactivated?: boolean; keepWithoutNox?: boolean }) {
+  async update(id: string, patch: { role?: Role; deactivated?: boolean; keepWithoutNox?: boolean; projects?: string[] }) {
     try {
       const { user } = await http.patch<{ user: User }>(`/users/${id}`, patch);
       store.set((s) => ({ users: records.put(s.users, user) }));
@@ -49,7 +50,14 @@ const people = {
   },
 
   invites: () => http.get<Invite[]>('/invites'),
-  invite: (input: { role: Role; days?: number }) => http.post<{ token: string; invite: Invite }>('/invites', input),
+  invite: (input: { role: Role; projectIds?: string[]; days?: number }) => http.post<{ token: string; invite: Invite }>('/invites', input),
+  async setSharing(patch: Partial<SharingPolicy>) {
+    try {
+      store.set({ sharing: await http.put<SharingPolicy>('/sharing', patch) });
+    } catch (err) {
+      toast.error(err);
+    }
+  },
   revokeInvite: (id: string) => http.del(`/invites/${encodeURIComponent(id)}`),
 };
 

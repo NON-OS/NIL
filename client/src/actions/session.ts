@@ -14,6 +14,7 @@ import type NoxInfo from '../types/NoxInfo';
 import type HolderGate from '../types/HolderGate';
 import type TimeEntry from '../types/TimeEntry';
 import type RewardToken from '../types/RewardToken';
+import type SharingPolicy from '../types/SharingPolicy';
 import keyring from '../state/keyring';
 
 interface Bootstrap {
@@ -29,6 +30,8 @@ interface Bootstrap {
   ai: boolean;
   nox: NoxInfo | null;
   rewards: RewardToken[];
+  guest: boolean;
+  sharing: SharingPolicy;
   timer: TimeEntry | null;
   sourceUrl: string | null;
 }
@@ -49,6 +52,8 @@ async function load() {
     ai: b.ai,
     nox: b.nox,
     rewards: b.rewards ?? [],
+    guest: b.guest,
+    sharing: b.sharing,
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });

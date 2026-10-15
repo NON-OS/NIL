@@ -1,6 +1,6 @@
 import './ProjectView.css';
 import { useMemo, useState } from 'react';
-import { Archive, Kanban, List, Pencil, Plus, Presentation } from 'lucide-react';
+import { Archive, Kanban, List, Pencil, Plus, Presentation, Share2 } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import FilterBar from '../components/shell/FilterBar';
 import ListOptions from '../components/shell/ListOptions';
@@ -20,6 +20,7 @@ import storage from '../lib/storage';
 import meta from '../lib/meta';
 import dates from '../lib/dates';
 import decks from '../actions/decks';
+import ShareLinkModal from '../components/share/ShareLinkModal';
 
 export default function ProjectView({ projectId }: { projectId: string }) {
   const project = useStore((s) => s.projects[projectId]);
@@ -29,6 +30,9 @@ export default function ProjectView({ projectId }: { projectId: string }) {
   const all = useTasks();
   const [mode, setModeState] = useState<'board' | 'list'>(() => storage.get(`project-mode:${projectId}`, 'board'));
   const [editing, setEditing] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const canShare = useStore((s) => s.sharing.shareLinks && !s.guest);
+  const isGuest = useStore((s) => s.guest);
   const [filter, setFilter] = useFilter(`project:${projectId}`);
   const [prefs, setPrefs] = useListPrefs(`project:${projectId}`, { groupBy: 'status', sortBy: 'manual' });
 
@@ -70,12 +74,19 @@ export default function ProjectView({ projectId }: { projectId: string }) {
                 <List /> List
               </button>
             </div>
+            {canShare && (
+              <button type="button" className="icon-btn" onClick={() => setSharing(true)} aria-label="Share read-only link" title="Share a read-only link">
+                <Share2 />
+              </button>
+            )}
             <button type="button" className="icon-btn" onClick={() => decks.open({ kind: 'project', id: project.id })} aria-label="Create a status deck" title="Create a status deck (.pptx)">
               <Presentation />
             </button>
-            <button type="button" className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit project" title="Edit project">
-              <Pencil />
-            </button>
+            {!isGuest && (
+              <button type="button" className="icon-btn" onClick={() => setEditing(true)} aria-label="Edit project" title="Edit project">
+                <Pencil />
+              </button>
+            )}
             <button type="button" className="btn btn-primary" onClick={() => ui.quickAdd(defaults)}>
               <Plus /> New task
             </button>
@@ -109,6 +120,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
         <TaskList tasks={tasks} groupBy={prefs.groupBy} sortBy={prefs.sortBy} defaults={defaults} />
       )}
       {editing && <ProjectModal project={project} onClose={() => setEditing(false)} />}
+      {sharing && <ShareLinkModal kind="project" targetId={project.id} name={project.name} onClose={() => setSharing(false)} />}
     </div>
   );
 }

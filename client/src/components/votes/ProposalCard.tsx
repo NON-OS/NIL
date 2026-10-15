@@ -12,11 +12,12 @@ import timeLeft from '../../lib/timeLeft';
 import tokenAmount from '../../lib/tokenAmount';
 import cx from '../../lib/cx';
 import type Proposal from '../../types/Proposal';
+import isAdminUser from '../../lib/isAdmin';
 
 const percent = (part: bigint, whole: bigint) => (whole ? Number((part * 1000n) / whole) / 10 : 0);
 
 export default function ProposalCard({ proposal, onChange }: { proposal: Proposal; onChange: () => void }) {
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const author = useStore((s) => (proposal.createdBy ? s.users[proposal.createdBy] : undefined));
   const [busy, setBusy] = useState<number | 'close' | null>(null);
   const open = !proposal.closedAt && proposal.closesAt > Date.now();

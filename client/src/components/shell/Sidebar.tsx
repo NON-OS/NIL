@@ -25,6 +25,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
   const users = useStore((s) => s.users);
   const presence = useStore((s) => s.presence);
   const meId = useStore((s) => s.me?.id);
+  const guest = useStore((s) => s.guest);
 
   const projects = useMemo(() => Object.values(projectMap).filter((p) => !p.archived).sort((a, b) => a.position - b.position), [projectMap]);
   const openCounts = useMemo(() => {
@@ -66,7 +67,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
 
         <div className="sidebar-scroll">
           <div className="nav">
-            {NAV.map(({ to, label, icon: Icon, key }) => (
+            {NAV.filter((n) => !(guest && 'members' in n)).map(({ to, label, icon: Icon, key }) => (
               <a key={to} href={to} onClick={link(to)} aria-current={path === to || (to !== '/' && path.startsWith(`${to}/`)) ? 'page' : undefined}>
                 <Icon />
                 {label}
@@ -77,9 +78,11 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
 
           <div className="sidebar-section">
             <span className="eyebrow">Projects</span>
-            <button type="button" className="icon-only" onClick={onNewProject} aria-label="New project" title="New project">
-              <Plus size={14} />
-            </button>
+            {!guest && (
+              <button type="button" className="icon-only" onClick={onNewProject} aria-label="New project" title="New project">
+                <Plus size={14} />
+              </button>
+            )}
           </div>
           <div className="nav">
             {projects.map((p) => (
@@ -89,7 +92,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
                 {openCounts[p.id] ? <span className="count num">{openCounts[p.id]}</span> : null}
               </a>
             ))}
-            {!projects.length && (
+            {!projects.length && !guest && (
               <button type="button" className="nav-project" style={{ border: 0, background: 'none', color: 'var(--muted)' }} onClick={onNewProject}>
                 <Plus size={14} /> <span>Create a project</span>
               </button>

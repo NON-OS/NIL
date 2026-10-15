@@ -11,6 +11,7 @@ import DataSettings from '../components/settings/DataSettings';
 import AiSettings from '../components/settings/AiSettings';
 import useRoute from '../hooks/useRoute';
 import router from '../lib/router';
+import useStore from '../state/useStore';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: UserRound, view: ProfileSettings },
@@ -25,7 +26,10 @@ const TABS = [
 
 export default function SettingsView() {
   const { query } = useRoute();
-  const active = TABS.find((t) => t.id === query.get('tab')) ?? TABS[0];
+  const guest = useStore((s) => s.guest);
+  // guests manage their own account; workspace-wide settings belong to members
+  const tabs = guest ? TABS.filter((t) => ['profile', 'security', 'ai'].includes(t.id)) : TABS;
+  const active = tabs.find((t) => t.id === query.get('tab')) ?? tabs[0];
   const View = active.view;
 
   return (
@@ -34,7 +38,7 @@ export default function SettingsView() {
       <div className="page">
         <div className="settings">
           <nav className="settings-tabs" role="tablist" aria-label="Settings sections">
-            {TABS.map(({ id, label, icon: Icon }) => (
+            {tabs.map(({ id, label, icon: Icon }) => (
               <button key={id} type="button" role="tab" aria-selected={active.id === id} onClick={() => router.navigate(`/settings?tab=${id}`, { replace: true })}>
                 <Icon /> {label}
               </button>

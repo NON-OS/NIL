@@ -9,9 +9,10 @@ import useStore from '../state/useStore';
 import toast from '../state/toast';
 import votes from '../actions/votes';
 import type Proposal from '../types/Proposal';
+import isAdminUser from '../lib/isAdmin';
 
 export default function VotesView() {
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   // bumped by the server whenever a vote is cast, opened or closed
   const revision = useStore((s) => s.proposalsRev);
   const [list, setList] = useState<Proposal[] | null>(null);

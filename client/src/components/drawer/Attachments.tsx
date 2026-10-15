@@ -5,13 +5,14 @@ import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
 import formatBytes from '../../lib/formatBytes';
 import type Attachment from '../../types/Attachment';
+import isAdminUser from '../../lib/isAdmin';
 
 const isImage = (a: Attachment) => /^image\/(png|jpeg|gif|webp)$/.test(a.mime);
 
 export default function Attachments({ taskId }: { taskId: string }) {
   const attachments = useStore((s) => (s.detail?.taskId === taskId ? s.detail.attachments : null));
   const meId = useStore((s) => s.me?.id);
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [uploading, setUploading] = useState(0);
   const [over, setOver] = useState(false);
   const input = useRef<HTMLInputElement>(null);

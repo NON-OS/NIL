@@ -8,6 +8,7 @@ import HttpError from '../lib/HttpError.js';
 import hub from '../realtime/hub.js';
 import publishTask from '../services/publishTask.js';
 import toGoal from '../mappers/toGoal.js';
+import guestScope from '../services/guestScope.js';
 
 const router = express.Router();
 
@@ -28,7 +29,7 @@ function fields(b) {
 
 function publish(id) {
   const goal = toGoal(sql.get('SELECT * FROM goals WHERE id = ?', id));
-  hub.broadcast({ type: 'goal', goal });
+  hub.broadcast((viewer) => (guestScope.of(viewer.id) ? null : { type: 'goal', goal }));
   return { goal };
 }
 

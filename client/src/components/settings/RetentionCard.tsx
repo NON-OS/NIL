@@ -4,6 +4,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import privacy from '../../actions/privacy';
 import type Retention from '../../types/Retention';
+import isAdminUser from '../../lib/isAdmin';
 
 const ROWS = [
   { key: 'doneDays', label: 'Finished and canceled tasks', hint: 'Including their comments and files. Receipts already exported stay valid.' },
@@ -15,7 +16,7 @@ const label = (days: number) => (days === 0 ? 'Keep forever' : days === 1 ? 'Aft
 
 // Zero-state: the less you keep, the less there is to leak.
 export default function RetentionCard() {
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [data, setData] = useState<{ retention: Retention; allowed: number[] } | null>(null);
 
   useEffect(() => {

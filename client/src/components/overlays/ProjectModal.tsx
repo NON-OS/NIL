@@ -9,6 +9,7 @@ import projectActions from '../../actions/projects';
 import router from '../../lib/router';
 import meta from '../../lib/meta';
 import type Project from '../../types/Project';
+import isAdminUser from '../../lib/isAdmin';
 
 interface Props {
   project?: Project;
@@ -17,7 +18,7 @@ interface Props {
 
 export default function ProjectModal({ project, onClose }: Props) {
   const users = useStore((s) => s.users);
-  const isAdmin = useStore((s) => s.me?.role !== 'member');
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [name, setName] = useState(project?.name ?? '');
   const [key, setKey] = useState(project?.key ?? '');
   const [color, setColor] = useState(project?.color ?? meta.palette[0].value);

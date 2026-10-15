@@ -18,6 +18,8 @@ const initialState: State = {
   ai: false,
   nox: null,
   rewards: [],
+  guest: false,
+  sharing: { invitePolicy: 'admins', shareLinks: false },
   proposalsRev: 0,
   timer: null,
   docsUnlocked: false,

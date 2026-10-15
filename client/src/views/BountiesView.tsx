@@ -21,6 +21,7 @@ import amountsByToken from '../lib/amountsByToken';
 import taskKey from '../lib/taskKey';
 import type BountyOverview from '../types/BountyOverview';
 import type Task from '../types/Task';
+import isAdminUser from '../lib/isAdmin';
 
 const sum = (tasks: Task[]) => amountsByToken(tasks.map((t) => ({ amount: t.bounty!, token: t.bountyToken })));
 
@@ -30,7 +31,7 @@ export default function BountiesView() {
   const nox = useStore((s) => s.nox);
   const rewards = useStore((s) => s.rewards);
   const tasks = useTasks();
-  const isAdmin = me.role !== 'member';
+  const isAdmin = isAdminUser(me);
   const [data, setData] = useState<BountyOverview | null>(null);
 
   const refresh = useCallback(() => bounties.overview().then(setData).catch(toast.error), []);
