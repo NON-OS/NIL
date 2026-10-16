@@ -51,3 +51,5 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md). To contribute, see [C
 ## Licence
 
 Nil is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. If you run a modified version for others over a network, offer them its source (set `SOURCE_URL`). See [LICENSE](LICENSE).
+
+The Nil and NØNOS names and logos are not covered by the licence. See [TRADEMARKS.md](TRADEMARKS.md).
