@@ -10,8 +10,8 @@ interface Gate {
   minimum: string | null;
 }
 
-// The open door for token holders: anyone holding enough NOX can join without an invite,
-// and is checked again every time they sign in.
+// The open door for token holders: anyone holding enough NOX (held, staked, or as
+// Zero-State Passes) can join without an invite, and keeps being checked after that.
 export default function HolderGateCard() {
   const nox = useStore((s) => s.nox);
   const [gate, setGate] = useState<Gate | null>(null);
@@ -49,7 +49,7 @@ export default function HolderGateCard() {
         <span>
           <strong>Let {symbol} holders join without an invite</strong>
           <br />
-          <span className="muted">They join as members. Their balance is checked when they join and again every time they sign in. Removing their access works like for anyone else.</span>
+          <span className="muted">They join as members. {symbol} in their wallets, {symbol} staked and Zero-State Passes all count. Their holdings are checked when they join, at every sign-in and every few hours; someone who falls below gets a notice and a few days to hold enough again before they’re signed out. Removing their access works like for anyone else.</span>
         </span>
         <button type="button" className="toggle" role="switch" aria-checked={gate.enabled} onClick={() => save(!gate.enabled)} aria-label={`Let ${symbol} holders join`} />
       </label>

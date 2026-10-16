@@ -22,7 +22,7 @@ interface Props {
 const LEAD = {
   setup: 'You’re the first one here, so you’ll be the owner. Your wallet becomes the key to this workspace.',
   invite: 'Pick the name your team will see, then sign with your wallet.',
-  holder: 'Anyone whose wallet holds enough NOX tokens can join this workspace. Nil checks the balance when you sign. Nothing is spent.',
+  holder: 'This workspace is open to NOX holders. NOX in this wallet, NOX staked and Zero-State Passes all count, checked when you sign. Nothing is spent.',
 };
 
 export default function JoinPanel({ mode, inviteToken, workspaceName, requirement, onRestore, onBack }: Props) {

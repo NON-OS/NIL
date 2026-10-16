@@ -1,8 +1,12 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
-import readTransfer from '../chain/readTransfer.js';
+import readReceipt from '../chain/readReceipt.js';
+import finalizedBlock from '../chain/finalizedBlock.js';
+import blockAt from '../chain/blockAt.js';
 import treasury from './treasury.js';
 import rewardToken from '../lib/rewardToken.js';
+import formatUnits from '../lib/formatUnits.js';
+import sameSuffix from '../billing/sameSuffix.js';
 import settlePayment from './settlePayment.js';
 import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
@@ -13,33 +17,70 @@ function payers(payerId) {
   return new Set([...own, ...treasury.get()]);
 }
 
-// Checks one pending payment against the chain. It settles only when NOX from an allowed
-// payer reached the contributor's wallet, covered the whole bounty, and is buried under
-// enough blocks that a reorg can't undo it.
+// A payment cancelled while stuck is only watched, never failed: if its transaction lands and
+// checks out it still counts, so no money that moved is ever left off the record.
+function refuse(payment, problem) {
+  if (payment.status === 'pending') return failPayment(payment, problem);
+  sql.run('UPDATE payments SET problem = ?, checked_at = ? WHERE id = ?', problem, Date.now(), payment.id);
+}
+
+// Checks one payment against the chain as it is now. It settles only when the real token
+// contract moved tokens from an allowed payer to the contributor's address, in a block mined
+// after the payment was started in Nil, in an amount that carries the suffix Nil asked for, and
+// once that block is final. Until then the block and its hash are kept up to date, so a reorg
+// that moves or drops the transaction is followed rather than missed.
 export default async function verifyPayment(id) {
   const payment = sql.get('SELECT * FROM payments WHERE id = ?', id);
-  if (payment?.status !== 'pending') return;
+  if (payment?.status !== 'pending' && payment?.status !== 'cancelled') return;
 
   const token = rewardToken(payment.token);
-  const found = await readTransfer(payment.tx_hash, token.address);
+  const found = await readReceipt(payment.tx_hash);
+  const now = Date.now();
   if (found.state === 'unknown') {
-    if (Date.now() - payment.created_at > config.nox.missingTxMs) failPayment(payment, 'The transaction never showed up on-chain.');
-    else sql.run('UPDATE payments SET checked_at = ? WHERE id = ?', Date.now(), id);
+    if (payment.block_hash) {
+      sql.run('UPDATE payments SET block_number = NULL, block_hash = NULL, problem = ?, checked_at = ? WHERE id = ?', 'A chain reorganisation took the transaction out of its block. Nil keeps watching for it.', now, id);
+    } else if (payment.status === 'pending' && now - payment.created_at > config.nox.missingTxMs) {
+      failPayment(payment, 'The transaction never showed up on-chain.');
+    } else {
+      sql.run('UPDATE payments SET checked_at = ? WHERE id = ?', now, id);
+    }
     return;
   }
-  if (found.state === 'failed') return failPayment(payment, `The transaction failed on-chain, so no ${token.symbol} moved.`);
+  if (found.state === 'failed') return refuse(payment, `The transaction failed on-chain, so no ${token.symbol} moved.`);
 
-  const allowed = payers(payment.payer_id);
-  const toPayee = found.transfers.filter((t) => t.to === payment.to_address);
-  const funded = toPayee.filter((t) => allowed.has(t.from));
-  if (!toPayee.length) return failPayment(payment, `This transaction has no ${token.symbol} transfer to the contributor’s ${payment.stealth_ephemeral ? 'private address' : 'wallet'}.`);
-  if (!funded.length) return failPayment(payment, `The ${token.symbol} came from a wallet that isn’t yours or a treasury address.`);
-  if (funded.reduce((sum, t) => sum + t.value, 0n) < BigInt(payment.amount)) return failPayment(payment, `Less ${token.symbol} was sent than the bounty.`);
+  const toPayee = found.transfers.filter((t) => t.token === token.address && t.to === payment.to_address);
+  const funded = toPayee.filter((t) => payers(payment.payer_id).has(t.from));
+  if (!toPayee.length) return refuse(payment, `This transaction has no ${token.symbol} transfer to the contributor’s ${payment.stealth_ephemeral ? 'private address' : 'wallet'}.`);
+  if (!funded.length) return refuse(payment, `The ${token.symbol} came from a wallet that isn’t yours or a treasury address.`);
+  if (payment.start_block !== null && found.blockNumber < payment.start_block) {
+    return refuse(payment, 'This transaction was mined before the payment was started in Nil, so it can’t be told apart from a payment made for something else.');
+  }
 
-  if (found.confirmations < config.nox.confirmations) {
-    sql.run('UPDATE payments SET block_number = ?, checked_at = ? WHERE id = ?', found.blockNumber, Date.now(), id);
+  let paying;
+  if (payment.expected) {
+    const expected = BigInt(payment.expected);
+    paying = funded.filter((t) => t.value === expected || sameSuffix(t.value, expected, payment.grid));
+    if (!paying.length) {
+      const sent = funded.map((t) => formatUnits(t.value, token.decimals, token.decimals)).join(' and ');
+      return refuse(payment, `Nil asked for exactly ${formatUnits(expected, token.decimals, token.decimals)} ${token.symbol}, and this sent ${sent}. Without those last digits it can’t be told apart from a payment for something else, so it doesn’t count here.`);
+    }
+  } else {
+    // recorded before payments started in Nil: the old rule, at least the whole bounty
+    paying = funded;
+    if (funded.reduce((sum, t) => sum + t.value, 0n) < BigInt(payment.amount)) return refuse(payment, `Less ${token.symbol} was sent than the bounty.`);
+  }
+
+  if (found.blockHash !== payment.block_hash) {
+    sql.run('UPDATE payments SET block_number = ?, block_hash = ?, problem = NULL, checked_at = ? WHERE id = ?', found.blockNumber, found.blockHash, now, id);
+  }
+  if (found.blockNumber > (await finalizedBlock())) {
+    sql.run('UPDATE payments SET checked_at = ? WHERE id = ?', now, id);
     return;
   }
-  settlePayment(payment, { from: funded[0].from, blockNumber: found.blockNumber });
+  const block = await blockAt(found.blockNumber);
+  // the node hasn't settled on that block yet; look again next time
+  if (!block || block.hash !== found.blockHash) return;
+
+  settlePayment(payment, { from: paying[0].from, blockNumber: found.blockNumber, blockHash: found.blockHash, received: paying.reduce((sum, t) => sum + t.value, 0n) });
   if (payment.stealth_ephemeral) await checkAnnouncement(id);
 }

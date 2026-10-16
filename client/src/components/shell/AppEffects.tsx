@@ -4,8 +4,8 @@ import useShortcuts from '../../hooks/useShortcuts';
 import store from '../../state/store';
 import storage from '../../lib/storage';
 import describeNotification from '../../lib/describeNotification';
+import systemNotice from '../../lib/systemNotice';
 import router from '../../lib/router';
-import noticeLead from '../../lib/noticeLead';
 import push from '../../actions/push';
 import followPushLinks from '../../actions/pushLinks';
 import type InboxItem from '../../types/InboxItem';
@@ -38,13 +38,15 @@ export default function AppEffects() {
       // The body stays short and never includes comment text, since lock screens can show it. A
       // private task's title was decrypted in this tab and must not leave it: the OS keeps
       // notifications in its own history, so those only say a private task changed.
-      const heading = noticeLead(n) ?? `${actor} ${describeNotification(n)}`;
-      const body = task?.private ? 'A private task' : task?.title ?? n.data.title ?? '';
+      const notice = systemNotice(n);
+      const heading = notice ? notice.heading : `${actor} ${describeNotification(n)}`;
+      const body = notice?.text || (task?.private ? 'A private task' : task?.title ?? n.data.title ?? '');
       const shown = new Notification(heading, { body, tag: `nonos-${n.id}`, silent: false });
       shown.onclick = () => {
         window.focus();
         if (task) router.setParam('task', String(task.number));
         else if (n.type === 'proposal') router.navigate('/votes');
+        else if (n.type === 'plan_ending') router.navigate('/settings?tab=plan');
         shown.close();
       };
     };

@@ -20,7 +20,7 @@ Some things are always erased on a schedule, whatever the settings: deleted task
 
 ## Erase everything
 
-An owner can erase the whole workspace. In **Settings → Data & privacy**, find **Erase everything**, type the workspace name exactly and click **Erase everything**. This deletes every task, comment, file, goal and account, and the proof signing key, then signs everyone out. The server goes back to a fresh install.
+An owner can erase the whole workspace. In **Settings → Data & privacy**, find **Erase everything**, type the workspace name exactly and click **Erase everything**. This deletes every task, comment, file, goal and account, and the proof signing key, then signs everyone out. The server goes back to a fresh install. On a server that charges for Nil Pro, the billing record stays, without who paid: the paid-until date, the trial's start and the transactions already counted. That way erasing can't start a new trial or make a payment count twice.
 
 This can't be undone. [Download an encrypted capsule](backups-and-moving.md#encrypted-capsules) first if you might want the data back.
 

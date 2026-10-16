@@ -1,12 +1,17 @@
 import plan from './plan.js';
 import HttpError from '../lib/HttpError.js';
 
-// Teams up to the free seat count need no subscription; growing past it does. Guests, such as
-// accepted bounty applicants, never take a seat.
+// Adding a person (joining, coming back, or stepping up from guest) needs a free seat: one of
+// the free seats without Pro, one of the seats paid for with it. Guests, such as accepted bounty
+// applicants, never take a seat.
 export default function seatGate(role) {
   if (role === 'guest') return;
   const status = plan.status();
-  if (!status.unlocked && status.seatsUsed >= status.freeSeats) {
-    throw new HttpError(402, `The free plan includes ${status.freeSeats} people. An admin can add more seats with a NOX subscription in Settings → Plan.`);
-  }
+  if (status.seatLimit === null || status.seatsUsed < status.seatLimit) return;
+  throw new HttpError(
+    402,
+    status.unlocked
+      ? `Your Nil Pro plan covers ${status.seatLimit} people. An admin can add seats in Settings → Plan.`
+      : `The free plan includes ${status.freeSeats} people. An admin can add more with Nil Pro in Settings → Plan.`,
+  );
 }

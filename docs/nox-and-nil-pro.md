@@ -1,6 +1,6 @@
 # NOX, voting power and Nil Pro
 
-NOX is a token on Ethereum (an ERC-20 token). Nil uses it in a few places: bounties can be paid in it, it gives voting power, it can open the workspace to holders, and some servers charge for Nil Pro in it. You can use Nil without holding any NOX.
+NOX is a token on Ethereum (an ERC-20 token). Nil uses it in a few places: bounties can be paid in it, it gives voting power, it can open the workspace to holders, and on servers that charge for Nil Pro it pays for less and holding it brings perks. You can use Nil without holding any NOX.
 
 ## The token
 
@@ -24,7 +24,9 @@ The staking contract is read with `getStakeInfo` (default `0xa94d6009790Ba13597A
 
 ## The token-holder door
 
-Admins can let anyone holding a minimum amount of NOX join without an invite. See [People and roles](people-and-roles.md#let-nox-holders-join-without-an-invite).
+Admins can let anyone holding a minimum amount of NOX join without an invite. NOX in the wallet, NOX staked in the official staking contract and Zero-State Passes all count toward the minimum; one pass counts as 100,000 NOX by default (`HOLDER_ZSP_NOX`).
+
+Members who came in this way keep being checked: at every sign-in, every few hours (`HOLDER_RECHECK_HOURS`), and whenever someone new joins through the door. That way one stack of NOX can't let several wallets in one after another. Someone who falls below the minimum isn't locked out on the spot: they get a notice and 3 days (`HOLDER_GRACE_DAYS`) with full access to hold enough again. After that they are signed out and can't sign in until they do. An admin can let a member stay without the check. See [People and roles](people-and-roles.md#let-nox-holders-join-without-an-invite).
 
 ## Nil Pro
 
@@ -36,25 +38,50 @@ A server that hasn't set a treasury address (`PLAN_TREASURY`) runs in community 
 
 ### On a server that charges
 
-A server that sets a treasury, such as a hosted service, asks each workspace to pay in NOX:
+A server that sets a treasury, such as the hosted service the NØNOS foundation runs, asks each workspace to pay for Nil Pro:
 
-- A free trial runs from the day the workspace was set up, 14 days by default.
-- The price is 1000 NOX per 30 days by default.
-- After the plan runs out, a grace period (7 days by default) keeps the paid tools working while you renew.
+- The price is in US dollars: a flat fee per period ($12 per 30 days by default) plus a price per person above the free seats ($3 each by default, with 5 free seats). Guests never count.
+- You pay in USDC at face value, or in NOX for less (20% off by default).
+- A free trial runs when the workspace first appears on the server, 14 days by default including the grace days. Erasing the workspace or restoring a capsule never starts another trial.
+- After Nil Pro runs out, a grace period (7 days by default) keeps the paid tools working while you renew. Owners and admins get a reminder 7 days and 1 day before it runs out.
 - Nothing renews by itself, and no card or email is ever asked for.
 
-**Settings → Plan** shows where you stand: **Trial**, **Active until** a date, **Grace period** with the day the tools pause, or **Paid tools paused**. It also shows the price, how many people the workspace has against its free seats, and the grace period.
+**Settings → Plan** shows where you stand: **Trial**, **Pro until** a date, **Pro with a Zero-State Pass**, **Grace period** with the day the tools pause, or **Paid tools paused**. It also shows the price and how many people the plan covers.
+
+### What NOX holders get
+
+- **A Zero-State Pass gives Pro.** If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. It's checked every few hours and whenever an invoice is made. If the pass is sold, Pro ends at the next check and the grace period follows.
+- **Staking takes money off.** When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. The discount is read when the invoice is made and locked into it.
+- **Paying in NOX costs less** than paying in USDC.
 
 ### Pay for Nil Pro
 
-Admins pay from **Settings → Plan**, under **Pay for the plan**:
+Admins pay from **Settings → Plan**:
 
-1. Choose how long to pay for: 30, 90, 180 or 360 days at the default period length.
-2. Click **Pay from my wallet** and approve the NOX transfer to the treasury in your wallet.
+1. Under **Get Nil Pro**, choose how long to pay for and how many people the plan covers. The price shows line by line before anything is made: the flat fee, the seats, the staker discount, any credit, and what that comes to in USDC and in NOX.
+2. Click **Make the invoice**. It's open for 24 hours, and the NOX rate and discounts are locked for that time.
+3. Pay one of the amounts shown, in one of three ways:
+   - **From this browser's wallet**: click **Pay from this browser's wallet** and approve the transfer.
+   - **From a phone wallet**: scan the QR code. It opens the transfer, amount and all.
+   - **From an exchange or any other wallet**: copy the exact amount and the treasury address and send it. If you have the transaction hash, paste it under the invoice to have it found at once.
 
-To pay from a Safe or another wallet, send the NOX to the treasury address shown at the top of the page (hover over it to see it in full), then paste the transaction hash and click **Record payment**. The payment has to come from an admin's wallet or one of the workspace's treasury addresses.
+Send the exact amount. Its last few digits (for example the 4817 in 12.004817 USDC) tell your payment apart from everyone else's paying the same treasury, which is how a payment from any wallet or exchange finds its invoice. An exchange that rounds the amount can't be matched, so use one that sends it as is.
 
-The server checks the transfer on the blockchain and adds one period for each full price paid, up to 24 periods in one payment. Paying during the trial adds to it, so you don't lose the days you were given. Past payments are listed under **Payments**.
+The invoice then shows where it stands: **Waiting for payment**, **Seen, not mined yet**, **Confirming** (the payment is in a block that isn't final yet, usually under 15 minutes on Ethereum), and **Paid**. A payment counts only once its block is final.
+
+- **Underpaid**: if less arrived, the invoice shows what's missing and the exact amount to send to finish. It ends in the same digits, so it's matched to the same invoice.
+- **Overpaid**: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
+- **Expired or cancelled**: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.
+
+Under- and overpayments from any wallet are matched automatically on hosted servers that give each workspace its own share of suffixes (`PLAN_INVOICE_SLOT`). Elsewhere, paste the transaction hash under the invoice and it's matched the same way.
+
+The invoice list keeps every invoice with its transactions and a link to check each one on a block explorer.
+
+### Where the money goes
+
+Under **Where the money goes**, admins see what the workspace has paid the treasury for Nil Pro and the share of that revenue that buys and burns NOX, as published by whoever runs the server (`BURN_SHARE`).
+
+On the NØNOS foundation's hosted service, the burn works like this. The foundation does it by hand, from the treasury: it takes the published share of the Nil Pro revenue received since the last burn, buys NOX on the open market with it, and sends that NOX to a burn address, one nobody holds a key to, so it can never move again. Every purchase and burn is an ordinary public transaction, and the foundation publishes them (`BURN_REPORT_URL`) so anyone can add them up against the treasury's incoming payments. No contract does this automatically, and Nil itself never moves treasury funds.
 
 ### What needs Nil Pro
 
@@ -63,7 +90,7 @@ The server checks the transfer on the blockchain and adds one period for each fu
 - the token-holder door,
 - the built-in AI,
 - connecting AI assistants over MCP,
-- more people than the free seats, 5 by default. Guests never count.
+- more people than the free seats, 5 by default. Guests never count. With paid Pro, the team can have as many people as the plan covers; to add more before it runs out, choose **More seats now** and pay for the rest of the paid time.
 
 ### What never needs it
 

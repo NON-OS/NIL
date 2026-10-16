@@ -4,7 +4,6 @@ import { spawnSync } from 'node:child_process';
 
 const CONFIG = new URL('../config.js', import.meta.url).href;
 const TREASURY = '0x7777777777777777777777777777777777777777';
-const NOX = (whole) => (BigInt(whole * 10) * 10n ** 17n).toString();
 
 // Log lines look like "<time> WARN  [config] <message>"; only the message matters here.
 const warningsIn = (stderr) => stderr.split('\n').filter((line) => line.includes(' [config] ')).map((line) => line.slice(line.indexOf('[config]')));
@@ -46,30 +45,25 @@ test('empty values count as unset and get the defaults, never 0', () => {
   assert.deepEqual(config.jobs, { purgeMs: 3_600_000, paymentsMs: 60_000, votesMs: 60_000, remindersMs: 60_000, dueAlertsMs: 60_000, optimizeMs: 3_600_000 });
   assert.deepEqual([config.ai.timeoutMs, config.ai.maxRetries, config.shutdownTimeoutMs, config.dbJournalLimitBytes, config.setupToken], [120_000, 1, 20_000, 64 * 1024 * 1024, null]);
   assert.deepEqual([config.port, config.sessionDays, config.trashDays, config.maxUploadBytes, config.maxCapsuleBytes], [3000, 30, 30, 25 * 1024 * 1024, 4096 * 1024 * 1024]);
-  assert.deepEqual([config.nox.chainId, config.nox.decimals, config.nox.confirmations, config.nox.explorer], [1, 18, 3, 'https://etherscan.io']);
-  assert.deepEqual(config.plan, { treasury: null, price: NOX(1000), periodDays: 30, graceDays: 7, freeSeats: 5, maxPeriods: 24, trialDays: 14 });
+  assert.deepEqual([config.nox.chainId, config.nox.decimals, config.nox.explorer], [1, 18, 'https://etherscan.io']);
+  assert.deepEqual(config.plan, { treasury: null, periodDays: 30, graceDays: 7, freeSeats: 5, maxPeriods: 24, trialDays: 14 });
   assert.deepEqual([config.stealth.announceCheckDays, config.semaphore.depth], [7, 16]);
   // a real 0 still means 0
   assert.equal(load({ PLAN_TRIAL_DAYS: '0' }).config.plan.trialDays, 0);
 });
 
-test('a treasury or price that is set but can’t be used is reported at startup', () => {
-  const badTreasury = load({ PLAN_TREASURY: '0x1234', PLAN_PRICE: '500' });
+test('a treasury that is set but can’t be used is reported at startup', () => {
+  const badTreasury = load({ PLAN_TREASURY: '0x1234' });
   assert.equal(badTreasury.config.plan.treasury, null);
   assert.equal(badTreasury.warnings.length, 1);
   assert.match(badTreasury.warnings[0], /PLAN_TREASURY .*community mode/);
   // the value itself stays out of the logs, in case it was a private key
   assert.ok(!badTreasury.warnings[0].includes('0x1234'));
 
-  for (const price of ['lots', '0', '-5', '1,000']) {
-    const { config, warnings } = load({ PLAN_TREASURY: TREASURY, PLAN_PRICE: price });
-    assert.deepEqual([config.plan.treasury, config.plan.price], [TREASURY, NOX(1000)]);
-    assert.equal(warnings.length, 1);
-    assert.match(warnings[0], /PLAN_PRICE=.* the default, 1000/);
-  }
-
-  const fractional = load({ PLAN_TREASURY: TREASURY, PLAN_PRICE: '12.5' });
-  assert.deepEqual([fractional.config.plan.price, fractional.warnings], [NOX(12.5), []]);
+  // the old NOX price is no longer read, and saying so beats silently charging something else
+  const { warnings } = load({ PLAN_TREASURY: TREASURY, PLAN_PRICE: '12.5' });
+  assert.equal(warnings.length, 1);
+  assert.match(warnings[0], /PLAN_PRICE is no longer read.*PLAN_PRICE_USD/);
 
   const offChain = load({ PLAN_TREASURY: TREASURY, NOX_RPC_URL: 'off' });
   assert.match(offChain.warnings.join('\n'), /PLAN_TREASURY is set, but NOX_RPC_URL is off/);
@@ -133,10 +127,9 @@ test('on a chain other than mainnet every contract has to be named', () => {
   assert.deepEqual(load({ NOX_CHAIN_ID: '11155111', NOX_RPC_URL: 'off' }).warnings, []);
 });
 
-test('a payment needs at least one confirmation', () => {
-  const { config, warnings } = load({ NOX_CONFIRMATIONS: '0' });
-  assert.equal(config.nox.confirmations, 3);
-  assert.match(warnings[0], /NOX_CONFIRMATIONS=0 .*at least 1/);
+test('settings that no longer do anything say so', () => {
+  const { warnings } = load({ NOX_CONFIRMATIONS: '0' });
+  assert.match(warnings[0], /NOX_CONFIRMATIONS is no longer read/);
 });
 
 test('production warns about settings that leak or misdirect', () => {
@@ -210,4 +203,40 @@ test('TRUST_PROXY takes hops or proxy addresses, never everyone', () => {
     assert.equal(config.trustProxy, false, value);
     assert.match(warnings.join('\n'), /TRUST_PROXY/);
   }
+});
+
+test('billing settings default sensibly and say so when a value can’t be used', () => {
+  const { config, warnings } = load({});
+  assert.deepEqual(warnings, []);
+  const b = config.billing;
+  assert.deepEqual([b.priceUsd, b.seatUsd, b.noxDiscount, b.suffixDigits, b.amountDecimals, b.invoiceHours, b.burnShare, b.slot, b.treasuryName], [12_000_000, 3_000_000, 20, 4, 8, 24, 0, null, 'the treasury']);
+  assert.deepEqual(b.stakerTiers, [{ stake: '10000', percent: 10 }, { stake: '100000', percent: 25 }]);
+  assert.deepEqual(b.remindDays, [7, 1]);
+  assert.equal(b.usdc.address, '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
+  assert.equal(b.oracle.manualUsd, null);
+  assert.equal(config.finality.depth, 64);
+  assert.deepEqual([config.holders.zspWorth, config.holders.graceDays], ['100000', 3]);
+
+  const bad = load({
+    PLAN_PRICE_USD: '0',
+    PLAN_SEAT_USD: 'free',
+    PLAN_STAKER_TIERS: '10000:150',
+    PLAN_INVOICE_SLOT: '12/10',
+    BURN_SHARE: '120',
+    PLAN_NOX_USD: '-1',
+    PLAN_NOX_POOL: '0xnope',
+    PRO_FOR_ZSP: 'maybe',
+    BURN_REPORT_URL: 'javascript:alert(1)',
+  });
+  assert.deepEqual([bad.config.billing.priceUsd, bad.config.billing.seatUsd, bad.config.billing.stakerTiers, bad.config.billing.slot, bad.config.billing.burnShare, bad.config.billing.oracle.manualUsd, bad.config.billing.oracle.pool, bad.config.billing.proForZsp, bad.config.billing.burnReportUrl], [12_000_000, 3_000_000, [], null, 0, null, null, true, null]);
+  for (const name of ['PLAN_PRICE_USD', 'PLAN_SEAT_USD', 'PLAN_STAKER_TIERS', 'PLAN_INVOICE_SLOT', 'BURN_SHARE', 'PLAN_NOX_USD', 'PLAN_NOX_POOL', 'PRO_FOR_ZSP', 'BURN_REPORT_URL']) {
+    assert.ok(bad.warnings.some((w) => w.includes(name)), name);
+  }
+
+  const hosted = load({ PLAN_INVOICE_SLOT: '3/50', PLAN_PRICE_USD: '19.99', PLAN_USDC: 'off' });
+  assert.deepEqual(hosted.config.billing.slot, { index: 3, count: 50 });
+  assert.equal(hosted.config.billing.priceUsd, 19_990_000);
+  assert.equal(hosted.config.billing.usdc, null);
+  // a slot without a key works, but the warning says what it gives away
+  assert.match(hosted.warnings.join('\n'), /PLAN_INVOICE_SLOT is set without PLAN_INVOICE_KEY/);
 });

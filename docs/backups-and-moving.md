@@ -34,6 +34,8 @@ Everyone then signs in again with their wallets. Wallets work on any domain, so 
 
 By default the new server accepts capsules up to 4096 MB. The operator can raise this with `MAX_CAPSULE_MB`.
 
+A capsule doesn't carry Nil Pro with it. On a server that charges, the new server keeps its own billing: paid time, trial, invoices and payments stay with the server they were paid to.
+
 ## Server backups
 
 If you run the server, back up its data folder as well as downloading capsules. The most important file is the signing key in `DATA_DIR/keys`. Without it, nobody can derive their encryption keys again and earlier proofs stop matching the workspace. [Production deployment](deploy.md#10-backups) has scripts for nightly and cold backups and for restoring them.

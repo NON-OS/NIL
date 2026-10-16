@@ -8,16 +8,25 @@ import dataTables from '../db/dataTables.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import hub from '../realtime/hub.js';
+import billingTables from '../billing/billingTables.js';
+import trialWindow from '../billing/trialWindow.js';
 
 // The owner's "erase everything": every row, every file, the signing key and the copies taken
 // before upgrades. The server goes back to a fresh install that takes the setup token again (a
-// newly printed one, unless SETUP_TOKEN is set), and everyone is signed out.
+// newly printed one, unless SETUP_TOKEN is set), and everyone is signed out. The billing record
+// stays, minus who paid: it belongs to the server, and keeping it is what stops an erase from
+// starting a new trial or letting a transaction that was already counted count again.
 export default function wipeWorkspace() {
-  const tables = dataTables(db);
+  // pins the trial's start before the workspace row that dates it is gone
+  trialWindow();
+  const keep = new Set(billingTables);
+  const tables = dataTables(db).filter((name) => !keep.has(name));
   db.exec('PRAGMA foreign_keys = OFF');
   try {
     db.exec('BEGIN IMMEDIATE');
     for (const table of tables) db.exec(`DELETE FROM "${table}"`);
+    db.exec('UPDATE billing_invoices SET created_by = NULL');
+    db.exec('UPDATE billing_payments SET from_address = NULL');
     db.exec('COMMIT');
   } catch (err) {
     db.exec('ROLLBACK');

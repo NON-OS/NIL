@@ -2,7 +2,7 @@
 
 Nil is the private task app for you and your team, made by the NØNOS foundation. You sign in with an Ethereum wallet, run it on your own server, and your private tasks and docs are encrypted in the browser before they reach it.
 
-Besides tasks, Nil has bounties paid in NOX or USDC and checked on-chain, signed and anonymous votes, and signed proof of work. This is version 3.0.0; see [CHANGELOG.md](CHANGELOG.md) for what changed. No part of Nil's own code has had an independent security audit, and encrypted weighted votes are in beta. The [privacy model](docs/privacy-model.md) explains what that means.
+Besides tasks, Nil has bounties paid in NOX or USDC and checked on-chain, signed and anonymous votes, and signed proof of work. Running it yourself is free. The NØNOS foundation also hosts Nil, where Nil Pro is paid in USDC or in NOX for less, and NOX holders get perks; [NOX, voting power and Nil Pro](docs/nox-and-nil-pro.md) explains how NOX fits in. This is version 3.0.0; see [CHANGELOG.md](CHANGELOG.md) for what changed. No part of Nil's own code has had an independent security audit, and encrypted weighted votes are in beta. The [privacy model](docs/privacy-model.md) explains what that means.
 
 ## Quick start
 

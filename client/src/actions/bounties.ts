@@ -8,15 +8,24 @@ import encodeTransfer from '../lib/encodeTransfer';
 import announceCall from '../lib/stealth/announceCall';
 import type Task from '../types/Task';
 import type Payment from '../types/Payment';
+import type PaymentIntent from '../types/PaymentIntent';
 import type BountyOverview from '../types/BountyOverview';
 
-type Stealth = { ephemeralKey: string; announceTx?: string };
+const BOUNTY_STATE: Record<Payment['state'], Task['bountyState']> = { sent: 'pending', confirming: 'pending', paid: 'paid', overpaid: 'paid', underpaid: 'underpaid', failed: null, cancelled: null };
 
-async function recorded(taskId: string, txHash: string, stealth?: Stealth) {
-  const { payment } = await http.post<{ payment: Payment }>(`/tasks/${taskId}/payments`, { txHash, stealth });
+const start = (taskId: string, stealth?: { ephemeralKey: string }) => http.post<{ intent: PaymentIntent }>(`/tasks/${taskId}/payments/intent`, stealth ? { stealth } : {}).then((r) => r.intent);
+
+async function recorded(taskId: string, intentId: string, txHash: string, announceTx?: string) {
+  const { payment } = await http.post<{ payment: Payment }>(`/tasks/${taskId}/payments`, { intentId, txHash, announceTx });
   const task = store.get().tasks[taskId];
-  if (task) putTask({ ...task, bountyState: payment.status === 'failed' ? null : payment.status === 'confirmed' ? 'paid' : 'pending' });
+  if (task) putTask({ ...task, bountyState: BOUNTY_STATE[payment.state] });
   return payment;
+}
+
+// The server names the address to pay; this browser already knows it, and refuses to send
+// anywhere else, so a server that was tampered with can't redirect a payout.
+function sameAddress(expected: string, intent: PaymentIntent) {
+  if (intent.to.toLowerCase() !== expected.toLowerCase()) throw new Error('Nil asked to send to a different address than this browser expected, so nothing was sent.');
 }
 
 const announced = (id: string, txHash: string) => http.post<{ payment: Payment }>(`/payments/${id}/announce`, { txHash }).then((r) => r.payment);
@@ -24,10 +33,11 @@ const announced = (id: string, txHash: string) => http.post<{ payment: Payment }
 const bounties = {
   overview: () => http.get<BountyOverview>('/bounties'),
 
-  // The payer's own wallet sends the reward token straight to the contributor. Nil only
-  // builds the transfer and afterwards checks the result on-chain; it never touches the funds.
-  // When the contributor has private payouts on, the tokens go to a fresh one-time address
-  // only they can open, announced on-chain so they can find it without Nil.
+  // The payer's own wallet sends the reward token straight to the contributor. Nil first says
+  // exactly how much (what's still owed, ending in a few digits that identify this payment),
+  // then checks the result on-chain; it never touches the funds. When the contributor has
+  // private payouts on, the tokens go to a fresh one-time address only they can open,
+  // announced on-chain so they can find it without Nil.
   async pay(task: Task) {
     const { nox, users, rewards, stealth } = store.get();
     const token = rewards.find((t) => t.symbol === task.bountyToken);
@@ -35,25 +45,29 @@ const bounties = {
     if (!nox || !task.bounty || !token) throw new Error('This task has no bounty this server can pay.');
     if (!payee?.address) throw new Error('The assignee has no wallet linked yet.');
     const from = await payerWallet(nox.chainId);
-    const amount = BigInt(task.bounty);
 
     if (!payee.stealthMeta || !stealth) {
-      return recorded(task.id, await ethereum.send({ from, to: token.address, data: encodeTransfer(payee.address, amount) }));
+      const intent = await start(task.id);
+      sameAddress(payee.address, intent);
+      return recorded(task.id, intent.id, await ethereum.send({ from, to: token.address, data: encodeTransfer(intent.to, BigInt(intent.amount)) }));
     }
 
     // the curve maths for one-time addresses loads only for a private payout
     const { default: newStealthPayment } = await import('../lib/stealth/newStealthPayment');
     const one = newStealthPayment(payee.stealthMeta);
+    const intent = await start(task.id, { ephemeralKey: one.ephemeralKey });
+    sameAddress(one.address, intent);
+    const amount = BigInt(intent.amount);
     const transfer = { to: token.address, data: encodeTransfer(one.address, amount) };
     const announce = { to: stealth.announcer, data: announceCall({ stealthAddress: one.address, ephemeralPublicKey: one.ephemeralPublicKey, viewTag: one.viewTag, token: token.address, amount }) };
     const topUp = BigInt(stealth.gasTopUpWei) > 0n ? [{ to: one.address, data: '0x', value: BigInt(stealth.gasTopUpWei) }] : [];
 
     const bundle = await ethereum.batch(from, nox.chainId, [transfer, announce, ...topUp]);
-    if (bundle) return recorded(task.id, bundle, { ephemeralKey: one.ephemeralKey, announceTx: bundle });
+    if (bundle) return recorded(task.id, intent.id, bundle, bundle);
 
     // one prompt at a time: the payout is recorded the moment it's sent, so declining a later
     // prompt never loses track of it
-    let payment = await recorded(task.id, await ethereum.send({ from, ...transfer }), { ephemeralKey: one.ephemeralKey });
+    let payment = await recorded(task.id, intent.id, await ethereum.send({ from, ...transfer }));
     try {
       payment = await announced(payment.id, await ethereum.send({ from, ...announce }));
     } catch {
@@ -76,9 +90,12 @@ const bounties = {
     return announced(payment.id, await ethereum.send({ from, to: stealth.announcer, data }));
   },
 
-  // For payments sent some other way, like from a Safe multisig.
-  record: (taskId: string, txHash: string) => recorded(taskId, txHash),
+  // For payments sent some other way, like from a Safe multisig: first the exact amount to
+  // send, then the transaction that sent it.
+  start: (taskId: string) => start(taskId),
+  record: (taskId: string, intentId: string, txHash: string) => recorded(taskId, intentId, txHash),
   check: (id: string) => http.post<{ payment: Payment }>(`/payments/${id}/check`).then((r) => r.payment),
+  cancel: (id: string) => http.post<{ payment: Payment }>(`/payments/${id}/cancel`).then((r) => r.payment),
   dismiss: (id: string) => http.del(`/payments/${id}`),
   setTreasury: (addresses: string[]) => http.put<{ treasury: string[] }>('/bounties/treasury', { addresses }).then((r) => r.treasury),
 };

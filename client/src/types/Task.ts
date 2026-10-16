@@ -30,7 +30,7 @@ export default interface Task {
   // in the token's smallest unit, as text
   bounty: string | null;
   bountyToken: string | null;
-  bountyState: 'pending' | 'paid' | null;
+  bountyState: 'pending' | 'paid' | 'underpaid' | null;
   // only the creator and the assignee can see a private task
   private: boolean;
   // a private task's encrypted contents; title, description and checklist above hold the

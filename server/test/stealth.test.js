@@ -37,6 +37,13 @@ before(async () => {
 after(() => srv.close());
 
 const bountyTask = async () => (await owner('POST', '/api/tasks', { title: 'Private work', assigneeId: ids.Mia, bounty: BOUNTY, status: 'done' })).data.task;
+// Starts a private payout in Nil with the payer's one-time key, then lets blocks pass so the
+// transfers added next land after it and are final.
+async function startPrivate(taskId, ephemeralKey) {
+  const res = await owner('POST', `/api/tasks/${taskId}/payments/intent`, { stealth: { ephemeralKey } });
+  chain.mine(6);
+  return res;
+}
 
 test('stealth addresses match the ERC-5564 reference implementation byte for byte', () => {
   for (const v of VECTORS) {
@@ -63,17 +70,20 @@ test('a meta-address is validated and shown only to admins and its owner', async
 
 test('a private payout settles when NOX reaches the payee’s stealth address, and counts as announced once the chain says so', async () => {
   const t = await bountyTask();
+  const { intent } = (await startPrivate(t.id, mine.ephemeralKey)).data;
+  // the one-time address is derived on the server from the key, exactly as the reference does
+  assert.deepEqual([intent.to, intent.stealth, intent.ephemeralPublicKey], [mine.stealthAddress, true, mine.ephemeralPublicKey]);
   const hash = tx();
   const announceTx = tx();
-  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: mine.stealthAddress, value: BOUNTY });
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: mine.stealthAddress, value: intent.amount });
   chain.addAnnouncement({ hash: announceTx, announcer: ANNOUNCER, stealthAddress: mine.stealthAddress, caller: ownerWallet.address, ephemeralPublicKey: mine.ephemeralPublicKey, metadata: metadata(mine.viewTag.slice(2)) });
-  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash, stealth: { ephemeralKey: mine.ephemeralKey, announceTx } });
+  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { intentId: intent.id, txHash: hash, announceTx });
   assert.equal(res.status, 200);
   assert.deepEqual([res.data.payment.status, res.data.payment.stealth, res.data.payment.announced, res.data.payment.to], ['confirmed', true, true, mine.stealthAddress]);
 
   // the receipt names the one-time address, and the payee can list the payout; listing never
   // asks the node, so the balance is unknown until a lookup made on its own has read it
-  chain.setBalance(mine.stealthAddress, BOUNTY);
+  chain.setBalance(mine.stealthAddress, intent.amount);
   chain.setEthBalance(mine.stealthAddress, '300000000000000');
   const asked = chain.calls.length;
   let payouts = (await mia('GET', '/api/stealth/payouts')).data.payouts;
@@ -84,19 +94,20 @@ test('a private payout settles when NOX reaches the payee’s stealth address, a
 
   // about to move it, the payee reads that one address now
   const now = await mia('GET', `/api/stealth/payouts/${payouts[0].id}/balance`);
-  assert.deepEqual([now.status, now.data.balance.token, now.data.balance.eth], [200, BOUNTY, '300000000000000']);
+  assert.deepEqual([now.status, now.data.balance.token, now.data.balance.eth], [200, intent.amount, '300000000000000']);
   assert.equal((await sam('GET', `/api/stealth/payouts/${payouts[0].id}/balance`)).status, 404);
   payouts = (await mia('GET', '/api/stealth/payouts')).data.payouts;
-  assert.equal(payouts[0].balance.token, BOUNTY);
+  assert.equal(payouts[0].balance.token, intent.amount);
   assert.ok(payouts[0].balanceCheckedAt <= Date.now());
 });
 
 test('a transfer to the payee’s public wallet doesn’t count as a private payout', async () => {
   const t = await bountyTask();
+  const { intent } = (await startPrivate(t.id, other.ephemeralKey)).data;
   const hash = tx();
   const miaPublic = (await owner('GET', '/api/bootstrap')).data.users.find((u) => u.id === ids.Mia).address;
-  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: miaPublic, value: BOUNTY });
-  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash, stealth: { ephemeralKey: other.ephemeralKey, announceTx: tx() } });
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: miaPublic, value: intent.amount });
+  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { intentId: intent.id, txHash: hash, announceTx: tx() });
   assert.equal(res.data.payment.status, 'failed');
   assert.match(res.data.payment.problem, /private address/);
 });
@@ -105,11 +116,12 @@ test('a wrong announcement leaves the payout unannounced until the payer sends a
   const t = await bountyTask();
   const eph = `0x${'44'.repeat(32)}`;
   const derived = stealthAddress(mine.meta, eph);
+  const { intent } = (await startPrivate(t.id, eph)).data;
   const hash = tx();
   const badAnnounce = tx();
-  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: derived.address, value: BOUNTY });
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: derived.address, value: intent.amount });
   chain.addAnnouncement({ hash: badAnnounce, announcer: ANNOUNCER, stealthAddress: derived.address, caller: ownerWallet.address, ephemeralPublicKey: mine.ephemeralPublicKey, metadata: metadata('00') });
-  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash, stealth: { ephemeralKey: eph, announceTx: badAnnounce } });
+  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { intentId: intent.id, txHash: hash, announceTx: badAnnounce });
   assert.deepEqual([res.data.payment.status, res.data.payment.announced], ['confirmed', false]);
 
   const fixed = tx();
@@ -121,7 +133,7 @@ test('a wrong announcement leaves the payout unannounced until the payer sends a
 
 test('someone without private payouts on can’t be paid privately', async () => {
   const t = (await owner('POST', '/api/tasks', { title: 'For Sam', assigneeId: ids.Sam, bounty: BOUNTY })).data.task;
-  const res = await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: tx(), stealth: { ephemeralKey: mine.ephemeralKey, announceTx: tx() } });
+  const res = await owner('POST', `/api/tasks/${t.id}/payments/intent`, { stealth: { ephemeralKey: mine.ephemeralKey } });
   assert.equal(res.status, 400);
   assert.match(res.data.error, /hasn’t turned on private payouts/);
 });
@@ -150,9 +162,10 @@ test('payout balances are read one address at a time, later, with another payee�
   const samVector = VECTORS[2];
   assert.equal((await sam('PUT', '/api/me/stealth', { metaAddress: samVector.meta })).status, 200);
   const t = (await owner('POST', '/api/tasks', { title: 'For Sam, privately', assigneeId: ids.Sam, bounty: BOUNTY, status: 'done' })).data.task;
+  const { intent } = (await startPrivate(t.id, samVector.ephemeralKey)).data;
   const hash = tx();
-  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: samVector.stealthAddress, value: BOUNTY });
-  assert.equal((await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash, stealth: { ephemeralKey: samVector.ephemeralKey, announceTx: tx() } })).data.payment.status, 'confirmed');
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: samVector.stealthAddress, value: intent.amount });
+  assert.equal((await owner('POST', `/api/tasks/${t.id}/payments`, { intentId: intent.id, txHash: hash, announceTx: tx() })).data.payment.status, 'confirmed');
   // long enough for every earlier lookup, which can land up to a window late, to go stale
   await new Promise((r) => setTimeout(r, 2100));
 

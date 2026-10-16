@@ -12,7 +12,7 @@ const stealthPayouts = {
 
   list(userId) {
     const rows = sql.all(
-      "SELECT * FROM payments WHERE payee_id = ? AND stealth_ephemeral IS NOT NULL AND status != 'failed' ORDER BY created_at DESC LIMIT ?",
+      "SELECT * FROM payments WHERE payee_id = ? AND stealth_ephemeral IS NOT NULL AND status NOT IN ('failed', 'cancelled') ORDER BY created_at DESC LIMIT ?",
       userId, LIMIT,
     );
     stealthBalances.refresh(userId, rows.map((r) => ({ address: r.to_address, tokenAddress: rewardToken(r.token).address })));

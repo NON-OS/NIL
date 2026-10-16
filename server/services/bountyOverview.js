@@ -3,6 +3,7 @@ import config from '../config.js';
 import treasury from './treasury.js';
 import visibleSql from './visibleSql.js';
 import toPayment from '../mappers/toPayment.js';
+import bountyReceived from './bountyReceived.js';
 
 // Promised, owed and paid per person and token. Admins see everyone. Members see only their
 // own rows and payments, because a transaction hash reveals the receiving wallet. Promised and
@@ -18,11 +19,12 @@ export default function bountyOverview(viewer) {
 
   const visible = visibleSql(viewer.id, 't');
   const open = sql.all(
-    `SELECT t.assignee_id, t.status, t.bounty, t.bounty_token FROM tasks t WHERE t.bounty IS NOT NULL AND t.assignee_id IS NOT NULL AND t.deleted_at IS NULL
+    `SELECT t.id, t.assignee_id, t.status, t.bounty, t.bounty_token, t.bounty_state FROM tasks t WHERE t.bounty IS NOT NULL AND t.assignee_id IS NOT NULL AND t.deleted_at IS NULL
      AND t.status != 'canceled' AND (t.bounty_state IS NULL OR t.bounty_state != 'paid') AND ${visible.where}`,
     ...visible.params,
   );
-  for (const t of open) of(t.assignee_id, t.bounty_token || config.nox.symbol)[t.status === 'done' ? 'owed' : 'promised'] += BigInt(t.bounty);
+  // an underpaid bounty still owes only what hasn't arrived; what has is under paid already
+  for (const t of open) of(t.assignee_id, t.bounty_token || config.nox.symbol)[t.status === 'done' ? 'owed' : 'promised'] += BigInt(t.bounty) - (t.bounty_state === 'underpaid' ? bountyReceived(t.id) : 0n);
   for (const p of sql.all("SELECT payee_id, amount, token FROM payments WHERE status = 'confirmed' AND payee_id IS NOT NULL")) of(p.payee_id, p.token).paid += BigInt(p.amount);
 
   const payments = viewer.isAdmin

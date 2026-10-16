@@ -7,9 +7,13 @@ import migrate from '../db/migrate.js';
 import uploadDir from '../lib/uploadDir.js';
 import HttpError from '../lib/HttpError.js';
 import signingKey from '../proofs/signingKey.js';
+import billingTables from '../billing/billingTables.js';
+import billingState from '../billing/billingState.js';
 
 // Copies a decrypted capsule into this (empty) server: database rows, files and the
-// workspace signing key, so proofs issued before the move keep verifying.
+// workspace signing key, so proofs issued before the move keep verifying. Billing is the one
+// thing that doesn't move: this server keeps its own paid time, trial, invoices and payments,
+// so a capsule can't carry Pro from elsewhere or replay payments counted there.
 export default function restoreCapsule(dir) {
   const restoredDb = path.join(dir, 'nonos.db');
   if (!fs.existsSync(restoredDb)) throw HttpError.badRequest('That capsule has no database inside.');
@@ -24,8 +28,9 @@ export default function restoreCapsule(dir) {
     incoming.close();
   }
 
-  // triggers rebuild the search index as the task and comment rows go in
-  const tables = dataTables(db);
+  // triggers rebuild the search index as the task and comment rows go in; billing stays as it is
+  const keep = new Set(billingTables);
+  const tables = dataTables(db).filter((name) => !keep.has(name));
   db.exec('PRAGMA foreign_keys = OFF');
   db.exec(`ATTACH DATABASE '${restoredDb.replace(/'/g, "''")}' AS capsule`);
   try {
@@ -38,6 +43,8 @@ export default function restoreCapsule(dir) {
       // everyone signs in again on the new server, and turns push on again there
       db.exec('DELETE FROM main.sessions');
       db.exec('DELETE FROM main.push_subscriptions');
+      // the trial on this server starts when its first workspace arrives, restored or not
+      if (billingState.get('trialStart', null) === null) billingState.set('trialStart', Date.now());
       db.exec('COMMIT');
     } catch (err) {
       db.exec('ROLLBACK');
