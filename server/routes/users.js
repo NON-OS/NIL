@@ -18,6 +18,7 @@ const router = express.Router();
 function target(req) {
   const row = sql.get('SELECT * FROM users WHERE id = ?', req.params.id);
   if (!row) throw HttpError.notFound('That person');
+  if (row.kind === 'agent') throw HttpError.badRequest('Agents are managed in Settings → Agents.');
   if (row.id === req.user.id) throw HttpError.badRequest('You can’t change your own access. Ask another admin.');
   if (row.role === 'owner' && req.user.role !== 'owner') throw HttpError.forbidden('Only an owner can change another owner.');
   return row;

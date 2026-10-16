@@ -15,6 +15,7 @@ import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
 import resealComments from './resealComments.js';
 import scrubPlaintext from './scrubPlaintext.js';
+import keepAgentsOffPrivate from '../agents/keepAgentsOffPrivate.js';
 
 const COLUMNS = {
   title: 'title',
@@ -80,6 +81,7 @@ export default function updateTask(actor, id, body, { today } = {}) {
   if ('private' in patch && patch.private !== existing.private && actor.id !== existing.creatorId && actor.id !== existing.assigneeId) {
     throw HttpError.forbidden('Only the person who created this task or its assignee can change who sees it.');
   }
+  keepAgentsOffPrivate({ ...existing, ...patch });
   const sealing = sealRules(existing, patch);
   const changes = Object.entries(patch)
     .filter(([key, value]) => !same(existing[key], value))

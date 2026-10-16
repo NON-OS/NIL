@@ -1,6 +1,7 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
 import settingsStore from './settingsStore.js';
+import seatHolders from './seatHolders.js';
 
 const DAY = 86_400_000;
 
@@ -22,7 +23,7 @@ const plan = {
     const now = Date.now();
     const active = Boolean(paidUntil && paidUntil > now);
     const inGrace = !active && Boolean(paidUntil && paidUntil + config.plan.graceDays * DAY > now);
-    const seatsUsed = sql.get("SELECT COUNT(*) AS n FROM users WHERE deactivated = 0 AND role != 'guest'").n;
+    const seatsUsed = seatHolders();
     return {
       enforced,
       unlocked: !enforced || active || inGrace,

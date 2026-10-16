@@ -7,6 +7,8 @@ export default function toUser(row, viewer) {
     name: row.name,
     title: row.title,
     role: row.role,
+    // 'agent' for AI teammates set up in Settings → Agents; they never sign in
+    kind: row.kind === 'agent' ? 'agent' : 'human',
     color: row.color,
     deactivated: !!row.deactivated,
     createdAt: row.created_at,

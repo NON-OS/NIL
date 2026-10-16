@@ -1,6 +1,8 @@
 import path from 'node:path';
 import envNumber from './lib/envNumber.js';
 import configWarning from './lib/configWarning.js';
+import envDecimal from './lib/envDecimal.js';
+import domain from './lib/domain.js';
 
 // Every setting is optional. An empty value counts as unset. A value that is set but can't be
 // used gets the default, or turns its feature off, and says so in a warning at startup.
@@ -124,6 +126,54 @@ const semaphore = Object.freeze({
   depth: envNumber('SEMAPHORE_DEPTH', 16, { min: 1, max: 32 }),
 });
 
+// Agents. These are workspace-wide defaults; each limit can be lowered or raised per agent in
+// Settings → Agents. Prices are only for the cost estimate shown to admins, in US dollars per
+// million tokens, and default to Anthropic's list price for the default model.
+const EFFORTS = ['low', 'medium', 'high', 'xhigh', 'max'];
+
+function agentEffort(value) {
+  if (!value) return 'high';
+  if (value === 'off') return null;
+  if (EFFORTS.includes(value)) return value;
+  configWarning(`AGENT_EFFORT=${value} isn’t one of ${EFFORTS.join(', ')} or off. Using the default, high.`);
+  return 'high';
+}
+
+function agentDoneStatus(value) {
+  if (!value) return 'in_review';
+  if (value === 'none' || domain.statuses.includes(value)) return value;
+  configWarning(`AGENT_DONE_STATUS=${value} isn’t a task status or "none". Using the default, in_review.`);
+  return 'in_review';
+}
+
+const agents = Object.freeze({
+  model: env.AGENT_MODEL || 'claude-opus-5-5',
+  effort: agentEffort((env.AGENT_EFFORT ?? '').trim()),
+  thinking: env.AGENT_THINKING === 'off' ? 'off' : 'adaptive',
+  maxSteps: envNumber('AGENT_MAX_STEPS', 12, { min: 1, max: 100 }),
+  maxRunTokens: envNumber('AGENT_MAX_TOKENS_PER_RUN', 300_000, { min: 1000 }),
+  maxDayTokens: envNumber('AGENT_MAX_TOKENS_PER_DAY', 3_000_000, { min: 1000 }),
+  maxOutputTokens: envNumber('AGENT_MAX_OUTPUT_TOKENS', 32_000, { min: 256, max: 128_000 }),
+  runTimeoutMs: envNumber('AGENT_RUN_TIMEOUT_SECONDS', 600, { min: 5 }) * 1000,
+  concurrency: envNumber('AGENT_CONCURRENCY', 2, { min: 1, max: 32 }),
+  retries: envNumber('AGENT_RETRIES', 3, { max: 10 }),
+  pollMs: envNumber('AGENT_POLL_SECONDS', 5, { min: 1, max: 300 }) * 1000,
+  doneStatus: agentDoneStatus((env.AGENT_DONE_STATUS ?? '').trim()),
+  rateLimit: envNumber('AGENT_RATE_LIMIT', 60, { min: 1 }),
+  idempotencyHours: envNumber('AGENT_IDEMPOTENCY_HOURS', 24, { min: 1 }),
+  bulkLimit: envNumber('AGENT_BULK_LIMIT', 5, { min: 1 }),
+  bulkWindowMs: envNumber('AGENT_BULK_WINDOW_MINUTES', 10, { min: 1 }) * 60_000,
+  allowLocalEndpoints: env.AGENT_ALLOW_LOCAL_ENDPOINTS === 'true',
+  webhookTimeoutMs: envNumber('AGENT_WEBHOOK_TIMEOUT_SECONDS', 10, { min: 1, max: 60 }) * 1000,
+  webhookMaxAttempts: envNumber('AGENT_WEBHOOK_MAX_ATTEMPTS', 8, { min: 1, max: 20 }),
+  webhookBackoffMs: envNumber('AGENT_WEBHOOK_BACKOFF_SECONDS', 30, { min: 1 }) * 1000,
+  webhookDisableAfter: envNumber('AGENT_WEBHOOK_DISABLE_AFTER', 20, { min: 1 }),
+  webhookToleranceSeconds: envNumber('AGENT_WEBHOOK_TOLERANCE_SECONDS', 300, { min: 30 }),
+  dueSoonHours: envNumber('AGENT_DUE_SOON_HOURS', 24, { min: 1 }),
+  priceIn: envDecimal('AGENT_PRICE_INPUT_PER_MTOK', 4),
+  priceOut: envDecimal('AGENT_PRICE_OUTPUT_PER_MTOK', 20),
+});
+
 const config = Object.freeze({
   port: envNumber('PORT', 3000, { max: 65535 }),
   host: env.HOST || '0.0.0.0',
@@ -147,6 +197,7 @@ const config = Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
   }),
+  agents,
 });
 
 export default config;
