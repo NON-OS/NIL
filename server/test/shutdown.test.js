@@ -19,8 +19,15 @@ after(() => dirs.forEach((dir) => fs.rmSync(dir, { recursive: true, force: true 
 
 const SETUP_TOKEN = 'shutdown-test-setup-token';
 
+// Waits until the server has created a working folder whose name starts with `prefix`, which
+// both routes used here do as their first step, so the request is surely in flight.
+async function inFlight(dir, prefix) {
+  for (let i = 0; i < 200 && !fs.readdirSync(dir).some((name) => name.startsWith(prefix)); i++) await new Promise((resolve) => setTimeout(resolve, 25));
+}
+
 test('SIGTERM lets a running request finish, sends open tabs 1001 and exits 0', async () => {
-  const server = await bootProcess({ dataDir: dataDir(), env: { SETUP_TOKEN } });
+  const dir = dataDir();
+  const server = await bootProcess({ dataDir: dir, env: { SETUP_TOKEN } });
   const owner = client(() => server.base);
   assert.equal((await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS', setupToken: SETUP_TOKEN })).status, 200);
 
@@ -34,7 +41,7 @@ test('SIGTERM lets a running request finish, sends open tabs 1001 and exits 0', 
     headers: { 'X-NONOS': '1', 'Content-Type': 'application/json', Cookie: owner.cookie() },
     body: JSON.stringify({ passphrase: 'correct horse capsule staple' }),
   });
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await inFlight(dir, 'capsule-');
   const exitCode = server.stop('SIGTERM');
 
   const res = await exporting;
@@ -46,7 +53,8 @@ test('SIGTERM lets a running request finish, sends open tabs 1001 and exits 0', 
 });
 
 test('a shutdown that can’t finish in time exits non-zero', async () => {
-  const server = await bootProcess({ dataDir: dataDir(), env: { SETUP_TOKEN, SHUTDOWN_TIMEOUT_SECONDS: '1' } });
+  const dir = dataDir();
+  const server = await bootProcess({ dataDir: dir, env: { SETUP_TOKEN, SHUTDOWN_TIMEOUT_SECONDS: '1' } });
   // an upload that never finishes keeps one request open forever
   const { port } = new URL(server.base);
   const socket = net.connect(Number(port), '127.0.0.1');
@@ -65,7 +73,7 @@ test('a shutdown that can’t finish in time exits non-zero', async () => {
       'NONOSCAP',
     ].join('\r\n'),
   );
-  await new Promise((resolve) => setTimeout(resolve, 100));
+  await inFlight(dir, 'restore-');
   const started = Date.now();
   assert.equal(await server.stop('SIGTERM'), 1);
   assert.ok(Date.now() - started >= 900);
