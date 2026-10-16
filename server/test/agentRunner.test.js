@@ -71,9 +71,9 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
     (state) => ({ text: 'Reading the task first.', calls: [{ name: 'get_task', input: { key: state.user.match(/<task key="([^"]+)"/)[1] } }] }),
     (state) => {
       const read = JSON.parse(state.results[0].content);
-      return { calls: [{ name: 'update_task', input: { key: read.key, checklistTick: [read.checklist[0].id] } }] };
+      return { calls: [{ name: 'update_task', input: { key: read.key, checklistDone: [{ id: read.checklist[0].id, result: 'Logged out after 24 hours on build 2.4.1: the refresh token expires and is never renewed.' }] } }] };
     },
-    { text: 'Reproduced the crash: the refresh token expires after 24 hours. Ticked the first step. The fix needs a decision on the token lifetime.' },
+    { text: 'Reproduced the crash: the refresh token expires after 24 hours. The fix needs a decision on the token lifetime.' },
   ]);
   const t = await newTask({ title: 'Fix the login crash', description: 'Happens overnight.', checklist: [{ text: 'Reproduce' }, { text: 'Write the fix' }], assigneeId: ids.builder });
   const run = await settled(t.id);
@@ -90,6 +90,7 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
   const [note] = comments(t.id);
   assert.equal(note.name, 'Builder');
   assert.match(note.body, /^Reproduced the crash/);
+  assert.match(note.body, /Checklist items done:\n- Reproduce: Logged out after 24 hours on build 2\.4\.1/);
   assert.match(note.body, /_2 changes made_/);
 
   const activity = sql.all('SELECT * FROM activity WHERE task_id = ? AND actor_id = ?', t.id, ids.builder);
@@ -114,6 +115,61 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
   const usage = (await owner('GET', '/api/agents')).data.agents.find((a) => a.id === ids.builder).usage;
   assert.equal(usage.today.runs, 1);
   assert.equal(usage.today.input, 300);
+});
+
+test('a checklist item is ticked only with the work for it; the run log says what was refused', async () => {
+  const model = use([
+    (state) => ({ calls: [{ name: 'update_task', input: { key: state.user.match(/<task key="([^"]+)"/)[1], checklistTick: [state.user.match(/\(id ([\w-]+)\) Headline/)[1]] } }] }),
+    (state) => {
+      const key_ = state.user.match(/<task key="([^"]+)"/)[1];
+      const id = (text) => state.user.match(new RegExp(`\\(id ([\\w-]+)\\) ${text}`))[1];
+      return {
+        calls: [{
+          name: 'update_task',
+          input: {
+            key: key_,
+            checklistAdd: ['Ask Ana to review the copy'],
+            checklistDone: [
+              { id: id('Three feature blurbs'), result: 'Completed the three feature blurbs as requested.' },
+              { id: id('Call to action'), result: 'Start a free workspace today. No email, no card.' },
+            ],
+          },
+        }],
+      };
+    },
+    { text: 'Headline: Plan your week in one private place. Call to action: start a free workspace today, no email, no card. The blurbs still need writing.' },
+  ]);
+  const t = await newTask({ title: 'Write the launch page copy', checklist: [{ text: 'Headline' }, { text: 'Three feature blurbs' }, { text: 'Call to action' }], assigneeId: ids.builder });
+  const run = await settled(t.id);
+  assert.equal(run.status, 'done', run.error);
+  assert.deepEqual(JSON.parse(task(t.id).checklist).map((i) => [i.text, i.done]), [['Headline', false], ['Three feature blurbs', false], ['Call to action', true], ['Ask Ana to review the copy', false]]);
+
+  const guards = steps(run.id).filter((s) => s.kind === 'guard').map((s) => s.output);
+  assert.equal(guards.length, 2);
+  assert.match(guards[0], /^Didn’t tick “Headline”: it was ticked without a result/);
+  assert.match(guards[1], /^Didn’t tick “Three feature blurbs”: the result only says it’s done/);
+  // the model is told, so it can do the work or leave the item open
+  const [first, second] = model.seen.at(-1).results;
+  assert.equal(first.isError, true);
+  assert.match(first.content, /Not ticked: “Headline”/);
+  assert.match(second.content, /"changed":true/);
+  assert.match(second.content, /Not ticked: “Three feature blurbs”/);
+
+  const note = comments(t.id).at(-1).body;
+  assert.match(note, /^Headline: Plan your week/);
+  // the call to action is already in the reply, so the list only names the item
+  assert.match(note, /Checklist items done:\n- Call to action\n/);
+  assert.doesNotMatch(note, /- Three feature blurbs:/);
+});
+
+test('a result has to be work, not a claim of work', async () => {
+  const { default: checkWorkProduct } = await import('../agents/runner/checkWorkProduct.js');
+  for (const [result, item] of [['Done', 'Headline'], ['Headline done.', 'Headline'], ['Completed the three feature blurbs as requested', 'Three feature blurbs'], ['Checked and verified, all ok', 'Check the release notes'], ['I have done this step now', 'Reproduce']]) {
+    assert.ok(checkWorkProduct(result, item), `${result} should not pass`);
+  }
+  for (const [result, item] of [['Plan your week in one private place', 'Headline'], ['Added four steps: reproduce, find the cause, fix, retest', 'Split the work into steps'], ['Tokens expire after 24 hours; the app never renews them', 'Reproduce']]) {
+    assert.equal(checkWorkProduct(result, item), null, result);
+  }
 });
 
 test('a mention gets an answer; agents mentioning agents never start a run', async () => {

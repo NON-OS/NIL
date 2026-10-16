@@ -19,6 +19,8 @@ import stepLog from './stepLog.js';
 import publishRun from './publishRun.js';
 import tokensToday from './tokensToday.js';
 import runComment from './runComment.js';
+import runnerTools from './runnerTools.js';
+import checklistDone from './checklistDone.js';
 import ProviderError from './ProviderError.js';
 import log from '../../lib/log.js';
 
@@ -26,7 +28,8 @@ const RESULT_CAP = 20_000;
 const RETRY_BASE_MS = 30_000;
 const byName = new Map(tools.map((t) => [t.name, t]));
 
-const toolset = ({ agent, scope }) => tools.filter((t) => agent.tools.includes(t.name) && (!t.write || scope === 'write'));
+const toolset = ({ agent, scope }) => runnerTools(tools.filter((t) => agent.tools.includes(t.name) && (!t.write || scope === 'write')));
+const refusalText = (refused) => refused.map((r) => `Not ticked: “${r.text}”, because ${r.reason}.`).join('\n');
 
 function resultText(out) {
   if (out.ok) {
@@ -93,6 +96,8 @@ export default async function executeRun(row, signal) {
   const abort = AbortSignal.any([signal, deadline.signal]);
   const usage = { input: run.input_tokens, output: run.output_tokens };
   const pending = [];
+  // checklist items ticked in this run, with what the agent produced for each
+  const done = [];
   let changes = 0;
   let final = '';
   let stop = null;
@@ -130,12 +135,21 @@ export default async function executeRun(row, signal) {
             results.push({ id: call.id, content: JSON.stringify({ INVALID_JSON: String(call.error ?? '').slice(0, 2000) }), isError: true });
             continue;
           }
-          const out = runTool(principal, call.name, call.input, { via: 'runner', runId: run.id, actingFor: run.acting_for });
+          // a checklist item is ticked only with the work for it; the rest of the call goes ahead
+          const guarded = call.name === 'update_task' ? checklistDone(call.input, user) : null;
+          for (const r of guarded?.refused ?? []) log.add('guard', { tool: call.name, input: { item: r.text }, output: `Didn’t tick “${r.text}”: ${r.reason}.`, ok: false });
+          if (guarded && !guarded.input) {
+            results.push({ id: call.id, content: `${refusalText(guarded.refused)}\nPut the work in your reply and attach it as the result, or leave the item open.`, isError: true });
+            continue;
+          }
+          const out = runTool(principal, call.name, guarded?.input ?? call.input, { via: 'runner', runId: run.id, actingFor: run.acting_for });
           // a write that turned out to change nothing (changed: false) isn't counted
           if (out.ok && byName.get(call.name)?.write && out.data?.changed !== false) changes += 1;
+          if (out.ok && guarded) done.push(...guarded.accepted.filter((a) => !done.some((d) => d.id === a.id)));
           if (out.pending) pending.push(out.pending);
           log.add(out.pending ? 'approval' : out.ok ? 'tool' : 'refused', { tool: call.name, input: call.input, output: resultText(out), ok: out.ok || Boolean(out.pending) });
-          results.push({ id: call.id, content: resultText(out), isError: !out.ok && !out.pending });
+          const refusals = guarded?.refused.length ? `\n${refusalText(guarded.refused)}` : '';
+          results.push({ id: call.id, content: resultText(out) + refusals, isError: !out.ok && !out.pending });
         }
         provider.addResults(state, results);
         const total = usage.input + usage.output;
@@ -163,7 +177,7 @@ export default async function executeRun(row, signal) {
       const message = err instanceof ProviderError ? err.message : 'The agent stopped on an unexpected error.';
       if (!(err instanceof ProviderError)) log.error('agents', `run ${run.id} failed`, err);
       log.add('error', { output: message, ok: false });
-      comment(runComment({ text: `I couldn’t finish this: ${message}`, stop: null, changes, pending, agent, secrets: knownSecrets(agent) }));
+      comment(runComment({ text: `I couldn’t finish this: ${message}`, stop: null, changes, pending, done, agent, secrets: knownSecrets(agent) }));
       return finish('failed', { error: message });
     }
   }
@@ -186,7 +200,7 @@ export default async function executeRun(row, signal) {
   }
 
   const secrets = knownSecrets(agent);
-  comment(runComment({ text: final, stop, changes, pending, agent, secrets }));
-  const summary = runComment({ text: final, stop: null, changes, pending: [], agent, secrets }).slice(0, 2000);
+  comment(runComment({ text: final, stop, changes, pending, done, agent, secrets }));
+  const summary = runComment({ text: final, stop: null, changes, pending: [], done, agent, secrets }).slice(0, 2000);
   return finish(stop === 'done' ? 'done' : 'stopped', { summary, error: stop === 'done' ? null : stop });
 }
