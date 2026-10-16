@@ -41,7 +41,8 @@ test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh ser
   const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/index.js'], { env: { ...process.env, DATA_DIR: freshDir, PORT: String(port), APP_URL: `http://127.0.0.1:${port}` }, stdio: ['ignore', 'ignore', 'inherit'] });
   try {
     const other = `http://127.0.0.1:${port}`;
-    for (let i = 0; i < 50; i++) {
+    // up to 20 s: while other test files prove ballots in parallel, a second server starts slowly
+    for (let i = 0; i < 200; i++) {
       try {
         if ((await fetch(`${other}/healthz`)).ok) break;
       } catch {}
