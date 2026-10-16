@@ -8,15 +8,33 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **A setup token guards a fresh server.** Creating the first workspace, or restoring a capsule into an empty server, needs a one-time token: `SETUP_TOKEN`, or one the server makes at first start, prints once in the log and keeps in `DATA_DIR/setup-token`. The setup and restore screens ask for it. It stops working once a workspace exists, and erasing the workspace makes a new one.
+- **Clean shutdown.** On SIGTERM or Ctrl+C the server stops its jobs, tells open tabs to reconnect (WebSocket close code 1001), lets requests in progress finish, waits for running jobs and closes the database, then exits 0. If that takes longer than `SHUTDOWN_TIMEOUT_SECONDS` (20) it exits with an error. `docker-compose.yml` allows 30 seconds.
+- **`/healthz` checks the database** and answers 503 when it doesn't respond. It reports the version, the schema, when each job last succeeded and failed, and whether the Ethereum node answered the last time it was asked, and nothing about the workspace.
+- **A copy of the database before every upgrade.** Before applying migrations, the server saves `pre-migration-<time>-schema-<n>.db` in the data folder with `VACUUM INTO` and keeps the newest three. Erasing the workspace deletes them too.
+- `STRICT_CONFIG=1` refuses to start while any `[config]` warning remains. `LOG_FORMAT=json` writes one JSON object per log line.
+- Settings for values that were fixed in code, with the old values as defaults: `NOX_RPC_TIMEOUT_SECONDS`, `NOX_MISSING_TX_HOURS` (bounty payments), `MAX_JSON_KB`, `NOTIFICATION_DAYS`, `USED_INVITE_DAYS`, `JOB_PURGE_SECONDS`, `JOB_PAYMENTS_SECONDS`, `JOB_VOTES_SECONDS`, `JOB_REMINDERS_SECONDS`, and new ones for `JOB_OPTIMIZE_SECONDS`, `DB_JOURNAL_LIMIT_MB`, `AI_TIMEOUT_SECONDS` and `AI_MAX_RETRIES`. All are in `.env.example`.
+- Migration 019 adds indexes for the hourly purge (comments, activity and read notifications by date) and for tasks by creator. SQLite's `PRAGMA optimize` runs hourly, and the write-ahead log is cut back to 64 MB after checkpoints.
+- Continuous integration (`.github/workflows/ci.yml`): tests, type check, build, `npm audit --omit=dev`, a Docker build that boots the image and checks `/healthz`, and an upgrade of a 3.0.0 database (`server/test/fixtures/v3.0.0.db`) to the latest schema.
 
 ### Changed
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
+- **`docker-compose.yml` publishes port 3000 on 127.0.0.1 only.** Put Caddy or another TLS proxy in front, as `docs/DEPLOY.md` describes. It also limits the container to 1 GB of memory (2 GB in memory-only mode, whose data lives in RAM) and rotates its logs.
+- The Docker image is pinned to Node 22.23.3 on Alpine 3.24 by digest, carries OCI labels with the version, and its health check follows `PORT`.
+- Log lines carry a timestamp and a level. Configured secrets are cut out of every line, and request bodies, cookies and headers are never logged. The startup line shows the version and `APP_URL`.
+- Stricter settings checks. `NOX_TOKEN`, `REWARD_TOKENS`, `STEALTH_ANNOUNCER`, `NOX_STAKING`, `ZSP_CONTRACT` and `PLAN_TREASURY` must be valid addresses, with a correct EIP-55 checksum when they mix upper and lower case; a bad one is named in a warning instead of being dropped quietly. With `NOX_CHAIN_ID` other than 1, the contracts have to be named, since the defaults are mainnet contracts. `NOX_CONFIRMATIONS` is at least 1. In production the server warns about an empty `APP_URL`, an https `APP_URL` without `TRUST_PROXY`, and the default public Ethereum node.
+- An AI request gives up after 120 seconds and is retried once, instead of the SDK's default ten minutes and two retries.
+- The server refuses to start on a database written by a newer release, and says so, instead of running against a schema it doesn't know. A capsule from a newer release is refused the same way.
 
 ### Fixed
 
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
+- A background job that failed, for example on "database is locked" or a full disk, could take the whole server down. Every job now logs its failure (at most once every ten minutes while it keeps failing) and runs again on schedule. Errors in the live-update connection are caught the same way, and an error nothing else handles stops the server cleanly instead of abruptly.
+- Payment checks that failed were dropped without a word. They are logged now, rate-limited.
+- A missing file under `/assets/` got the app's HTML with status 200. It is a plain 404 now.
+- A capsule export kept encrypting after the browser cancelled the download. It stops now, and its plaintext database snapshot is always deleted.
 
 ## 3.0.0 (2026-10-15)
 
