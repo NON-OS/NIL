@@ -13,6 +13,7 @@ import goalActions from '../../actions/goals';
 import ui from '../../actions/ui';
 import meta from '../../lib/meta';
 import dates from '../../lib/dates';
+import isArchived from '../../lib/isArchived';
 import type Goal from '../../types/Goal';
 import type GoalStatus from '../../types/GoalStatus';
 
@@ -23,6 +24,7 @@ export default function GoalModal({ goal, onClose }: { goal?: Goal; onClose: () 
   const users = useStore((s) => s.users);
   const meId = useStore((s) => s.me?.id ?? null);
   const all = useTasks();
+  const archive = useStore((s) => s.archive);
   const [form, setForm] = useState({
     title: goal?.title ?? '',
     description: goal?.description ?? '',
@@ -34,7 +36,12 @@ export default function GoalModal({ goal, onClose }: { goal?: Goal; onClose: () 
     metricCurrent: goal?.metricCurrent?.toString() ?? '',
     metricTarget: goal?.metricTarget?.toString() ?? '',
   });
-  const linked = useMemo(() => (goal ? all.filter((t) => t.goalId === goal.id).sort((a, b) => Number(meta.isClosed(a.status)) - Number(meta.isClosed(b.status))) : []), [all, goal]);
+  const linked = useMemo(
+    () => (goal ? all.filter((t) => t.goalId === goal.id && !isArchived(t, archive.before)).sort((a, b) => Number(meta.isClosed(a.status)) - Number(meta.isClosed(b.status))) : []),
+    [all, goal, archive.before],
+  );
+  // older finished tasks stay in the archive; the list mentions them rather than loading them
+  const older = goal ? archive.done.goals[goal.id] ?? 0 : 0;
   const set = (patch: Partial<typeof form>) => setForm((f) => ({ ...f, ...patch }));
 
   const save = async () => {
@@ -109,13 +116,18 @@ export default function GoalModal({ goal, onClose }: { goal?: Goal; onClose: () 
           <section>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
               <h3 style={{ fontSize: 'var(--text-md)' }}>
-                Linked tasks <span className="muted num">{linked.length}</span>
+                Linked tasks <span className="muted num">{linked.length + older}</span>
               </h3>
               <button type="button" className="btn btn-sm" onClick={() => ui.quickAdd({ goalId: goal.id })}>
                 <Plus /> Add task
               </button>
             </div>
-            {linked.length ? linked.map((t) => <TaskLine key={t.id} task={t} />) : <p className="muted">Link tasks to this goal from any task’s Goal field, or add one here.</p>}
+            {linked.length ? linked.map((t) => <TaskLine key={t.id} task={t} />) : !older && <p className="muted">Link tasks to this goal from any task’s Goal field, or add one here.</p>}
+            {older > 0 && (
+              <p className="muted" style={{ fontSize: 'var(--text-sm)', marginTop: 6 }}>
+                Plus {older} finished {older === 1 ? 'task' : 'tasks'} from before {dates.short(dates.toISO(new Date(archive.before)))}.
+              </p>
+            )}
           </section>
         )}
       </div>

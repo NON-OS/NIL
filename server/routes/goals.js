@@ -29,7 +29,8 @@ function fields(b) {
 
 function publish(id) {
   const goal = toGoal(sql.get('SELECT * FROM goals WHERE id = ?', id));
-  hub.broadcast((viewer) => (guestScope.of(viewer.id) ? null : { type: 'goal', goal }));
+  const event = { type: 'goal', goal };
+  hub.broadcast((viewer) => (guestScope.of(viewer.id) ? null : event));
   return { goal };
 }
 

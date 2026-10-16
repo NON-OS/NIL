@@ -5,6 +5,7 @@ import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
 import logLimited from '../lib/logLimited.js';
+import buildId from '../lib/buildId.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -39,7 +40,8 @@ function handleMessage(ws, raw) {
     client.lastTyping = now;
     const task = loadTask(msg.taskId.slice(0, 32));
     if (!canSeeTask(task, { id: client.userId })) return;
-    hub.broadcast((viewer) => (canSeeTask(task, viewer) ? { type: 'typing', taskId: task.id, userId: client.userId } : null), { except: ws });
+    const typing = { type: 'typing', taskId: task.id, userId: client.userId };
+    hub.broadcast((viewer) => (canSeeTask(task, viewer) ? typing : null), { except: ws });
   }
 }
 
@@ -66,7 +68,8 @@ function connected(ws, user) {
   ws.on('message', guarded('message', (raw) => handleMessage(ws, raw)));
   ws.on('close', () => hub.remove(ws));
   ws.on('error', () => hub.remove(ws));
-  ws.send(JSON.stringify({ type: 'hello', presence: hub.presence() }));
+  // the build lets a tab that reconnects after a deploy see it's running an old version
+  ws.send(JSON.stringify({ type: 'hello', presence: hub.presence(), build: buildId() }));
 }
 
 export default function attachRealtime(server) {

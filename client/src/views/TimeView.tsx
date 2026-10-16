@@ -8,6 +8,7 @@ import useTasks from '../hooks/useTasks';
 import toast from '../state/toast';
 import timer from '../actions/timer';
 import detail from '../actions/detail';
+import archive from '../actions/archive';
 import dates from '../lib/dates';
 import formatDuration from '../lib/formatDuration';
 import taskKey from '../lib/taskKey';
@@ -34,6 +35,11 @@ export default function TimeView() {
   useEffect(() => {
     refresh();
   }, [refresh, running?.id]);
+
+  // time logged on tasks finished long ago still shows their names, from the archive
+  useEffect(() => {
+    if (entries) archive.find(entries.map((e) => e.taskId)).catch(() => {});
+  }, [entries]);
 
   const days = useMemo(() => {
     const list = Array.from({ length: 7 }, (_, i) => {

@@ -1,45 +1,60 @@
 import { lazy, Suspense, useState } from 'react';
 import Sidebar from './components/shell/Sidebar';
 import AppEffects from './components/shell/AppEffects';
+import UpdatePrompt from './components/shell/UpdatePrompt';
 import TaskDrawer from './components/drawer/TaskDrawer';
 import QuickAdd from './components/overlays/QuickAdd';
 import CommandPalette from './components/overlays/CommandPalette';
-import ShortcutsHelp from './components/overlays/ShortcutsHelp';
-import ExtractModal from './components/overlays/ExtractModal';
-import DeckModal from './components/decks/DeckModal';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
-import AuthView from './views/AuthView';
 import MyWorkView from './views/MyWorkView';
 import InboxView from './views/InboxView';
 import BoardView from './views/BoardView';
 import ListView from './views/ListView';
-import CalendarView from './views/CalendarView';
-import GoalsView from './views/GoalsView';
-import InsightsView from './views/InsightsView';
 import ProjectView from './views/ProjectView';
-import SettingsView from './views/SettingsView';
 import NotFoundView from './views/NotFoundView';
-import ProofsView from './views/ProofsView';
-import VerifyView from './views/VerifyView';
-import BountiesView from './views/BountiesView';
-import VotesView from './views/VotesView';
-import TimeView from './views/TimeView';
-import DocsView from './views/DocsView';
-import SharePage from './views/SharePage';
-import OpenBountiesPage from './views/OpenBountiesPage';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 
-// The help center carries every docs page as text, so it loads only when someone opens it.
+// The everyday screens above load with the app. The rest arrive when first opened, so the
+// first paint of My work and the board doesn't wait on settings, charts, crypto or exports.
+const AuthView = lazy(() => import('./views/AuthView'));
+const CalendarView = lazy(() => import('./views/CalendarView'));
+const GoalsView = lazy(() => import('./views/GoalsView'));
+const InsightsView = lazy(() => import('./views/InsightsView'));
+const SettingsView = lazy(() => import('./views/SettingsView'));
+const DocsView = lazy(() => import('./views/DocsView'));
+const TimeView = lazy(() => import('./views/TimeView'));
+const VotesView = lazy(() => import('./views/VotesView'));
+const BountiesView = lazy(() => import('./views/BountiesView'));
+const ProofsView = lazy(() => import('./views/ProofsView'));
+const VerifyView = lazy(() => import('./views/VerifyView'));
+const SharePage = lazy(() => import('./views/SharePage'));
+const OpenBountiesPage = lazy(() => import('./views/OpenBountiesPage'));
+const ShortcutsHelp = lazy(() => import('./components/overlays/ShortcutsHelp'));
+const ExtractModal = lazy(() => import('./components/overlays/ExtractModal'));
+const DeckModal = lazy(() => import('./components/decks/DeckModal'));
+// the help center carries every docs page as text
 const HelpView = lazy(() => import('./views/HelpView'));
-const helpFallback = (
-  <div className="loading-screen">
-    <Spinner size={18} />
-  </div>
-);
+
+function LoadingScreen() {
+  return (
+    <div className="loading-screen">
+      <BrandArt kind="mark" height={40} />
+      <Spinner size={18} />
+    </div>
+  );
+}
+
+function ViewLoading() {
+  return (
+    <div className="main view-loading">
+      <Spinner size={18} />
+    </div>
+  );
+}
 
 function Screen({ segments }: { segments: string[] }) {
   const [first, second] = segments;
@@ -73,11 +88,7 @@ function Screen({ segments }: { segments: string[] }) {
     case 'verify':
       return <VerifyView />;
     case 'help':
-      return (
-        <Suspense fallback={helpFallback}>
-          <HelpView />
-        </Suspense>
-      );
+      return <HelpView />;
     case 'projects':
       return second ? <ProjectView key={second} projectId={second} /> : <NotFoundView />;
     default:
@@ -97,30 +108,29 @@ export default function App() {
   const taskNumber = Number(query.get('task'));
 
   // public pages work signed in or out, outside the app shell
-  if (segments[0] === 's' && segments[1]) return <SharePage token={segments[1]} />;
-  if (segments[0] === 'open') return <OpenBountiesPage />;
-
-  if (phase === 'loading') {
+  if (segments[0] === 's' && segments[1]) {
     return (
-      <div className="loading-screen">
-        <BrandArt kind="mark" height={40} />
-        <Spinner size={18} />
-      </div>
+      <Suspense fallback={<LoadingScreen />}>
+        <SharePage token={segments[1]} />
+      </Suspense>
     );
   }
+  if (segments[0] === 'open') {
+    return (
+      <Suspense fallback={<LoadingScreen />}>
+        <OpenBountiesPage />
+      </Suspense>
+    );
+  }
+
+  if (phase === 'loading') return <LoadingScreen />;
 
   if (phase === 'auth') {
     return (
       <>
-        {segments[0] === 'verify' ? (
-          <VerifyView standalone />
-        ) : segments[0] === 'help' ? (
-          <Suspense fallback={helpFallback}>
-            <HelpView standalone />
-          </Suspense>
-        ) : (
-          <AuthView />
-        )}
+        <Suspense fallback={<LoadingScreen />}>
+          {segments[0] === 'verify' ? <VerifyView standalone /> : segments[0] === 'help' ? <HelpView standalone /> : <AuthView />}
+        </Suspense>
         <Toasts />
       </>
     );
@@ -130,14 +140,19 @@ export default function App() {
     <div className="app">
       <AppEffects />
       <Sidebar onNewProject={() => setNewProject(true)} />
-      <Screen segments={segments} />
+      <Suspense fallback={<ViewLoading />}>
+        <Screen segments={segments} />
+      </Suspense>
       {taskNumber > 0 && <TaskDrawer key={taskNumber} number={taskNumber} />}
       {quickAdd && <QuickAdd />}
       {palette && <CommandPalette />}
-      {shortcuts && <ShortcutsHelp />}
-      {extract && <ExtractModal />}
-      {deckOpen && <DeckModal />}
       {newProject && <ProjectModal onClose={() => setNewProject(false)} />}
+      <Suspense fallback={null}>
+        {shortcuts && <ShortcutsHelp />}
+        {extract && <ExtractModal />}
+        {deckOpen && <DeckModal />}
+      </Suspense>
+      <UpdatePrompt />
       <Toasts />
     </div>
   );

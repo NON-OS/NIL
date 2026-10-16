@@ -1,21 +1,29 @@
-import { useMemo, useState, type FormEvent } from 'react';
+import { useEffect, useMemo, useState, type FormEvent } from 'react';
 import { Plus } from 'lucide-react';
 import ColorSwatches from '../ui/ColorSwatches';
 import ConfirmButton from '../ui/ConfirmButton';
 import useStore from '../../state/useStore';
 import useTasks from '../../hooks/useTasks';
 import labelActions from '../../actions/labels';
+import archive from '../../actions/archive';
 import meta from '../../lib/meta';
+import isArchived from '../../lib/isArchived';
 
 export default function LabelSettings() {
   const labelMap = useStore((s) => s.labels);
   const tasks = useTasks();
+  const before = useStore((s) => s.archive.before);
   const labels = useMemo(() => Object.values(labelMap).sort((a, b) => a.name.localeCompare(b.name)), [labelMap]);
+  // archived tasks are counted by the server, loaded here or not
+  const [archived, setArchived] = useState<Record<string, number>>({});
+  useEffect(() => {
+    archive.labelCounts().then(setArchived).catch(() => {});
+  }, [before]);
   const usage = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const t of tasks) for (const l of t.labels) counts[l] = (counts[l] ?? 0) + 1;
+    const counts: Record<string, number> = { ...archived };
+    for (const t of tasks) if (!isArchived(t, before)) for (const l of t.labels) counts[l] = (counts[l] ?? 0) + 1;
     return counts;
-  }, [tasks]);
+  }, [tasks, archived, before]);
   const [name, setName] = useState('');
   const [color, setColor] = useState(meta.palette[1].value);
   const [open, setOpen] = useState<string | null>(null);

@@ -13,8 +13,11 @@ import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import insightsData from '../lib/insightsData';
 import goalProgress from '../lib/goalProgress';
+import projectProgress from '../lib/projectProgress';
 import meta from '../lib/meta';
+import dates from '../lib/dates';
 import decks from '../actions/decks';
+import useArchiveSince from '../hooks/useArchiveSince';
 
 const SERIES = [
   { key: 'urgent', label: 'Urgent', color: 'var(--chart-4)' },
@@ -23,6 +26,8 @@ const SERIES = [
   { key: 'low', label: 'Low or none', color: 'var(--chart-1)' },
 ];
 const bucket = (p: number) => (p === 4 ? 'urgent' : p === 3 ? 'high' : p === 2 ? 'medium' : 'low');
+// how far back the weekly chart in insightsData reaches; the archive is loaded back to there
+const WEEKS = 12;
 
 export default function InsightsView() {
   const tasks = useTasks();
@@ -30,6 +35,10 @@ export default function InsightsView() {
   const projects = useStore((s) => s.projects);
   const goals = useStore((s) => s.goals);
   const aiOn = useStore((s) => s.ai);
+  const archive = useStore((s) => s.archive);
+  // from noon the day before the chart's first week, so all of that first day is covered
+  const historyStart = dates.parse(dates.addDays(dates.weekStart(dates.today()), -7 * (WEEKS - 1) - 1)).getTime();
+  const loadingHistory = useArchiveSince(historyStart);
   const data = useMemo(() => insightsData(tasks), [tasks]);
 
   const workload = useMemo(() => {
@@ -50,12 +59,9 @@ export default function InsightsView() {
     () =>
       Object.values(projects)
         .filter((p) => !p.archived)
-        .map((p) => {
-          const own = tasks.filter((t) => t.projectId === p.id && t.status !== 'canceled');
-          return { p, done: own.filter((t) => t.status === 'done').length, total: own.length };
-        })
+        .map((p) => ({ p, ...projectProgress(p.id, tasks, archive) }))
         .filter((r) => r.total > 0),
-    [projects, tasks],
+    [projects, tasks, archive],
   );
 
   const delta = data.lastWeek - data.priorWeek;
@@ -84,7 +90,7 @@ export default function InsightsView() {
           <section className="panel wide">
             <div className="panel-head">
               <h2>Tasks finished per week</h2>
-              <span className="muted">Last 12 weeks</span>
+              <span className="muted">{loadingHistory ? 'Loading older weeks…' : `Last ${WEEKS} weeks`}</span>
             </div>
             <div className="panel-body">
               <ColumnChart data={data.weeks} unit="finished" />
@@ -126,7 +132,7 @@ export default function InsightsView() {
             <div className="panel-body">
               {Object.values(goals).length ? (
                 Object.values(goals).map((g) => {
-                  const p = goalProgress(g, tasks);
+                  const p = goalProgress(g, tasks, archive);
                   return <Meter key={g.id} label={g.title} value={p.pct} total={100} color="var(--accent-line)" caption={`${p.pct}% · ${meta.goalStatus[g.status]}`} />;
                 })
               ) : (

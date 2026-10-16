@@ -14,6 +14,7 @@ import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import useFilter from '../hooks/useFilter';
 import useListPrefs from '../hooks/useListPrefs';
+import useArchiveSearch from '../hooks/useArchiveSearch';
 import ui from '../actions/ui';
 import filterTasks from '../lib/filterTasks';
 import storage from '../lib/storage';
@@ -21,6 +22,8 @@ import meta from '../lib/meta';
 import dates from '../lib/dates';
 import decks from '../actions/decks';
 import ShareLinkModal from '../components/share/ShareLinkModal';
+import ArchiveMore from '../components/task/ArchiveMore';
+import projectProgress from '../lib/projectProgress';
 
 export default function ProjectView({ projectId }: { projectId: string }) {
   const project = useStore((s) => s.projects[projectId]);
@@ -28,6 +31,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
   const meId = useStore((s) => s.me?.id ?? null);
   const prefix = useStore((s) => s.workspace.taskPrefix);
   const all = useTasks();
+  const archive = useStore((s) => s.archive);
   const [mode, setModeState] = useState<'board' | 'list'>(() => storage.get(`project-mode:${projectId}`, 'board'));
   const [editing, setEditing] = useState(false);
   const [sharing, setSharing] = useState(false);
@@ -38,7 +42,8 @@ export default function ProjectView({ projectId }: { projectId: string }) {
 
   const inProject = useMemo(() => all.filter((t) => t.projectId === projectId && t.status !== 'canceled'), [all, projectId]);
   const tasks = useMemo(() => filterTasks(inProject, filter, { meId, prefix, keepClosed: mode === 'board' }), [inProject, filter, meId, prefix, mode]);
-  const done = inProject.filter((t) => t.status === 'done').length;
+  const progress = useMemo(() => projectProgress(projectId, all, archive), [projectId, all, archive]);
+  useArchiveSearch(filter.query, mode === 'list' && filter.showClosed);
   const overdue = inProject.filter((t) => !meta.isClosed(t.status) && t.dueDate && t.dueDate < dates.today()).length;
 
   if (!project) {
@@ -102,13 +107,13 @@ export default function ProjectView({ projectId }: { projectId: string }) {
             </span>
           )}
           {overdue > 0 && <span style={{ color: 'var(--danger)' }}>{overdue} overdue</span>}
-          <Meter label="Progress" value={done} total={inProject.length} color={project.color} />
+          <Meter label="Progress" value={progress.done} total={progress.total} color={project.color} />
         </div>
       </div>
       <FilterBar filter={filter} onChange={setFilter} showProjects={false} showClosedToggle={mode === 'list'}>
         {mode === 'list' && <ListOptions groupBy={prefs.groupBy} sortBy={prefs.sortBy} onGroup={(groupBy) => setPrefs({ groupBy })} onSort={(sortBy) => setPrefs({ sortBy })} />}
       </FilterBar>
-      {inProject.length === 0 ? (
+      {inProject.length === 0 && progress.total === 0 ? (
         <EmptyState icon={<Kanban />} title="No tasks in this project yet" actions={<button type="button" className="btn btn-primary" onClick={() => ui.quickAdd(defaults)}><Plus /> Add a task</button>}>
           Tip: type “+{project.key.toLowerCase()}” in any new task to drop it here.
         </EmptyState>
@@ -117,7 +122,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
           <TaskBoard tasks={tasks} showProject={false} defaults={defaults} />
         </div>
       ) : (
-        <TaskList tasks={tasks} groupBy={prefs.groupBy} sortBy={prefs.sortBy} defaults={defaults} />
+        <TaskList tasks={tasks} groupBy={prefs.groupBy} sortBy={prefs.sortBy} defaults={defaults} footer={filter.showClosed && <ArchiveMore />} />
       )}
       {editing && <ProjectModal project={project} onClose={() => setEditing(false)} />}
       {sharing && <ShareLinkModal kind="project" targetId={project.id} name={project.name} onClose={() => setSharing(false)} />}
