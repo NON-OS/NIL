@@ -21,6 +21,7 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 - [Private tasks](private-tasks.md): tasks only two people can read, encrypted in the browser.
 - [Encrypted docs](encrypted-docs.md): team documents the server can't read.
 - [Privacy model](privacy-model.md): what is encrypted, what the server can see and the honest limits.
+- [Encryption and trust](encryption.md): who holds which key, how teammates check each other's keys, and the recovery kit.
 - [Zero-state](zero-state.md): auto-erase, erasing everything and memory-only mode.
 
 ## Money and decisions

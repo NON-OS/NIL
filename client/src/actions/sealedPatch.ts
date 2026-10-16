@@ -13,14 +13,17 @@ import type Attachment from '../types/Attachment';
 const WORDS = ['title', 'description', 'checklist'] as const;
 
 // Every comment and file on the task, moved to a new key, or back to plain when `to` is null.
-// Comments go first: they're re-encrypted in memory, so failing there leaves nothing uploaded.
+// Comments go first: they're re-encrypted in memory with their signatures untouched, so failing
+// there leaves nothing uploaded.
 async function moveContents(task: Task, to: TaskKey | null) {
   const { comments, attachments } = await http.get<{ comments: Comment[]; attachments: Attachment[] }>(`/tasks/${task.id}/detail`);
   const moved = await Promise.all(
     comments.map(async (c) => {
-      const open = await commentText.open(task, c);
-      if (open.locked) throw new Error('A comment on this task can’t be opened here, so the task can’t change who can read it.');
-      return { id: c.id, body: to ? await commentText.seal(to, c.authorId, open.body) : open.body };
+      try {
+        return { id: c.id, body: await commentText.move(task, c, to) };
+      } catch {
+        throw new Error('A comment on this task can’t be opened and checked here, so the task can’t change who can read it.');
+      }
     }),
   );
   return { comments: moved, files: await moveFiles(task, attachments, to) };
@@ -48,7 +51,7 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   if (opening) return { ...rest, private: false, ...words, ...(await moveContents(task, null)) };
   if (sealing || rehoming) {
     const fresh = taskKeys.fresh();
-    const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId]);
+    const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId], { ask: true });
     return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys), ...(await moveContents(task, fresh)) };
   }
   return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys) };

@@ -35,9 +35,13 @@ export default function DocHistory({ doc, onClose, onRestore }: { doc: DocItem; 
                 <strong>
                   <span className="mono muted">v{r.version}</span> {r.title}
                 </strong>
-                <button type="button" className="btn btn-sm" onClick={() => (onRestore(r.title, r.body), onClose())}>
-                  Restore
-                </button>
+                {r.verified ? (
+                  <button type="button" className="btn btn-sm" onClick={() => (onRestore(r.title, r.body), onClose())}>
+                    Restore
+                  </button>
+                ) : (
+                  <small style={{ color: 'var(--danger)' }}>Not verified</small>
+                )}
               </div>
               <small className="muted">
                 {r.updatedBy ? users[r.updatedBy]?.name ?? 'A former member' : 'Someone'} · {dates.dateTime(r.createdAt)}

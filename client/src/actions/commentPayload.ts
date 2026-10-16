@@ -7,5 +7,5 @@ import commentText from './commentText';
 export default async function commentPayload(taskId: string, body: string): Promise<{ body: string; sealed?: true }> {
   const task = store.get().tasks[taskId];
   if (!task?.sealed) return { body };
-  return { body: await commentText.seal(await taskKeys.open(task.sealed), store.get().me!.id, body), sealed: true };
+  return { body: await commentText.seal(await taskKeys.open(task.sealed), task.id, store.get().me!.id, body), sealed: true };
 }

@@ -6,17 +6,22 @@ import { Identity } from '@semaphore-protocol/identity';
 import { Group } from '@semaphore-protocol/group';
 import { poseidon2 } from 'poseidon-lite/poseidon2';
 import { groth16 } from 'snarkjs';
-import { Base8, addPoint, mulPointEscalar, subOrder } from '@zk-kit/baby-jubjub';
+import { Base8, Fr, addPoint, mulPointEscalar, subOrder } from '@zk-kit/baby-jubjub';
 import startServer from './helpers/startServer.js';
 import mockChain from './helpers/mockChain.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import trusteePartial from './helpers/trusteePartial.js';
+import trusteeDealing from './helpers/trusteeDealing.js';
+import dealVoteKey from './helpers/dealVoteKey.js';
+import publishKey from './helpers/publishKey.js';
 import fieldHash from '../votes/fieldHash.js';
 import aggregateBallots from '../votes/encrypted/aggregateBallots.js';
 import trusteeKey from '../votes/encrypted/trusteeKey.js';
 import checkPartial from '../votes/encrypted/checkPartial.js';
 import combineTotals from '../votes/encrypted/combineTotals.js';
+import checkKnowledge from '../votes/encrypted/checkKnowledge.js';
+import knowledgeChallenge from '../votes/encrypted/knowledgeChallenge.js';
 
 const ZK = new URL('../../client/public/zk/', import.meta.url).pathname;
 const KEY = JSON.parse(fs.readFileSync(new URL('../votes/ballotKey.json', import.meta.url)));
@@ -45,7 +50,7 @@ before(async () => {
   }
   for (const n of names) {
     await who[n]('PUT', '/api/me/semaphore', { commitment: identity[n].commitment.toString() });
-    await who[n]('PUT', '/api/me/encryption-key', { publicKey: Buffer.from(crypto.randomBytes(32)).toString('base64url') });
+    assert.equal((await publishKey(who[n], wallets[n])).status, 200);
   }
   await who.owner('PUT', '/api/vote-power', { zspPower: '100' });
   chain.setBalance(wallets.owner.address, 1000n * unit);
@@ -103,20 +108,68 @@ test('an encrypted vote needs three trustees with encryption keys, and a census 
   assert.equal(vote.totals, null);
 });
 
-test('the vote key appears only once all three trustees have dealt, and only trustees deal', async () => {
+test('trustees commit before anyone reveals, and every reveal proves knowledge of its secrets', async () => {
   const vote = await getVote(ids.vote);
   assert.match((await ballot(ids.vote, await proveBallot('owner', { ...vote, encrypted: { publicKey: str(Base8) } }, 0))).data.error, /opens once its trustees/);
-  const dealing = () => ({ commitments: [], shares: { 1: 'a'.repeat(123), 2: 'b'.repeat(123), 3: 'c'.repeat(123) } });
-  assert.equal((await who.ben('PUT', `/api/proposals/${ids.vote}/dealing`, dealing())).status, 403);
-  for (const [position, n] of [[1, 'owner'], [2, 'ana'], [3, 'cy']]) {
-    lines[position] = [rand(), rand()];
-    const body = { ...dealing(), commitments: lines[position].map((a) => str(mulPointEscalar(Base8, a))) };
-    assert.equal((await who[n]('PUT', `/api/proposals/${ids.vote}/dealing`, body)).status, 200);
-  }
-  const ready = await getVote(ids.vote);
+  const seats = [[1, 'owner'], [2, 'ana'], [3, 'cy']];
+  for (const [position] of seats) lines[position] = [rand(), rand()];
+  const deal = Object.fromEntries(seats.map(([position]) => [position, trusteeDealing(ids.vote, position, lines[position])]));
+  const commit = (n, commitment) => who[n]('PUT', `/api/proposals/${ids.vote}/commitment`, { commitment });
+  const reveal = (n, body) => who[n]('PUT', `/api/proposals/${ids.vote}/dealing`, body);
+
+  assert.equal((await commit('ben', deal[1].commitment)).status, 403);
+  assert.equal((await commit('owner', deal[1].commitment)).status, 200);
+  // nobody reveals before all three have committed, and a commitment can't be swapped
+  assert.equal((await reveal('owner', deal[1].reveal)).status, 409);
+  assert.equal((await commit('owner', 'f'.repeat(64))).status, 409);
+  assert.equal((await commit('ana', deal[2].commitment)).status, 200);
+  const midway = (await getVote(ids.vote, 'ben')).encrypted;
+  assert.deepEqual(midway.trustees.map((t) => t.committed), [true, true, false]);
+  assert.ok(midway.commitments.every((c) => c === null));
+  assert.equal((await commit('cy', deal[3].commitment)).status, 200);
+
+  // a reveal that differs from the commitment, or whose proofs don't hold, is refused
+  assert.match((await reveal('ana', deal[1].reveal)).data.error, /doesn’t match what you committed/);
+  const copied = { ...deal[2].reveal, proofs: deal[1].reveal.proofs };
+  assert.match((await reveal('ana', copied)).data.error, /proofs of knowledge/);
+  const bent = { ...deal[2].reveal, proofs: [{ ...deal[2].reveal.proofs[0], z: '1' }, deal[2].reveal.proofs[1]] };
+  assert.match((await reveal('ana', bent)).data.error, /proofs of knowledge/);
+  for (const [position, n] of seats) assert.equal((await reveal(n, deal[position].reveal)).status, 200);
+  assert.equal((await reveal('owner', deal[1].reveal)).status, 409);
+
+  // every member, trustee or not, gets the commitments and proofs to rebuild the key with
+  const ready = (await getVote(ids.vote, 'ben')).encrypted;
+  assert.equal(ready.dealings, null);
+  assert.deepEqual(ready.commitments, seats.map(([position]) => ({ commitments: deal[position].reveal.commitments, proofs: deal[position].reveal.proofs })));
   const expected = [1, 2, 3].reduce((sum, p) => addPoint(sum, mulPointEscalar(Base8, lines[p][0])), [0n, 1n]);
-  assert.deepEqual(ready.encrypted.publicKey, str(expected));
-  assert.equal((await who.owner('PUT', `/api/proposals/${ids.vote}/dealing`, { ...dealing(), commitments: lines[1].map((a) => str(mulPointEscalar(Base8, a))) })).status, 409);
+  assert.deepEqual(ready.publicKey, str(expected));
+  assert.deepEqual(str(ready.commitments.reduce((sum, d) => addPoint(sum, d.commitments[0].map(BigInt)), [0n, 1n])), ready.publicKey);
+});
+
+test('a rogue trustee can’t aim the vote key at a secret only they know', () => {
+  // with the others' A0 in view, the last dealer would like A0 = t·G - (A0_1 + A0_2), so the sum
+  // is t·G; but then they don't know their own A0's secret, and their best proof attempt fails
+  const others = [1, 2].reduce((sum, p) => addPoint(sum, mulPointEscalar(Base8, lines[p][0])), [0n, 1n]);
+  const t = rand();
+  const rogue = addPoint(mulPointEscalar(Base8, t), [Fr.neg(others[0]), others[1]]);
+  const w = rand();
+  const T = mulPointEscalar(Base8, w);
+  const c = knowledgeChallenge(ids.vote, 3, 0, [Base8, rogue, T]);
+  assert.equal(checkKnowledge(ids.vote, 3, 0, rogue, { t: str(T), z: ((w + c * t) % subOrder).toString() }), false);
+  // the same proof for an honest commitment holds, and doesn't carry over to another seat
+  const honest = mulPointEscalar(Base8, t);
+  const ch = knowledgeChallenge(ids.vote, 3, 0, [Base8, honest, T]);
+  const proof = { t: str(T), z: ((w + ch * t) % subOrder).toString() };
+  assert.equal(checkKnowledge(ids.vote, 3, 0, honest, proof), true);
+  assert.equal(checkKnowledge(ids.vote, 2, 0, honest, proof), false);
+});
+
+test('trustees check the shares dealt to them before any ballot is cast', async () => {
+  assert.equal((await who.ben('POST', `/api/proposals/${ids.vote}/shares-check`, { ok: true })).status, 403);
+  for (const n of ['owner', 'ana', 'cy']) assert.equal((await who[n]('POST', `/api/proposals/${ids.vote}/shares-check`, { ok: true })).status, 200);
+  const vote = (await getVote(ids.vote, 'ben')).encrypted;
+  assert.deepEqual(vote.trustees.map((t) => t.shares), ['ok', 'ok', 'ok']);
+  assert.equal(vote.disputed, false);
 });
 
 test('weighted ballots are proven and encrypted; nobody sees totals before decryption', async () => {
@@ -188,4 +241,19 @@ test('the audit file lets anyone re-verify every ballot and redo the decryption'
   assert.ok(partials.every((p) => p.d));
   const bound = audit.census.reduce((sum, m) => sum + BigInt(m.power), 0n);
   assert.deepEqual(combineTotals(aggregates, partials, bound).map((t) => String(t * unit)), audit.proposal.result.totals);
+});
+
+test('a trustee who finds a bad share stops the vote from taking ballots', async () => {
+  const res = await who.owner('POST', '/api/proposals', { title: 'Second encrypted vote', options: ['A', 'B'], weighting: 'power', anonymous: true, trustees: [ids.owner, ids.ana, ids.cy] });
+  const id = res.data.proposal.id;
+  const { responses } = await dealVoteKey(id, [[1, who.owner], [2, who.ana], [3, who.cy]]);
+  assert.ok(responses.every((r) => r.status === 200));
+  assert.equal((await who.cy('POST', `/api/proposals/${id}/shares-check`, { ok: false, from: 7 })).status, 400);
+  assert.equal((await who.cy('POST', `/api/proposals/${id}/shares-check`, { ok: false, from: 1 })).status, 200);
+  const vote = await getVote(id, 'ben');
+  assert.equal(vote.encrypted.disputed, true);
+  assert.deepEqual(vote.encrypted.trustees.map((t) => t.shares), [null, null, 'bad']);
+  const refused = await ballot(id, {});
+  assert.equal(refused.status, 409);
+  assert.match(refused.data.error, /can’t take ballots/);
 });

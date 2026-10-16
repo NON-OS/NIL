@@ -33,7 +33,7 @@ const anonymousVotes = {
     if (!registered) throw new Error('Join anonymous votes first, then vote.');
     const identity = await loadIdentity();
     if (identity.commitment.toString() !== registered) {
-      throw new Error('This wallet unlocks a different voting key than the one you set up. Switch to the wallet you first voted with.');
+      throw new Error('Your voting key changed when your keys were reset. Join anonymous votes again to register the new one, once no anonymous vote is open.');
     }
     return identity;
   },

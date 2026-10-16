@@ -22,6 +22,9 @@ router.post(
     if (proposal.closed_at || proposal.closes_at < Date.now()) throw HttpError.badRequest('This vote has closed.');
     if (proposal.weighting === 'power') {
       if (!proposal.public_key) throw HttpError.badRequest('This vote opens once its trustees have set up the key.');
+      if (sql.get("SELECT 1 FROM proposal_trustees WHERE proposal_id = ? AND shares_check LIKE 'bad:%'", proposal.id)) {
+        throw new HttpError(409, 'A trustee found a key share that doesn’t match its dealer’s commitment, so this vote can’t take ballots. Ask an admin to start it again.');
+      }
       const { nullifier, ciphertexts } = await checkEncryptedBallot(proposal, parseJSON(proposal.options, []), req.body);
       const countsAt = heldBallots.hold(proposal.id, nullifier, { ciphertexts, proof: { proof: req.body.proof, publicSignals: req.body.publicSignals } });
       return { ok: true, countsAt };

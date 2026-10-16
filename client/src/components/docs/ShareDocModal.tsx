@@ -4,7 +4,7 @@ import Avatar from '../ui/Avatar';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
-import http from '../../api/http';
+import keyDirectory from '../../actions/keyDirectory';
 import docs from '../../actions/docs';
 import type DocItem from '../../types/DocItem';
 
@@ -26,14 +26,15 @@ export default function ShareDocModal({ doc, canManage, onClose, onDone }: Props
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
-    http.get<{ userId: string }[]>('/encryption-keys').then((keys) => setWithKeys(new Set(keys.map((k) => k.userId)))).catch(() => {});
+    keyDirectory.load().then((keys) => setWithKeys(new Set([...keys.values()].filter((k) => k.active).map((k) => k.userId)))).catch(() => {});
   }, []);
 
   const save = async () => {
     setBusy(true);
     try {
       const target = audience === 'team' ? people.map((p) => p.id) : [...picked];
-      const removing = doc.readers.some((id) => id !== me.id && !target.includes(id)) || audience !== doc.audience;
+      // a version that failed its check is only kept by moving it to a fresh key, signed by you
+      const removing = doc.warning === 'unverified' || doc.readers.some((id) => id !== me.id && !target.includes(id)) || audience !== doc.audience;
       if (removing) {
         if (!canManage) throw new Error('Only the doc’s creator or an admin can remove people.');
         await docs.restrict(doc, target, audience);

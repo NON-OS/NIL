@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Clock, Lock, Plus, Users } from 'lucide-react';
+import { Clock, Lock, Plus, ShieldAlert, Users } from 'lucide-react';
 import useStore from '../../state/useStore';
 import dates from '../../lib/dates';
 import type DocItem from '../../types/DocItem';
@@ -34,13 +34,14 @@ export default function DocList({ docs, waiting, current, onOpen, onNew }: Props
           <button key={d.id} type="button" className="doc-link" aria-current={d.id === current} onClick={() => onOpen(d.id)}>
             <strong>{d.title || 'Untitled'}</strong>
             <small>
+              {d.warning && <ShieldAlert aria-label={d.warning === 'unverified' ? 'Not verified' : 'Older than a version seen before'} style={{ color: 'var(--danger)' }} />}
               {d.audience === 'team' ? <Users /> : <Lock />}
               {d.audience === 'team' ? 'Team' : `${d.readers.length} ${d.readers.length === 1 ? 'person' : 'people'}`} · {dates.ago(d.updatedAt)}
             </small>
           </button>
         ))}
         {waiting.map((w) => (
-          <div key={w.id} className="doc-link waiting" title="A teammate’s browser hands you the key the next time they open Docs">
+          <div key={w.id} className="doc-link waiting" title="A teammate’s browser hands you the key once they’ve confirmed your key">
             <strong>Encrypted doc</strong>
             <small>
               <Clock /> Waiting for a key from {w.createdBy ? users[w.createdBy]?.name ?? 'a teammate' : 'a teammate'}

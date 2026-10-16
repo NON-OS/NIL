@@ -1,12 +1,14 @@
 import http from '../api/http';
 import session from './session';
 import ethereum from '../lib/ethereum';
+import assertNotKeyMessage from '../lib/crypto/assertNotKeyMessage';
 import type JoinDetails from '../types/JoinDetails';
 import type SecurityOverview from '../types/SecurityOverview';
 
 async function walletCeremony(body: Record<string, unknown>) {
   const { address, chainId } = await ethereum.account();
   const { challengeId, message } = await http.post<{ challengeId: string; message: string }>('/auth/wallet/challenge', { ...body, address, chainId });
+  assertNotKeyMessage(message);
   const signature = await ethereum.sign(message, address);
   return http.post('/auth/wallet/verify', { challengeId, signature });
 }

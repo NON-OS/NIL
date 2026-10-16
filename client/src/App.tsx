@@ -7,6 +7,7 @@ import QuickAdd from './components/overlays/QuickAdd';
 import CommandPalette from './components/overlays/CommandPalette';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
+import KeyCheckModal from './components/keys/KeyCheckModal';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import MyWorkView from './views/MyWorkView';
@@ -107,6 +108,7 @@ export default function App() {
   const shortcuts = useStore((s) => s.shortcuts);
   const extract = useStore((s) => s.extract);
   const deckOpen = useStore((s) => s.deck.open);
+  const keyCheck = useStore((s) => s.keyCheck !== null);
   const { segments, query } = useRoute();
   const [newProject, setNewProject] = useState(false);
   const taskNumber = Number(query.get('task'));
@@ -157,6 +159,7 @@ export default function App() {
         {deckOpen && <DeckModal />}
       </Suspense>
       <UpdatePrompt />
+      {keyCheck && <KeyCheckModal />}
       <Toasts />
     </div>
   );

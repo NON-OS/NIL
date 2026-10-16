@@ -20,6 +20,8 @@ import taskCards from '../services/taskCards.js';
 import archivedSql from '../services/archivedSql.js';
 import archiveBoundary from '../services/archiveBoundary.js';
 import archiveSummary from '../services/archiveSummary.js';
+import keySite from '../keys/keySite.js';
+import signingKey from '../proofs/signingKey.js';
 
 const router = express.Router();
 
@@ -86,6 +88,9 @@ router.get(
       sourceUrl: config.sourceUrl,
       // the web app this server hands out, so an open tab can notice it's out of date
       build: buildId(),
+      // what key messages are bound to: the configured site (APP_URL) and the workspace's signing key
+      origin: keySite().origin,
+      workspaceKey: signingKey.publicKey(),
     };
   }),
 );

@@ -47,6 +47,8 @@ interface Bootstrap {
   timer: TimeEntry | null;
   sourceUrl: string | null;
   build: string | null;
+  origin: string;
+  workspaceKey: string;
 }
 
 // Re-bootstrapping after a reconnect is spread over this long, so a server that just restarted
@@ -79,6 +81,8 @@ async function load() {
     stealth: b.stealth,
     timer: b.timer,
     sourceUrl: b.sourceUrl,
+    origin: b.origin,
+    workspaceKey: b.workspaceKey,
   });
   checkBuild(b.build);
   void openSealed();

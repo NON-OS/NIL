@@ -4,14 +4,17 @@ import { poseidon2 } from 'poseidon-lite/poseidon2';
 import type { Identity } from '@semaphore-protocol/identity';
 import fieldHash from '../semaphore/fieldHash';
 import type Proposal from '../../types/Proposal';
+import type Point from './point';
 
 const OPTIONS = 8;
 const DEPTH = 16;
 
 // An encrypted, weighted ballot, proven in this browser: the circuit encrypts your power into
 // the chosen option and zero into the rest, under the trustees' joint key, and proves your
-// leaf (identity, power) is in the census. Single-threaded, so the page needs no data: workers.
-export default async function proveEncryptedBallot(identity: Identity, vote: Proposal, choice: number) {
+// leaf (identity, power) is in the census. The key is the one this browser rebuilt from the
+// trustees' commitments (votePublicKey), not the server's copy. Single-threaded, so the page
+// needs no data: workers.
+export default async function proveEncryptedBallot(identity: Identity, vote: Proposal, choice: number, publicKey: Point) {
   const members = vote.anonymous!.members;
   const index = members.findIndex((m) => m.commitment === identity.commitment.toString() && !m.removed);
   if (index < 0) throw new Error('You had no voting power when this vote opened, so you’re not in its census.');
@@ -36,7 +39,7 @@ export default async function proveEncryptedBallot(identity: Identity, vote: Pro
       randomness,
       scope: fieldHash(vote.anonymous!.scope),
       optionCount: vote.options.length,
-      publicKey: vote.encrypted!.publicKey,
+      publicKey,
     },
     '/zk/ballot.wasm',
     '/zk/ballot.zkey',

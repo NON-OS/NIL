@@ -51,6 +51,13 @@ export default interface State {
   timer: TimeEntry | null;
   docsUnlocked: boolean;
   docsRev: number;
+  // the site and workspace key every key message is bound to (from bootstrap, set by APP_URL)
+  origin: string;
+  workspaceKey: string;
+  // bumped when anyone publishes keys or this browser confirms one
+  keysRev: number;
+  // teammates whose new or changed keys are waiting for this person to confirm them
+  keyCheck: { userIds: string[]; reason: string } | null;
   deck: { open: boolean; preset?: Partial<DeckScope> };
   sourceUrl: string | null;
   presence: PresenceEntry[];

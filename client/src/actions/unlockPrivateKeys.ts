@@ -1,39 +1,23 @@
-import http from '../api/http';
 import store from '../state/store';
+import keyring from '../state/keyring';
 import privateKeys from '../state/privateKeys';
-import ethereum from '../lib/ethereum';
-import privateKeysMessage from '../lib/crypto/privateKeysMessage';
-import privateKeysFromSignature from '../lib/crypto/privateKeysFromSignature';
+import privateKeysFromSeed from '../lib/crypto/privateKeysFromSeed';
 import metaAddress from '../lib/stealth/metaAddress';
+import vault from './vault';
 import registerVotingKey from './registerVotingKey';
 import type PrivateKeys from '../types/PrivateKeys';
 
-const fingerprint = (k: PrivateKeys) => metaAddress(k.spendingKey, k.viewingKey);
-
-async function sign() {
-  const { me } = store.get();
-  const [{ key }, { address }] = await Promise.all([http.get<{ key: string }>('/proofs/key'), ethereum.account()]);
-  return ethereum.sign(privateKeysMessage({ workspaceKey: key, userId: me!.id }), address);
-}
-
-// Derives your private keys from a wallet signature. Setting them up for the first time signs
-// twice, because a wallet that signs non-deterministically would lose every payout sent to it
-// and every vote cast with it.
+// Your private-payout and anonymous-voting keys, derived from your identity once it's unlocked.
+// They follow your identity to every wallet you link and into your recovery kit.
 export default async function unlockPrivateKeys(): Promise<PrivateKeys> {
   const held = privateKeys.get();
   if (held) return held;
-  const me = store.get().me;
-  const firstTime = !me?.stealthMeta && !me?.semaphoreCommitment;
-  const keys = privateKeysFromSignature(await sign());
-  if (firstTime) {
-    const again = privateKeysFromSignature(await sign());
-    if (fingerprint(again) !== fingerprint(keys)) {
-      throw new Error('Your wallet signs the same message differently each time, so it can’t hold private keys. Wallets like MetaMask, Rabby, Ledger and Trezor work.');
-    }
-  }
-  const registered = me?.stealthMeta;
-  if (registered && registered !== fingerprint(keys)) {
-    throw new Error('This wallet unlocks different keys than the ones your private payouts use. Switch to the wallet you turned them on with.');
+  await vault.unlock();
+  const keys = privateKeysFromSeed(keyring.identity()!.seed);
+  const registered = store.get().me?.stealthMeta;
+  if (registered && registered !== metaAddress(keys.spendingKey, keys.viewingKey)) {
+    for (const k of Object.values(keys)) k.fill(0);
+    throw new Error('Private payouts were turned on with keys from before your last key reset. Restore your recovery kit to reach payouts sent before then, or turn private payouts off and on again to use your current keys.');
   }
   privateKeys.set(keys);
   // Unlocking is also when a member joins anonymous votes, long before any ballot. A failure here

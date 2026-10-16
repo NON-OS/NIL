@@ -10,9 +10,12 @@ import type PrivateKeys from '../types/PrivateKeys';
 // ballot from the same browser, would point straight at you.
 export default async function registerVotingKey(keys: PrivateKeys) {
   const me = store.get().me;
-  if (!me || me.role === 'guest' || me.semaphoreCommitment) return;
+  if (!me || me.role === 'guest') return;
   const { Identity } = await import('@semaphore-protocol/identity');
   const commitment = new Identity(keys.semaphoreSecret).commitment.toString();
+  // already registered; after a key reset the new one replaces it, which the server refuses
+  // while an anonymous vote is open
+  if (me.semaphoreCommitment === commitment) return;
   const { user } = await http.put<{ user: User }>('/me/semaphore', { commitment });
   const s = store.get();
   store.set({ me: { ...s.me!, ...user }, users: records.put(s.users, user) });

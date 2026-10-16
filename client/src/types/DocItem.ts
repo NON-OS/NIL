@@ -10,4 +10,7 @@ export default interface DocItem {
   createdAt: number;
   updatedAt: number;
   readers: string[];
+  // 'unverified': no teammate's signature checks out on this version, so it may be the server's
+  // own text. 'rollback': older than a version this browser already opened.
+  warning: 'unverified' | 'rollback' | null;
 }

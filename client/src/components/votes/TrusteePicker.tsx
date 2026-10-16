@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import Avatar from '../ui/Avatar';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
-import http from '../../api/http';
+import keyDirectory from '../../actions/keyDirectory';
 
 // Three members who will hold the vote's decryption key together: any two can reveal the
 // totals after it closes, none alone can see anything. They need an encryption key (docs).
@@ -11,7 +11,7 @@ export default function TrusteePicker({ value, onChange }: { value: string[]; on
   const [withKeys, setWithKeys] = useState<Set<string> | null>(null);
 
   useEffect(() => {
-    http.get<{ userId: string }[]>('/encryption-keys').then((keys) => setWithKeys(new Set(keys.map((k) => k.userId)))).catch(toast.error);
+    keyDirectory.load().then((keys) => setWithKeys(new Set([...keys.values()].filter((k) => k.active).map((k) => k.userId)))).catch(toast.error);
   }, []);
 
   const people = Object.values(users).filter((u) => !u.deactivated && u.role !== 'guest');
