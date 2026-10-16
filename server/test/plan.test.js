@@ -238,9 +238,11 @@ test('a transaction pays one thing: never a bounty and an invoice both', async (
   const invoice = await create();
   // a bounty payment already recorded here
   const bountyTask = (await owner('POST', '/api/tasks', { title: 'Fix the bug', assigneeId: ids.member, bounty: String(10n ** 18n) })).data.task;
+  const intent = (await owner('POST', `/api/tasks/${bountyTask.id}/payments/intent`, {})).data.intent;
   const bountyHash = tx();
-  chain.addTransfer({ hash: bountyHash, token: NOX, from: ownerWallet.address, to: memberWallet.address, value: String(10n ** 18n) });
-  assert.equal((await owner('POST', `/api/tasks/${bountyTask.id}/payments`, { txHash: bountyHash })).status, 200);
+  chain.mine(1);
+  chain.addTransfer({ hash: bountyHash, token: NOX, from: ownerWallet.address, to: memberWallet.address, value: intent.amount, depth: 1 });
+  assert.equal((await owner('POST', `/api/tasks/${bountyTask.id}/payments`, { intentId: intent.id, txHash: bountyHash })).status, 200);
   const reuse = await owner('POST', `/api/plan/invoices/${invoice.id}/transactions`, { txHash: bountyHash });
   assert.equal(reuse.status, 409);
   assert.match(reuse.data.error, /already pays a bounty/);
@@ -250,7 +252,8 @@ test('a transaction pays one thing: never a bounty and an invoice both', async (
   await finalize();
   assert.equal((await view(invoice.id)).state, 'paid');
   const other = (await owner('POST', '/api/tasks', { title: 'Another', assigneeId: ids.member, bounty: '7' })).data.task;
-  const res = await owner('POST', `/api/tasks/${other.id}/payments`, { txHash: planHash });
+  const otherIntent = (await owner('POST', `/api/tasks/${other.id}/payments/intent`, {})).data.intent;
+  const res = await owner('POST', `/api/tasks/${other.id}/payments`, { intentId: otherIntent.id, txHash: planHash });
   assert.equal(res.status, 409);
   assert.match(res.data.error, /pays for Nil Pro/);
 });
@@ -365,9 +368,11 @@ test('paid utilities work, seats follow what was paid, and promised bounties sta
 
   billingState.set('plan', { ...billingState.get('plan'), paidUntil: Date.now() - 30 * DAY });
   assert.equal((await owner('POST', '/api/proposals', { title: 'Lapsed' })).status, 402);
+  const intent = (await owner('POST', `/api/tasks/${t.id}/payments/intent`, {})).data.intent;
   const hash = tx();
-  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: memberWallet.address, value: (10n * 10n ** 18n).toString() });
-  const payout = await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash });
+  chain.mine(4);
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: memberWallet.address, value: intent.amount, depth: 4 });
+  const payout = await owner('POST', `/api/tasks/${t.id}/payments`, { intentId: intent.id, txHash: hash });
   assert.equal(payout.data.payment.status, 'confirmed');
 });
 

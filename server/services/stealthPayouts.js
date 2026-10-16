@@ -11,7 +11,7 @@ const stealthPayouts = {
 
   async list(userId) {
     const rows = sql.all(
-      "SELECT * FROM payments WHERE payee_id = ? AND stealth_ephemeral IS NOT NULL AND status != 'failed' ORDER BY created_at DESC LIMIT ?",
+      "SELECT * FROM payments WHERE payee_id = ? AND stealth_ephemeral IS NOT NULL AND status NOT IN ('failed', 'cancelled') ORDER BY created_at DESC LIMIT ?",
       userId, LIMIT,
     );
     return Promise.all(

@@ -326,6 +326,14 @@ const finality = Object.freeze({
   depth: envNumber('NOX_FINALITY_DEPTH', 64, { min: 1 }),
 });
 
+// Bounty payments start in Nil, which hands out the exact amount to send. That amount stays good
+// for this many days (long enough for a multisig to collect its signatures), and a payment that
+// was cancelled while stuck is still watched this long in case its transaction lands after all.
+const payments = Object.freeze({
+  intentDays: envNumber('PAYMENT_INTENT_DAYS', 14, { min: 1, max: 365 }),
+  watchDays: envNumber('PAYMENT_WATCH_DAYS', 7, { min: 1, max: 365 }),
+});
+
 // The holder door counts NOX held, NOX staked and Zero-State Passes (each worth this many NOX),
 // and keeps checking members who came in through it.
 const holders = Object.freeze({
@@ -379,6 +387,7 @@ const config = Object.freeze({
   power,
   billing,
   finality,
+  payments,
   holders,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),

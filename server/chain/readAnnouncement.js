@@ -24,7 +24,7 @@ export default async function readAnnouncement(txHash) {
   if (receipt.status !== '0x1') return { state: 'failed' };
 
   const blockNumber = Number(receipt.blockNumber);
-  const head = Number(await rpc('eth_blockNumber'));
+  const blockHash = String(receipt.blockHash ?? '').toLowerCase();
   const announcements = (receipt.logs ?? [])
     .filter((log) => !log.removed && log.address?.toLowerCase() === config.stealth.announcer && log.topics?.length === 4 && log.topics[0] === TOPIC)
     .map((log) => {
@@ -36,5 +36,5 @@ export default async function readAnnouncement(txHash) {
         metadata: bytesAt(data, 1),
       };
     });
-  return { state: 'mined', blockNumber, confirmations: head - blockNumber + 1, announcements };
+  return { state: 'mined', blockNumber, blockHash, announcements };
 }
