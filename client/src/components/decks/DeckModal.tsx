@@ -83,7 +83,7 @@ export default function DeckModal() {
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
           The deck is built in your browser: cover, at a glance, shipped, in progress, goals (an editable chart), risks, bounties and next steps, each with speaker notes.
-          {aiOn && withAi ? ' With Claude on, only the task titles, names and counts on the slides are sent to Anthropic.' : ' Nothing leaves this device.'}
+          {aiOn && withAi ? ' With Claude on, the task titles, names and counts on the slides go to Anthropic through this Nil server as readable text, including any private tasks you chose to show.' : ' Nothing leaves this device.'}
         </p>
       </div>
     </Modal>

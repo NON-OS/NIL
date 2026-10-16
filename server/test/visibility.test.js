@@ -6,6 +6,7 @@ import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import socket from './helpers/socket.js';
+import sealed from './helpers/sealed.js';
 
 // Notifications, watches, presence and the timesheet must never tell someone about a task they
 // can't open. These are the cases a guest used to see through.
@@ -115,4 +116,14 @@ test('the timesheet shows no title for a task the guest can no longer open', asy
   const csv = (await guest('GET', '/api/time/export.csv')).data;
   assert.ok(!csv.includes('CEO pay') && !csv.includes('Brochure'));
   assert.match(csv, /A task you can no longer open/);
+});
+
+test('bounty totals leave out private tasks the viewer can’t open, admins included', async () => {
+  const task = (await member('POST', '/api/tasks', { title: 'Side quest', assigneeId: ids.member })).data.task;
+  assert.equal((await owner('PATCH', `/api/tasks/${task.id}`, { bounty: '1000' })).status, 200);
+  const promised = async (who) => (await who('GET', '/api/bounties')).data.people.find((p) => p.userId === ids.member)?.promised ?? '0';
+  assert.equal(await promised(owner), '1000');
+  assert.equal((await member('PATCH', `/api/tasks/${task.id}`, { private: true, sealed: sealed(ids.member) })).status, 200);
+  assert.equal(await promised(owner), '0');
+  assert.equal(await promised(member), '1000');
 });

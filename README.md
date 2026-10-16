@@ -125,13 +125,22 @@ What Nil protects, and what it doesn't.
 
 **What the server operator can see**
 
-- Docs, private tasks (title, notes, checklist, comments) and the contents of encrypted ballots are encrypted in the browser. Everything else is stored in plain form in the database: team tasks and their comments, files, goals, time entries, reminders and the list of who is in the workspace. Anyone with access to the server or its backups can read those. What the server still knows about a private task is that it exists, who created it, who it's assigned to, its status, dates, project and labels.
+- Docs, private tasks (title, notes, checklist, comments) and the contents of encrypted ballots are encrypted in the browser. Everything else is stored in plain form in the database: team tasks and their comments, files, goals, time entries, reminders and the list of who is in the workspace. Anyone with access to the server or its backups can read those.
+- **What the server still knows about a private task.** It can't read the title, notes, checklist or comments. It does see, and stores in plain form:
+  - that the task exists, its number, who created it and who it's assigned to;
+  - its status, priority, project, goal, labels, estimate, start and due dates, and whether it repeats;
+  - when it was created, last changed, finished or deleted, and its place in a list;
+  - any bounty on it, the token, and whether it was paid, plus payments and receipts for it;
+  - how many comments it has, who wrote each and when, and roughly how long each encrypted text is;
+  - its history of field changes (who changed status, dates, assignee and so on, and when), but not the old or new text;
+  - who watches it, whose My Day it's on, and the time entries and reminders linked to it, which only their owners see in the app.
+- Admins don't see private tasks in the app, and bounty totals leave them out for anyone who can't open them. Whoever runs the server can still read the list above from the database.
 
 **What leaves your server**
 
 - **The browser loads nothing from other hosts.** No analytics, no trackers, no CDNs, no third-party fonts or scripts. Fonts are bundled and the zero-knowledge circuit files are served by your server. The Content Security Policy sets `default-src 'self'` and `connect-src 'self'`, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, outside Nil's control.
 - **The Ethereum node.** The server reads the chain through `NOX_RPC_URL` to check payments, balances, stakes and passes. That node sees which addresses and transactions your server looks up, and your server's IP address. There is no default: a server people reach over the network must name a node, ideally your own. Only a localhost trial falls back to a public node, with a warning. Nil makes the lookups harder to link. Private-payout balances are read one address at a time, at random moments within `STEALTH_BALANCE_SPREAD_SECONDS`, with another payee's address read alongside each, and only the payout being moved is read on demand. Vote snapshots read members' wallets in a shuffled order, a few at a time, so the node can't tell whose wallets go together, though it can tell they were read for the same block. `NOX_RPC_URL=off` turns every on-chain feature off.
-- **Anthropic**, only if you set `ANTHROPIC_API_KEY`, and only when someone uses an AI button. Draft with AI in a doc sends your instruction and, if you choose, the doc's text. That text is decrypted in your browser and leaves it for that request.
+- **Anthropic**, only if you set `ANTHROPIC_API_KEY`, and only when someone uses an AI button. Every AI request goes from the browser to your Nil server and from there to Anthropic, so the server sees the text too, in readable form, though it doesn't store it. Draft with AI in a doc sends your instruction and, if you choose, the doc's text: that text is decrypted in your browser and passes through your server for that request. A status deck with Claude on sends the titles, names and counts on its slides, including any private tasks you chose to show.
 - **Your own AI assistant**, if you connect one over MCP. Whatever it reads goes to that assistant's provider.
 
 **What is public on purpose**
