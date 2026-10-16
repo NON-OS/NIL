@@ -10,6 +10,8 @@ import sameSuffix from '../billing/sameSuffix.js';
 import settlePayment from './settlePayment.js';
 import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
+import feeAt from './feeAt.js';
+import netOfFee from '../billing/netOfFee.js';
 
 // Who may fund a bounty: the wallets of the admin who recorded it, plus treasury addresses.
 function payers(payerId) {
@@ -57,9 +59,18 @@ export default async function verifyPayment(id) {
   }
 
   let paying;
+  let fee = 0n;
   if (payment.expected) {
     const expected = BigInt(payment.expected);
     paying = funded.filter((t) => t.value === expected || sameSuffix(t.value, expected, payment.grid));
+    // NOX may keep a fee on transfers between wallets: the exact amount, less exactly that fee,
+    // was sent in full
+    if (!paying.length && token.address === config.nox.token) {
+      const bps = await feeAt(found.blockNumber);
+      const net = bps > 0 ? netOfFee(expected, bps) : null;
+      paying = funded.filter((t) => t.value === net);
+      if (paying.length) fee = expected - net;
+    }
     if (!paying.length) {
       const sent = funded.map((t) => formatUnits(t.value, token.decimals, token.decimals)).join(' and ');
       return refuse(payment, `Nil asked for exactly ${formatUnits(expected, token.decimals, token.decimals)} ${token.symbol}, and this sent ${sent}. Without those last digits it can’t be told apart from a payment for something else, so it doesn’t count here.`);
@@ -81,6 +92,6 @@ export default async function verifyPayment(id) {
   // the node hasn't settled on that block yet; look again next time
   if (!block || block.hash !== found.blockHash) return;
 
-  settlePayment(payment, { from: paying[0].from, blockNumber: found.blockNumber, blockHash: found.blockHash, received: paying.reduce((sum, t) => sum + t.value, 0n) });
+  settlePayment(payment, { from: paying[0].from, blockNumber: found.blockNumber, blockHash: found.blockHash, received: paying.reduce((sum, t) => sum + t.value, 0n), fee });
   if (payment.stealth_ephemeral) await checkAnnouncement(id);
 }

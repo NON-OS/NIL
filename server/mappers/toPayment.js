@@ -4,7 +4,7 @@ function stateOf(row) {
   if (row.status === 'pending') return row.block_number ? 'confirming' : 'sent';
   if (row.status !== 'confirmed') return row.status;
   if (!row.expected) return 'paid';
-  const [amount, expected] = [BigInt(row.amount), BigInt(row.expected)];
+  const [amount, expected] = [BigInt(row.amount) + BigInt(row.token_fee ?? '0'), BigInt(row.expected)];
   return amount < expected ? 'underpaid' : amount > expected ? 'overpaid' : 'paid';
 }
 
@@ -20,6 +20,8 @@ export default function toPayment(row) {
     from: row.from_address,
     // what arrived once confirmed; what was asked for until then
     amount: row.amount,
+    // what the token kept as a transfer fee, when it keeps one
+    fee: row.token_fee && row.token_fee !== '0' ? row.token_fee : null,
     expected: row.expected ?? null,
     token: row.token,
     txHash: row.tx_hash,

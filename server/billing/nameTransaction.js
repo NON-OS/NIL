@@ -5,6 +5,7 @@ import HttpError from '../lib/HttpError.js';
 import readReceipt from '../chain/readReceipt.js';
 import spentElsewhere from './spentElsewhere.js';
 import attachReceipt from './attachReceipt.js';
+import feeAt from '../services/feeAt.js';
 
 const TX = /^0x[0-9a-f]{64}$/;
 
@@ -39,5 +40,5 @@ export default async function nameTransaction(invoiceId, txHash) {
     return;
   }
   sql.run("INSERT INTO billing_payments (id, invoice_id, tx_hash, status, created_at, checked_at) VALUES (?, ?, ?, 'seen', ?, ?)", id, invoiceId, hash, now, now);
-  attachReceipt({ id, invoice_id: invoiceId, tx_hash: hash }, receipt);
+  attachReceipt({ id, invoice_id: invoiceId, tx_hash: hash }, receipt, { feeBps: await feeAt(receipt.blockNumber) });
 }

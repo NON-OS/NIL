@@ -15,6 +15,8 @@ const toPayment = (p, symbols) => ({
   token: p.token,
   symbol: p.token ? symbols.get(p.token) ?? null : config.nox.symbol,
   amount: p.amount,
+  // what the token kept as a transfer fee on the way, when it keeps one
+  fee: p.token_fee && p.token_fee !== '0' ? p.token_fee : null,
   usd: p.usd,
   onTime: Boolean(p.on_time),
   status: p.status,

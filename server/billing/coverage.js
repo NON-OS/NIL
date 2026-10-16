@@ -11,8 +11,9 @@ const { SCALE } = paidFraction;
 export default function coverage(invoice) {
   const amounts = sql.all('SELECT * FROM billing_amounts WHERE invoice_id = ? ORDER BY symbol', invoice.id);
   const arriving = new Map();
-  for (const p of sql.all("SELECT token, amount FROM billing_payments WHERE invoice_id = ? AND ((status = 'final' AND on_time = 1) OR status = 'confirming')", invoice.id)) {
-    arriving.set(p.token, (arriving.get(p.token) ?? 0n) + BigInt(p.amount));
+  // what was sent: what arrived plus anything the token kept as a fee
+  for (const p of sql.all("SELECT token, amount, token_fee FROM billing_payments WHERE invoice_id = ? AND ((status = 'final' AND on_time = 1) OR status = 'confirming')", invoice.id)) {
+    arriving.set(p.token, (arriving.get(p.token) ?? 0n) + BigInt(p.amount) + BigInt(p.token_fee));
   }
   let covered = invoice.due_usd === 0 ? SCALE : 0n;
   for (const a of amounts) covered += ((arriving.get(a.token) ?? 0n) * SCALE) / BigInt(a.amount);

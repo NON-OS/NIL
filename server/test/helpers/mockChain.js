@@ -42,6 +42,7 @@ const LATEST_ROUND = selector('latestRoundData()');
 const GET_RESERVES = selector('getReserves()');
 const PRICE0 = selector('price0CumulativeLast()');
 const PRICE1 = selector('price1CumulativeLast()');
+const FEES = selector('fees()');
 const DECIMALS = selector('decimals()');
 const hex = (n) => `0x${n.toString(16)}`;
 
@@ -70,6 +71,8 @@ export default function mockChain() {
   const sent = [];
   let callDelayMs = 0;
   let priorityFee = 100_000_000n;
+  // NOX's fees(): null answers nothing, like a token without it
+  let transferFeeBps = null;
   const genesis = Math.floor(Date.now() / 1000);
   let block = 1000;
   let chainId = 1;
@@ -120,6 +123,8 @@ export default function mockChain() {
     // getStakeInfo(address): staked amount first, six more words after it
     if (data.startsWith('0xc3453153')) return `0x${pad((stakes.get(holder) ?? 0n).toString(16))}${pad('0').repeat(6)}`;
     if (data === DECIMALS) return `0x${pad('12')}`;
+    // fees(): buy, sell, transfer, then how the fee is shared out, as the NOX token answers
+    if (data === FEES && transferFeeBps !== null) return `0x${word(0)}${word(300)}${word(transferFeeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
     return '0x';
   }
 
@@ -230,6 +235,8 @@ export default function mockChain() {
     setChainId: (id) => (chainId = id),
     // the tip the node suggests for eth_maxPriorityFeePerGas, in wei
     setPriorityFee: (wei) => (priorityFee = BigInt(wei)),
+    // the token's fee on transfers between wallets, in basis points, as NOX's fees() reports it
+    setTransferFee: (bps) => (transferFeeBps = bps),
     mine: (blocks) => (block += blocks),
     head: () => block,
     // null: the node doesn't know the `finalized` tag

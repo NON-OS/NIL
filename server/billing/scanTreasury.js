@@ -6,6 +6,7 @@ import transferLogs from '../chain/transferLogs.js';
 import billingState from './billingState.js';
 import recordTransfer from './recordTransfer.js';
 import scanGaps from './scanGaps.js';
+import transferFee from '../services/transferFee.js';
 
 const DAY = 86_400_000;
 // the head moves on during a scan, so it keeps this many blocks inside the node's window
@@ -43,7 +44,7 @@ export default async function scanTreasury(now = Date.now()) {
     try {
       for (let at = from; at <= head; at += config.billing.logBlocks) {
         const to = Math.min(head, at + config.billing.logBlocks - 1);
-        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer);
+        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer, { feeBps: transferFee.current().bps });
         cursors[token] = Math.max(cursors[token] ?? 0, Math.min(final, to));
       }
     } catch (err) {

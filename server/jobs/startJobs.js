@@ -8,6 +8,7 @@ import closeProposals from './closeProposals.js';
 import sendReminders from './sendReminders.js';
 import sendDueAlerts from './sendDueAlerts.js';
 import recordPoolPrice from './recordPoolPrice.js';
+import checkTransferFee from './checkTransferFee.js';
 
 // Starts every background job on its interval from config. Purge and optimize also run once
 // right away, so a server that restarts often still gets to them.
@@ -23,6 +24,7 @@ export default function startJobs() {
     // it takes the current time as its argument, so the signal isn't handed on
     { run: safeJob('dueAlerts', () => sendDueAlerts(), { signal }), every: config.jobs.dueAlertsMs },
     { run: safeJob('poolPrice', recordPoolPrice, { signal }), every: config.jobs.poolPriceMs, now: true },
+    { run: safeJob('transferFee', checkTransferFee, { signal }), every: config.jobs.transferFeeMs, now: true },
   ];
   const timers = schedule.map(({ run, every, now }) => {
     if (now) run();
