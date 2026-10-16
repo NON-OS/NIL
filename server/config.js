@@ -124,6 +124,12 @@ const semaphore = Object.freeze({
   depth: envNumber('SEMAPHORE_DEPTH', 16, { min: 1, max: 32 }),
 });
 
+// Wallet sign-in. Smart-contract wallets are checked on the chain above, and the timeout keeps
+// a slow node from holding a sign-in open.
+const signIn = Object.freeze({
+  chainTimeoutMs: envNumber('SIGNIN_CHAIN_TIMEOUT_MS', 8000, { min: 500, max: 60_000 }),
+});
+
 const config = Object.freeze({
   port: envNumber('PORT', 3000, { max: 65535 }),
   host: env.HOST || '0.0.0.0',
@@ -143,6 +149,7 @@ const config = Object.freeze({
   stealth,
   semaphore,
   power,
+  signIn,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

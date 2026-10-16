@@ -9,6 +9,7 @@ import rateLimit from '../auth/rateLimit.js';
 import challenges from '../auth/challenges.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
+import walletSignature from '../auth/walletSignature.js';
 import currentUser from '../auth/currentUser.js';
 import signIn from '../auth/signIn.js';
 import liveInvite from '../services/liveInvite.js';
@@ -82,7 +83,7 @@ router.post(
   route(async (req, res) => {
     const pending = challenges.take(req.body.challengeId, 'wallet');
     if (!pending) throw HttpError.badRequest('That wallet request expired. Try again.');
-    if (siwe.recover(pending.message, req.body.signature) !== pending.address) throw new HttpError(401, 'That signature doesn’t match the wallet.');
+    await walletSignature(pending.address, pending.message, req.body.signature);
 
     if (pending.mode === 'login') {
       const row = sql.get("SELECT c.id, c.user_id, u.deactivated, u.joined_via FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.kind = 'wallet' AND c.external_id = ?", pending.address);
