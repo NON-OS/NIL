@@ -174,3 +174,11 @@ test('bounties can be paid in USDC, checked against the USDC contract only', asy
   const rows = (await member('GET', '/api/bounties')).data.people.filter((p) => p.userId === ids.member);
   assert.equal(rows.find((r) => r.token === 'USDC').paid, paid.intent.amount);
 });
+
+test('an agent can’t be paid a bounty, and says so plainly', async () => {
+  const agent = (await owner('POST', '/api/agents', { name: 'Scout', access: 'write', allProjects: true })).data.agent;
+  const t = (await owner('POST', '/api/tasks', { title: 'Translate the docs', assigneeId: agent.id, bounty: BOUNTY })).data.task;
+  const res = await owner('POST', `/api/tasks/${t.id}/payments/intent`, {});
+  assert.equal(res.status, 400);
+  assert.match(res.data.error, /An agent has no wallet, so it can’t be paid a bounty/);
+});

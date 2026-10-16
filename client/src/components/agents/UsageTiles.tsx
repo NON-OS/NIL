@@ -1,14 +1,16 @@
 import formatUsage from './formatUsage';
 import type AgentUsage from '../../types/AgentUsage';
 
-// Usage at a glance: tokens and the estimated cost of built-in runs, and calls from outside.
+// Usage at a glance: tokens and, once the agent has prices, the estimated cost of built-in runs;
+// calls from outside for external agents.
 export default function UsageTiles({ usage, builtIn }: { usage: AgentUsage; builtIn: boolean }) {
+  const priced = usage.today.cost !== null && usage.last30Days.cost !== null;
   const tiles = builtIn
     ? [
         [formatUsage.tokens(usage.today.input + usage.today.output), 'tokens today'],
-        [formatUsage.cost(usage.today.cost), 'estimated cost today'],
+        ...(priced ? [[formatUsage.cost(usage.today.cost ?? 0), 'estimated cost today']] : []),
         [formatUsage.tokens(usage.last30Days.input + usage.last30Days.output), 'tokens, 30 days'],
-        [formatUsage.cost(usage.last30Days.cost), 'estimated cost, 30 days'],
+        ...(priced ? [[formatUsage.cost(usage.last30Days.cost ?? 0), 'estimated cost, 30 days']] : []),
         [String(usage.last30Days.runs), `runs, 30 days${usage.last30Days.failed ? ` (${usage.last30Days.failed} failed)` : ''}`],
       ]
     : [

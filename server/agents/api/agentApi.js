@@ -11,6 +11,7 @@ import expressPath from './expressPath.js';
 import idempotency from './idempotency.js';
 import pendingBody from '../pendingBody.js';
 import sendError from './sendError.js';
+import log from '../../lib/log.js';
 
 const router = express.Router();
 const serverUrl = (req) => `${config.appUrl ?? `${req.protocol}://${req.get('host')}`}/api/agent/v1`;
@@ -78,7 +79,7 @@ router.use((req, res) => sendError(res, 404, 'not_found', 'No such endpoint. The
 router.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') return sendError(res, 413, 'too_large', 'The request body is too large.');
   if (err?.type === 'entity.parse.failed') return sendError(res, 400, 'invalid_json', 'The request body isn’t valid JSON.');
-  console.error('[agent api]', err);
+  log.error('agent api', `${req.method} ${req.baseUrl}${req.route?.path ?? ''} failed`, err);
   sendError(res, 500, 'server_error', 'Something went wrong on the Nil server.');
 });
 

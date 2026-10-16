@@ -49,14 +49,14 @@ const voterGroups = {
   start(proposalId) {
     sql.tx(() => {
       // in key order, not join order, so a seat's position doesn't name the person in it
-      for (const u of sql.all("SELECT id, semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND semaphore_commitment IS NOT NULL ORDER BY semaphore_commitment")) append(proposalId, u.c, u.id);
+      for (const u of sql.all("SELECT id, semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human' AND semaphore_commitment IS NOT NULL ORDER BY semaphore_commitment")) append(proposalId, u.c, u.id);
       saveRoot(proposalId);
     });
   },
 
   // a member set up (or reactivated) their voting key: add them to every vote still open
   join(userId) {
-    const user = sql.get("SELECT semaphore_commitment AS c FROM users WHERE id = ? AND deactivated = 0 AND role != 'guest'", userId);
+    const user = sql.get("SELECT semaphore_commitment AS c FROM users WHERE id = ? AND deactivated = 0 AND role != 'guest' AND kind = 'human'", userId);
     if (!user?.c) return;
     sql.tx(() => {
       for (const { id } of sql.all(OPEN, Date.now())) {

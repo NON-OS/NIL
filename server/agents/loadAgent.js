@@ -3,11 +3,12 @@ import config from '../config.js';
 import parseJSON from '../lib/parseJSON.js';
 
 // An agent's settings with the workspace defaults filled in where the admin left a limit empty.
-// Only the built-in Anthropic runner has a list price; a local model costs nothing per token.
 export default function loadAgent(id) {
   const row = sql.get("SELECT u.id, u.name, u.color, u.deactivated, a.* FROM users u JOIN agents a ON a.user_id = u.id WHERE u.id = ? AND u.kind = 'agent'", id);
   if (!row) return null;
-  const listPrice = row.runner === 'anthropic';
+  // the workspace prices are Anthropic's; any other endpoint is priced on the agent, or not at all
+  const priceIn = row.price_in ?? (row.runner === 'anthropic' ? config.agents.priceIn : null);
+  const priceOut = row.price_out ?? (row.runner === 'anthropic' ? config.agents.priceOut : null);
   return {
     id: row.id,
     name: row.name,
@@ -19,7 +20,7 @@ export default function loadAgent(id) {
     projectIds: sql.all('SELECT project_id FROM agent_projects WHERE agent_id = ?', row.id).map((r) => r.project_id),
     tools: parseJSON(row.tools, []),
     runner: row.runner,
-    model: row.runner === 'anthropic' ? row.model || config.agents.model : row.model,
+    model: row.model || (row.runner === 'anthropic' ? config.agents.model : null),
     endpoint: row.endpoint,
     apiKeyCt: row.api_key_ct,
     doneStatus: row.done_status || config.agents.doneStatus,
@@ -29,7 +30,8 @@ export default function loadAgent(id) {
       maxDayTokens: row.max_day_tokens ?? config.agents.maxDayTokens,
       rateLimit: row.rate_limit ?? config.agents.rateLimit,
     },
-    price: { in: row.price_in ?? (listPrice ? config.agents.priceIn : 0), out: row.price_out ?? (listPrice ? config.agents.priceOut : 0) },
+    // null until both prices are known; then runs get a cost estimate
+    price: priceIn === null || priceOut === null ? null : { in: priceIn, out: priceOut },
     pausedAt: row.paused_at,
     removedAt: row.removed_at,
     createdBy: row.created_by,

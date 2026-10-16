@@ -21,6 +21,9 @@ after(() => srv.close());
 
 test('getting started belongs to whoever set the workspace up', async () => {
   assert.deepEqual((await owner('GET', '/api/first-run')).data, { active: true, quickAdd: false, invited: false, sample: null });
+  // an agent is no teammate invited
+  await owner('POST', '/api/agents', { name: 'Scout', access: 'read', allProjects: true });
+  assert.equal((await owner('GET', '/api/first-run')).data.invited, false);
   const inv = await owner('POST', '/api/invites', { role: 'member' });
   assert.equal((await owner('GET', '/api/first-run')).data.invited, true);
   ids.member = (await member.wallet(wallet(), 'invite', { name: 'Mia Member', inviteToken: inv.data.token })).data.user.id;

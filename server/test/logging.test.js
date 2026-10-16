@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawnSync } from 'node:child_process';
+import fs from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const LOG = new URL('../lib/log.js', import.meta.url).href;
 const KEY = 'sk-test-0123456789abcdef';
@@ -31,4 +34,22 @@ test('lines carry a timestamp and a level, and info goes to stdout', () => {
   const line = JSON.parse(json.stderr);
   assert.deepEqual([line.level, line.scope, line.message, line.error, line.code], ['error', 'jobs', 'The purge job failed.', 'database is locked', 'SQLITE_BUSY']);
   assert.match(line.stack, /database is locked/);
+});
+
+// console.* skips the redaction and LOG_FORMAT=json, so the server only logs through log.js.
+test('server code logs through lib/log.js, never console', () => {
+  const root = fileURLToPath(new URL('..', import.meta.url));
+  const offenders = [];
+  const walk = (dir) => {
+    for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
+      const full = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        if (entry.name !== 'test' && entry.name !== 'node_modules') walk(full);
+      } else if (entry.name.endsWith('.js') && /\bconsole\.(log|info|warn|error|debug)\(/.test(fs.readFileSync(full, 'utf8'))) {
+        offenders.push(path.relative(root, full));
+      }
+    }
+  };
+  walk(root);
+  assert.deepEqual(offenders, []);
 });

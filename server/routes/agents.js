@@ -25,7 +25,7 @@ const router = express.Router();
 const formOptions = () => ({
   tools: tools.map((t) => ({ name: t.name, title: t.title, description: t.description, write: Boolean(t.write) })),
   events: webhookEvents,
-  anthropicAvailable: config.ai.enabled,
+  anthropicAvailable: config.ai.hasKey,
   allowLocalEndpoints: config.agents.allowLocalEndpoints,
   webhookToleranceSeconds: config.agents.webhookToleranceSeconds,
   defaults: {

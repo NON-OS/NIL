@@ -17,7 +17,7 @@ function view(userId) {
   if (!state) return { active: false };
   const sample = state.sample && sql.get('SELECT 1 FROM projects WHERE id = ?', state.sample.projectId) ? { projectId: state.sample.projectId } : null;
   if (state.dismissed) return { active: false, sample };
-  const invited = Boolean(sql.get('SELECT 1 FROM invites WHERE created_by = ? LIMIT 1', userId)) || sql.get('SELECT COUNT(*) AS n FROM users').n > 1;
+  const invited = Boolean(sql.get('SELECT 1 FROM invites WHERE created_by = ? LIMIT 1', userId)) || sql.get("SELECT COUNT(*) AS n FROM users WHERE kind = 'human'").n > 1;
   return { active: true, quickAdd: state.quickAdd, invited, sample };
 }
 

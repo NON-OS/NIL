@@ -10,7 +10,9 @@ Nil speaks the Model Context Protocol (MCP), a standard way for AI assistants to
 2. Give the key a name you'll recognise, such as the name of the assistant.
 3. Choose **Read only** or **Read and write**, and when the key expires: in 30 days, 90 days, a year, or never.
 4. Click **Create key** and copy the key straight away. It's shown only once.
-5. Under **Set it up**, copy the snippet that fits your assistant: a command line, or a JSON config that works with any MCP client. Both already contain your server's address and your new key.
+5. Under **Set it up**, copy the snippet that fits your assistant: the command for Claude Code, or the JSON for a Claude Code project file or Cursor. Both already contain your server's address and your new key.
+
+Other assistants take the same address and key in their own formats: VS Code, and the Claude app and claude.ai as a custom connector, are in [AI agents](ai-agents.md#connect-an-external-agent-over-mcp); use your personal key where those steps say `nonos_agt_…`. ChatGPT can't send a key, so it can't connect.
 
 Then ask your assistant things like "What's overdue in Nil?", "Create a task for Ana to draft the launch post, due Friday" or "Summarise NON-12".
 
@@ -48,7 +50,7 @@ The endpoint is `/mcp` on your server, using the MCP streamable HTTP transport w
 
 ## Built-in AI
 
-When whoever runs the server sets `ANTHROPIC_API_KEY`, these features appear:
+When whoever runs the server sets `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the name of the Anthropic model to use), these features appear:
 
 | Where | Button | What it does |
 |---|---|---|

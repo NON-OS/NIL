@@ -24,7 +24,8 @@ export default interface Agent {
   hasApiKey?: boolean;
   doneStatus?: Status | 'none';
   limits?: { maxSteps: number; maxRunTokens: number; maxDayTokens: number; rateLimit: number };
-  price?: { in: number; out: number };
+  // null until the agent (or the server, for Anthropic) has prices
+  price?: { in: number; out: number } | null;
   overrides?: {
     doneStatus: Status | 'none' | null;
     maxSteps: number | null;

@@ -2,6 +2,7 @@ import config from '../../config.js';
 import redactSecrets from './redactSecrets.js';
 
 const MAX = 9000;
+const squash = (text) => String(text).toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
 function stopNote(stop, agent) {
   switch (stop) {
@@ -22,13 +23,21 @@ function stopNote(stop, agent) {
   }
 }
 
-// The comment a run leaves on its task: the model's own summary, scrubbed of anything shaped like
-// a secret, then a plain footer with what the server knows for certain: how many changes went
-// through, what waits for approval, and why the run stopped if it stopped early.
-export default function runComment({ text, stop, changes, pending, agent, secrets = [] }) {
-  const body = redactSecrets(text, secrets).trim().slice(0, MAX);
+// The comment a run leaves on its task: the model's own reply, then the checklist items it ticked
+// with the work it attached to each, all scrubbed of anything shaped like a secret, then a plain
+// footer with what the server knows for certain: how many changes went through, how much of the
+// checklist is still open (whatever the reply claims), what waits for approval, and why the run
+// stopped if it stopped early. `checklist` is the task's checklist as the run left it.
+export default function runComment({ text, stop, changes, pending, done = [], checklist = [], agent, secrets = [] }) {
+  const reply = String(text ?? '').trim();
+  // a result already in the reply isn't repeated; the item is still named
+  const inReply = (result) => squash(reply).includes(squash(result).slice(0, 200));
+  const ticked = done.length ? `Checklist items done:\n${done.map((d) => (inReply(d.result) ? `- ${d.text}` : `- ${d.text}: ${d.result.slice(0, 1500)}`)).join('\n')}` : '';
+  const body = redactSecrets([reply, ticked].filter(Boolean).join('\n\n'), secrets).trim().slice(0, MAX);
+  const open = checklist.filter((i) => !i.done).length;
   const facts = [
     changes ? `${changes} change${changes === 1 ? '' : 's'} made` : 'No changes made',
+    open ? `${open} of ${checklist.length} checklist item${checklist.length === 1 ? '' : 's'} still open` : null,
     ...pending.map((p) => `waiting for approval: ${p.summary} (${p.reasons.join(', ')})`),
     stopNote(stop, agent),
   ].filter(Boolean);

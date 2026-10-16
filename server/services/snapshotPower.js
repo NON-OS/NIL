@@ -32,7 +32,8 @@ export default async function snapshotPower(proposalId) {
   const block = Number(await rpc('eth_blockNumber'));
   const tag = `0x${block.toString(16)}`;
   const perZsp = BigInt(zspPower.get()) * 10n ** BigInt(config.nox.decimals);
-  const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest'").map((m) => m.id);
+  // votes are for people: agents hold no wallet and never get a row in the snapshot
+  const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((m) => m.id);
   const totals = new Map(members.map((id) => [id, { nox: 0n, staked: 0n, zsp: 0n }]));
   const wallets = shuffle(sql.all("SELECT user_id, external_id FROM credentials WHERE kind = 'wallet'").filter((w) => totals.has(w.user_id)));
 

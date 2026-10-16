@@ -39,7 +39,7 @@ before(async () => {
   anthropic = await fakeAnthropic();
   chat = await fakeChatCompletions();
   srv = await startServer({
-    env: { ANTHROPIC_API_KEY: 'test-key-not-real', ANTHROPIC_BASE_URL: anthropic.url, AGENT_ALLOW_LOCAL_ENDPOINTS: 'true', AGENT_RUN_TIMEOUT_SECONDS: '2', AGENT_RETRIES: '2' },
+    env: { ANTHROPIC_API_KEY: 'test-key-not-real', ANTHROPIC_BASE_URL: anthropic.url, AGENT_MODEL: 'test-model', AGENT_PRICE_INPUT_PER_MTOK: '4', AGENT_PRICE_OUTPUT_PER_MTOK: '20', AGENT_ALLOW_LOCAL_ENDPOINTS: 'true', AGENT_RUN_TIMEOUT_SECONDS: '2', AGENT_RETRIES: '2' },
   });
   sql = (await import('../db/sql.js')).default;
   worker = (await import('../agents/runner/worker.js')).default;
@@ -71,9 +71,9 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
     (state) => ({ text: 'Reading the task first.', calls: [{ name: 'get_task', input: { key: state.user.match(/<task key="([^"]+)"/)[1] } }] }),
     (state) => {
       const read = JSON.parse(state.results[0].content);
-      return { calls: [{ name: 'update_task', input: { key: read.key, checklistTick: [read.checklist[0].id] } }] };
+      return { calls: [{ name: 'update_task', input: { key: read.key, checklistDone: [{ id: read.checklist[0].id, result: 'Logged out after 24 hours on build 2.4.1: the refresh token expires and is never renewed.' }] } }] };
     },
-    { text: 'Reproduced the crash: the refresh token expires after 24 hours. Ticked the first step. The fix needs a decision on the token lifetime.' },
+    { text: 'Reproduced the crash: the refresh token expires after 24 hours. The fix needs a decision on the token lifetime.' },
   ]);
   const t = await newTask({ title: 'Fix the login crash', description: 'Happens overnight.', checklist: [{ text: 'Reproduce' }, { text: 'Write the fix' }], assigneeId: ids.builder });
   const run = await settled(t.id);
@@ -90,7 +90,8 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
   const [note] = comments(t.id);
   assert.equal(note.name, 'Builder');
   assert.match(note.body, /^Reproduced the crash/);
-  assert.match(note.body, /_2 changes made_/);
+  assert.match(note.body, /Checklist items done:\n- Reproduce: Logged out after 24 hours on build 2\.4\.1/);
+  assert.match(note.body, /_2 changes made · 1 of 2 checklist items still open_/);
 
   const activity = sql.all('SELECT * FROM activity WHERE task_id = ? AND actor_id = ?', t.id, ids.builder);
   assert.deepEqual(activity.map((a) => a.type).sort(), ['checklist', 'comment', 'status']);
@@ -319,7 +320,7 @@ test('runs survive a restart, and cancelling, pausing, the time limit and the ki
 
 test('the OpenAI-compatible runner works against any chat completions server', async () => {
   providerFor.replace(null);
-  const made = await owner('POST', '/api/agents', { name: 'Local', color: '#2f8a3b', access: 'write', projectIds: [ids.alpha], runner: 'openai', endpoint: `${chat.url}/v1`, model: 'llama3.1:8b', apiKey: 'sk-local-test-key-1234567890' });
+  const made = await owner('POST', '/api/agents', { name: 'Local', color: '#2f8a3b', access: 'write', projectIds: [ids.alpha], runner: 'openai', endpoint: `${chat.url}/v1`, model: 'test-model', apiKey: 'sk-local-test-key-1234567890' });
   assert.equal(made.status, 200, JSON.stringify(made.data));
   assert.equal(made.data.agent.hasApiKey, true);
   assert.equal(JSON.stringify(made.data).includes('sk-local-test-key'), false);
@@ -332,11 +333,11 @@ test('the OpenAI-compatible runner works against any chat completions server', a
   const run = await settled(t.id);
   assert.equal(run.status, 'done', run.error);
   assert.equal(run.input_tokens, 470);
-  assert.equal(run.cost, 0, 'a local model costs nothing per token by default');
+  assert.equal(run.cost, 0, 'no cost is estimated without prices on the agent');
   const [first, second] = chat.requests.slice(-2);
   assert.equal(first.path, '/v1/chat/completions');
   assert.equal(first.headers.authorization, 'Bearer sk-local-test-key-1234567890');
-  assert.equal(first.body.model, 'llama3.1:8b');
+  assert.equal(first.body.model, 'test-model');
   assert.equal(first.body.tool_choice, 'auto');
   assert.equal(first.body.messages[0].role, 'system');
   assert.ok(first.body.tools.some((tool) => tool.type === 'function' && tool.function.name === 'get_task' && tool.function.parameters.required[0] === 'key'));
@@ -359,7 +360,7 @@ test('the OpenAI-compatible runner works against any chat completions server', a
   assert.match(failed.error, /tools not supported/);
 });
 
-test('the Anthropic runner streams through the official SDK with adaptive thinking and fallbacks', async () => {
+test('the Anthropic runner streams through the official SDK with adaptive thinking, and no fallbacks unless asked', async () => {
   providerFor.replace(null);
   const t = await newTask({ title: 'Check the release checklist' });
   anthropic.script([{ tool: { id: 'toolu_1', name: 'get_task', input: { key: key(t) } }, inputTokens: 900, outputTokens: 50 }, { text: 'The checklist is empty, so there is nothing to check yet.', inputTokens: 1000, outputTokens: 30 }]);
@@ -370,13 +371,13 @@ test('the Anthropic runner streams through the official SDK with adaptive thinki
   assert.equal(run.output_tokens, 80);
   const [first, second] = anthropic.requests.slice(-2);
   assert.equal(first.path, '/v1/messages?beta=true');
-  assert.match(first.headers['anthropic-beta'], /server-side-fallback-2026-07-01/);
+  assert.doesNotMatch(first.headers['anthropic-beta'] ?? '', /server-side-fallback/);
+  assert.equal(first.body.fallbacks, undefined);
   assert.equal(first.headers['x-api-key'], 'test-key-not-real');
   assert.equal(first.body.stream, true);
-  assert.equal(first.body.model, 'claude-opus-5-5');
+  assert.equal(first.body.model, 'test-model');
   assert.deepEqual(first.body.thinking, { type: 'adaptive' });
   assert.deepEqual(first.body.output_config, { effort: 'high' });
-  assert.equal(first.body.fallbacks, 'default');
   assert.deepEqual(first.body.cache_control, { type: 'ephemeral' });
   assert.ok(first.body.tools.every((tool) => tool.eager_input_streaming === true && tool.input_schema.type === 'object'));
   assert.match(first.body.system, /You are Echo/);

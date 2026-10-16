@@ -54,6 +54,6 @@ export default function toAgent(agent, viewer) {
     key: token ? { createdAt: token.created_at, lastUsedAt: token.last_used_at } : null,
     webhook: hook ? { url: hook.url, events: parseJSON(hook.events, []), failures: hook.failures, disabledAt: hook.disabled_at, disabledReason: hook.disabled_reason, createdAt: hook.created_at } : null,
     pendingApprovals: sql.get("SELECT COUNT(*) AS n FROM agent_approvals WHERE agent_id = ? AND status = 'pending'", agent.id).n,
-    usage: agentUsage(agent.id),
+    usage: agentUsage(agent.id, { priced: Boolean(agent.price) }),
   };
 }

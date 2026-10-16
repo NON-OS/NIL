@@ -102,7 +102,8 @@ const docs = {
     const me = store.get().me!;
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const docKey = crypto.getRandomValues(new Uint8Array(32));
-    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated).map((u) => u.id) : people;
+    // agents never read docs: they hold no key
+    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id) : people;
     const grants = await sealFor(docKey, [me.id, ...everyone]);
     const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, ...(await sealed(docKey, id, 1, title, body)) });
     keyring.rememberDocKey(id, docKey);
@@ -143,7 +144,7 @@ const docs = {
   // Hands team docs to teammates who joined or unlocked after the doc was written, once this
   // person has confirmed their keys. Never asks, never shares a doc that failed its check.
   async shareWithTeam(items: DocItem[]) {
-    const people = Object.values(store.get().users).filter((u) => !u.deactivated).map((u) => u.id);
+    const people = Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id);
     const ready = new Set((await keyDirectory.sharable(people)).keys());
     for (const doc of items.filter((d) => d.audience === 'team' && !d.warning)) {
       const missing = people.filter((u) => ready.has(u) && !doc.readers.includes(u));

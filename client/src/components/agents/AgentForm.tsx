@@ -186,7 +186,8 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
       {form.runner === 'anthropic' && (
         <label className="field">
           <span>Model</span>
-          <input className="input mono" value={form.model} maxLength={120} onChange={(e) => set({ model: e.target.value })} placeholder={options.defaults.model} />
+          <input className="input mono" value={form.model} maxLength={120} required={!options.defaults.model} onChange={(e) => set({ model: e.target.value })} placeholder={options.defaults.model ?? 'The model name, as Anthropic lists it'} />
+          {!options.defaults.model && <small>The server has no AGENT_MODEL, so this agent needs its own.</small>}
         </label>
       )}
       {form.runner === 'openai' && (
@@ -198,7 +199,7 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
           </label>
           <label className="field">
             <span>Model</span>
-            <input className="input mono" value={form.model} maxLength={120} required onChange={(e) => set({ model: e.target.value })} placeholder="llama3.1:8b" />
+            <input className="input mono" value={form.model} maxLength={120} required onChange={(e) => set({ model: e.target.value })} placeholder="The model name, as the server lists it" />
           </label>
           <div className="field">
             <span>API key</span>
@@ -237,12 +238,12 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
           <div className="agent-form-grid">
             <label className="field">
               <span>Input price, $ per million tokens</span>
-              <input className="input" inputMode="decimal" value={form.priceIn} onChange={(e) => set({ priceIn: e.target.value })} placeholder={form.runner === 'anthropic' ? String(options.defaults.priceIn) : '0'} />
+              <input className="input" inputMode="decimal" value={form.priceIn} onChange={(e) => set({ priceIn: e.target.value })} placeholder={form.runner === 'anthropic' && options.defaults.priceIn !== null ? String(options.defaults.priceIn) : 'Not set'} />
             </label>
             <label className="field">
               <span>Output price, $ per million tokens</span>
-              <input className="input" inputMode="decimal" value={form.priceOut} onChange={(e) => set({ priceOut: e.target.value })} placeholder={form.runner === 'anthropic' ? String(options.defaults.priceOut) : '0'} />
-              <small>Only for the cost estimate in Settings.</small>
+              <input className="input" inputMode="decimal" value={form.priceOut} onChange={(e) => set({ priceOut: e.target.value })} placeholder={form.runner === 'anthropic' && options.defaults.priceOut !== null ? String(options.defaults.priceOut) : 'Not set'} />
+              <small>Only for the cost estimate in Settings. Without prices, Settings shows token counts.</small>
             </label>
           </div>
         </>

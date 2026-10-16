@@ -5,6 +5,7 @@ import canSeeTask from '../services/canSeeTask.js';
 import subscriptions from './subscriptions.js';
 import pushPayload from './pushPayload.js';
 import sendPush from './sendPush.js';
+import log from '../lib/log.js';
 
 const URGENT = new Set(['reminder', 'due_soon']);
 
@@ -32,5 +33,5 @@ async function deliver(userId, notification) {
 // notification still waits in the app's inbox.
 export default function pushNotification(userId, notification) {
   if (!config.push.enabled || !pushPayload.types.has(notification.type)) return;
-  setImmediate(() => deliver(userId, notification).catch((err) => console.error('[push] could not deliver:', err.message)));
+  setImmediate(() => deliver(userId, notification).catch((err) => log.error('push', 'could not deliver a notification', err.message)));
 }

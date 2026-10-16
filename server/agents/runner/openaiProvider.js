@@ -2,6 +2,7 @@ import config from '../../config.js';
 import secretBox from '../secretBox.js';
 import safeFetch from '../net/safeFetch.js';
 import SafeFetchError from '../net/SafeFetchError.js';
+import log from '../../lib/log.js';
 import ProviderError from './ProviderError.js';
 
 const RESPONSE_CAP = 8 * 1024 * 1024;
@@ -24,11 +25,16 @@ function openKey(sealed) {
   }
 }
 
-function errorFrom(res) {
-  let detail = '';
+function detailOf(res) {
   try {
-    detail = String(res.json()?.error?.message ?? '').slice(0, 200);
-  } catch {}
+    return String(res.json()?.error?.message ?? '').slice(0, 200);
+  } catch {
+    return '';
+  }
+}
+
+function errorFrom(res) {
+  const detail = detailOf(res);
   const transient = res.status === 429 || res.status >= 500;
   return new ProviderError(`The model endpoint answered ${res.status}${detail ? `: ${detail}` : '.'}`, { transient, status: res.status });
 }
@@ -36,9 +42,12 @@ function errorFrom(res) {
 // Any OpenAI-compatible chat completions server with tool calling: Ollama, vLLM, LM Studio,
 // OpenRouter and the like, over plain HTTP with no SDK. Requests go through safeFetch, so a local
 // model works only where the admin allowed local endpoints, and metadata addresses never do.
+// max_tokens is AGENT_MAX_OUTPUT_TOKENS; a server that refuses it (some check it against the
+// context window) gets the request again without it, for the rest of the run.
 export default function openaiProvider(agent) {
   const apiKey = openKey(agent.apiKeyCt);
   const url = completionsUrl(agent.endpoint ?? '');
+  let sendMaxTokens = true;
   return {
     model: agent.model,
 
@@ -50,20 +59,27 @@ export default function openaiProvider(agent) {
     },
 
     async step(state, { signal, maxTokens }) {
-      let res;
-      try {
-        res = await safeFetch(url, {
-          method: 'POST',
-          signal,
-          timeoutMs: config.agents.runTimeoutMs,
-          maxBytes: RESPONSE_CAP,
-          headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
-          body: JSON.stringify({ model: agent.model, messages: state.messages, tools: state.tools, tool_choice: 'auto', max_tokens: maxTokens }),
-        });
-      } catch (err) {
-        if (signal?.aborted) throw err;
-        if (err instanceof SafeFetchError) throw new ProviderError(err.message, { transient: ['timeout', 'network', 'dns'].includes(err.code) });
-        throw err;
+      const send = async () => {
+        try {
+          return await safeFetch(url, {
+            method: 'POST',
+            signal,
+            timeoutMs: config.agents.runTimeoutMs,
+            maxBytes: RESPONSE_CAP,
+            headers: { 'Content-Type': 'application/json', Accept: 'application/json', ...(apiKey ? { Authorization: `Bearer ${apiKey}` } : {}) },
+            body: JSON.stringify({ model: agent.model, messages: state.messages, tools: state.tools, tool_choice: 'auto', ...(sendMaxTokens ? { max_tokens: maxTokens } : {}) }),
+          });
+        } catch (err) {
+          if (signal?.aborted) throw err;
+          if (err instanceof SafeFetchError) throw new ProviderError(err.message, { transient: ['timeout', 'network', 'dns'].includes(err.code) });
+          throw err;
+        }
+      };
+      let res = await send();
+      if (res.status === 400 && sendMaxTokens && /max_tokens|max_completion_tokens|maximum context/i.test(detailOf(res))) {
+        log.warn('agents', `The model endpoint for ${agent.name} refused max_tokens ${maxTokens}, so this run goes on without it. Lower AGENT_MAX_OUTPUT_TOKENS to keep a limit.`, detailOf(res));
+        sendMaxTokens = false;
+        res = await send();
       }
       if (res.status >= 400) throw errorFrom(res);
       let data;

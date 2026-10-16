@@ -4,6 +4,7 @@ import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import agentCalls from './helpers/agentCalls.js';
+import sealed from './helpers/sealed.js';
 
 let srv;
 let sql;
@@ -252,7 +253,13 @@ test('errors have one shape; keys, rate limits and arguments are checked', async
   assert.equal(missing.status, 401);
   assert.equal(missing.data.error.code, 'unauthorized');
   assert.match(missing.headers.get('www-authenticate'), /Bearer/);
-  assert.equal((await rest('nonos_agt_wrong', 'GET', '/me')).status, 401);
+  assert.match(missing.data.error.message, /Send a Nil access key/);
+  const wrong = await rest('nonos_agt_wrong', 'GET', '/me');
+  assert.equal(wrong.status, 401);
+  assert.match(wrong.data.error.message, /That access key isn’t valid/);
+  const wrongOverMcp = await mcp('nonos_agt_wrong', 'ping');
+  assert.equal(wrongOverMcp.status, 401);
+  assert.match(wrongOverMcp.body.error, /That access key isn’t valid/);
   const unknown = await rest(keys.helper, 'GET', '/nope');
   assert.deepEqual(Object.keys(unknown.data.error).sort(), ['code', 'message', 'status']);
   assert.equal(unknown.status, 404);
@@ -312,4 +319,29 @@ test('the OpenAPI document is generated from the tool list and matches it', asyn
     if (t.write) assert.ok(op.responses['202'], `${t.name} pending approval response`);
     if (method !== 'get') assert.ok(op.parameters.some((p) => p.$ref === '#/components/parameters/IdempotencyKey'));
   }
+});
+
+test('search_tasks finds every word in any order, and only tasks the agent may see', async () => {
+  await owner('PATCH', `/api/agents/${ids.helper}`, { rateLimit: null });
+  const faq = (await ana('POST', '/api/tasks', { title: 'Draft the FAQ for launch', projectId: ids.alpha, checklist: [{ text: 'Pricing questions' }] })).data.task;
+  await ana('POST', `/api/tasks/${faq.id}/comments`, { body: 'Support keeps asking about refunds.' });
+  const beta = (await ana('POST', '/api/tasks', { title: 'Launch FAQ for finance', projectId: ids.beta })).data.task;
+  await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana), projectId: ids.alpha });
+
+  // words out of order, a word from the checklist, one from a comment, prefixes
+  for (const query of ['launch faq', 'FAQ for the launch', 'pricing launch', 'refunds faq', 'draf laun']) {
+    const found = await both(keys.helper, 'search_tasks', { query }, 'GET', `/tasks/search?query=${encodeURIComponent(query)}`);
+    assert.deepEqual(found.rest.tasks.map((t) => t.key), [k(faq)], query);
+  }
+  const viaComment = (await tool(keys.helper, 'search_tasks', { query: 'refunds' })).structuredContent.tasks[0];
+  assert.equal(viaComment.matched, 'comment');
+  assert.match(viaComment.snippet, /refunds/);
+
+  // Beta is outside Helper's projects; an agent on all projects sees it
+  assert.deepEqual((await tool(keys.reader, 'search_tasks', { query: 'launch faq' })).structuredContent.tasks.map((t) => t.key).sort(), [k(faq), k(beta)].sort());
+  assert.deepEqual((await tool(keys.reader, 'search_tasks', { query: 'launch faq', project: 'Beta' })).structuredContent.tasks.map((t) => t.key), [k(beta)]);
+  assert.equal((await tool(keys.reader, 'search_tasks', { query: 'launch faq', status: 'done' })).structuredContent.count, 0);
+  assert.equal((await tool(keys.reader, 'search_tasks', { query: 'a' })).structuredContent.tasks.some((t) => t.private), false);
+  // punctuation can't be read as search syntax
+  assert.equal((await tool(keys.helper, 'search_tasks', { query: 'faq" OR title:*' })).isError, undefined);
 });

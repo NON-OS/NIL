@@ -62,7 +62,7 @@ test('admins add agents; members see them without the settings; only admins mana
   assert.equal((await owner('POST', '/api/agents', { name: 'scout' })).status, 400);
   assert.equal((await owner('POST', '/api/agents', { name: 'Ana Park' })).status, 400);
   assert.match((await owner('POST', '/api/agents', { name: 'Local', runner: 'openai' })).data.error, /endpoint/);
-  assert.match((await owner('POST', '/api/agents', { name: 'Claude', runner: 'anthropic' })).data.error, /ANTHROPIC_API_KEY/);
+  assert.match((await owner('POST', '/api/agents', { name: 'Assistant', runner: 'anthropic' })).data.error, /ANTHROPIC_API_KEY/);
 
   const boot = await ana('GET', '/api/bootstrap');
   const member = boot.data.users.find((u) => u.id === ids.scout);
@@ -80,6 +80,14 @@ test('agents never sign in and never take a paid seat', async () => {
   const team = await owner('PATCH', `/api/users/${ids.scout}`, { role: 'admin' });
   assert.equal(team.status, 400);
   assert.match(team.data.error, /Settings → Agents/);
+});
+
+test('agents hear nothing about team docs: they hold no key to read them', async () => {
+  const { default: docRecipients } = await import('../services/docRecipients.js');
+  const now = Date.now();
+  sql.run("INSERT INTO docs (id, title_ct, body_ct, audience, created_by, created_at, updated_at) VALUES ('teamdoc', 'x', 'x', 'team', ?, ?, ?)", ids.owner, now, now);
+  assert.deepEqual(docRecipients('teamdoc').sort(), [ids.owner, ids.ana].sort());
+  sql.run("DELETE FROM docs WHERE id = 'teamdoc'");
 });
 
 test('agents can be assigned, mentioned and watch tasks like any teammate', async () => {
@@ -101,6 +109,7 @@ test('an agent sees its projects and its own tasks, and never a private task', a
   const handedOver = (await ana('POST', '/api/tasks', { title: 'Beta bug for Scout', projectId: ids.beta, assigneeId: ids.scout })).data.task;
   const hidden = await tool(key, 'get_task', { key: `NON-${outside.number}` });
   assert.equal(hidden.isError, true);
+  assert.equal(hidden.content[0].text, `NON-${outside.number} is outside this agent’s projects. An admin can add its project in Settings → Agents.`);
   assert.equal((await tool(key, 'get_task', { key: `NON-${handedOver.number}` })).structuredContent.title, 'Beta bug for Scout');
   const listed = (await tool(key, 'list_tasks')).structuredContent.tasks.map((t) => t.title);
   assert.ok(listed.includes('Crash on login') && listed.includes('Beta bug for Scout'));
@@ -108,7 +117,9 @@ test('an agent sees its projects and its own tasks, and never a private task', a
   assert.deepEqual((await tool(key, 'list_projects')).structuredContent.projects.map((p) => p.name), ['Alpha']);
 
   const secret = (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana), projectId: ids.alpha })).data.task;
-  assert.equal((await tool(key, 'get_task', { key: `NON-${secret.number}` })).isError, true);
+  // a private task answers exactly like one that doesn't exist
+  assert.equal((await tool(key, 'get_task', { key: `NON-${secret.number}` })).content[0].text, `There’s no task NON-${secret.number} you can see.`);
+  assert.equal((await tool(key, 'get_task', { key: 'NON-9999' })).content[0].text, 'There’s no task NON-9999 you can see.');
   assert.equal((await tool(key, 'search_tasks', { query: 'a' })).structuredContent.tasks.some((t) => t.private), false);
   assert.equal((await tool(key, 'workspace_summary')).structuredContent.open, 2);
   const refused = await ana('PATCH', `/api/tasks/${secret.id}`, { assigneeId: ids.scout });

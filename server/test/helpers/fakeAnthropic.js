@@ -20,14 +20,15 @@ function stream({ text, tool, inputTokens = 120, outputTokens = 40 }) {
     );
   }
   return [
-    event('message_start', { message: { id: `msg_${Date.now()}`, type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: inputTokens, output_tokens: 1 } } }),
+    event('message_start', { message: { id: `msg_${Date.now()}`, type: 'message', role: 'assistant', model: 'test-model', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: inputTokens, output_tokens: 1 } } }),
     ...blocks,
     event('message_delta', { delta: { stop_reason: tool ? 'tool_use' : 'end_turn', stop_sequence: null }, usage: { output_tokens: outputTokens } }),
     event('message_stop', {}),
   ].join('');
 }
 
-// A local stand-in for the Anthropic API that records requests and streams scripted turns.
+// A local stand-in for the Anthropic API that records requests and streams scripted turns. A turn
+// of { error: { status, message } } answers with that API error instead, as the real API does.
 export default async function fakeAnthropic() {
   const requests = [];
   let turns = [];
@@ -37,6 +38,11 @@ export default async function fakeAnthropic() {
     req.on('end', () => {
       requests.push({ path: req.url, headers: req.headers, body: JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') });
       const turn = turns.shift() ?? { text: 'Done.' };
+      if (turn.error) {
+        const type = turn.error.status === 400 ? 'invalid_request_error' : 'api_error';
+        res.writeHead(turn.error.status, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ type: 'error', error: { type, message: turn.error.message } }));
+      }
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
       res.end(stream(turn));
     });

@@ -5,6 +5,7 @@ import mockChain from './helpers/mockChain.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import siwe from '../auth/siwe.js';
+import agentCalls from './helpers/agentCalls.js';
 
 let srv;
 const chain = mockChain();
@@ -13,6 +14,8 @@ const owner = client(base);
 const ana = client(base);
 const ben = client(base);
 const wallets = { owner: wallet(), ana: wallet(), ben: wallet() };
+const { tool } = agentCalls(base);
+const scout = {};
 
 before(async () => {
   srv = await startServer({ chain });
@@ -21,6 +24,9 @@ before(async () => {
     const inv = await owner('POST', '/api/invites', { role: 'member' });
     await c.wallet(wallets[who], 'invite', { name: who, inviteToken: inv.data.token });
   }
+  // an agent is in the workspace, but votes are for people
+  const made = (await owner('POST', '/api/agents', { name: 'Scout', access: 'read', allProjects: true })).data;
+  Object.assign(scout, { id: made.agent.id, key: made.key });
 });
 after(() => srv.close());
 
@@ -35,6 +41,7 @@ test('one person, one vote: signed ballots, changeable until closed, sealed tota
   const { proposal } = (await owner('POST', '/api/proposals', { title: 'Adopt the Q1 roadmap', sealed: true })).data;
   assert.deepEqual(proposal.options, ['Yes', 'No', 'Abstain']);
   assert.ok((await ana('GET', '/api/notifications')).data.some((n) => n.type === 'proposal'));
+  assert.deepEqual((await tool(scout.key, 'my_inbox')).structuredContent.items, []);
 
   // a ballot signed by somebody else's wallet doesn't count
   const ballot = await ana('POST', `/api/proposals/${proposal.id}/ballot`, { choice: 0 });
@@ -88,6 +95,8 @@ test('weighted votes count NOX held, NOX staked and ZSPs, snapshotted when the v
   const audit = (await owner('GET', `/api/proposals/${proposal.id}/audit`)).data;
   assert.equal(audit.power.zspPower, '500');
   assert.ok(audit.power.block > 0);
+  assert.equal(audit.power.members.length, 3);
+  assert.ok(!audit.power.members.some((m) => m.id === scout.id));
   const snap = audit.power.members.find((m) => m.wallets.includes(wallets.ana.address.toLowerCase()));
   assert.deepEqual([snap.nox, snap.staked, snap.zsp, snap.power], [(100n * unit).toString(), (50n * unit).toString(), 2, anaPower]);
   for (const b of audit.ballots) assert.equal(siwe.recover(b.message, b.signature), b.address);

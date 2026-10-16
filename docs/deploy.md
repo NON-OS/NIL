@@ -92,7 +92,7 @@ Then decide on these:
 | `NOX_RPC_URL` | Required. Your own Ethereum node (an execution client such as Geth, Nethermind or Reth, with a consensus client), or a provider you trust. The node sees every wallet and payout address your server looks up, and from which IP. Nil reads private-payout balances one address at a time at random moments, with other payees' addresses mixed in, and reads vote snapshots in a shuffled order a few wallets at a time, so a node can't group one person's addresses by timing. It can still tell that a snapshot's wallets were read together. Only your own node keeps every lookup to yourself. Use `off` if you don't want any on-chain features |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run Nil for others and charge them for Nil Pro; see [Charging for Nil Pro](#charging-for-nil-pro) |
-| `ANTHROPIC_API_KEY` | Only if you want built-in AI. Text goes to Anthropic only when someone clicks an AI button |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Only if you want built-in AI: the key and the name of the Anthropic model to use. Text goes to Anthropic only when someone clicks an AI button |
 | `MAX_UPLOAD_MB` | Raise it if your team attaches large files (default 25) |
 
 Don't set `DATA_DIR` in Docker. The image already uses `/data`, which is the `nonos-data` volume. Every variable is explained in [.env.example](../.env.example).
@@ -508,7 +508,7 @@ Nil matches a transfer to the treasury by its exact amount, so the amount must b
 
 ### "AI assist is off"
 
-`ANTHROPIC_API_KEY` is not set, or the container wasn't recreated after setting it.
+`ANTHROPIC_API_KEY` or `ANTHROPIC_MODEL` is not set (the startup log says which), or the container wasn't recreated after setting them.
 
 ### "This wallet doesn't unlock your keys yet"
 
