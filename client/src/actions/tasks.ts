@@ -24,11 +24,16 @@ async function sealedNew(input: Partial<Task>) {
 }
 
 const tasks = {
+  // Throws when the server refuses, for callers that report failures their own way (imports).
+  async add(input: Partial<Task>): Promise<Task> {
+    const { task } = await http.post<{ task: Task }>('/tasks', input.private ? await sealedNew(input) : input);
+    putTask(task);
+    return task;
+  },
+
   async create(input: Partial<Task>): Promise<Task | null> {
     try {
-      const { task } = await http.post<{ task: Task }>('/tasks', input.private ? await sealedNew(input) : input);
-      putTask(task);
-      return task;
+      return await tasks.add(input);
     } catch (err) {
       toast.error(err);
       return null;

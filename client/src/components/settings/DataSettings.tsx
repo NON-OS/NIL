@@ -2,6 +2,7 @@ import { Download, ExternalLink, ShieldCheck } from 'lucide-react';
 import CapsuleCard from './CapsuleCard';
 import RetentionCard from './RetentionCard';
 import WipeCard from './WipeCard';
+import ImportCard from '../import/ImportCard';
 import useStore from '../../state/useStore';
 
 export default function DataSettings() {
@@ -29,6 +30,11 @@ export default function DataSettings() {
           <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>The CSV opens in any spreadsheet. The JSON backup is human-readable and never includes sessions or keys.</p>
         </div>
         {isAdmin && <CapsuleCard />}
+      </section>
+
+      <section className="settings-section">
+        <h2>Import from Todoist, Trello or a CSV file</h2>
+        <ImportCard />
       </section>
 
       <section className="settings-section">
