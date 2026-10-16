@@ -38,7 +38,7 @@ export default function deckFacts(s: State, scope: DeckScope): DeckFacts {
 
   let bounties: DeckFacts['bounties'] = null;
   const withBounty = inScope.filter((t) => t.bounty);
-  if (s.nox && withBounty.length) {
+  if (s.nox && s.workspace.cryptoTools && withBounty.length) {
     const rows = new Map<string, { name: string; token: string; paid: bigint; owed: bigint }>();
     for (const t of withBounty) {
       const name = who(t) ?? 'Unclaimed';

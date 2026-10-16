@@ -12,6 +12,8 @@ import fuzzyScore from '../../lib/fuzzyScore';
 import meta from '../../lib/meta';
 import decks from '../../actions/decks';
 import isAdminUser from '../../lib/isAdmin';
+import cryptoOnly from '../../lib/cryptoOnly';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 interface Item {
   id: string;
@@ -46,6 +48,7 @@ export default function CommandPalette() {
   const prefix = useStore((s) => s.workspace.taskPrefix);
   const aiOn = useStore((s) => s.ai);
   const isAdmin = useStore((s) => isAdminUser(s.me));
+  const cryptoTools = useCryptoTools();
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -67,7 +70,7 @@ export default function CommandPalette() {
     if (aiOn) add({ id: 'extract', group: 'Actions', title: 'Turn notes into tasks', icon: <Sparkles />, run: then(() => ui.extract()) }, 'notes meeting extract ai tasks');
     add({ id: 'deck', group: 'Actions', title: 'Create a status deck (.pptx)', icon: <Presentation />, run: then(() => decks.open()) }, 'deck powerpoint pptx slides presentation status report');
     if (isAdmin) add({ id: 'invite', group: 'Actions', title: 'Invite a teammate', icon: <UserPlus />, run: then(() => router.navigate('/settings?tab=team')) }, 'invite teammate member people');
-    for (const v of VIEWS) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
+    for (const v of VIEWS.filter((view) => cryptoTools || !cryptoOnly(view.to))) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
     for (const p of Object.values(projects).filter((p) => !p.archived)) {
       add({ id: `p${p.id}`, group: 'Projects', title: p.name, icon: <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, margin: 3 }} />, hint: p.key, run: then(() => router.navigate(`/projects/${p.id}`)) }, `${p.name} ${p.key}`);
     }
@@ -86,7 +89,7 @@ export default function CommandPalette() {
 
     const order = q ? ['Tasks', 'Projects', 'Goals', 'Go to', 'Actions'] : ['Actions', 'Go to', 'Projects', 'Goals'];
     return out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.score - a.score).slice(0, 40);
-  }, [query, tasks, projects, goals, prefix, aiOn, isAdmin]);
+  }, [query, tasks, projects, goals, prefix, aiOn, isAdmin, cryptoTools]);
 
   useEffect(() => setActive(0), [query]);
   useEffect(() => {

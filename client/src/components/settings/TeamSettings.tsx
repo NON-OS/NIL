@@ -10,12 +10,13 @@ import meta from '../../lib/meta';
 import dates from '../../lib/dates';
 import type Invite from '../../types/Invite';
 import type Role from '../../types/Role';
-import shortAddress from '../../lib/shortAddress';
 import HolderGateCard from './HolderGateCard';
 import '../bounty/Bounty.css';
 import isAdminUser from '../../lib/isAdmin';
 import GuestProjects from './GuestProjects';
 import VotePowerCard from './VotePowerCard';
+import WalletAddress from './WalletAddress';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 const HINT: Record<Role, string> = { guest: 'Sees only chosen projects', member: 'Works on tasks', admin: 'Manages people', owner: 'Full control' };
 const ROLE_OPTIONS = (['guest', 'member', 'admin', 'owner'] as Role[]).map((r) => ({ value: r, label: meta.role[r], hint: HINT[r] }));
@@ -33,6 +34,7 @@ export default function TeamSettings() {
   const me = useStore((s) => s.me)!;
   const userMap = useStore((s) => s.users);
   const isAdmin = isAdminUser(me);
+  const cryptoTools = useCryptoTools();
   const sharing = useStore((s) => s.sharing);
   const isGuest = useStore((s) => s.guest);
   const projectMap = useStore((s) => s.projects);
@@ -138,14 +140,14 @@ export default function TeamSettings() {
         </section>
       )}
 
-      {isAdmin && (
+      {isAdmin && cryptoTools && (
         <section className="settings-section">
           <h2>Token holders</h2>
           <HolderGateCard />
         </section>
       )}
 
-      {isAdmin && (
+      {isAdmin && cryptoTools && (
         <section className="settings-section">
           <h2>Voting power</h2>
           <VotePowerCard />
@@ -163,7 +165,13 @@ export default function TeamSettings() {
                   {u.name} {u.id === me.id && <span className="muted">(you)</span>}
                 </div>
                 <div className="member-sub">
-                  {[u.deactivated ? 'Access removed' : meta.role[u.role], u.joinedVia === 'holder' && 'joined as holder', u.title, u.address && shortAddress(u.address)].filter(Boolean).join(' · ')}
+                  {[u.deactivated ? 'Access removed' : meta.role[u.role], cryptoTools && u.joinedVia === 'holder' && 'joined as holder', u.title].filter(Boolean).join(' · ')}
+                  {u.address && (
+                    <>
+                      {' · '}
+                      <WalletAddress address={u.address} />
+                    </>
+                  )}
                 </div>
               </div>
               {isAdmin && u.id !== me.id && (u.role !== 'owner' || me.role === 'owner') && (
@@ -176,7 +184,7 @@ export default function TeamSettings() {
                   {u.role === 'guest' && !u.deactivated && (
                     <GuestProjects user={u} options={projectOptions} />
                   )}
-                  {u.joinedVia === 'holder' && !u.deactivated && (
+                  {cryptoTools && u.joinedVia === 'holder' && !u.deactivated && (
                     <button type="button" className="btn btn-sm" onClick={() => people.update(u.id, { keepWithoutNox: true })} title="Stops checking their balance at sign-in">
                       Keep without NOX
                     </button>

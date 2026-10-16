@@ -7,10 +7,13 @@ import session from '../../actions/session';
 import ui from '../../actions/ui';
 import router from '../../lib/router';
 import shortAddress from '../../lib/shortAddress';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 export default function UserMenu() {
   const me = useStore((s) => s.me);
   const sourceUrl = useStore((s) => s.sourceUrl);
+  // everyday teams go by names; the address is in Settings → Profile for whoever wants it
+  const address = useCryptoTools() ? me?.address : null;
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const go = (fn: () => void) => () => {
@@ -24,9 +27,9 @@ export default function UserMenu() {
         <Avatar user={me} size={26} />
         <span className="me-who">
           <b>{me?.name}</b>
-          {me?.address && (
-            <small title={me.address}>
-              <i aria-hidden="true" /> {shortAddress(me.address)}
+          {address && (
+            <small title={address}>
+              <i aria-hidden="true" /> {shortAddress(address)}
             </small>
           )}
         </span>
@@ -35,7 +38,7 @@ export default function UserMenu() {
         <div className="menu-list">
           <div style={{ padding: '6px 8px 8px' }}>
             <div style={{ fontWeight: 600 }}>{me?.name}</div>
-            {me?.address && <div className="muted mono" style={{ fontSize: 'var(--text-xs)' }}>{shortAddress(me.address)}</div>}
+            {address && <div className="muted mono" style={{ fontSize: 'var(--text-xs)' }}>{shortAddress(address)}</div>}
           </div>
           <div className="menu-divider" />
           <button type="button" className="menu-item" onClick={go(() => router.navigate('/settings'))}>

@@ -207,3 +207,15 @@
   overflow-wrap: anywhere;
   font-size: 12px;
 }
+
+.wallet-reveal {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: inherit;
+}
+
+.wallet-reveal:hover {
+  text-decoration: underline;
+}

@@ -17,6 +17,7 @@ export default function DeckModal() {
   const projects = useStore((s) => s.projects);
   const goals = useStore((s) => s.goals);
   const aiOn = useStore((s) => s.ai);
+  const cryptoTools = useStore((s) => s.workspace.cryptoTools);
   const [scope, setScope] = useState<DeckScope>({ kind: preset?.kind ?? 'workspace', id: preset?.id, days: preset?.days ?? 14, includePrivate: false });
   const [withAi, setWithAi] = useState(aiOn);
   const [busy, setBusy] = useState(false);
@@ -82,7 +83,7 @@ export default function DeckModal() {
           </label>
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          The deck is built in your browser: cover, at a glance, shipped, in progress, goals (an editable chart), risks, bounties and next steps, each with speaker notes.
+          The deck is built in your browser: cover, at a glance, shipped, in progress, goals (an editable chart), risks, {cryptoTools ? 'bounties and ' : ''}next steps, each with speaker notes.
           {aiOn && withAi ? ' With Claude on, only the task titles, names and counts on the slides are sent to Anthropic.' : ' Nothing leaves this device.'}
         </p>
       </div>

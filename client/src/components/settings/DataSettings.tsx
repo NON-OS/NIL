@@ -8,6 +8,7 @@ export default function DataSettings() {
   const role = useStore((s) => s.me?.role);
   const aiOn = useStore((s) => s.ai);
   const sourceUrl = useStore((s) => s.sourceUrl);
+  const cryptoTools = useStore((s) => s.workspace.cryptoTools);
   const isAdmin = role === 'owner' || role === 'admin';
 
   return (
@@ -45,7 +46,7 @@ export default function DataSettings() {
             <li><ShieldCheck /> People sign in with an Ethereum wallet. Nil never asks for an email, a phone number or a password.</li>
             <li><ShieldCheck /> Sessions and invite links are stored only as hashes, so a copied database can’t be used to sign in.</li>
             <li><ShieldCheck /> Only admins see wallet addresses. Teammates see the name each person picked.</li>
-            <li><ShieldCheck /> Proofs of work hide task titles unless the contributor reveals them, and are checked without uploading anything.</li>
+            {cryptoTools && <li><ShieldCheck /> Proofs of work hide task titles unless the contributor reveals them, and are checked without uploading anything.</li>}
             <li><ShieldCheck /> Deleted data is overwritten in the database file. Trash is erased after 30 days.</li>
             <li><ShieldCheck />{aiOn ? 'AI assist is on. When someone clicks an AI button, only the text that feature needs goes to Anthropic’s API.' : 'AI assist is off. No task data leaves your server.'}</li>
           </ul>

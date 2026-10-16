@@ -5,7 +5,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import people from '../../actions/people';
 import storage from '../../lib/storage';
-import shortAddress from '../../lib/shortAddress';
+import WalletAddress from './WalletAddress';
 
 export default function ProfileSettings() {
   const me = useStore((s) => s.me)!;
@@ -40,7 +40,7 @@ export default function ProfileSettings() {
           <div className="settings-row">
             <Avatar user={me} size={44} />
             <div>
-              <div className="mono" style={{ fontWeight: 600 }} title={me.address ?? undefined}>{me.address ? shortAddress(me.address) : 'No wallet linked'}</div>
+              <div style={{ fontWeight: 600 }}>{me.address ? <WalletAddress address={me.address} /> : 'No wallet linked'}</div>
               <div className="muted" style={{ fontSize: 'var(--text-sm)' }}>Your sign-in wallet. Only admins can see it.</div>
             </div>
           </div>

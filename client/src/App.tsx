@@ -32,9 +32,13 @@ import SharePage from './views/SharePage';
 import OpenBountiesPage from './views/OpenBountiesPage';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
+import useCryptoTools from './hooks/useCryptoTools';
+import cryptoOnly from './lib/cryptoOnly';
 
 function Screen({ segments }: { segments: string[] }) {
   const [first, second] = segments;
+  const cryptoTools = useCryptoTools();
+  if (!cryptoTools && cryptoOnly(`/${first}`)) return <NotFoundView />;
   switch (first) {
     case undefined:
       return <MyWorkView />;

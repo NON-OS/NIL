@@ -1,0 +1,48 @@
+.team-kind {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.team-kind legend {
+  margin-bottom: 6px;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.team-kind-option {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.team-kind-option:has(input:checked) {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.team-kind-option input {
+  margin: 3px 0 0;
+  accent-color: var(--accent-line);
+}
+
+.team-kind-option span {
+  display: grid;
+  gap: 2px;
+}
+
+.team-kind-option small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}

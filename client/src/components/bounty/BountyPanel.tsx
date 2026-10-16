@@ -11,6 +11,7 @@ import tokenAmount from '../../lib/tokenAmount';
 import cx from '../../lib/cx';
 import type Task from '../../types/Task';
 import isAdminUser from '../../lib/isAdmin';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 // The bounty's story inside a task: what it's worth, who gets it, and the way to pay it.
 export default function BountyPanel({ task }: { task: Task }) {
@@ -18,7 +19,8 @@ export default function BountyPanel({ task }: { task: Task }) {
   const nox = useStore((s) => s.nox);
   const assignee = useStore((s) => (task.assigneeId ? s.users[task.assigneeId] : undefined));
   const [pasting, setPasting] = useState(false);
-  if (!task.bounty) return null;
+  const cryptoTools = useCryptoTools();
+  if (!task.bounty || !cryptoTools) return null;
 
   const amount = tokenAmount(task.bounty, task.bountyToken);
   const paid = task.bountyState === 'paid';

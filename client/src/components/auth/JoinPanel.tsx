@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
+import TeamKindChoice from './TeamKindChoice';
 import identity from '../../actions/identity';
 import type JoinDetails from '../../types/JoinDetails';
 
@@ -23,6 +24,8 @@ const LEAD = {
 export default function JoinPanel({ mode, inviteToken, workspaceName, requirement, onRestore, onBack }: Props) {
   const [form, setForm] = useState({ workspaceName: '', name: '' });
   const [busy, setBusy] = useState(false);
+  // setup only: the answer to "everyday team or crypto team"
+  const [cryptoTools, setCryptoTools] = useState(false);
   const [error, setError] = useState('');
 
   const submit = async (e: FormEvent) => {
@@ -30,7 +33,7 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
     setError('');
     setBusy(true);
     try {
-      await identity.walletJoin({ mode, name: form.name.trim(), workspaceName: form.workspaceName, inviteToken });
+      await identity.walletJoin({ mode, name: form.name.trim(), workspaceName: form.workspaceName, inviteToken, ...(mode === 'setup' ? { cryptoTools } : {}) });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -54,6 +57,7 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
         <input className="input" required maxLength={80} autoComplete="nickname" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <small>A nickname is fine. Nil never asks for your email or real identity.</small>
       </label>
+      {mode === 'setup' && <TeamKindChoice cryptoTools={cryptoTools} onChange={setCryptoTools} />}
       {requirement && <p className="method-hint">{requirement}</p>}
       <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim()}>
         {busy ? <Spinner size={14} /> : <Wallet />} {mode === 'setup' ? 'Create workspace with your wallet' : 'Join with your wallet'}

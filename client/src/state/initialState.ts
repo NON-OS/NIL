@@ -5,7 +5,7 @@ const initialState: State = {
   needsSetup: false,
   holderGate: null,
   me: null,
-  workspace: { name: '', taskPrefix: 'NON' },
+  workspace: { name: '', taskPrefix: 'NON', cryptoTools: true },
   users: {},
   projects: {},
   labels: {},
