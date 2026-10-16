@@ -50,7 +50,7 @@ const people = {
   },
 
   invites: () => http.get<Invite[]>('/invites'),
-  invite: (input: { role: Role; projectIds?: string[]; days?: number }) => http.post<{ token: string; invite: Invite }>('/invites', input),
+  invite: (input: { role: Role; projectIds?: string[]; days?: number; reusable?: boolean; maxUses?: number | null }) => http.post<{ token: string; invite: Invite }>('/invites', input),
   async setSharing(patch: Partial<SharingPolicy>) {
     try {
       store.set({ sharing: await http.put<SharingPolicy>('/sharing', patch) });

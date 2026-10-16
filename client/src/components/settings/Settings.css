@@ -219,3 +219,29 @@
 .wallet-reveal:hover {
   text-decoration: underline;
 }
+
+.invite-kind {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+  color: var(--muted);
+}
+
+.invite-joined {
+  white-space: normal;
+}
+
+.invite-limit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.invite-limit .input {
+  width: 110px;
+}
