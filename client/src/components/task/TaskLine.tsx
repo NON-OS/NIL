@@ -12,27 +12,40 @@ import meta from '../../lib/meta';
 import cx from '../../lib/cx';
 import type Task from '../../types/Task';
 
-// A compact, personal row: one click finishes it, the sun adds it to My Day.
+const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+// A compact, personal row: one click finishes it, the sun adds it to My Day. The check, the
+// title and the sun are sibling buttons; the row itself only widens the mouse target.
 function TaskLine({ task }: { task: Task }) {
   const project = useStore((s) => (task.projectId ? s.projects[task.projectId] : undefined));
   const inMyDay = useStore((s) => s.focus.some((f) => f.taskId === task.id));
   const closed = meta.isClosed(task.status);
+  const doneLabel = task.status === 'done' ? 'Mark as not done' : 'Mark as done';
 
   return (
-    <div className={cx('line', closed && 'closed')} onClick={() => detail.open(task)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && detail.open(task)}>
+    <div className={cx('line', closed && 'closed')} onClick={() => detail.open(task)}>
       <button
         type="button"
-        className="line-check"
+        className="line-check hit"
         onClick={(e) => {
-          e.stopPropagation();
+          stop(e);
           taskActions.toggleDone(task);
         }}
-        aria-label={task.status === 'done' ? 'Mark as not done' : 'Mark as done'}
-        title={task.status === 'done' ? 'Mark as not done' : 'Mark as done'}
+        aria-label={doneLabel}
+        title={doneLabel}
       >
         <StatusIcon status={task.status} size={17} />
       </button>
-      <span className="line-title">{task.title}</span>
+      <button
+        type="button"
+        className="line-title line-open"
+        onClick={(e) => {
+          stop(e);
+          detail.open(task);
+        }}
+      >
+        {task.title}
+      </button>
       <span className="line-meta">
         {project && (
           <span className="line-project">
@@ -46,12 +59,12 @@ function TaskLine({ task }: { task: Task }) {
           type="button"
           className={cx('icon-only sun', inMyDay && 'on')}
           onClick={(e) => {
-            e.stopPropagation();
+            stop(e);
             if (inMyDay) focus.remove(task.id);
             else focus.add(task.id);
           }}
           aria-pressed={inMyDay}
-          aria-label={inMyDay ? 'Remove from My Day' : 'Add to My Day'}
+          aria-label="Add to My Day"
           title={inMyDay ? 'Remove from My Day' : 'Add to My Day'}
         >
           <Sun size={14} />

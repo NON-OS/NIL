@@ -115,12 +115,13 @@
   color: var(--faint);
 }
 
+/* a 2px teal ring: the pale cyan halo this replaced was too faint to find on white */
 .input:focus,
 .textarea:focus,
 .select:focus {
   outline: none;
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-line);
 }
 
 .textarea {

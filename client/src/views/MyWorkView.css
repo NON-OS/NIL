@@ -51,6 +51,7 @@
 .mywork-add:focus-within {
   border-style: solid;
   border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line);
 }
 
 .mywork-add input {

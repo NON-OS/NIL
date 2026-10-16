@@ -1,5 +1,5 @@
 import './TaskDrawer.css';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { SearchX } from 'lucide-react';
 import DrawerHeader from './DrawerHeader';
@@ -12,12 +12,15 @@ import Attachments from './Attachments';
 import Timeline from './Timeline';
 import LockedTask from './LockedTask';
 import useStore from '../../state/useStore';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import detail from '../../actions/detail';
 
 export default function TaskDrawer({ number }: { number: number }) {
   const tasks = useStore((s) => s.tasks);
   const task = useMemo(() => Object.values(tasks).find((t) => t.number === number), [tasks, number]);
   const taskId = task?.id;
+  const ref = useRef<HTMLElement>(null);
+  useFocusTrap(ref);
 
   useEffect(() => {
     if (!taskId) return;
@@ -39,7 +42,7 @@ export default function TaskDrawer({ number }: { number: number }) {
   return createPortal(
     <>
       <div className="drawer-scrim" onClick={detail.close} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'}>
+      <aside ref={ref} className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'} tabIndex={-1}>
         {task ? (
           <>
             <DrawerHeader task={task} />

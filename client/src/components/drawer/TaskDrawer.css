@@ -22,6 +22,11 @@
   animation: slide-in 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
+/* the panel takes focus on open so screen readers announce it; it is not a control */
+.drawer:focus {
+  outline: none;
+}
+
 @keyframes slide-in {
   from {
     transform: translateX(24px);
@@ -89,8 +94,8 @@
 }
 
 .drawer-title:focus {
-  outline: none;
-  border-color: var(--accent-line);
+  outline: 2px solid var(--focus);
+  outline-offset: 0;
   background: var(--surface);
 }
 
@@ -235,6 +240,12 @@
   border: 0;
   background: transparent;
   outline: none;
+}
+
+.checklist-text:focus-visible {
+  border-radius: var(--r-sm);
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
 }
 
 .dropzone.over {
@@ -391,7 +402,7 @@
 
 .composer-box:focus-within {
   border-color: var(--accent-line);
-  box-shadow: 0 0 0 3px var(--accent-soft);
+  box-shadow: 0 0 0 1px var(--accent-line);
 }
 
 .composer-box textarea {

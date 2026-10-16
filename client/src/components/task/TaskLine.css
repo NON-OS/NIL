@@ -37,6 +37,15 @@
   font-weight: 500;
 }
 
+.line-open {
+  align-self: stretch;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  text-align: left;
+}
+
 .line.closed .line-title {
   color: var(--muted);
   text-decoration: line-through;
@@ -74,8 +83,8 @@
 }
 
 .line:hover .sun,
-.line .sun.on,
-.line .sun:focus-visible {
+.line:focus-within .sun,
+.line .sun.on {
   opacity: 1;
 }
 
@@ -87,7 +96,15 @@
   .line-project {
     display: none;
   }
+}
 
+@media (pointer: coarse) {
+  .line {
+    min-height: 48px;
+    padding-block: 0;
+  }
+
+  /* no hover on touch, so the sun can't wait to be revealed */
   .line .sun {
     opacity: 1;
   }
