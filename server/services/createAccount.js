@@ -6,6 +6,7 @@ import parseJSON from '../lib/parseJSON.js';
 import seatGate from './seatGate.js';
 import inviteIsLive from './inviteIsLive.js';
 import useInvite from './useInvite.js';
+import firstRunState from '../firstRun/firstRunState.js';
 
 const randomColor = () => domain.colors[Math.floor(Math.random() * domain.colors.length)];
 
@@ -24,6 +25,7 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
     if (mode === 'setup') {
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
       sql.run('INSERT INTO workspace (id, name, task_prefix, crypto_tools, created_at) VALUES (1, ?, ?, ?, ?)', workspaceName, workspacePrefix(workspaceName), cryptoTools ? 1 : 0, Date.now());
+      firstRunState.start(id);
       role = 'owner';
     } else if (mode === 'invite') {
       const invite = sql.get('SELECT * FROM invites WHERE token_hash = ?', inviteHash);
