@@ -54,7 +54,7 @@ Docker writes its own firewall rules for published ports, and those skip ufw. Th
 ## 4. Get the code
 
 ```bash
-sudo git clone <your-nonos-repo-url> /opt/nonos
+sudo git clone https://github.com/NON-OS/NIL-.git /opt/nonos
 cd /opt/nonos
 sudo git checkout <release>          # the release tag or branch you want to run
 ```

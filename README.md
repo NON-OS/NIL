@@ -11,7 +11,7 @@ You need a browser with an Ethereum wallet extension, or a wallet's in-app brows
 With Docker (Compose v2.24 or newer):
 
 ```bash
-git clone <your-nonos-repo-url> nonos
+git clone https://github.com/NON-OS/NIL-.git nonos
 cd nonos
 cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
