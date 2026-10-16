@@ -31,3 +31,6 @@ services:
 
 volumes:
   nonos-data:
+    # a fixed name, so backups and restores find it whatever folder the code is in; it's the
+    # name Compose gave it before, so existing servers keep their data
+    name: nonos_nonos-data

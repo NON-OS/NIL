@@ -21,9 +21,20 @@ Nil has no port open to the internet. Only Caddy does.
 |---|---|
 | Size | 2 vCPU, 2 GB RAM and 20 GB of SSD is a comfortable start for a team of a few dozen people. These are starting points, not measured limits. Building the Docker image on the server uses most of that memory. With 1 GB of RAM, add swap for the build (but see the note on swap in [memory-only mode](zero-state.md#memory-only-mode)) |
 | One instance | Nil uses SQLite, and keeps live updates and rate limits in memory. Run exactly one copy. Don't put it behind a load balancer with several replicas |
-| Software | Docker Engine with the Compose plugin, version 2.24.4 or newer (the compose files use `!reset` and `!override`). Check with `docker compose version`. Install Docker from the official instructions at docs.docker.com/engine/install |
+| Software | Docker Engine with the Compose plugin, version 2.24.4 or newer (the compose files use `!reset` and `!override`). Check with `docker compose version`. On Ubuntu or Debian, the commands are below the table; for other systems, see docs.docker.com/engine/install |
 | Outbound access | The server needs HTTPS out to your Ethereum node, to Anthropic if you turn AI on, to the browser makers' push services (`PUSH_SERVICES`) once someone turns on push notifications, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building. `PUSH_NOTIFICATIONS=off` keeps the server from ever contacting a push service |
 | A wallet | You sign in with an Ethereum wallet in your browser (an extension such as MetaMask or Rabby, or a wallet's in-app browser). Have one ready, plus a second wallet to link as a backup |
+
+Docker on Ubuntu, from Docker's own package repository (on Debian, use `debian` in both URLs):
+
+```bash
+sudo apt-get update && sudo apt-get install -y ca-certificates curl
+sudo install -m 0755 -d /etc/apt/keyrings
+sudo curl -fsSL https://download.docker.com/linux/ubuntu/gpg -o /etc/apt/keyrings/docker.asc
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.asc] https://download.docker.com/linux/ubuntu $(. /etc/os-release && echo "$VERSION_CODENAME") stable" | sudo tee /etc/apt/sources.list.d/docker.list
+sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+docker compose version
+```
 
 ## 2. Point DNS at the server
 
@@ -49,6 +60,8 @@ sudo ufw allow 443/udp      # HTTP/3, optional
 sudo ufw enable
 ```
 
+`OpenSSH` means port 22. If your SSH server listens somewhere else (check with `sudo ss -tlpn | grep sshd`), allow that port instead, before `ufw enable`, or the firewall locks you out.
+
 Docker writes its own firewall rules for published ports, and those skip ufw. That is why `docker-compose.yml` publishes Nil's port 3000 on the loopback interface only (`127.0.0.1:3000`), which nothing outside the machine can reach, and the override in step 6 removes even that. Only Caddy publishes ports to the internet.
 
 ## 4. Get the code
@@ -58,6 +71,8 @@ sudo git clone https://github.com/NON-OS/NIL-.git /opt/nonos
 cd /opt/nonos
 sudo git checkout <release>          # the release tag or branch you want to run
 ```
+
+If the repository is private, a fork for example, sign in first with `gh auth login` or give the server a read-only deploy key; an anonymous clone can't reach it. Any folder works in place of `/opt/nonos`: the data volume's name is fixed in `docker-compose.yml`, so the backup commands below work wherever the code is.
 
 Build from a fresh clone like this. The image never takes local data: `.dockerignore` leaves out data folders, databases, capsules, exports, `.env` files and keys wherever they sit (a development copy keeps its database under `server/data/`, for example), and the Dockerfile removes any that still slip into the server folder. A fresh clone is still the cleanest starting point.
 
@@ -83,7 +98,7 @@ STRICT_CONFIG=1
 - `TRUST_PROXY=uniquelocal` tells Nil to believe forwarded headers only from a private address, which is where Caddy reaches it on the Docker network. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's. A hop count (`1`) also works, but only while port 3000 is closed to everything except Caddy: anyone who reaches the port directly could otherwise claim any IP address. `true` is refused.
 - `NOX_RPC_URL` is required on a server people reach over the network (see the table below), or `off`.
 - `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
-- `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an https `APP_URL` without `TRUST_PROXY`, and about a `NOX_RPC_URL` that names the public node.
+- `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an https `APP_URL` without `TRUST_PROXY`, and about a `NOX_RPC_URL` that names the public node. That second warning counts too: with `STRICT_CONFIG=1`, a server pointed at the public node doesn't start. Use your own node or a provider you trust, or, if you accept what the public node sees, leave `STRICT_CONFIG` out.
 
 Then decide on these:
 
@@ -143,8 +158,10 @@ services:
   caddy:
     image: caddy:2
     restart: unless-stopped
+    # wait until Nil answers its health check, so Caddy never proxies to a server still starting
     depends_on:
-      - nonos
+      nonos:
+        condition: service_healthy
     ports:
       - "80:80"
       - "443:443"
@@ -201,7 +218,7 @@ The Nil container runs as an unprivileged user with a read-only root filesystem,
 Do this right after the first start. Creating the workspace, or restoring a capsule into the empty server, needs a one-time setup token, so nobody who finds the server first can claim it. Unless you set `SETUP_TOKEN` yourself, the server makes one at first start and prints it once in the log:
 
 ```bash
-sudo docker compose logs nonos | grep 'setup token'
+sudo docker compose logs nonos | grep 'setup token'     # prints a secret: keep it out of chats and tickets
 sudo docker compose exec nonos cat /data/setup-token     # the same token, if the log has rotated
 ```
 
@@ -217,7 +234,7 @@ If the workspace was set up by mistake, and there is nothing in it you need, res
 
 ```bash
 sudo docker compose rm -sf nonos
-sudo docker volume rm nonos_nonos-data     # check the name with: docker volume ls
+sudo docker volume rm nonos_nonos-data
 sudo docker compose up -d
 ```
 
@@ -255,7 +272,7 @@ Skip Caddy and follow [Tor onion service](tor.md): start once to create the addr
 
 ### What to back up
 
-Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the container. With the code in `/opt/nonos`, the volume is called `nonos_nonos-data` (check with `docker volume ls`).
+Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the container. The volume is always called `nonos_nonos-data`, whatever folder the code is in, because `docker-compose.yml` fixes the name.
 
 | Path in `/data` | What it is |
 |---|---|
@@ -450,10 +467,6 @@ Use the token from the first start's log (or `/data/setup-token`), or the `SETUP
 ### "The database has schema …, but this version of Nil only knows up to …"
 
 The image is older than the one that last ran on this volume. Run the newer release again, or restore the backup taken before the upgrade.
-
-### Lines starting with `[config]` in the log at startup
-
-A setting in `.env` couldn't be used. Each line names the setting and says what the server does instead: the default, or community mode for an unusable `PLAN_TREASURY`. Fix the value and recreate the container.
 
 ### The container keeps restarting with a permission or read-only error on `/data` or `./data`
 
