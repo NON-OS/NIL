@@ -38,7 +38,7 @@ test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh ser
 
   const freshDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nonos-restore-'));
   const port = 30000 + Math.floor(Math.random() * 20000);
-  const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/index.js'], { env: { ...process.env, DATA_DIR: freshDir, PORT: String(port) }, stdio: ['ignore', 'ignore', 'inherit'] });
+  const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', 'server/index.js'], { env: { ...process.env, DATA_DIR: freshDir, PORT: String(port), APP_URL: `http://127.0.0.1:${port}` }, stdio: ['ignore', 'ignore', 'inherit'] });
   try {
     const other = `http://127.0.0.1:${port}`;
     for (let i = 0; i < 50; i++) {
