@@ -1,6 +1,9 @@
 import { WebSocketServer } from 'ws';
 import hub from './hub.js';
 import currentUser from '../auth/currentUser.js';
+import sessions from '../auth/sessions.js';
+import sessionCookie from '../auth/sessionCookie.js';
+import tokenHash from '../auth/tokenHash.js';
 import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
@@ -50,7 +53,7 @@ export default function attachRealtime(server) {
     if (!user) return refuse(socket, '401 Unauthorized');
 
     wss.handleUpgrade(req, socket, head, (ws) => {
-      hub.add(ws, { userId: user.id, isAdmin: user.isAdmin });
+      hub.add(ws, { userId: user.id, isAdmin: user.isAdmin, session: tokenHash(sessionCookie.read(req)) });
       ws.on('pong', () => {
         const c = hub.get(ws);
         if (c) c.alive = true;
@@ -62,9 +65,15 @@ export default function attachRealtime(server) {
     });
   });
 
-  // Drop sockets that stopped answering pings (sleeping laptops, dead proxies).
+  // Drop sockets that stopped answering pings (sleeping laptops, dead proxies), and sockets
+  // whose session ended some other way: it expired, or it was revoked from another device.
   setInterval(() => {
     for (const [ws, c] of hub.entries()) {
+      if (!sessions.isLive(c.session)) {
+        ws.close(4001, 'signed out');
+        hub.remove(ws);
+        continue;
+      }
       if (!c.alive) {
         ws.terminate();
         hub.remove(ws);

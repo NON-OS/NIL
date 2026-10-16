@@ -13,15 +13,26 @@ function parse(header = '') {
   return out;
 }
 
+// Whether the browser reached us over HTTPS, for plain requests and WebSocket upgrades alike.
+// X-Forwarded-Proto counts even without TRUST_PROXY because it can only make the server
+// stricter: a request claiming https gets the __Host- cookie and loses the plain one, and
+// nobody can add that header to someone else's browser requests.
+function overHttps(req) {
+  if (req.secure || req.socket?.encrypted) return true;
+  return String(req.headers['x-forwarded-proto'] ?? '').split(',')[0].trim().toLowerCase() === 'https';
+}
+
 const sessionCookie = {
+  // Over HTTPS only the __Host- cookie counts. A sibling subdomain can plant a plain cookie for
+  // this domain, and reading it would sign the browser in as whoever planted it.
   read(req) {
     const cookies = parse(req.headers.cookie);
-    return cookies[SECURE_NAME] || cookies[PLAIN_NAME] || null;
+    return (overHttps(req) ? cookies[SECURE_NAME] : cookies[PLAIN_NAME]) || null;
   },
 
   write(req, res, token) {
     const maxAge = config.sessionDays * 86_400;
-    const cookie = req.secure
+    const cookie = overHttps(req)
       ? `${SECURE_NAME}=${token}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`
       : `${PLAIN_NAME}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
     res.setHeader('Set-Cookie', cookie);

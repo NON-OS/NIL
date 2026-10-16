@@ -142,7 +142,7 @@ What Nil protects, and what it doesn't.
 **How the server protects data**
 
 - Session, invite, share-link and access-key tokens are random. Only their SHA-256 hashes are stored, so a leaked database can't be used to sign in.
-- Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix.
+- Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix, and only that cookie is accepted, so a cookie planted by a sibling subdomain signs nobody in. Signing out closes that session's live connection.
 - Every write needs a custom header and an origin check against `APP_URL` (and `ALLOWED_ORIGINS`), which blocks cross-site request forgery. WebSockets and the MCP endpoint check the origin too. Wallet sign-in messages always name the configured domain, never one taken from the request, so a phishing site can't collect a signature that works here.
 - Security headers: a strict CSP with no inline or external scripts, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP and CORP, a restrictive `Permissions-Policy`, and HSTS over HTTPS.
 - Sign-in, applications, ballots, AI and other sensitive endpoints are rate-limited.

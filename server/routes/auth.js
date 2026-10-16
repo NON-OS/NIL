@@ -3,6 +3,8 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import sessions from '../auth/sessions.js';
 import sessionCookie from '../auth/sessionCookie.js';
+import tokenHash from '../auth/tokenHash.js';
+import hub from '../realtime/hub.js';
 import currentUser from '../auth/currentUser.js';
 import rateLimit from '../auth/rateLimit.js';
 import liveInvite from '../services/liveInvite.js';
@@ -26,7 +28,10 @@ router.get(
 router.post(
   '/auth/logout',
   route((req, res) => {
-    sessions.revoke(sessionCookie.read(req));
+    const token = sessionCookie.read(req);
+    sessions.revoke(token);
+    // the live connection opened with this session would otherwise keep streaming updates
+    if (token) hub.endSession(tokenHash(token));
     sessionCookie.clear(req, res);
     return { ok: true };
   }),

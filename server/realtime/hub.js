@@ -1,4 +1,4 @@
-// Every open socket, plus who it belongs to and which task it's looking at.
+// Every open socket, plus who it belongs to, the session it opened with, and which task it's looking at.
 const clients = new Map();
 let presenceTimer = null;
 
@@ -14,6 +14,15 @@ function presenceSnapshot() {
     byUser.set(c.userId, entry);
   }
   return [...byUser.values()];
+}
+
+function closeWhere(match) {
+  for (const [ws, c] of clients) {
+    if (!match(c)) continue;
+    ws.close(4001, 'signed out');
+    clients.delete(ws);
+  }
+  hub.presenceChanged();
 }
 
 const hub = {
@@ -54,13 +63,13 @@ const hub = {
     for (const c of clients.values()) if (c.userId === userId) c.isAdmin = isAdmin;
   },
 
+  // Closes every socket of a person (removed, deactivated) or of one session (signed out).
   disconnect(userId) {
-    for (const [ws, c] of clients) {
-      if (c.userId !== userId) continue;
-      ws.close(4001, 'signed out');
-      clients.delete(ws);
-    }
-    hub.presenceChanged();
+    closeWhere((c) => c.userId === userId);
+  },
+
+  endSession(sessionHash) {
+    closeWhere((c) => c.session === sessionHash);
   },
 
   presence: presenceSnapshot,
