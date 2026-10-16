@@ -44,6 +44,12 @@ textarea {
   color: inherit;
 }
 
+input,
+select,
+textarea {
+  font-size: var(--field-text);
+}
+
 button {
   cursor: pointer;
 }

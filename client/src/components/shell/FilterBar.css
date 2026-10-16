@@ -27,7 +27,7 @@
   height: 30px;
   min-height: 30px;
   padding: 4px 8px 4px 28px;
-  font-size: var(--text-sm);
+  font-size: var(--field-text-sm);
 }
 
 .filter-btn {

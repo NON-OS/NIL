@@ -116,7 +116,7 @@
 
 .invite-link input {
   font-family: var(--font-mono);
-  font-size: var(--text-sm);
+  font-size: var(--field-text-sm);
 }
 
 .privacy-list {

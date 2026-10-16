@@ -199,7 +199,7 @@
 
   .cal-chip {
     padding: 2px 3px;
-    font-size: 10.5px;
+    font-size: var(--text-xs);
   }
 
   .cal-dow span {

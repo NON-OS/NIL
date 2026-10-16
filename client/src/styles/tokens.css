@@ -18,7 +18,7 @@
   --ink: #0a0b0d;
   --ink-2: #3a3e47;
   --muted: #676c77;
-  --faint: #8c919b;
+  --faint: #6b707a;
   --line: #e2e4ea;
   --line-strong: #cdd0d8;
   --accent: #66ffff;
@@ -37,12 +37,12 @@
   --success: #007c85;
   --success-soft: #dcfafa;
 
-  --st-backlog: #a3a8b2;
+  --st-backlog: #7d828c;
   --st-todo: #767b86;
   --st-progress: #c98a00;
   --st-review: #2438ff;
   --st-done: #007c85;
-  --st-canceled: #a3a8b2;
+  --st-canceled: #7d828c;
   --p-urgent: #d0342e;
 
   /* sequential, one hue light to dark: cyan family down to Deep Teal */
@@ -62,8 +62,8 @@
   --font-body: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
 
-  --text-xs: 11.5px;
-  --text-sm: 12.5px;
+  --text-xs: 12px;
+  --text-sm: 13px;
   --text-md: 13.5px;
   --text-lg: 15px;
   --text-xl: 19px;
@@ -76,5 +76,18 @@
   --topbar-h: 52px;
   --drawer-w: min(640px, 100vw);
   --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* smallest box a finger can hit reliably; applied only under pointer: coarse */
+  --tap-min: 44px;
+  --field-text: var(--text-md);
+  --field-text-sm: var(--text-sm);
   color-scheme: light;
+}
+
+@media (pointer: coarse) {
+  :root {
+    /* iOS Safari zooms the page into any field set below 16px when it takes focus */
+    --field-text: 16px;
+    --field-text-sm: 16px;
+  }
 }
