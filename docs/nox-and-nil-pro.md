@@ -38,7 +38,7 @@ A server that hasn't set a treasury address (`PLAN_TREASURY`) runs in community 
 
 ### On a server that charges
 
-A server that sets a treasury, such as the hosted service the NØNOS foundation runs, asks each workspace to pay for Nil Pro:
+A server that sets a treasury, such as the hosted service the NØNOS foundation runs, asks each workspace to pay for Nil Pro. On the foundation's hosted Nil, payments go to the NØNOS DAO treasury at `0x9B90166E484a5C57608D3b2e78B79e10dA92c3b7`, which anyone can check on a block explorer.
 
 - The price is in US dollars: a flat fee per period ($12 per 30 days by default) plus a price per person above the free seats ($3 each by default, with 5 free seats). Guests never count.
 - You pay in USDC at face value, or in NOX for less (20% off by default).

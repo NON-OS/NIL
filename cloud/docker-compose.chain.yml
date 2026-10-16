@@ -1,0 +1,73 @@
+# Optional: your own Ethereum node on the same server, so the chain lookups hosted workspaces
+# make (payments, balances, stakes, passes) never reach a third-party RPC provider. Reth is the
+# execution client, Lighthouse the consensus client; together they need roughly 16 to 32 GB of
+# RAM and 1.5 to 2 TB of disk, and a day or more for the first sync.
+#
+# Turn it on in /opt/nil/.env: set COMPOSE_FILE=docker-compose.yml:docker-compose.chain.yml and
+# RETH_IMAGE and LIGHTHOUSE_IMAGE to the clients' current stable release tags (an outdated
+# client stops following the chain at the next network upgrade). Then set
+# CLOUD_RPC_URL=http://reth:8545 in cloud.env. deploy/provision.sh --with-chain writes the
+# engine API secret to /opt/nil/chain/jwt.hex. Peer-to-peer traffic is outbound only, since
+# the firewall leaves 30303 and 9000 closed; both clients sync fine that way.
+services:
+  reth:
+    image: ${RETH_IMAGE:?set RETH_IMAGE in .env to a current Reth release}
+    container_name: nil-reth
+    restart: unless-stopped
+    command: >-
+      node --chain mainnet --full --datadir /data
+      --http --http.addr 0.0.0.0 --http.port 8545 --http.api eth,net,web3
+      --authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.jwtsecret /jwt/jwt.hex
+    volumes:
+      - reth-data:/data
+      - ./chain/jwt.hex:/jwt/jwt.hex:ro
+    # chain: reached by Caddy's relay only. p2p: the way out to other Ethereum nodes.
+    networks:
+      - chain
+      - p2p
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${RETH_MEMORY:-24g}
+    stop_grace_period: 3m
+    logging:
+      driver: local
+      options:
+        max-size: 50m
+        max-file: "3"
+
+  lighthouse:
+    image: ${LIGHTHOUSE_IMAGE:?set LIGHTHOUSE_IMAGE in .env to a current Lighthouse release}
+    container_name: nil-lighthouse
+    restart: unless-stopped
+    # Checkpoint sync downloads a recent finalized state once, from the URL below, instead of
+    # replaying the whole beacon chain. It is the only request that goes to a fixed third party.
+    command: >-
+      lighthouse bn --network mainnet --datadir /data
+      --execution-endpoint http://reth:8551 --execution-jwt /jwt/jwt.hex
+      --checkpoint-sync-url ${CHECKPOINT_SYNC_URL:-https://mainnet.checkpoint.sigp.io}
+      --disable-deposit-contract-sync
+    volumes:
+      - lighthouse-data:/data
+      - ./chain/jwt.hex:/jwt/jwt.hex:ro
+    networks:
+      - p2p
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: ${LIGHTHOUSE_MEMORY:-8g}
+    stop_grace_period: 2m
+    logging:
+      driver: local
+      options:
+        max-size: 50m
+        max-file: "3"
+
+networks:
+  p2p: {}
+
+volumes:
+  reth-data:
+  lighthouse-data:

@@ -43,6 +43,7 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 
 - [Backups and moving](backups-and-moving.md): exports, encrypted capsules and moving to a new server.
 - [Self-hosting](self-hosting.md): running Nil yourself and the settings that matter.
+- [Hosted Nil](hosted.md): a workspace the NØNOS foundation runs for you.
 - [Production deployment](deploy.md): a step-by-step guide for a public server with HTTPS.
 - [Tor onion service](tor.md): reaching Nil over Tor.
 - [Development](development.md): commands, project layout and the stack.

@@ -1,0 +1,92 @@
+import http from 'node:http';
+import HttpError from '../../lib/HttpError.js';
+import states from '../../provisioning/states.js';
+import clientIp from '../clientIp.js';
+import securityHeaders from './securityHeaders.js';
+import sendJson from './sendJson.js';
+import readJson from './readJson.js';
+import staticAssets from './staticAssets.js';
+import renderPages from './renderPages.js';
+
+const NOTICES = {
+  stopped: ['This workspace is offline for now', 'It has been stopped by the host and will be back.'],
+  suspended: ['This workspace is paused', 'The host has paused it. Its data is kept.'],
+  deleting: ['This workspace is being closed', 'It is scheduled for deletion and is no longer available.'],
+  starting: ['This workspace is starting', 'Try again in a minute.'],
+};
+
+// The public face of the control plane, behind Caddy: the sign-up page and its small JSON API,
+// plus the notice shown for workspaces that aren't running. No cookies are ever set: the
+// sign-up session is a ticket the page keeps in memory.
+export default function createPublicServer(ctx, flow) {
+  const assets = staticAssets();
+  const pages = renderPages(ctx.config);
+  const origin = `https://${ctx.config.signupHost}`;
+
+  // Cross-site pages can't add custom headers without a CORS preflight, which is never
+  // answered, so requiring one (plus a matching Origin) rules out cross-site requests.
+  function guard(req) {
+    if (req.headers['x-nil-signup'] !== '1') throw HttpError.forbidden('Request blocked. Reload the page and try again.');
+    const from = req.headers.origin;
+    if (from && from !== origin && !(ctx.config.trustProxy === 0 && from === `http://${req.headers.host}`)) throw HttpError.forbidden('Request blocked. Reload the page and try again.');
+  }
+
+  function html(res, status, body, extra = {}) {
+    res.writeHead(status, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store', ...extra });
+    res.end(body);
+  }
+
+  function unavailable(req, res) {
+    const host = String(req.headers.host ?? '').toLowerCase().replace(/:\d+$/, '');
+    const suffix = `.${ctx.config.domain}`;
+    const workspace = host.endsWith(suffix) ? ctx.store.workspaces.byName(host.slice(0, -suffix.length)) : null;
+    if (!workspace) return html(res, 404, pages.unavailable('There’s no workspace here', `Nothing is hosted at ${host || 'this address'}.`));
+    const [title, detail] = NOTICES[workspace.state] ?? (states.routed.includes(workspace.state) ? NOTICES.starting : ['This workspace isn’t available', 'Try again later.']);
+    html(res, 503, pages.unavailable(title, detail), { 'retry-after': '60' });
+  }
+
+  async function handle(req, res) {
+    const url = new URL(req.url, 'http://localhost');
+    const ip = clientIp(req, ctx.config.trustProxy);
+    securityHeaders(res, ctx.config.trustProxy > 0 && req.headers['x-forwarded-proto'] === 'https');
+
+    if (req.method === 'GET' || req.method === 'HEAD') {
+      const asset = assets.get(url.pathname);
+      if (asset) {
+        res.writeHead(200, { 'content-type': asset.type, 'cache-control': 'public, max-age=86400', 'content-length': asset.body.length });
+        return res.end(req.method === 'HEAD' ? undefined : asset.body);
+      }
+      if (url.pathname === '/unavailable') return unavailable(req, res);
+      if (url.pathname === '/') return html(res, 200, pages.index(flow.closed()));
+      if (url.pathname.startsWith('/api/names/')) {
+        let name;
+        try {
+          name = decodeURIComponent(url.pathname.slice(11));
+        } catch {
+          throw HttpError.badRequest('That address isn’t valid.');
+        }
+        return sendJson(res, 200, flow.checkName(name, ip));
+      }
+      if (url.pathname === '/api/status') return sendJson(res, 200, flow.status(req.headers['x-signup-ticket']));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/challenge') {
+      guard(req);
+      return sendJson(res, 200, flow.challenge(await readJson(req), ip));
+    }
+    if (req.method === 'POST' && url.pathname === '/api/verify') {
+      guard(req);
+      return sendJson(res, 200, flow.verify(await readJson(req), ip));
+    }
+    if (url.pathname.startsWith('/api/')) throw new HttpError(404, 'Unknown request.');
+    html(res, 404, pages.unavailable('Page not found', 'There’s nothing at this address.'));
+  }
+
+  return http.createServer((req, res) => {
+    handle(req, res).catch((err) => {
+      if (res.headersSent) return res.destroy();
+      if (err instanceof HttpError) return sendJson(res, err.status, { error: err.message }, err.extra.retryAfterSec ? { 'retry-after': String(err.extra.retryAfterSec) } : {});
+      ctx.log.error('signup.error', { path: req.url?.split('?')[0], error: err });
+      sendJson(res, 500, { error: 'Something went wrong on our side. Please try again.' });
+    });
+  });
+}

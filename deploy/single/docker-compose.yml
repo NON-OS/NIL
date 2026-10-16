@@ -1,0 +1,80 @@
+# One self-hosted Nil workspace behind Caddy, deployed with the same scripts as hosted Nil.
+# On the server this file is /opt/nil/docker-compose.yml, next to .env (single.env.example),
+# nil.env (the app's settings, from the root .env.example) and the Caddyfile next to it.
+name: nil
+
+services:
+  nil:
+    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    container_name: nil-app
+    restart: unless-stopped
+    env_file:
+      - path: nil.env
+    # behind Caddy: the address and the proxy hop are fixed here, whatever nil.env says
+    environment:
+      APP_URL: https://${NIL_DOMAIN:?set NIL_DOMAIN in .env}
+      TRUST_PROXY: "1"
+    volumes:
+      - nil-data:/data
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    mem_limit: ${NIL_MEMORY:-2g}
+    pids_limit: 512
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2.10.2}
+    container_name: nil-caddy
+    restart: unless-stopped
+    depends_on:
+      - nil
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      NIL_DOMAIN: ${NIL_DOMAIN}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in .env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-state:/config
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "5"
+
+networks:
+  edge: {}
+
+volumes:
+  # named explicitly so the deploy scripts can reach it for checkpoints
+  nil-data:
+    name: nil-data
+  caddy-data:
+  caddy-state:

@@ -31,6 +31,30 @@ jobs:
       - run: npm run build
       - run: npm audit --omit=dev
 
+  # The hosted control plane has its own dependencies and tests; the deploy scripts it uses
+  # must stay shellcheck-clean.
+  cloud:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: cloud
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: cloud/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm audit --omit=dev
+      - name: Check the deploy scripts
+        working-directory: .
+        run: shellcheck deploy/*.sh
+
   docker:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

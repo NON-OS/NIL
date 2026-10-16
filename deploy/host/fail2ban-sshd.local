@@ -1,0 +1,11 @@
+# Written by deploy/provision.sh. Bans addresses that keep failing SSH logins, for longer each
+# time they come back. Password logins are off anyway; this keeps the log quiet and the noise out.
+[sshd]
+enabled = true
+backend = systemd
+mode = aggressive
+maxretry = 5
+findtime = 10m
+bantime = 1h
+bantime.increment = true
+bantime.maxtime = 1w
