@@ -60,7 +60,9 @@ test('a member who lost their wallet gets back into the same account with a new 
   assert.equal((await mia.wallet(fresh, 'login')).data.user.id, ids.mia);
   const boot = (await mia('GET', '/api/bootstrap')).data;
   assert.equal(boot.tasks.find((t) => t.id === task.id).assigneeId, ids.mia);
-  const old = (await mia('GET', '/api/me/credentials')).data.credentials.find((c) => c.address === wallets.mia.address);
+  const linked = (await mia('GET', '/api/me/credentials')).data.credentials;
+  assert.equal(linked.find((c) => c.address === fresh.address).label, 'Wallet from your sign-in reset');
+  const old = linked.find((c) => c.address === wallets.mia.address);
   assert.equal((await mia('DELETE', `/api/me/credentials/${old.id}`)).status, 200);
   assert.equal((await client(base).wallet(wallets.mia, 'login')).status, 404);
   wallets.mia = fresh;

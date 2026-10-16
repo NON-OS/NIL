@@ -15,7 +15,9 @@ export default function useSignInReset(resetId, address) {
     if (!reset || !reset.issued_at || reset.used_at || reset.closed_at || reset.expires_at <= now || reset.deactivated) {
       throw HttpError.badRequest('This sign-in reset link has expired or was already used. Ask your admin for a new one.');
     }
-    addCredential(reset.user_id, address);
+    // named and stamped so it stands out from the lost wallets in the person's list
+    const credentialId = addCredential(reset.user_id, address);
+    sql.run("UPDATE credentials SET label = 'Wallet from your sign-in reset', last_used_at = ? WHERE id = ?", now, credentialId);
     sql.run('UPDATE sign_in_resets SET used_at = ? WHERE id = ?', now, reset.id);
     signInAudit('reset.used', { actorId: reset.user_id, subjectId: reset.user_id, resetId: reset.id });
     sessions.revokeAll(reset.user_id);
