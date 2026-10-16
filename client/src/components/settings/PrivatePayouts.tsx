@@ -40,7 +40,7 @@ export default function PrivatePayouts() {
             </strong>
             <br />
             <span className="muted">
-              Each payout goes to a fresh address only your wallet can open (ERC-5564 stealth addresses), so your earnings can’t be traced to your sign-in wallet or added up. Your keys come from a wallet signature and stay in this browser. The payer and the amount are still visible on-chain.
+              Each payout goes to a fresh address only your wallet can open (ERC-5564 stealth addresses), so your earnings can’t be traced to your sign-in wallet or added up. The payout keys come from your encryption keys and are only ever unlocked in this browser. The payer and the amount are still visible on-chain.
             </span>
           </span>
           {busy ? <Spinner size={16} /> : <button type="button" className="toggle" role="switch" aria-checked={on} onClick={toggle} aria-label="Receive bounties at one-time addresses" />}

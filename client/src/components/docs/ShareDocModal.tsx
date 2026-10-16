@@ -91,7 +91,7 @@ export default function ShareDocModal({ doc, canManage, onClose, onDone }: Props
           </div>
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          {audience === 'team' ? 'Everyone in the workspace can read and edit it. People who haven’t unlocked docs yet get the key the next time a teammate opens Docs.' : 'Only the people you tick can read and edit it.'}
+          {audience === 'team' ? 'Everyone in the workspace can read and edit it. People who haven’t unlocked docs yet get the key the next time a teammate who has confirmed their keys opens Docs.' : 'Only the people you tick can read and edit it.'}
         </p>
       </div>
     </Modal>

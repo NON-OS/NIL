@@ -33,7 +33,7 @@ const anonymousVotes = {
     if (!registered) throw new Error('Join anonymous votes first, then vote.');
     const identity = await loadIdentity();
     if (identity.commitment.toString() !== registered) {
-      throw new Error('Your voting key changed when your keys were reset. Join anonymous votes again to register the new one, once no anonymous vote is open.');
+      throw new Error('Your voting key changed when your keys were reset. Nil registers the new one by itself once the anonymous votes you joined with the old key have closed.');
     }
     return identity;
   },

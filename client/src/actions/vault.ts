@@ -49,7 +49,7 @@ async function unlockWithWallet(reset: boolean) {
   const listed = keys.get(store.get().me!.id);
   const wrap = wraps.find((w) => w.address === address.toLowerCase());
   if (!wrap) {
-    if (listed || wraps.length) throw new VaultError('no-wrap', 'This wallet doesn’t unlock your keys yet. Unlock once with a wallet that does and add this one in Settings, under Security, or restore from your recovery kit.');
+    if (listed || wraps.length) throw new VaultError('no-wrap', 'This wallet doesn’t unlock your keys yet. Unlock once with a wallet that does and add this one in Settings, under Sign-in & security, or restore from your recovery kit.');
     return create(address, false);
   }
   const identity = await fromSeed(await walletWraps.open(wrap, address));

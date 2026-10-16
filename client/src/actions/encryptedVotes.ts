@@ -52,7 +52,7 @@ const encryptedVotes = {
     const keys = await keyDirectory.sharable(trusteeIds(proposal));
     const recipients = proposal.encrypted!.trustees.map((t) => {
       const publicKey = t.userId ? keys.get(t.userId) : undefined;
-      if (!publicKey) throw new Error('A trustee’s key isn’t confirmed or no longer exists, so this vote can’t be set up. Confirm it in Settings, under Security, or ask the admin to start the vote again.');
+      if (!publicKey) throw new Error('A trustee’s key isn’t confirmed or no longer exists, so this vote can’t be set up. Confirm it in Settings, under Sign-in & security, or ask the admin to start the vote again.');
       return { position: t.position, publicKey };
     });
     const [{ default: dealingLine }, { default: dealShares }] = await Promise.all([import('../lib/ballot/dealingLine'), import('../lib/ballot/dealShares')]);

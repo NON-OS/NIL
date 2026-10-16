@@ -27,7 +27,7 @@ function saveMe(user: User) {
 async function keyFor(payout: StealthPayout) {
   const keys = await unlockPrivateKeys();
   const derived = stealthKey(keys.spendingKey, keys.viewingKey, payout.ephemeralPublicKey);
-  if (derived.address !== payout.address) throw new Error('These keys don’t open this payout. Unlock with the wallet you had private payouts on with when it was paid.');
+  if (derived.address !== payout.address) throw new Error('These keys don’t open this payout: it was paid to keys you no longer hold. If yours were reset and you kept a recovery kit from before, restore it to move the payout.');
   return derived;
 }
 

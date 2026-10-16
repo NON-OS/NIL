@@ -11,7 +11,7 @@ export default function BackupWalletCard({ count, afterReset }: { count: number;
         <div>
           <strong>You’re back in with your new wallet.</strong>
           <p>If you no longer have your old wallets, remove them below so nobody else can sign in with them. Bounties are paid to the wallet at the top of the list.</p>
-          <p>Your encryption keys were locked to the old wallets. Restore them from your recovery kit under Encryption keys below, or set up new ones; teammates will be asked to confirm your new key before sharing anything with it.</p>
+          <p>Your encryption keys were locked to the old wallets. To restore them from your recovery kit, open Docs and choose Unlock with your wallet; Nil offers the restore there. Or set up new ones; teammates will be asked to confirm your new key before sharing anything with it.</p>
         </div>
       </div>
     );

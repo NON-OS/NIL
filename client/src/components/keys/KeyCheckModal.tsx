@@ -52,7 +52,7 @@ export default function KeyCheckModal() {
     >
       <div className="modal-body" style={{ display: 'grid', gap: 12 }}>
         <p style={{ margin: 0 }}>
-          Before Nil shares {check.reason} with them, make sure these keys are theirs. Ask each person to read out the fingerprint in their Settings, under Security, and compare it with the one here, face to face or on a call.
+          Before Nil shares {check.reason} with them, make sure these keys are theirs. Ask each person to read out the fingerprint in their Settings, under Sign-in & security, and compare it with the one here, face to face or on a call.
         </p>
         {keys?.some((k) => k.state === 'changed') && (
           <p className="key-warn">A changed key is normal after someone resets their keys or restores them on a new wallet. It is also what a tampered server would show, so confirm only once you’ve checked with them.</p>

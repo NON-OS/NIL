@@ -3,7 +3,7 @@ import keyDirectory from './keyDirectory';
 
 let waiting: { resolve: () => void; reject: (err: Error) => void } | null = null;
 
-const declined = () => new Error('Nothing was shared: their keys aren’t confirmed yet. Check them any time in Settings, under Security.');
+const declined = () => new Error('Nothing was shared: their keys aren’t confirmed yet. Check them any time in Settings, under Sign-in & security.');
 
 // Asks this person to confirm teammates' new or changed keys before anything is sealed to them.
 // The prompt (KeyCheckModal) shows each fingerprint, and the action that asked waits for the
