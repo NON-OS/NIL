@@ -13,6 +13,7 @@ import rollbackWorkspace from '../provisioning/rollbackWorkspace.js';
 import rollingUpgrade from '../provisioning/rollingUpgrade.js';
 import deleteWorkspace from '../provisioning/deleteWorkspace.js';
 import resizeWorkspace from '../provisioning/resizeWorkspace.js';
+import refreshWorkspace from '../provisioning/refreshWorkspace.js';
 import housekeeping from '../ops/housekeeping.js';
 import nameStatus from '../names/nameStatus.js';
 import testContext from './helpers/testContext.js';
@@ -214,4 +215,24 @@ test('resizing recreates the container with the new limits on the same volume', 
   const { spec } = ctx.driver.containers.get(ws.id);
   assert.deepEqual(spec.limits, { cpus: 2, memoryBytes: 1536 * 1024 ** 2, pids: 512 });
   assert.equal(spec.volume, ws.volume);
+});
+
+test('refresh recreates a container from the current settings and keeps the old one if it fails', async () => {
+  const ctx = testContext();
+  const ws = await running(ctx);
+  const before = ctx.driver.containers.get(ws.id).spec;
+  const after = await refreshWorkspace(ctx, ws.id);
+  assert.equal(after.state, 'active');
+  assert.notEqual(ctx.driver.containers.get(ws.id).spec, before, 'a fresh container');
+  assert.equal(ctx.driver.containers.get(ws.id).spec.volume, ws.volume);
+
+  ctx.driver.fail.start = new Error('port in use');
+  await assert.rejects(refreshWorkspace(ctx, ws.id), /port in use/);
+  assert.equal(ctx.store.workspaces.get(ws.id).state, 'active');
+  assert.equal(ctx.driver.containers.get(ws.id).running, true);
+  assert.equal(ctx.alerts.at(-1).event, 'workspace.refresh_failed');
+
+  await stopWorkspace(ctx, ws.id);
+  assert.equal((await refreshWorkspace(ctx, ws.id)).state, 'stopped');
+  assert.equal(ctx.driver.containers.get(ws.id).running, false, 'a stopped workspace stays stopped');
 });

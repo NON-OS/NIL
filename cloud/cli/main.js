@@ -7,6 +7,7 @@ import create from './commands/create.js';
 import lifecycle from './commands/lifecycle.js';
 import upgrade from './commands/upgrade.js';
 import rollback from './commands/rollback.js';
+import refresh from './commands/refresh.js';
 import remove from './commands/remove.js';
 import backup from './commands/backup.js';
 import restore from './commands/restore.js';
@@ -27,6 +28,7 @@ Workspaces
   stop <name>                            stop it, keeping its data
   suspend <name> [--reason <text>]       take it offline with a notice, keeping its data
   resize <name> <plan>                   move it to another resource plan
+  refresh <name…>|--all                  recreate containers after changing cloud.env or workspace.env
   upgrade <name…>|--all --image <image>  rolling upgrade with pre-migration checkpoints
          [--max-failures <n>]            and automatic rollback on a failed health check
   rollback <name…>|--all [--yes]         back to the checkpoint from before the last upgrade
@@ -55,6 +57,7 @@ const COMMANDS = {
   stop: lifecycle,
   suspend: lifecycle,
   resize: lifecycle,
+  refresh,
   upgrade,
   rollback,
   delete: remove,
