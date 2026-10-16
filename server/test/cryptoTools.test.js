@@ -63,6 +63,7 @@ test('billing, encryption keys and everyday work keep working', async () => {
   assert.equal((await owner('GET', '/api/plan')).status, 200);
   assert.equal((await member('GET', '/api/proofs/key')).status, 200);
   assert.equal((await member('POST', '/api/tasks', { title: 'Bake sourdough' })).status, 200);
+  assert.equal((await owner('GET', '/api/search?q=flour')).status, 200);
 });
 
 test('a bounty can’t be put on a task while the tools are off', async () => {

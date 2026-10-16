@@ -52,6 +52,8 @@ test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh ser
     assert.equal((await there('POST', '/api/auth/restore', capsule, pass('correct horse capsule staple'))).status, 200);
     assert.equal((await there.wallet(ownerWallet, 'login')).status, 200);
     assert.ok((await there('GET', '/api/bootstrap')).data.tasks.some((t) => t.title === 'Ship the pitch deck'));
+    // the search index is rebuilt from the restored rows
+    assert.deepEqual((await there('GET', '/api/search?q=pitch')).data.tasks.map((t) => t.title), ['Ship the pitch deck']);
     const keyThere = await fetch(`${other}/.well-known/nonos-proof-key`).then((r) => r.json());
     const keyHere = await fetch(`${base()}/.well-known/nonos-proof-key`).then((r) => r.json());
     assert.equal(keyThere.key, keyHere.key);
@@ -86,4 +88,11 @@ test('the owner can erase everything, which returns the server to a fresh instal
   assert.equal((await stranger('GET', '/api/auth/state')).data.needsSetup, true);
   assert.equal((await owner('GET', '/api/bootstrap')).status, 401);
   assert.equal(fs.readdirSync(path.join(srv.dataDir, 'uploads')).length, 0);
+
+  // a fresh setup on the same server gets a working, empty search index
+  const again = client(base);
+  await again.wallet(wallet(), 'setup', { name: 'New Owner', workspaceName: 'Fresh' });
+  await again('POST', '/api/tasks', { title: 'Water the plants' });
+  assert.deepEqual((await again('GET', '/api/search?q=plants')).data.tasks.map((t) => t.title), ['Water the plants']);
+  assert.deepEqual((await again('GET', '/api/search?q=pitch')).data.tasks, []);
 });
