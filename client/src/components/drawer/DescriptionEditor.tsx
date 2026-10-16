@@ -6,9 +6,9 @@ import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import ai from '../../actions/ai';
 import toast from '../../state/toast';
-import type Task from '../../types/Task';
+import type LoadedTask from '../../types/LoadedTask';
 
-export default function DescriptionEditor({ task }: { task: Task }) {
+export default function DescriptionEditor({ task }: { task: LoadedTask }) {
   const aiOn = useStore((s) => s.ai);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(task.description);

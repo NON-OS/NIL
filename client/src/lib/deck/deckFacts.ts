@@ -28,7 +28,7 @@ export default function deckFacts(s: State, scope: DeckScope): DeckFacts {
 
   const goals = Object.values(s.goals)
     .filter((g) => (scope.kind === 'goal' ? g.id === scope.id : scope.kind === 'project' ? inScope.some((t) => t.goalId === g.id) : g.status !== 'done'))
-    .map((g) => ({ title: g.title, pct: goalProgress(g, all).pct }));
+    .map((g) => ({ title: g.title, pct: goalProgress(g, all, s.archive).pct }));
 
   const perPerson = new Map<string, number>();
   for (const t of shipped) {

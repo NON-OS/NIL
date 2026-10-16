@@ -54,6 +54,9 @@ export default function createApp() {
       res.sendFile(path.join(DIST, 'sw.js'));
     });
     app.use('/assets', express.static(path.join(DIST, 'assets'), { immutable: true, maxAge: '1y', index: false }));
+    // A build file that's gone (a tab from before a deploy asking for its old chunks) is a 404,
+    // never the app's HTML in its place, so the tab sees the failure and reloads.
+    app.use('/assets', (req, res) => res.status(404).type('text').send('Not found'));
     app.use(express.static(DIST, { index: false, maxAge: '1h' }));
     app.get('*', (req, res) => {
       res.setHeader('Cache-Control', 'no-cache');

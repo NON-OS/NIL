@@ -1,5 +1,5 @@
 import './TaskDrawer.css';
-import { useEffect, useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SearchX } from 'lucide-react';
 import DrawerHeader from './DrawerHeader';
@@ -11,19 +11,42 @@ import Checklist from './Checklist';
 import Attachments from './Attachments';
 import Timeline from './Timeline';
 import LockedTask from './LockedTask';
+import WordsLoading from './WordsLoading';
+import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
+import archive from '../../actions/archive';
+import hasWords from '../../lib/hasWords';
 
 export default function TaskDrawer({ number }: { number: number }) {
   const tasks = useStore((s) => s.tasks);
+  const archived = useStore((s) => s.archive.cursor !== null);
   const task = useMemo(() => Object.values(tasks).find((t) => t.number === number), [tasks, number]);
   const taskId = task?.id;
+  // a link to an older finished task finds it in the archive before saying it's gone
+  const [searching, setSearching] = useState(!task && archived);
 
   useEffect(() => {
     if (!taskId) return;
     detail.load(taskId);
     return () => detail.clear();
   }, [taskId]);
+
+  useEffect(() => {
+    if (taskId || !archived) {
+      setSearching(false);
+      return;
+    }
+    let live = true;
+    setSearching(true);
+    archive
+      .byNumber(number)
+      .catch(() => null)
+      .then(() => live && setSearching(false));
+    return () => {
+      live = false;
+    };
+  }, [taskId, archived, number]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -54,14 +77,24 @@ export default function TaskDrawer({ number }: { number: number }) {
                   <TitleEditor task={task} />
                   <PropertyGrid task={task} />
                   <BountyPanel task={task} />
-                  <DescriptionEditor task={task} />
-                  <Checklist task={task} />
+                  {hasWords(task) ? (
+                    <>
+                      <DescriptionEditor task={task} />
+                      <Checklist task={task} />
+                    </>
+                  ) : (
+                    <WordsLoading />
+                  )}
                   <Attachments taskId={task.id} isPrivate={task.private} />
                   <Timeline taskId={task.id} />
                 </>
               )}
             </div>
           </>
+        ) : searching ? (
+          <div className="drawer-missing">
+            <Spinner size={22} />
+          </div>
         ) : (
           <div className="drawer-missing">
             <SearchX size={28} />

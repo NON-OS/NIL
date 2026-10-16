@@ -9,8 +9,10 @@ import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import useFilter from '../hooks/useFilter';
 import useListPrefs from '../hooks/useListPrefs';
+import useArchiveSearch from '../hooks/useArchiveSearch';
 import ui from '../actions/ui';
 import filterTasks from '../lib/filterTasks';
+import ArchiveMore from '../components/task/ArchiveMore';
 
 export default function ListView() {
   const all = useTasks();
@@ -19,6 +21,7 @@ export default function ListView() {
   const [filter, setFilter] = useFilter('list');
   const [prefs, setPrefs] = useListPrefs('list', { groupBy: 'status', sortBy: 'priority' });
   const tasks = useMemo(() => filterTasks(all, filter, { meId, prefix }), [all, filter, meId, prefix]);
+  useArchiveSearch(filter.query, filter.showClosed);
 
   return (
     <div className="main">
@@ -41,11 +44,14 @@ export default function ListView() {
         <ListOptions groupBy={prefs.groupBy} sortBy={prefs.sortBy} onGroup={(groupBy) => setPrefs({ groupBy })} onSort={(sortBy) => setPrefs({ sortBy })} />
       </FilterBar>
       {tasks.length ? (
-        <TaskList tasks={tasks} groupBy={prefs.groupBy} sortBy={prefs.sortBy} />
+        <TaskList tasks={tasks} groupBy={prefs.groupBy} sortBy={prefs.sortBy} footer={filter.showClosed && <ArchiveMore />} />
       ) : (
-        <EmptyState icon={<List />} title={all.length ? 'No tasks match these filters' : 'No tasks yet'}>
-          {all.length ? 'Try clearing a filter or turning on “Show completed”.' : 'Press C anywhere to create your first task.'}
-        </EmptyState>
+        <>
+          <EmptyState icon={<List />} title={all.length ? 'No tasks match these filters' : 'No tasks yet'}>
+            {all.length ? 'Try clearing a filter or turning on “Show completed”.' : 'Press C anywhere to create your first task.'}
+          </EmptyState>
+          {filter.showClosed && <ArchiveMore />}
+        </>
       )}
     </div>
   );

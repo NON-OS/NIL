@@ -9,6 +9,7 @@ import useStore from '../state/useStore';
 import useNow from '../hooks/useNow';
 import inbox from '../actions/inbox';
 import detail from '../actions/detail';
+import archive from '../actions/archive';
 import describeNotification from '../lib/describeNotification';
 import dates from '../lib/dates';
 import cx from '../lib/cx';
@@ -35,6 +36,11 @@ export default function InboxView() {
   useEffect(() => {
     inbox.load();
   }, []);
+
+  // notifications can point at older finished tasks, which wait in the archive
+  useEffect(() => {
+    if (items) archive.find(items.map((n) => n.taskId)).catch(() => {});
+  }, [items]);
 
   const shown = useMemo(() => {
     const list = (items ?? []).filter((n) => (tab === 'unread' ? !n.readAt : tab === 'mentions' ? n.type === 'mention' : true));

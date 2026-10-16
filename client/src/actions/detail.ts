@@ -1,12 +1,14 @@
 import http from '../api/http';
 import ApiError from '../api/ApiError';
 import store from '../state/store';
+import fillWords from '../state/fillWords';
 import toast from '../state/toast';
 import router from '../lib/router';
 import socket from '../realtime/socket';
 import type Comment from '../types/Comment';
 import type Attachment from '../types/Attachment';
 import type Activity from '../types/Activity';
+import type Task from '../types/Task';
 import taskKeys from './taskKeys';
 import commentText from './commentText';
 
@@ -23,13 +25,14 @@ async function outgoing(taskId: string, body: string) {
 }
 
 interface DetailResponse {
+  task: Task;
   comments: Comment[];
   activity: Activity[];
   attachments: Attachment[];
   watchers: string[];
 }
 
-function patchDetail(taskId: string, fn: (d: NonNullable<ReturnType<typeof store.get>['detail']>) => Partial<DetailResponse>) {
+function patchDetail(taskId: string, fn: (d: NonNullable<ReturnType<typeof store.get>['detail']>) => Partial<Omit<DetailResponse, 'task'>>) {
   store.set((s) => (s.detail?.taskId === taskId ? { detail: { ...s.detail, ...fn(s.detail) } } : {}));
 }
 
@@ -41,7 +44,9 @@ const detail = {
     store.set({ detail: { taskId, loading: true, comments: [], activity: [], attachments: [], watchers: [] } });
     socket.viewing(taskId);
     try {
-      const d = await http.get<DetailResponse>(`/tasks/${taskId}/detail`);
+      const { task, ...d } = await http.get<DetailResponse>(`/tasks/${taskId}/detail`);
+      // the board only holds the card; the panel needs the notes and checklist too
+      fillWords(task);
       const comments = await opened(taskId, d.comments);
       if (store.get().detail?.taskId === taskId) store.set({ detail: { taskId, loading: false, ...d, comments } });
     } catch (err) {

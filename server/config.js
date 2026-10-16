@@ -124,6 +124,14 @@ const semaphore = Object.freeze({
   depth: envNumber('SEMAPHORE_DEPTH', 16, { min: 1, max: 32 }),
 });
 
+// The app starts with open work and recent history only. Finished tasks (done or canceled)
+// touched within these days come along, but never more than the newest `recentClosedMax` of
+// them; older ones load when a view asks for them.
+const tasks = Object.freeze({
+  recentClosedDays: envNumber('RECENT_CLOSED_DAYS', 30),
+  recentClosedMax: envNumber('RECENT_CLOSED_MAX', 1000, { min: 1 }),
+});
+
 const config = Object.freeze({
   port: envNumber('PORT', 3000, { max: 65535 }),
   host: env.HOST || '0.0.0.0',
@@ -142,6 +150,7 @@ const config = Object.freeze({
   plan,
   stealth,
   semaphore,
+  tasks,
   power,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),

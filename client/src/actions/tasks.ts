@@ -49,7 +49,7 @@ const tasks = {
         putTask(res.spawned);
         // the server copies a private task's sealed checklist as it was; clear the ticks here
         const copy = store.get().tasks[res.spawned.id];
-        if (copy?.sealed && !copy.locked && copy.checklist.some((i) => i.done)) {
+        if (copy?.sealed && !copy.locked && copy.checklist?.some((i) => i.done)) {
           void tasks.update(copy.id, { checklist: copy.checklist.map((i) => ({ ...i, done: false })) }, { quiet: true });
         }
         if (!quiet) toast.show(`Next one is ${taskKey(res.spawned)}, due ${dates.relative(res.spawned.dueDate!)}`, { tone: 'success' });

@@ -5,7 +5,6 @@ import toast from '../state/toast';
 import payerWallet from '../lib/payerWallet';
 import ethereum from '../lib/ethereum';
 import encodeTransfer from '../lib/encodeTransfer';
-import newStealthPayment from '../lib/stealth/newStealthPayment';
 import announceCall from '../lib/stealth/announceCall';
 import type Task from '../types/Task';
 import type Payment from '../types/Payment';
@@ -42,6 +41,8 @@ const bounties = {
       return recorded(task.id, await ethereum.send({ from, to: token.address, data: encodeTransfer(payee.address, amount) }));
     }
 
+    // the curve maths for one-time addresses loads only for a private payout
+    const { default: newStealthPayment } = await import('../lib/stealth/newStealthPayment');
     const one = newStealthPayment(payee.stealthMeta);
     const transfer = { to: token.address, data: encodeTransfer(one.address, amount) };
     const announce = { to: stealth.announcer, data: announceCall({ stealthAddress: one.address, ephemeralPublicKey: one.ephemeralPublicKey, viewTag: one.viewTag, token: token.address, amount }) };

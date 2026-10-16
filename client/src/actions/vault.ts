@@ -3,7 +3,6 @@ import store from '../state/store';
 import keyring from '../state/keyring';
 import ethereum from '../lib/ethereum';
 import keyMessage from '../lib/crypto/keyMessage';
-import identityFromSignature from '../lib/crypto/identityFromSignature';
 import b64u from '../lib/crypto/b64u';
 import records from '../state/records';
 import sealedCache from '../state/sealedCache';
@@ -28,6 +27,8 @@ const vault = {
     const me = store.get().me!;
     const keys = await http.get<{ userId: string; publicKey: string }[]>('/encryption-keys');
     const registered = keys.find((k) => k.userId === me.id)?.publicKey;
+    // the key derivation loads on first unlock rather than with the app
+    const { default: identityFromSignature } = await import('../lib/crypto/identityFromSignature');
     const identity = identityFromSignature(await sign());
     const publicKey = b64u.encode(identity.publicKey);
 

@@ -23,7 +23,6 @@ function open() {
     retry = 0;
     store.set({ connected: true });
     send({ type: 'presence', viewing });
-    // anything that happened while we were offline is picked up by a fresh bootstrap
     if (wasRetrying) onReconnect?.();
   };
   socket.onmessage = (e) => {

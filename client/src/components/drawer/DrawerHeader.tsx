@@ -6,6 +6,7 @@ import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import detail from '../../actions/detail';
 import focus from '../../actions/focus';
+import taskWords from '../../actions/taskWords';
 import toast from '../../state/toast';
 import taskKey from '../../lib/taskKey';
 import TimerButton from '../time/TimerButton';
@@ -39,9 +40,14 @@ export default function DrawerHeader({ task }: { task: Task }) {
 
   const duplicate = async () => {
     setMenu(false);
-    const { title, description, priority, projectId, goalId, assigneeId, dueDate, labels, checklist, estimate } = task;
-    const copyTask = await taskActions.create({ title: `${title} (copy)`, description, priority, projectId, goalId, assigneeId, dueDate, labels, estimate, private: task.private, checklist: checklist.map((i) => ({ ...i, done: false })) });
-    if (copyTask) detail.open(copyTask);
+    try {
+      const { title, description, checklist } = await taskWords(task);
+      const { priority, projectId, goalId, assigneeId, dueDate, labels, estimate } = task;
+      const copyTask = await taskActions.create({ title: `${title} (copy)`, description, priority, projectId, goalId, assigneeId, dueDate, labels, estimate, private: task.private, checklist: checklist.map((i) => ({ ...i, done: false })) });
+      if (copyTask) detail.open(copyTask);
+    } catch (err) {
+      toast.error(err);
+    }
   };
 
   return (

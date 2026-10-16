@@ -4,6 +4,9 @@ import putTask from '../state/putTask';
 import type TaskDetail from '../types/TaskDetail';
 import type Comment from '../types/Comment';
 import commentText from '../actions/commentText';
+import checkBuild from '../actions/checkBuild';
+import recountArchive from '../actions/recountArchive';
+import isArchived from '../lib/isArchived';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
@@ -23,6 +26,9 @@ export default function applyEvent(event: any): void {
   const s = store.get();
   switch (event.type) {
     case 'hello':
+      checkBuild(event.build);
+      store.set({ presence: event.presence });
+      break;
     case 'presence':
       store.set({ presence: event.presence });
       break;
@@ -30,9 +36,13 @@ export default function applyEvent(event: any): void {
       putTask(event.task);
       break;
     // the task went private (or was reassigned away) and we're no longer allowed to see it
-    case 'task.gone':
+    case 'task.gone': {
+      // an archived task, or one this tab never loaded, may be in the archive's counts
+      const held = s.tasks[event.id];
+      if (!held || isArchived(held, s.archive.before)) recountArchive();
       store.set({ tasks: records.drop(s.tasks, event.id) });
       break;
+    }
     case 'project':
       store.set({ projects: records.put(s.projects, event.project) });
       break;

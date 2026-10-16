@@ -3,6 +3,7 @@ import vault from './vault';
 import taskKeys, { type TaskKey } from './taskKeys';
 import taskSeal from './taskSeal';
 import commentText from './commentText';
+import taskWords from './taskWords';
 import type Task from '../types/Task';
 import type TaskPatch from '../types/TaskPatch';
 import type Comment from '../types/Comment';
@@ -24,7 +25,8 @@ async function moveComments(task: Task, to: TaskKey | null) {
 // Turns an edit made in plain text into what the server accepts for a private task. Making a
 // task private seals it under a fresh key, handing it to someone new does the same, opening it
 // up sends the plain text back, and an ordinary edit re-seals the words under the same key.
-// Anything that doesn't touch a private task's words passes through as it is.
+// Anything that doesn't touch a private task's words passes through as it is. Every one of
+// these sends all of the words, so a task held only as a card has its notes fetched first.
 export default async function sealedPatch(task: Task, patch: TaskPatch): Promise<Record<string, unknown>> {
   const sealing = patch.private === true && !task.sealed;
   const opening = patch.private === false && Boolean(task.sealed);
@@ -35,7 +37,8 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   if (task.locked) throw new Error('Unlock with your wallet to change this private task.');
   await vault.unlock();
   const next = { ...task, ...patch };
-  const words = { title: next.title, description: next.description, checklist: next.checklist };
+  const held = await taskWords(task);
+  const words = { title: patch.title ?? held.title, description: patch.description ?? held.description, checklist: patch.checklist ?? held.checklist };
   const rest = Object.fromEntries(Object.entries(patch).filter(([k]) => !(WORDS as readonly string[]).includes(k)));
 
   if (opening) return { ...rest, private: false, ...words, comments: await moveComments(task, null) };

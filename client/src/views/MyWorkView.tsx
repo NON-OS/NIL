@@ -16,6 +16,7 @@ import meta from '../lib/meta';
 import cx from '../lib/cx';
 import type Task from '../types/Task';
 import RemindersPanel from '../components/time/RemindersPanel';
+import useArchiveSince from '../hooks/useArchiveSince';
 
 const WEEK = 7 * 86_400_000;
 
@@ -42,6 +43,8 @@ export default function MyWorkView() {
   const all = useTasks();
   const [draft, setDraft] = useState('');
   const today = dates.today();
+  // the week-over-week count looks back two weeks, which recent history nearly always holds
+  useArchiveSince(dates.parse(dates.addDays(today, -15)).getTime());
 
   const mine = useMemo(() => all.filter((t) => t.assigneeId === me.id), [all, me.id]);
   const open = useMemo(() => mine.filter((t) => !meta.isClosed(t.status)).sort((a, b) => (a.dueDate ?? '9999').localeCompare(b.dueDate ?? '9999') || b.priority - a.priority), [mine]);

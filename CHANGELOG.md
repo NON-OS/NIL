@@ -8,8 +8,17 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **A tab notices a new deploy.** The server tells open tabs which build it serves, and a tab running an older one shows "A new version of Nil is ready" with a Reload button. A tab that asks for a screen whose files a deploy removed reloads once by itself. An error no screen handles now shows a plain page with a Reload button instead of a blank one. Nothing about the error leaves the browser.
 
 ### Changed
+
+- **Big workspaces start fast.** The app starts with open work and recent history as cards: title, status, dates, labels and checklist progress. Notes and checklists load when a task is opened. Finished tasks nobody has touched in 30 days stay on the server until a view needs them: All tasks and project lists have a Load older button, the calendar fetches finished tasks due in the month on screen, Insights and status decks load the weeks they cover, and search looks through them too. Goal and project progress still counts every finished task, and a finished task with an unpaid bounty always loads. `RECENT_CLOSED_DAYS` (30) and `RECENT_CLOSED_MAX` (1000) set how much history comes up front. On a test workspace of 20,000 tasks, the first load went from 30 MB and 0.9 s of server time to 3.5 MB and 0.14 s.
+- A private task starts as its encrypted title and checklist; its encrypted notes arrive when it's opened.
+- Tabs reconnecting after a server restart spread their refresh over a few seconds instead of all asking at once.
+- **Smaller app download.** Settings, Docs, Votes, Bounties, Proof of work, Verify, Insights, Calendar, Goals, Time, sign-in and the public pages load the first time they're opened, and the cryptography for private tasks and payouts loads on first unlock. The code needed to start went from 612 kB to 414 kB (193 kB to 130 kB compressed). Libraries sit in files of their own that stay cached, so most deploys only change a 184 kB file.
+- The Caddyfile in `docs/DEPLOY.md` compresses responses with `encode zstd gzip`. Add that line to yours.
+- API: `GET /api/bootstrap?tasks=cards` returns task cards and an `archive` section, and `GET /api/tasks/archive` and `/api/tasks/archive/summary` page through older finished tasks. Plain `GET /api/bootstrap` still returns every task in full, for tabs opened before this release and for scripts. Every task now carries `steps`, its checklist progress.
+- Live updates are encoded once for everyone who gets the same one, instead of once per open tab.
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
@@ -17,6 +26,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 ### Fixed
 
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
+- After a deploy, the service worker could store the app's page in place of a script that no longer existed, which broke that screen until the browser's cache was cleared. It now stores only real build files, and the server answers a missing build file with a 404. While the server restarts, an installed app opens from its stored copy instead of an error page.
 
 ## 3.0.0 (2026-10-15)
 

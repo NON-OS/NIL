@@ -18,6 +18,7 @@ import projects from './projects.js';
 import labels from './labels.js';
 import goals from './goals.js';
 import tasks from './tasks.js';
+import taskArchive from './taskArchive.js';
 import comments from './comments.js';
 import attachments from './attachments.js';
 import focus from './focus.js';
@@ -65,7 +66,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
   api.use(router);
 }
 

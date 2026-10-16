@@ -11,6 +11,7 @@ import router from '../../lib/router';
 import fuzzyScore from '../../lib/fuzzyScore';
 import meta from '../../lib/meta';
 import decks from '../../actions/decks';
+import useArchiveSearch from '../../hooks/useArchiveSearch';
 import isAdminUser from '../../lib/isAdmin';
 
 interface Item {
@@ -87,6 +88,8 @@ export default function CommandPalette() {
     const order = q ? ['Tasks', 'Projects', 'Goals', 'Go to', 'Actions'] : ['Actions', 'Go to', 'Projects', 'Goals'];
     return out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.score - a.score).slice(0, 40);
   }, [query, tasks, projects, goals, prefix, aiOn, isAdmin]);
+
+  useArchiveSearch(query);
 
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
