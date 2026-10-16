@@ -206,6 +206,8 @@ function announcer(value) {
 const stealth = Object.freeze({
   announcer: announcer((env.STEALTH_ANNOUNCER ?? '').trim()),
   gasTopUpWei: /^\d+$/.test(env.STEALTH_GAS_TOPUP_WEI ?? '') ? env.STEALTH_GAS_TOPUP_WEI : '300000000000000',
+  // the least tip a move out of a one-time address offers, whatever the node suggests
+  minTipWei: /^\d+$/.test(env.STEALTH_MIN_TIP_WEI ?? '') ? env.STEALTH_MIN_TIP_WEI : '50000000',
   // how long a confirmed payout keeps being checked for a late announcement
   announceCheckDays: envNumber('STEALTH_ANNOUNCE_CHECK_DAYS', 7),
   // payout balances are looked up one address at a time, at random moments within this window

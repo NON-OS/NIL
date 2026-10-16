@@ -63,6 +63,7 @@ export default function mockChain() {
   const calls = [];
   const sent = [];
   let callDelayMs = 0;
+  let priorityFee = 100_000_000n;
   const genesis = Math.floor(Date.now() / 1000);
   let block = 1000;
   let chainId = 1;
@@ -174,7 +175,7 @@ export default function mockChain() {
           if (tag === 'finalized' && finalityLag === null) throw new Error('unknown block tag finalized');
           const n = tag === 'latest' ? block : tag === 'finalized' ? block - finalityLag : Number(tag);
           result = n <= block ? { number: hex(n), hash: blockHash(n), timestamp: hex(blockTime(n)), baseFeePerGas: '0x3b9aca00' } : null;
-        } else if (method === 'eth_maxPriorityFeePerGas') result = '0x5f5e100';
+        } else if (method === 'eth_maxPriorityFeePerGas') result = hex(priorityFee);
         else if (method === 'eth_sendRawTransaction') {
           sent.push(params[0]);
           result = `0x${sent.length.toString(16).padStart(64, 'f')}`;
@@ -207,6 +208,8 @@ export default function mockChain() {
     setStake: (address, wei) => stakes.set(address.toLowerCase(), BigInt(wei)),
     sent,
     setChainId: (id) => (chainId = id),
+    // the tip the node suggests for eth_maxPriorityFeePerGas, in wei
+    setPriorityFee: (wei) => (priorityFee = BigInt(wei)),
     mine: (blocks) => (block += blocks),
     head: () => block,
     // null: the node doesn't know the `finalized` tag
