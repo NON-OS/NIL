@@ -156,7 +156,7 @@ What Nil protects, and what it doesn't.
 - Security headers: a strict CSP with no inline or external scripts, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP and CORP, a restrictive `Permissions-Policy`, and HSTS over HTTPS.
 - Sign-in, applications, ballots, AI and other sensitive endpoints are rate-limited.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser. Everything else downloads, so an uploaded HTML file can never run.
-- SQLite `secure_delete` is on, so deleted rows are overwritten in the database file. Trash is purged after `TRASH_DAYS`, read notifications after 90 days.
+- SQLite `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is purged after `TRASH_DAYS`, read notifications after 90 days.
 - Receipts are signed with a key stored outside the database (`DATA_DIR/keys`).
 - CSV exports neutralise spreadsheet formulas.
 

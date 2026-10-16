@@ -10,7 +10,7 @@ In **Settings → Data & privacy → Zero-state**, admins can set how long each 
 - **Comments** on any task
 - **Task history** (the activity log)
 
-The choices are: keep forever, or erase after 1, 7, 30, 90, 180 or 365 days. An hourly sweep erases expired data for good. SQLite's `secure_delete` overwrites the freed space in the database file.
+The choices are: keep forever, or erase after 1, 7, 30, 90, 180 or 365 days. An hourly sweep erases expired data for good. SQLite's `secure_delete` overwrites the freed space in the database file, and after every sweep, wipe or erase the write-ahead log (`nonos.db-wal`) is folded back in and cut to nothing, so erased text doesn't linger there either. Neither can reach copies the filesystem, a snapshot or a backup already made.
 
 Receipts survive this, so proofs people already exported stay valid. The private data needed to reveal a title is erased along with the task.
 
