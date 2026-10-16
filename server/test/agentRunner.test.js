@@ -359,6 +359,26 @@ test('the OpenAI-compatible runner works against any chat completions server', a
   assert.match(failed.error, /tools not supported/);
 });
 
+test('an OpenAI-compatible server that refuses max_tokens gets the request again without it', async () => {
+  providerFor.replace(null);
+  const local = sql.get("SELECT user_id FROM agents WHERE runner = 'openai'").user_id;
+  const t = await newTask({ title: 'Draft the incident timeline' });
+  const before = chat.requests.length;
+  chat.script([
+    { status: 400, body: { error: { message: "This model's maximum context length is 8192 tokens. However, you requested 32300 tokens. Please reduce max_tokens." } } },
+    { body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'get_task', arguments: JSON.stringify({ key: key(t) }) } }] }, finish_reason: 'tool_calls' }] } },
+    { body: { choices: [{ message: { role: 'assistant', content: 'Timeline: 09:12 alert, 09:20 rollback, 09:31 resolved.' }, finish_reason: 'stop' }] } },
+  ]);
+  await ana('PATCH', `/api/tasks/${t.id}`, { assigneeId: local });
+  const run = await settled(t.id);
+  assert.equal(run.status, 'done', run.error);
+  const sent = chat.requests.slice(before);
+  assert.equal(sent.length, 3);
+  assert.equal(sent[0].body.max_tokens, 32000, 'AGENT_MAX_OUTPUT_TOKENS by default');
+  assert.ok(sent.slice(1).every((r) => !('max_tokens' in r.body)));
+  assert.match(comments(t.id).at(-1).body, /^Timeline:/);
+});
+
 test('the Anthropic runner streams through the official SDK with adaptive thinking, and no fallbacks unless asked', async () => {
   providerFor.replace(null);
   const t = await newTask({ title: 'Check the release checklist' });
