@@ -157,6 +157,22 @@ test('the relay prepares and sends only transactions signed by the payee’s own
   assert.equal((await mia('POST', '/api/stealth/broadcast', { raw: `${raw}00` })).status, 400);
 });
 
+test('a move out of a one-time address never offers a zero tip, even when the node suggests one', async () => {
+  const fees = async () => (await mia('POST', '/api/stealth/prepare', { from: mine.stealthAddress, to: ownerWallet.address, data: '0x', value: '0' })).data;
+  try {
+    // the public node suggested exactly this when blocks had room
+    chain.setPriorityFee(0n);
+    const quiet = await fees();
+    assert.equal(quiet.maxPriorityFeePerGas, '50000000');
+    assert.equal(quiet.maxFeePerGas, String(2n * 1_000_000_000n + 50_000_000n));
+    // a busier chain's suggestion above the floor is used as it is
+    chain.setPriorityFee(2_000_000_000n);
+    assert.equal((await fees()).maxPriorityFeePerGas, '2000000000');
+  } finally {
+    chain.setPriorityFee(100_000_000n);
+  }
+});
+
 test('payout balances are read one address at a time, later, with another payee’s address mixed in', async () => {
   // Sam gets a private payout too, so there is someone else's address to mix in
   const samVector = VECTORS[2];

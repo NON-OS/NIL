@@ -2,6 +2,7 @@ import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import config from '../config.js';
+import transferFee from '../services/transferFee.js';
 import buildId from '../lib/buildId.js';
 import toUser from '../mappers/toUser.js';
 import userRows from '../services/userRows.js';
@@ -81,7 +82,7 @@ router.get(
       plan: guestScope.of(req.user.id) ? { unlocked: plan.status().unlocked } : plan.status(),
       ai: config.ai.enabled,
       nox: config.nox.enabled
-        ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer }
+        ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer, transferFeeBps: transferFee.current().bps }
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
       stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei } : null,

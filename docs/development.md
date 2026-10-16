@@ -78,7 +78,7 @@ client/src/
 client/public/zk/ circuit files served to browsers
 docs/             these pages, also bundled into the app as its help center
 circuits/         encrypted-ballot circuit and its setup record
-scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live agent checks (scripts/live/agents)
+scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live checks for agents and the chain (scripts/live/)
 deploy/tor/       Tor onion service image
 marketing/        video kits; not part of the app or the Docker image
 ```
@@ -94,6 +94,32 @@ The Docker build copies `docs/` for this reason, so keep it in the build context
 ## Stack
 
 Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, snarkjs, Semaphore, @zk-kit/baby-jubjub, poseidon-lite and the Anthropic SDK (used only when built-in AI is on). The web app uses React 18, TypeScript, Vite, dnd-kit, lucide icons and pptxgenjs. The Geist and JetBrains Mono fonts are bundled.
+
+## Live chain checks
+
+`npm test` runs against a small fake Ethereum node. The live chain checks run Nil against a local fork of Ethereum mainnet instead: the real NOX, staking, Zero-State Pass, USDC, ERC-5564 announcer, Chainlink feed, Uniswap V2 pair and Coinbase Smart Wallet factory, with their real state, and every payment a real signed transaction. They are slow, need network access and an anvil binary, and are never part of `npm test`. Run them before a release that touches anything on-chain.
+
+You need anvil from Foundry, either from `foundryup` or from npm (`npm install -g @foundry-rs/anvil`), on your PATH or named in `ANVIL`. The browser check also needs `npm run build` and Playwright: `npm install --prefix marketing/video`, then `npx --prefix marketing/video playwright install chromium` (or set `CHROMIUM_PATH`).
+
+```bash
+node scripts/live/chain/checkNode.mjs               # read-only: does NOX_RPC_URL have what Nil needs?
+node scripts/live/chain/check.mjs                   # every on-chain flow through the API
+node scripts/live/chain/check.mjs bounties votes    # only some flows (sign-in and Nil Pro always run first)
+node scripts/live/chain/checkBrowser.mjs            # the same flows through the app in Chromium
+node scripts/live/chain/up.mjs                      # leave a fork, wallets and Nil running to try by hand
+```
+
+`check.mjs` covers wallet sign-in with a plain wallet and with a smart wallet before and after it's deployed; bounty payments of the exact amount, short and topped up, over, through a reorg, and stuck then cancelled; private payouts found from the announcements alone and moved out with the gas top-up; Nil Pro invoices in USDC and NOX paid from another wallet, through a reorg, with seats, credit and a late payment, and NOX priced from the Uniswap V2 pair; the token-holder door with NOX held, staked and as passes, the grace notice and the lockout after it; weighted votes signed by plain and smart wallets and an encrypted anonymous one; and NOX switching on a transfer fee.
+
+How the checks are put together:
+
+- anvil forks mainnet at its latest finalized block and keeps chain ID 1, so Nil runs on its mainnet defaults. Old state is read lazily from free archive-capable public nodes listed in `scripts/live/chain/mainnet.mjs`; the default public node can't serve a fork, since it keeps only about 128 blocks of state. `finalized` sits 64 blocks under the head, like mainnet, and the checks mine on demand to reach it.
+- Nil talks to the fork through a proxy that refuses what `https://ethereum-rpc.publicnode.com` refuses without a key: logs older than 10,000 blocks, state older than about 128 blocks, more than 20,000 logs at once, and a suggested tip of zero. A flow that works here works against that node.
+- Test wallets get NOX, USDC and passes from real holders on the fork, through the token contracts themselves (anvil sends as those holders without their keys). When the listed holders run dry after many runs, a big staker unstakes more; restarting anvil starts fresh.
+- Each person has a key in memory. Transactions are signed and sent raw, as from a browser wallet; the smart wallet is a real Coinbase Smart Wallet whose owner key signs, and which sends through its own `execute`. In the browser, `injectWallet.mjs` puts that wallet into the page as `window.ethereum` and announces it (EIP-6963), with atomic batches (EIP-5792) for the smart wallet.
+- A reorg is a snapshot and a revert. Waiting days isn't practical, so two steps move a date in Nil's database instead: an invoice's deadline and a holder's grace period. The fork's Chainlink answer never updates, so the checks lift its age limit.
+
+`LIVE_CHAIN_RPC=http://127.0.0.1:8545` makes the checks reuse a fork that `up.mjs` left running, which saves a few minutes per run. Each run boots its own Nil with a fresh data folder; its log is named at the start of the output.
 
 ## House rules
 

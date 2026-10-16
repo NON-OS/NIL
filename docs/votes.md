@@ -33,6 +33,8 @@ On a server that charges for [Nil Pro](nox-and-nil-pro.md), starting a vote need
 
 Click an option and sign the ballot in your wallet. The ballot must be signed by a wallet linked to your account. You can change your vote while it's open by clicking another option and signing again.
 
+Smart wallets, passkey wallets like Coinbase Smart Wallet among them, can vote too. Their signature doesn't reveal who made it, so Nil asks the chain whether the wallet accepts it, the same way as at sign-in, and notes the block it asked at.
+
 Unless the results are sealed, everyone sees the running totals. The app shows each person only their own choice. The audit file, which admins can download, does list every ballot's wallet address and choice, so admins can see who voted what. Use an anonymous vote when that matters.
 
 In a vote weighted by voting power, you need some power at the moment the vote opened. Otherwise Nil tells you that you had none then.
@@ -75,13 +77,15 @@ voting power = NOX in linked wallets + NOX staked + Zero-State Passes held × po
 
 Tokens moved after that don't change anything, and people who join later have no power in that vote. [NOX, voting power and Nil Pro](nox-and-nil-pro.md#voting-power) explains each part.
 
+If the server's Ethereum node can't answer for every wallet while the power is read, because it's down or won't serve that block, the vote doesn't open and the admin is asked to try again. Nobody is ever counted as holding nothing because of a node problem. A contract that refuses the read itself, such as a paused staking contract, does count as zero for everyone, and the audit file shows it.
+
 ## Results and closing
 
 A vote closes by itself at its end time. An admin can close it early with **Close vote**, or delete it with **Delete**. Sealed results appear once it closes.
 
 Admins can download an **Audit file** for any vote, so anyone can recount it:
 
-- for a signed vote, every ballot with its signed message, signature, wallet, choice and weight, and for a weighted vote the block, the contracts and each member's power,
+- for a signed vote, every ballot with its signed message, signature, wallet, choice and weight, and for a weighted vote the block, the contracts and each member's power. Each ballot says how its signature was checked in `signatureCheck`. A plain wallet's ballot (`ecrecover`) can be recounted from the file alone, by recovering the signer from the signature. A smart wallet's ballot can't: it's checked on-chain, and the file gives the network (`chainId`) and the block it was checked at (`checkedAtBlock`). To recount one, ask the wallet with `isValidSignature(hash, signature)` at that block (`eip1271`, which needs a node that keeps old state), or run the EIP-6492 validator on it (`eip6492`), where hash is the EIP-191 hash of the message,
 - for an anonymous vote, the voter group, every accepted group root and every proof, with no names,
 - for an encrypted vote, the census, the roots, the vote's public key, each trustee's commitments with their proofs, their decryption proofs, and every encrypted ballot with its proof.
 

@@ -5,10 +5,11 @@ import finalizedBlock from '../chain/finalizedBlock.js';
 import attachReceipt from './attachReceipt.js';
 import finalizePayment from './finalizePayment.js';
 import log from '../lib/log.js';
+import feeAt from '../services/feeAt.js';
 
 async function follow(row, receipt, final, now) {
   if (row.status === 'seen') {
-    if (receipt.state === 'mined') attachReceipt(row, receipt);
+    if (receipt.state === 'mined') attachReceipt(row, receipt, { feeBps: await feeAt(receipt.blockNumber) });
     else if (receipt.state === 'failed') sql.run("UPDATE billing_payments SET status = 'failed', problem = ?, checked_at = ? WHERE id = ?", `The transaction failed on-chain, so nothing reached ${config.billing.treasuryName}. Send the payment again.`, now, row.id);
     else if (now - row.created_at > config.nox.missingTxMs) sql.run("UPDATE billing_payments SET status = 'dropped', problem = 'The transaction never showed up on-chain.', checked_at = ? WHERE id = ?", now, row.id);
     else sql.run('UPDATE billing_payments SET checked_at = ? WHERE id = ?', now, row.id);

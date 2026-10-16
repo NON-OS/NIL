@@ -11,6 +11,8 @@ import runAgentQueue from './runAgentQueue.js';
 import deliverWebhooks from './deliverWebhooks.js';
 import agentDueSoon from './agentDueSoon.js';
 import pruneAgentData from './pruneAgentData.js';
+import recordPoolPrice from './recordPoolPrice.js';
+import checkTransferFee from './checkTransferFee.js';
 
 // Starts every background job on its interval from config. Purge and optimize also run once
 // right away, so a server that restarts often still gets to them.
@@ -30,6 +32,8 @@ export default function startJobs() {
     { run: safeJob('webhooks', deliverWebhooks, { signal }), every: config.agents.pollMs, now: true },
     { run: safeJob('agentDueSoon', agentDueSoon, { signal }), every: config.jobs.agentDueSoonMs },
     { run: safeJob('agentPrune', pruneAgentData, { signal }), every: config.jobs.agentPruneMs },
+    { run: safeJob('poolPrice', recordPoolPrice, { signal }), every: config.jobs.poolPriceMs, now: true },
+    { run: safeJob('transferFee', checkTransferFee, { signal }), every: config.jobs.transferFeeMs, now: true },
   ];
   const timers = schedule.map(({ run, every, now }) => {
     if (now) run();

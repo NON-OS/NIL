@@ -8,12 +8,12 @@ import parseJSON from '../lib/parseJSON.js';
 import HttpError from '../lib/HttpError.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import challenges from '../auth/challenges.js';
-import siwe from '../auth/siwe.js';
 import hub from '../realtime/hub.js';
 import notify from '../services/notify.js';
 import voteMessage from '../services/voteMessage.js';
 import voteWeight from '../services/voteWeight.js';
 import snapshotPower from '../services/snapshotPower.js';
+import ballotSigner from '../services/ballotSigner.js';
 import zspPower from '../services/zspPower.js';
 import closeProposal from '../services/closeProposal.js';
 import publicWorkspace from '../services/publicWorkspace.js';
@@ -109,24 +109,23 @@ router.post(
   }),
 );
 
-// Step 2: the signature must come from one of the voter's own linked wallets.
+// Step 2: the signature must come from one of the voter's own linked wallets. A smart wallet
+// can't be recovered from its signature, so the browser also says which wallet signed.
 router.post(
   '/proposals/:id/vote',
   route(async (req) => {
     const ballot = challenges.take(req.body?.ballotId, 'vote');
     if (!ballot || ballot.proposalId !== req.params.id || ballot.userId !== req.user.id) throw HttpError.badRequest('That ballot expired. Vote again.');
     const proposal = openProposal(req.params.id);
-    const address = siwe.recover(ballot.message, req.body?.signature);
-    if (!address || !sql.get("SELECT 1 FROM credentials WHERE user_id = ? AND kind = 'wallet' AND external_id = ?", req.user.id, address)) {
-      throw new HttpError(401, 'Sign the vote with a wallet linked to your account.');
-    }
+    const signer = typeof req.body?.signature === 'string' ? await ballotSigner(req.user.id, ballot.message, req.body.signature, req.body?.address) : null;
+    if (!signer) throw new HttpError(401, 'Sign the vote with a wallet linked to your account.');
     const weight = voteWeight(req.user.id, proposal);
     if (weight === '0') throw HttpError.forbidden(`This vote counts voting power from when it opened (${config.nox.symbol} held or staked, and Zero-State Passes), and you had none then.`);
     sql.run(
-      `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+      `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
-         message = excluded.message, signature = excluded.signature, created_at = excluded.created_at`,
-      proposal.id, req.user.id, ballot.choice, weight, address, ballot.message, req.body.signature, Date.now(),
+         message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
+      proposal.id, req.user.id, ballot.choice, weight, signer.address, ballot.message, req.body.signature, signer.checkedBy, signer.block, Date.now(),
     );
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', proposal.id), req.user) };
@@ -186,6 +185,8 @@ router.get(
     return {
       type: 'nonos.vote-audit',
       v: 1,
+      // the network smart-wallet ballots were checked on
+      chainId: config.nox.chainId,
       proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), weighting: row.weighting, closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
       power:
         row.weighting === 'power'
@@ -200,12 +201,16 @@ router.get(
                 .map((m) => ({ wallets: (m.wallets ?? '').split(',').filter(Boolean), nox: m.nox, staked: m.staked, zsp: m.zsp, power: m.power })),
             }
           : null,
-      ballots: sql.all('SELECT address, choice, weight, message, signature, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({
+      // a plain wallet's ballot is checked by recovering the signer (ecrecover); a smart wallet's
+      // only on-chain, by asking it (EIP-1271) or the EIP-6492 validator at the block given
+      ballots: sql.all('SELECT address, choice, weight, message, signature, checked_by, checked_block, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({
         address: v.address,
         choice: v.choice,
         weight: v.weight,
         message: v.message,
         signature: v.signature,
+        signatureCheck: v.checked_by,
+        ...(v.checked_block !== null ? { checkedAtBlock: v.checked_block } : {}),
         castAt: new Date(v.created_at).toISOString(),
       })),
     };

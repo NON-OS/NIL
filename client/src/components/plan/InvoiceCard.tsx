@@ -73,6 +73,11 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
 
       {invoice.state === 'confirming' && <p className="plan-callout">Payment found. It counts once its block is final, usually within 15 minutes on Ethereum.</p>}
       {invoice.state === 'seen' && <p className="plan-callout">Your transaction was sent and isn’t in a block yet. This updates by itself.</p>}
+      {invoice.missedBlocks?.map((gap) => (
+        <p key={`${gap.symbol}-${gap.from}`} className="plan-callout warn">
+          Nil couldn’t look through blocks {gap.from.toLocaleString()} to {gap.to.toLocaleString()} for {gap.symbol} payments: its Ethereum node no longer keeps that part of the history. If you paid in that time, paste the transaction hash below so it counts.
+        </p>
+      ))}
 
       {invoice.status === 'open' && amount && (
         <>

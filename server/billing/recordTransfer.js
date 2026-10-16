@@ -8,7 +8,7 @@ import spentElsewhere from './spentElsewhere.js';
 // "confirming" until its block is final. A transfer is saved once (by transaction and log), a
 // transaction that pays a bounty is never counted here, and a transaction someone told us about
 // before it was mined gives up its placeholder. Returns the payment id, or null.
-export default function recordTransfer(transfer, { named = false } = {}) {
+export default function recordTransfer(transfer, { named = false, feeBps = 0 } = {}) {
   if (transfer.to !== config.plan.treasury) return null;
   const hash = transfer.txHash;
   const existing = sql.get('SELECT id, status, block_hash FROM billing_payments WHERE tx_hash = ? AND log_index = ?', hash, transfer.logIndex);
@@ -20,15 +20,15 @@ export default function recordTransfer(transfer, { named = false } = {}) {
     return existing.id;
   }
   if (spentElsewhere(hash)) return null;
-  const invoiceId = matchTransfer(transfer, { named });
-  if (!invoiceId) return null;
+  const match = matchTransfer(transfer, { named, feeBps });
+  if (!match) return null;
 
   const id = newId();
   sql.tx(() => {
     sql.run("DELETE FROM billing_payments WHERE tx_hash = ? AND log_index = -1 AND status IN ('seen', 'unmatched')", hash);
     sql.run(
-      "INSERT INTO billing_payments (id, invoice_id, tx_hash, log_index, token, from_address, amount, status, block_number, block_hash, created_at, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, 'confirming', ?, ?, ?, ?)",
-      id, invoiceId, hash, transfer.logIndex, transfer.token, transfer.from, String(transfer.value), transfer.blockNumber, transfer.blockHash, Date.now(), Date.now(),
+      "INSERT INTO billing_payments (id, invoice_id, tx_hash, log_index, token, from_address, amount, token_fee, status, block_number, block_hash, created_at, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirming', ?, ?, ?, ?)",
+      id, match.invoiceId, hash, transfer.logIndex, transfer.token, transfer.from, String(transfer.value), String(match.fee), transfer.blockNumber, transfer.blockHash, Date.now(), Date.now(),
     );
   });
   return id;

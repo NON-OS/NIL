@@ -3,6 +3,7 @@ import config from '../config.js';
 import paidFraction from './paidFraction.js';
 import coverage from './coverage.js';
 import paymentLink from './paymentLink.js';
+import scanGaps from './scanGaps.js';
 
 const DAY = 86_400_000;
 const CENT = 10_000;
@@ -14,6 +15,8 @@ const toPayment = (p, symbols) => ({
   token: p.token,
   symbol: p.token ? symbols.get(p.token) ?? null : config.nox.symbol,
   amount: p.amount,
+  // what the token kept as a transfer fee on the way, when it keeps one
+  fee: p.token_fee && p.token_fee !== '0' ? p.token_fee : null,
   usd: p.usd,
   onTime: Boolean(p.on_time),
   status: p.status,
@@ -84,6 +87,9 @@ export default function invoiceView(id) {
     overpaidUsd,
     grantedDays: Math.round((inv.granted_ms / DAY) * 100) / 100,
     payments: payments.map((p) => toPayment(p, symbols)),
+    // blocks the treasury scan couldn't read while this invoice was open: a payment sent then
+    // is only counted once someone names its transaction
+    missedBlocks: inv.status === 'open' ? amounts.flatMap((a) => scanGaps.after(a.token, inv.start_block).map((g) => ({ symbol: a.symbol, from: Math.max(g.from, inv.start_block), to: g.to }))) : [],
     retryOf: inv.retry_of,
     startBlock: inv.start_block,
     createdAt: inv.created_at,

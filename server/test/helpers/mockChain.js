@@ -39,6 +39,10 @@ const OBSERVE = selector('observe(uint32[])');
 const TOKEN0 = selector('token0()');
 const TOKEN1 = selector('token1()');
 const LATEST_ROUND = selector('latestRoundData()');
+const GET_RESERVES = selector('getReserves()');
+const PRICE0 = selector('price0CumulativeLast()');
+const PRICE1 = selector('price1CumulativeLast()');
+const FEES = selector('fees()');
 const DECIMALS = selector('decimals()');
 const hex = (n) => `0x${n.toString(16)}`;
 
@@ -57,12 +61,18 @@ export default function mockChain() {
   const forks = new Map();
   const times = new Map();
   const pools = new Map();
+  const pairs = new Map();
   const feeds = new Map();
   const failing = new Set();
+  // requests the node refuses outright, as [match(method, params), { status, error }]
+  const faults = [];
   // every call the server made, in order, so tests can check what the node got to see and when
   const calls = [];
   const sent = [];
   let callDelayMs = 0;
+  let priorityFee = 100_000_000n;
+  // NOX's fees(): null answers nothing, like a token without it
+  let transferFeeBps = null;
   const genesis = Math.floor(Date.now() / 1000);
   let block = 1000;
   let chainId = 1;
@@ -94,6 +104,14 @@ export default function mockChain() {
         return `0x${word(64)}${word(64 + 32 * 3)}${word(2)}${word(BigInt(pool.tick) * (now - seconds))}${word(BigInt(pool.tick) * now)}${word(2)}${word(0)}${word(0)}`;
       }
     }
+    const pair = pairs.get(contract);
+    if (pair) {
+      if (data === GET_RESERVES) return `0x${word(pair.reserve0)}${word(pair.reserve1)}${word(pair.last)}`;
+      if (data === PRICE0) return `0x${word(pair.price0)}`;
+      if (data === PRICE1) return `0x${word(pair.price1)}`;
+      if (data === TOKEN0) return `0x${pad(pair.token0)}`;
+      if (data === TOKEN1) return `0x${pad(pair.token1)}`;
+    }
     const feed = feeds.get(contract);
     if (feed) {
       if (data === DECIMALS) return `0x${word(feed.decimals)}`;
@@ -105,6 +123,8 @@ export default function mockChain() {
     // getStakeInfo(address): staked amount first, six more words after it
     if (data.startsWith('0xc3453153')) return `0x${pad((stakes.get(holder) ?? 0n).toString(16))}${pad('0').repeat(6)}`;
     if (data === DECIMALS) return `0x${pad('12')}`;
+    // fees(): buy, sell, transfer, then how the fee is shared out, as the NOX token answers
+    if (data === FEES && transferFeeBps !== null) return `0x${word(0)}${word(300)}${word(transferFeeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
     return '0x';
   }
 
@@ -151,6 +171,12 @@ export default function mockChain() {
     req.on('end', async () => {
       const { id, method, params } = JSON.parse(raw);
       calls.push({ method, params, at: Date.now() });
+      const fault = faults.find(([match]) => match(method, params))?.[1];
+      if (fault) {
+        res.statusCode = fault.status;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ jsonrpc: '2.0', id, error: fault.error }));
+      }
       let result = null;
       let error = null;
       try {
@@ -174,7 +200,7 @@ export default function mockChain() {
           if (tag === 'finalized' && finalityLag === null) throw new Error('unknown block tag finalized');
           const n = tag === 'latest' ? block : tag === 'finalized' ? block - finalityLag : Number(tag);
           result = n <= block ? { number: hex(n), hash: blockHash(n), timestamp: hex(blockTime(n)), baseFeePerGas: '0x3b9aca00' } : null;
-        } else if (method === 'eth_maxPriorityFeePerGas') result = '0x5f5e100';
+        } else if (method === 'eth_maxPriorityFeePerGas') result = hex(priorityFee);
         else if (method === 'eth_sendRawTransaction') {
           sent.push(params[0]);
           result = `0x${sent.length.toString(16).padStart(64, 'f')}`;
@@ -207,6 +233,10 @@ export default function mockChain() {
     setStake: (address, wei) => stakes.set(address.toLowerCase(), BigInt(wei)),
     sent,
     setChainId: (id) => (chainId = id),
+    // the tip the node suggests for eth_maxPriorityFeePerGas, in wei
+    setPriorityFee: (wei) => (priorityFee = BigInt(wei)),
+    // the token's fee on transfers between wallets, in basis points, as NOX's fees() reports it
+    setTransferFee: (bps) => (transferFeeBps = bps),
     mine: (blocks) => (block += blocks),
     head: () => block,
     // null: the node doesn't know the `finalized` tag
@@ -215,10 +245,31 @@ export default function mockChain() {
     blockTime,
     // a Uniswap V3 pool whose time-weighted average tick is `tick`
     setPool: (address, { token0, token1, tick, fail = false }) => pools.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), tick, fail }),
+    // A Uniswap V2 pair holding these reserves since the current head, with its cumulative prices
+    // starting from zero.
+    setPair(address, { token0, token1, reserve0, reserve1 }) {
+      pairs.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), price0: 0n, price1: 0n, last: BigInt(blockTime(block)) });
+    },
+    // A trade in the head block that leaves the pair with new reserves. Like the real contract it
+    // first adds the old price for the time since the last trade to the cumulative prices.
+    tradePair(address, { reserve0, reserve1 }) {
+      const pair = pairs.get(address.toLowerCase());
+      const now = BigInt(blockTime(block));
+      pair.price0 += ((pair.reserve1 << 112n) / pair.reserve0) * (now - pair.last);
+      pair.price1 += ((pair.reserve0 << 112n) / pair.reserve1) * (now - pair.last);
+      Object.assign(pair, { reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), last: now });
+    },
     // a Chainlink feed answering `answer` with `decimals`, last updated at `updatedAt` (seconds)
     setFeed: (address, { answer, decimals = 8, updatedAt = Math.floor(Date.now() / 1000) }) => feeds.set(address.toLowerCase(), { answer: BigInt(answer), decimals, updatedAt }),
     // every call to this contract reverts
     breakContract: (address) => failing.add(address.toLowerCase()),
+    // The node refuses requests that `match(method, params)` picks, the way public nodes do: by
+    // default an HTTP 403 saying old state needs a paid plan. Returns a function that lifts it.
+    refuse(match, { status = 403, error = { code: -32602, message: 'Archive requests require a personal token.' } } = {}) {
+      const entry = [match, { status, error }];
+      faults.push(entry);
+      return () => faults.splice(faults.indexOf(entry), 1);
+    },
     fixContract: (address) => failing.delete(address.toLowerCase()),
     // Records a mined ERC-20 Transfer, `depth` blocks below the current head (1 = the head).
     addTransfer({ hash, token, from, to, value, status = '0x1', depth = 6 }) {

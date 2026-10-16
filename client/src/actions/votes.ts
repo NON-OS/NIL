@@ -26,7 +26,8 @@ const votes = {
     const { ballotId, message } = await http.post<{ ballotId: string; message: string }>(`/proposals/${id}/ballot`, { choice });
     assertNotKeyMessage(message);
     const signature = await ethereum.sign(message, address);
-    return http.post<{ proposal: Proposal }>(`/proposals/${id}/vote`, { ballotId, signature }).then((r) => r.proposal);
+    // a smart wallet's signature doesn't say who made it, so the wallet's address goes along
+    return http.post<{ proposal: Proposal }>(`/proposals/${id}/vote`, { ballotId, signature, address }).then((r) => r.proposal);
   },
 
   close: (id: string) => http.post<{ proposal: Proposal }>(`/proposals/${id}/close`).then((r) => r.proposal),

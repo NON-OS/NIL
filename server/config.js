@@ -142,6 +142,8 @@ const nox = Object.freeze({
   decimals: envNumber('NOX_DECIMALS', 18, { max: 77 }),
   // how long a recorded payment may wait for its transaction to appear before it fails
   missingTxMs: envNumber('NOX_MISSING_TX_HOURS', 24, { min: 1 }) * HOUR,
+  // how far under the head the node still answers eth_getLogs; the public node stops at 10,000
+  logHistoryBlocks: envNumber('NOX_LOG_HISTORY_BLOCKS', 10_000, { min: 500 }),
   explorer: explorer(env.NOX_EXPLORER),
 });
 
@@ -208,6 +210,8 @@ function announcer(value) {
 const stealth = Object.freeze({
   announcer: announcer((env.STEALTH_ANNOUNCER ?? '').trim()),
   gasTopUpWei: /^\d+$/.test(env.STEALTH_GAS_TOPUP_WEI ?? '') ? env.STEALTH_GAS_TOPUP_WEI : '300000000000000',
+  // the least tip a move out of a one-time address offers, whatever the node suggests
+  minTipWei: /^\d+$/.test(env.STEALTH_MIN_TIP_WEI ?? '') ? env.STEALTH_MIN_TIP_WEI : '50000000',
   // how long a confirmed payout keeps being checked for a late announcement
   announceCheckDays: envNumber('STEALTH_ANNOUNCE_CHECK_DAYS', 7),
   // payout balances are looked up one address at a time, at random moments within this window
@@ -400,6 +404,8 @@ const jobs = Object.freeze({
   agentDueSoonMs: envNumber('JOB_AGENT_DUE_SOON_SECONDS', 300, { min: 1 }) * SECOND,
   agentPruneMs: envNumber('JOB_AGENT_PRUNE_SECONDS', 3600, { min: 1 }) * SECOND,
   optimizeMs: envNumber('JOB_OPTIMIZE_SECONDS', 3600, { min: 1 }) * SECOND,
+  poolPriceMs: envNumber('JOB_POOL_PRICE_SECONDS', 60, { min: 1 }) * SECOND,
+  transferFeeMs: envNumber('JOB_TRANSFER_FEE_SECONDS', 600, { min: 1 }) * SECOND,
 });
 
 // The app starts with open work and recent history only. Finished tasks (done or canceled)

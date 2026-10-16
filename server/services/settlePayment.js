@@ -8,16 +8,17 @@ import refreshBountyState from './refreshBountyState.js';
 import issuePaymentReceipt from '../proofs/issuePaymentReceipt.js';
 
 // Marks a payment confirmed exactly once, even if the background check and a manual re-check
-// race each other, with what actually arrived and the final block it arrived in. Then signs the
+// race each other, with what actually arrived (and what the token kept of it) and the final
+// block it arrived in. Then signs the
 // receipt for that amount, updates the bounty (paid, or underpaid if part is still owed) and
 // tells the contributor.
-export default function settlePayment(payment, { from, blockNumber, blockHash, received }) {
+export default function settlePayment(payment, { from, blockNumber, blockHash, received, fee = 0n }) {
   const now = Date.now();
   const amount = String(received);
   const settled = sql.tx(() => {
     const { changes } = sql.run(
-      "UPDATE payments SET status = 'confirmed', amount = ?, from_address = ?, block_number = ?, block_hash = ?, confirmed_at = ?, checked_at = ?, problem = NULL WHERE id = ? AND status IN ('pending', 'cancelled')",
-      amount, from, blockNumber, blockHash, now, now, payment.id,
+      "UPDATE payments SET status = 'confirmed', amount = ?, token_fee = ?, from_address = ?, block_number = ?, block_hash = ?, confirmed_at = ?, checked_at = ?, problem = NULL WHERE id = ? AND status IN ('pending', 'cancelled')",
+      amount, String(fee), from, blockNumber, blockHash, now, now, payment.id,
     );
     if (!changes) return false;
     const row = sql.get('SELECT * FROM payments WHERE id = ?', payment.id);
