@@ -8,15 +8,23 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **Everyday team or crypto team.** Setting up a workspace asks one question. An everyday team starts with bounties, votes, proof of work, private payouts and the token holder door hidden; a crypto team gets all of them. Admins can switch this in Settings, Workspace at any time, and nothing is deleted either way. With the tools off, their pages, menu entries and server routes are gone (the server answers 404), people go by name, and a wallet address shows only after a click on "Show wallet". The Nil Pro subscription works the same either way. Workspaces that existed before this keep their crypto tools on.
+- **Getting started.** After setup, the owner's My work shows a short checklist: create a project, invite people, add a task with quick add, try a private task. Each step ticks itself when it happens, and the card can be dismissed. It also offers a sample project with a website launch, an offsite and a hiring round, which can be removed again in one click.
+- **Reusable invite links.** Next to single-use links, admins can make a link several people can join through, with an expiry of 1, 7 or 30 days and an optional limit on how many. Links can be revoked, and admins see who joined through which link. Reusable links never make admins.
+- **Search by words.** The command palette finds tasks by their notes, checklists and comments as well as their titles, and marks the matching words. Team tasks are searched on the server with SQLite full-text search, under the same visibility rules as the rest of the app. Private tasks and docs never go into that index: the browser searches the ones this tab has opened, in memory only.
+- **Import from Todoist, Trello or a CSV file.** Settings, Data reads a Todoist project CSV, a Trello board JSON or any CSV with a header row in the browser, shows a preview, and lets you match its people and projects to this workspace. Tasks are then created a few at a time with progress, through the same calls the app uses everywhere. If you make them private, each one is encrypted in the browser from its first save.
 
 ### Changed
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
+- Migration 022 adds the crypto tools switch, invite use counts and the search index. Wiping the workspace and restoring a capsule now leave the index's own tables alone and rebuild it from the tasks.
+- Unused invite links are still deleted as soon as they expire. Links someone joined through are kept for 30 days after they end, so admins can see who came in with them.
 
 ### Fixed
 
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
+- A long explanation next to a switch in Settings could push the switch out of its card. The words wrap now.
 
 ## 3.0.0 (2026-10-15)
 
