@@ -10,7 +10,7 @@
   border-bottom: 1px solid var(--line);
   background: transparent;
   outline: none;
-  font-size: var(--text-md);
+  font-size: var(--field-text);
 }
 
 .menu-list {
@@ -75,4 +75,8 @@
   height: 1px;
   margin: 4px 6px;
   background: var(--line);
+}
+
+.menu-item.danger {
+  color: var(--danger);
 }

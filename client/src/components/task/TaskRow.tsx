@@ -43,18 +43,11 @@ function TaskRow({ task, selected, onSelect }: Props) {
       role="row"
       aria-selected={selected}
     >
-      <input
-        type="checkbox"
-        className="row-check"
-        checked={selected}
-        onClick={(e) => {
-          e.stopPropagation();
-          onSelect(task, e.shiftKey);
-        }}
-        onChange={() => {}}
-        aria-label={`Select ${taskKey(task)}`}
-      />
-      <span className="row-priority" onClick={stop}>
+      {/* the label is the touch target; clicks on it reach the checkbox with Shift intact */}
+      <label className="row-check" onClick={stop}>
+        <input type="checkbox" checked={selected} onClick={(e) => onSelect(task, e.shiftKey)} onChange={() => {}} aria-label={`Select ${taskKey(task)}`} />
+      </label>
+      <span className="row-priority row-cell" onClick={stop}>
         <PriorityPicker value={task.priority} onChange={(priority) => taskActions.update(task.id, { priority })} className="icon-only">
           <PriorityIcon priority={task.priority} />
         </PriorityPicker>
@@ -63,8 +56,8 @@ function TaskRow({ task, selected, onSelect }: Props) {
         {taskKey(task)}
         {task.private && <Lock size={10} style={{ marginLeft: 3, verticalAlign: '-1px' }} aria-label="Private" />}
       </span>
-      <span onClick={stop}>
-        <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn">
+      <span className="row-cell" onClick={stop}>
+        <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn hit">
           <StatusIcon status={task.status} />
         </StatusPicker>
       </span>
@@ -92,7 +85,7 @@ function TaskRow({ task, selected, onSelect }: Props) {
       <span style={{ justifySelf: 'end' }}>
         <DueBadge task={task} />
       </span>
-      <span onClick={stop}>
+      <span className="row-cell" onClick={stop}>
         <AssigneePicker value={task.assigneeId} onChange={(assigneeId) => taskActions.update(task.id, { assigneeId })} className="icon-only" align="end">
           <Avatar user={assignee} size={22} />
         </AssigneePicker>

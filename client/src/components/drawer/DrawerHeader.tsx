@@ -12,6 +12,7 @@ import taskKey from '../../lib/taskKey';
 import dates from '../../lib/dates';
 import TimerButton from '../time/TimerButton';
 import ReminderButton from '../time/ReminderButton';
+import CompleteButton from './CompleteButton';
 import type Task from '../../types/Task';
 import ShareLinkModal from '../share/ShareLinkModal';
 
@@ -54,7 +55,8 @@ export default function DrawerHeader({ task }: { task: Task }) {
 
   return (
     <header className="drawer-head">
-      <button type="button" className="drawer-key mono" onClick={() => copy(taskKey(task), `Copied ${taskKey(task)}`)} title="Copy task key">
+      <CompleteButton task={task} />
+      <button type="button" className="drawer-key mono hit" onClick={() => copy(taskKey(task), `Copied ${taskKey(task)}`)} title="Copy task key">
         {taskKey(task)}
       </button>
       {viewers.length > 0 && (
@@ -63,16 +65,19 @@ export default function DrawerHeader({ task }: { task: Task }) {
           <span className="muted">viewing</span>
         </span>
       )}
-      <span style={{ flex: 1 }} />
-      <TimerButton taskId={task.id} />
-      <ReminderButton taskId={task.id} />
-      <button type="button" className={`icon-btn${inMyDay ? ' on' : ''}`} onClick={() => (inMyDay ? focus.remove(task.id) : focus.add(task.id))} title={inMyDay ? 'Remove from My Day' : 'Add to My Day'} aria-pressed={inMyDay}>
-        <Sun />
-      </button>
-      <button type="button" className={`icon-btn${watching ? ' on' : ''}`} onClick={() => detail.watch(task.id, !watching)} title={watching ? 'Stop notifications for this task' : 'Get notified about changes'} aria-pressed={watching}>
-        {watching ? <Bell /> : <BellOff />}
-      </button>
-      <button ref={moreRef} type="button" className="icon-btn" onClick={() => setMenu((m) => !m)} aria-label="More actions" aria-expanded={menu}>
+      <span className="drawer-head-gap" />
+      {/* icons with tooltips on a desktop; on touch and narrow screens a captioned row of their own */}
+      <div className="drawer-tools" role="group" aria-label="Task tools">
+        <TimerButton taskId={task.id} />
+        <ReminderButton taskId={task.id} />
+        <button type="button" className={`icon-btn tip${inMyDay ? ' on' : ''}`} onClick={() => (inMyDay ? focus.remove(task.id) : focus.add(task.id))} aria-label="My Day" aria-pressed={inMyDay}>
+          <Sun />
+        </button>
+        <button type="button" className={`icon-btn tip${watching ? ' on' : ''}`} onClick={() => detail.watch(task.id, !watching)} aria-label="Watch" aria-pressed={watching}>
+          {watching ? <Bell /> : <BellOff />}
+        </button>
+      </div>
+      <button ref={moreRef} type="button" className="icon-btn tip" onClick={() => setMenu((m) => !m)} aria-label="More actions" aria-expanded={menu}>
         <MoreHorizontal />
       </button>
       <Popover anchor={moreRef} open={menu} onClose={() => setMenu(false)} width={210} align="end">
@@ -95,7 +100,7 @@ export default function DrawerHeader({ task }: { task: Task }) {
         </div>
       </Popover>
       {sharing && <ShareLinkModal kind="task" targetId={task.id} name={taskKey(task)} onClose={() => setSharing(false)} />}
-      <button type="button" className="icon-btn" onClick={detail.close} aria-label="Close task" title="Close (Esc)">
+      <button type="button" className="icon-btn tip tip-end" onClick={detail.close} aria-label="Close task">
         <X />
       </button>
     </header>

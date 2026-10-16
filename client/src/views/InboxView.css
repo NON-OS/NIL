@@ -104,3 +104,10 @@
   font-size: var(--text-xs);
   white-space: nowrap;
 }
+
+@media (pointer: coarse) {
+  .inbox-tabs button {
+    min-width: var(--tap-min);
+    height: var(--tap-min);
+  }
+}

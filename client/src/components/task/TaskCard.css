@@ -83,6 +83,42 @@
   margin-top: 1px;
 }
 
+.card-open {
+  flex: 1;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  line-height: inherit;
+  text-align: left;
+}
+
+/* the title's hit area covers the whole card; the card's own controls sit above it */
+.card-open::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+}
+
+.card-title > span,
+.card-foot > span:has(button) {
+  position: relative;
+  z-index: 1;
+}
+
+/* the drag-free way to change columns, shown where dragging is awkward */
+.card-move {
+  display: none;
+}
+
+@media (pointer: coarse), (max-width: 640px) {
+  .card-move {
+    display: inline-flex;
+  }
+}
+
 .card-foot {
   display: flex;
   flex-wrap: wrap;

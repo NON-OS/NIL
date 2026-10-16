@@ -1,5 +1,5 @@
 import './TaskDrawer.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { SearchX } from 'lucide-react';
 import DrawerHeader from './DrawerHeader';
@@ -14,6 +14,7 @@ import LockedTask from './LockedTask';
 import WordsLoading from './WordsLoading';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
+import useFocusTrap from '../../hooks/useFocusTrap';
 import detail from '../../actions/detail';
 import archive from '../../actions/archive';
 import hasWords from '../../lib/hasWords';
@@ -25,6 +26,8 @@ export default function TaskDrawer({ number }: { number: number }) {
   const taskId = task?.id;
   // a link to an older finished task finds it in the archive before saying it's gone
   const [searching, setSearching] = useState(!task && archived);
+  const ref = useRef<HTMLElement>(null);
+  useFocusTrap(ref);
 
   useEffect(() => {
     if (!taskId) return;
@@ -62,7 +65,7 @@ export default function TaskDrawer({ number }: { number: number }) {
   return createPortal(
     <>
       <div className="drawer-scrim" onClick={detail.close} />
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'}>
+      <aside ref={ref} className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'} tabIndex={-1}>
         {task ? (
           <>
             <DrawerHeader task={task} />

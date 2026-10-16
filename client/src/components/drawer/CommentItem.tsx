@@ -28,12 +28,12 @@ export default function CommentItem({ comment }: { comment: Comment }) {
           {!editing && (
             <span className="comment-actions">
               {mine && !comment.locked && (
-                <button type="button" onClick={() => setEditing(true)}>
+                <button type="button" className="hit" onClick={() => setEditing(true)}>
                   Edit
                 </button>
               )}
               {canDelete && (
-                <button type="button" onClick={() => detail.deleteComment(comment)}>
+                <button type="button" className="hit" onClick={() => detail.deleteComment(comment)}>
                   Delete
                 </button>
               )}

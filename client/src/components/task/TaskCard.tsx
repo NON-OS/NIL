@@ -1,6 +1,6 @@
 import './TaskCard.css';
 import { memo, useMemo, type CSSProperties, type Ref } from 'react';
-import { Lock, MessageSquare, Paperclip } from 'lucide-react';
+import { ArrowRightLeft, Lock, MessageSquare, Paperclip } from 'lucide-react';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
 import Avatar from '../ui/Avatar';
@@ -28,6 +28,10 @@ interface Props {
   dragProps?: Record<string, unknown>;
 }
 
+const stop = (e: React.SyntheticEvent) => e.stopPropagation();
+
+// The card is only the drag source. Its title is the button that opens it, stretched over
+// the whole card in CSS, with status, Move and assignee above; no control sits inside another.
 function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style, dragProps }: Props) {
   const project = useStore((s) => (task.projectId ? s.projects[task.projectId] : undefined));
   const assignee = useStore((s) => (task.assigneeId ? s.users[task.assigneeId] : undefined));
@@ -42,12 +46,6 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
       ref={innerRef}
       style={style}
       className={cx('card', dragging && 'dragging', overlay && 'overlay', meta.isClosed(task.status) && 'closed')}
-      onClick={() => detail.open(task)}
-      onKeyDown={(e) => {
-        if (e.key === 'Enter' && e.target === e.currentTarget) detail.open(task);
-      }}
-      tabIndex={0}
-      role="button"
       aria-label={`${taskKey(task)} ${task.title}`}
       {...dragProps}
     >
@@ -69,12 +67,21 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
         {task.priority > 0 && <PriorityIcon priority={task.priority} size={13} />}
       </div>
       <div className="card-title">
-        <span onClick={(e) => e.stopPropagation()}>
-          <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn">
+        <span onClick={stop}>
+          <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn hit">
             <StatusIcon status={task.status} />
           </StatusPicker>
         </span>
-        <span>{task.title}</span>
+        <button
+          type="button"
+          className="card-open"
+          onClick={(e) => {
+            stop(e);
+            detail.open(task);
+          }}
+        >
+          {task.title}
+        </button>
       </div>
       <div className="card-foot">
         <DueBadge task={task} />
@@ -101,7 +108,13 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
           </span>
         )}
         <span className="grow" />
-        <span onClick={(e) => e.stopPropagation()}>
+        {/* dragging is fiddly on a phone; this moves the card to another column instead */}
+        <span className="card-move" onClick={stop}>
+          <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="btn btn-sm" title="Move to column">
+            <ArrowRightLeft /> Move
+          </StatusPicker>
+        </span>
+        <span onClick={stop}>
           <AssigneePicker value={task.assigneeId} onChange={(assigneeId) => taskActions.update(task.id, { assigneeId })} className="icon-only" align="end">
             <Avatar user={assignee} size={20} />
           </AssigneePicker>

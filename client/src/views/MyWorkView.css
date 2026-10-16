@@ -31,6 +31,12 @@
   gap: 16px;
 }
 
+.mywork-side {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
 .mywork-add {
   display: flex;
   align-items: center;
@@ -45,6 +51,7 @@
 .mywork-add:focus-within {
   border-style: solid;
   border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line);
 }
 
 .mywork-add input {
@@ -101,12 +108,12 @@
 
 @media (max-width: 960px) {
   .mywork-grid {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
 @media (max-width: 520px) {
   .mywork-stats {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -12,13 +12,13 @@ export default function TimerButton({ taskId }: { taskId: string }) {
 
   if (mine) {
     return (
-      <button type="button" className="icon-btn timing" onClick={timer.stop} title="Stop the timer">
+      <button type="button" className="icon-btn tip timing" onClick={timer.stop} aria-label="Stop timer">
         <Square size={12} /> {clock(now - running.startedAt)}
       </button>
     );
   }
   return (
-    <button type="button" className="icon-btn" onClick={() => timer.start(taskId)} title={running ? 'Switch the timer to this task' : 'Start a timer for this task'}>
+    <button type="button" className="icon-btn tip" onClick={() => timer.start(taskId)} aria-label={running ? 'Move timer here' : 'Start timer'}>
       <Play />
     </button>
   );

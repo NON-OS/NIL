@@ -40,7 +40,7 @@ export default function ReminderButton({ taskId }: { taskId: string }) {
 
   return (
     <>
-      <button ref={anchor} type="button" className={`icon-btn${list.length ? ' on' : ''}`} onClick={() => setOpen((o) => !o)} title={list.length ? `${list.length} reminder${list.length === 1 ? '' : 's'} set` : 'Remind me'} aria-expanded={open}>
+      <button ref={anchor} type="button" className={`icon-btn tip${list.length ? ' on' : ''}`} onClick={() => setOpen((o) => !o)} aria-label={list.length ? `Reminders (${list.length})` : 'Remind me'} aria-expanded={open}>
         <AlarmClock />
       </button>
       <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} width={260} align="end">

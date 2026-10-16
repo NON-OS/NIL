@@ -44,6 +44,12 @@ textarea {
   color: inherit;
 }
 
+input,
+select,
+textarea {
+  font-size: var(--field-text);
+}
+
 button {
   cursor: pointer;
 }
@@ -80,6 +86,13 @@ img {
   font-family: var(--font-mono);
   font-size: 0.92em;
   font-variant-ligatures: none;
+}
+
+@media (pointer: coarse) {
+  input.mono,
+  textarea.mono {
+    font-size: var(--field-text);
+  }
 }
 
 .num {

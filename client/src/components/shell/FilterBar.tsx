@@ -1,10 +1,11 @@
 import './FilterBar.css';
-import { useMemo, type ReactNode } from 'react';
-import { CalendarClock, Flag, FolderKanban, Search, Tag, UserRound, X } from 'lucide-react';
+import { useMemo, useRef, type ReactNode } from 'react';
+import { CalendarClock, ChevronRight, Flag, FolderKanban, Search, Tag, UserRound, X } from 'lucide-react';
 import Picker from '../ui/Picker';
 import Avatar from '../ui/Avatar';
 import PriorityIcon from '../ui/PriorityIcon';
 import useStore from '../../state/useStore';
+import useOverflowEnd from '../../hooks/useOverflowEnd';
 import defaultFilter from '../../lib/defaultFilter';
 import meta from '../../lib/meta';
 import cx from '../../lib/cx';
@@ -33,6 +34,8 @@ export default function FilterBar({ filter, onChange, showProjects = true, showC
   const users = useStore((s) => s.users);
   const labels = useStore((s) => s.labels);
   const projects = useStore((s) => s.projects);
+  const ref = useRef<HTMLDivElement>(null);
+  const more = useOverflowEnd(ref);
 
   const people = useMemo(
     () => [
@@ -53,7 +56,7 @@ export default function FilterBar({ filter, onChange, showProjects = true, showC
   const nameOf = (id: string) => (id === 'me' ? 'Me' : id === 'none' ? 'Unassigned' : users[id]?.name);
 
   return (
-    <div className="filterbar" role="search">
+    <div ref={ref} className="filterbar" role="search">
       <label className="filter-search">
         <Search />
         <input className="input" placeholder="Filter by title or key" value={filter.query} onChange={(e) => onChange({ query: e.target.value })} aria-label="Filter tasks" />
@@ -94,6 +97,12 @@ export default function FilterBar({ filter, onChange, showProjects = true, showC
           <button type="button" className="toggle" role="switch" aria-checked={filter.showClosed} onClick={() => onChange({ showClosed: !filter.showClosed })} aria-label="Show completed" />
           Show completed
         </label>
+      )}
+      {/* on a phone the chips scroll sideways; this edge says so, and a tap scrolls on */}
+      {more && (
+        <span className="filter-more" aria-hidden="true" onClick={() => ref.current?.scrollBy({ left: ref.current.clientWidth * 0.6, behavior: 'smooth' })}>
+          <ChevronRight />
+        </span>
       )}
     </div>
   );

@@ -51,6 +51,10 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - **Reusable invite links.** Next to single-use links, admins can make a link several people can join through, with an expiry of 1, 7 or 30 days and an optional limit on how many. Links can be revoked, and admins see who joined through which link. Reusable links never make admins.
 - **Search by words.** The command palette finds tasks by their notes, checklists and comments as well as their titles, and marks the matching words. Team tasks are searched on the server with SQLite full-text search, under the same visibility rules as the rest of the app. Private tasks and docs never go into that index: the browser searches the ones this tab has opened, in memory only.
 - **Import from Todoist, Trello or a CSV file.** Settings, Data reads a Todoist project CSV, a Trello board JSON or any CSV with a header row in the browser, shows a preview, and lets you match its people and projects to this workspace. Tasks are then created a few at a time with progress, through the same calls the app uses everywhere. If you make them private, each one is encrypted in the browser from its first save.
+- **The calendar has an agenda on phones.** Below 600px a compact month picks the day, that day's tasks sit underneath with an Add button, and the rest of the month follows. Every task has a Move button that opens the date picker, so rescheduling works without dragging.
+- **The board has column tabs on phones**, and cards on touch screens have a Move button that changes their column without a drag.
+- The task panel has a Mark complete button, which reads Reopen on a finished or canceled task.
+- Search is one tap from the top bar whenever the sidebar is folded away.
 
 ### Changed
 
@@ -76,6 +80,14 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - A reminder about a private task no longer keeps the task's title in the stored notification.
 - Migration 022 adds the crypto tools switch, invite use counts and the search index. Wiping the workspace and restoring a capsule now leave the index's own tables alone and rebuild it from the tasks.
 - Unused invite links are still deleted as soon as they expire. Links someone joined through are kept for `USED_INVITE_DAYS` (30) days after they end, so admins can see who came in with them.
+- On touch screens every control is at least 44 by 44 pixels: list checkboxes, status icons, Mark as done, My Day, header and panel buttons, filter chips and tabs. Small icons keep their size and get a larger invisible hit area, so desktop looks the same.
+- Text fields are 16px on touch screens, so iOS no longer zooms in when one takes focus.
+- Faint text is darker (4.97:1 on white instead of 3.16:1), and the backlog, canceled and in-progress status icons clear 3:1. Body text is at least 13px; only metadata such as dates, keys and counts uses the 12px size.
+- Icon buttons in the task panel and the docs toolbar show their names as tooltips with a mouse. On touch and narrow screens the task panel prints the names under its tools, and the docs toolbar moves history, download and print into a menu with Delete set apart at the bottom.
+- Unassigned tasks show an outlined assign icon instead of a dashed question mark.
+- Initials on light member colours (ochre, teal, moss, sky, persimmon) are ink instead of white, which was as low as 3.25:1.
+- Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
+- The comment box only mentions Ctrl+Enter where there is likely a keyboard.
 
 ### Fixed
 
@@ -86,6 +98,12 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - A capsule export kept encrypting after the browser cancelled the download. It stops now, and its plaintext database snapshot is always deleted.
 - After a deploy, the service worker could store the app's page in place of a script that no longer existed, which broke that screen until the browser's cache was cleared. It now stores only real build files. While the server restarts, an installed app opens from its stored copy instead of an error page.
 - A long explanation next to a switch in Settings could push the switch out of its card. The words wrap now.
+- Settings scrolled sideways on phones (up to 929px wide on Team), and long switch descriptions were cut off on desktop. My work's side column could also push the page wider than the screen.
+- The task panel now keeps keyboard focus inside while it is open and returns it to where it was on close. Dialogs share the same code, and no longer move focus each time they re-render.
+- The task title, checklist steps, the My work add field and text inputs show a clear focus ring.
+- A My work row and a board card were buttons with other buttons inside, and Space did nothing on a row. Their controls are now separate buttons. Pressing Enter or Space on a button inside a card no longer starts a keyboard drag.
+- The closed sidebar on narrow screens could still be reached with Tab.
+- The docs delete button and the command palette's results list had no accessible name.
 
 ## 3.0.0 (2026-10-15)
 

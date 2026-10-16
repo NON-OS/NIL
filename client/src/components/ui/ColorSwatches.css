@@ -1,0 +1,12 @@
+.swatches {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* each swatch's touch hit area is wider than the swatch, so space them a finger apart */
+@media (pointer: coarse) {
+  .swatches {
+    gap: 14px 20px;
+  }
+}

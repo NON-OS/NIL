@@ -62,14 +62,23 @@
   margin-left: auto;
 }
 
-.menu-toggle {
+.menu-toggle,
+.search-toggle {
   display: none;
 }
 
 @media (max-width: 900px) {
-  .menu-toggle {
+  .menu-toggle,
+  .search-toggle {
     display: inline-grid;
+  }
+
+  .menu-toggle {
     margin-left: -6px;
+  }
+
+  .search-toggle {
+    margin-right: -6px;
   }
 
   .view-head {
@@ -79,5 +88,20 @@
 
   .view-head .subtitle {
     display: none;
+  }
+}
+
+/* When the actions don't fit beside the title they move to a second row; the title keeps
+   its full width rather than being squeezed to a letter. */
+@media (max-width: 599px) {
+  .view-head {
+    flex-wrap: wrap;
+    row-gap: 0;
+  }
+
+  .view-head-actions {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    padding-block: 4px;
   }
 }

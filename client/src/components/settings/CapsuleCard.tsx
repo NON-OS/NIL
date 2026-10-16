@@ -40,8 +40,8 @@ export default function CapsuleCard() {
           {busy ? <Spinner size={14} /> : <Lock />} Download capsule
         </button>
       </div>
-      {mismatch && <small style={{ color: 'var(--danger)' }}>The passphrases don’t match.</small>}
-      <small className="muted">Wallets work on any domain, so everyone signs in exactly as before after a restore.</small>
+      {mismatch && <p style={{ color: 'var(--danger)', fontSize: 'var(--text-sm)' }}>The passphrases don’t match.</p>}
+      <p className="muted" style={{ fontSize: 'var(--text-sm)' }}>Wallets work on any domain, so everyone signs in exactly as before after a restore.</p>
     </form>
   );
 }

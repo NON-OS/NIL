@@ -185,7 +185,7 @@
 
 @media (max-width: 1100px) {
   .cal-wrap {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .cal-side {
@@ -205,10 +205,17 @@
 
   .cal-chip {
     padding: 2px 3px;
-    font-size: 10.5px;
+    font-size: var(--text-xs);
   }
 
   .cal-dow span {
     padding: 6px 4px;
+  }
+}
+
+/* the add button waits for hover with a mouse; touch has no hover to wait for */
+@media (pointer: coarse) {
+  .cal-num .icon-only {
+    opacity: 1;
   }
 }

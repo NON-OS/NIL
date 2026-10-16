@@ -2,15 +2,18 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Download, Eye, History, Pencil, Printer, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react';
 import Markdown from '../ui/Markdown';
 import ConfirmButton from '../ui/ConfirmButton';
+import DocMoreMenu from './DocMoreMenu';
 import ShareDocModal from './ShareDocModal';
 import DocHistory from './DocHistory';
 import DraftModal from './DraftModal';
 import useStore from '../../state/useStore';
+import useMediaQuery from '../../hooks/useMediaQuery';
 import toast from '../../state/toast';
 import docs from '../../actions/docs';
 import saveBlob from '../../lib/saveBlob';
 import type DocItem from '../../types/DocItem';
 import isAdminUser from '../../lib/isAdmin';
+import media from '../../lib/media';
 
 type Status = 'saved' | 'dirty' | 'saving' | 'conflict';
 
@@ -38,6 +41,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
   const latest = useRef(doc);
   latest.current = doc;
   const canManage = doc.createdBy === me.id || isAdminUser(me);
+  const compact = useMediaQuery(media.touchOrNarrow);
 
   useEffect(() => {
     if (status === 'dirty' || status === 'saving') return;
@@ -84,6 +88,9 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
   };
 
   const label = { saved: 'Encrypted · saved', dirty: 'Unsaved', saving: 'Encrypting…', conflict: 'Conflict' }[status];
+  const audience = doc.audience === 'team' ? 'Team' : `${doc.readers.length} ${doc.readers.length === 1 ? 'reader' : 'readers'}`;
+  const download = () => saveBlob(new Blob([`# ${title}\n\n${body}\n`], { type: 'text/markdown' }), `${(title || 'doc').replace(/[^\w-]+/g, '-').toLowerCase()}.md`);
+  const remove = () => docs.remove(doc).then(onDeleted).catch(toast.error);
 
   return (
     <section className="doc-editor" aria-label="Doc">
@@ -102,22 +109,28 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
             <Sparkles /> Draft
           </button>
         )}
-        <button type="button" className="btn btn-sm" onClick={() => setSharing(true)}>
-          <Users /> {doc.audience === 'team' ? 'Team' : `${doc.readers.length}`}
+        <button type="button" className="btn btn-sm" onClick={() => setSharing(true)} aria-label={`Share, ${audience}`}>
+          <Users /> {audience}
         </button>
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => setHistory(true)} aria-label="Version history" title="Version history">
-          <History />
-        </button>
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => saveBlob(new Blob([`# ${title}\n\n${body}\n`], { type: 'text/markdown' }), `${(title || 'doc').replace(/[^\w-]+/g, '-').toLowerCase()}.md`)} aria-label="Download as Markdown" title="Download as Markdown (decrypted)">
-          <Download />
-        </button>
-        <button type="button" className="btn btn-sm btn-ghost" onClick={() => window.print()} aria-label="Print or save as PDF" title="Print or save as PDF">
-          <Printer />
-        </button>
-        {canManage && (
-          <ConfirmButton className="btn btn-sm btn-ghost" onConfirm={() => docs.remove(doc).then(onDeleted).catch(toast.error)} confirmLabel="Delete for everyone?">
-            <Trash2 />
-          </ConfirmButton>
+        {compact ? (
+          <DocMoreMenu onHistory={() => setHistory(true)} onDownload={download} onPrint={() => window.print()} onDelete={canManage ? remove : undefined} />
+        ) : (
+          <>
+            <button type="button" className="btn btn-sm btn-ghost tip" onClick={() => setHistory(true)} aria-label="Version history">
+              <History />
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost tip" onClick={download} aria-label="Download as Markdown (decrypted)">
+              <Download />
+            </button>
+            <button type="button" className="btn btn-sm btn-ghost tip" onClick={() => window.print()} aria-label="Print or save as PDF">
+              <Printer />
+            </button>
+            {canManage && (
+              <ConfirmButton className="btn btn-sm btn-ghost doc-delete tip tip-end" onConfirm={remove} confirmLabel="Delete for everyone?" label="Delete doc">
+                <Trash2 />
+              </ConfirmButton>
+            )}
+          </>
         )}
       </div>
       {status === 'conflict' && (

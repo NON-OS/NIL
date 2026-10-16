@@ -30,6 +30,8 @@ interface Item {
   locked?: boolean;
   // where the words were found, when it wasn't the title
   match?: { label: string; text: string };
+  // the hint is a keyboard shortcut rather than a key like NON-12
+  shortcut?: boolean;
   score: number;
   run: () => void;
 }
@@ -78,11 +80,11 @@ export default function CommandPalette() {
       if (score > 0) out.push({ ...item, score });
     };
 
-    add({ id: 'new', group: 'Actions', title: 'Create a task', icon: <Plus />, hint: 'C', run: then(() => ui.quickAdd()) }, 'create new task add');
+    add({ id: 'new', group: 'Actions', title: 'Create a task', icon: <Plus />, hint: 'C', shortcut: true, run: then(() => ui.quickAdd()) }, 'create new task add');
     if (aiOn) add({ id: 'extract', group: 'Actions', title: 'Turn notes into tasks', icon: <Sparkles />, run: then(() => ui.extract()) }, 'notes meeting extract ai tasks');
     add({ id: 'deck', group: 'Actions', title: 'Create a status deck (.pptx)', icon: <Presentation />, run: then(() => decks.open()) }, 'deck powerpoint pptx slides presentation status report');
     if (isAdmin) add({ id: 'invite', group: 'Actions', title: 'Invite a teammate', icon: <UserPlus />, run: then(() => router.navigate('/settings?tab=team')) }, 'invite teammate member people');
-    for (const v of VIEWS.filter((view) => cryptoTools || !cryptoOnly(view.to))) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
+    for (const v of VIEWS.filter((view) => cryptoTools || !cryptoOnly(view.to))) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, shortcut: true, run: then(() => router.navigate(v.to)) }, v.title);
     add({ id: 'help', group: 'Go to', title: 'Help', icon: <CircleHelp />, run: then(() => router.navigate('/help')) }, 'help guide how to docs faq questions');
     // whatever was typed can also be looked up in the help pages
     if (q) out.push({ id: 'help-search', group: 'Go to', title: `Search help for “${q}”`, icon: <CircleHelp />, score: 1, run: then(() => router.navigate(`/help?q=${encodeURIComponent(q)}`)) });
@@ -167,7 +169,7 @@ export default function CommandPalette() {
           }}
         />
       </div>
-      <ul className="palette-results" ref={listRef} role="listbox">
+      <ul className="palette-results" ref={listRef} role="listbox" aria-label="Results">
         {items.map((item, i) => (
           <li key={item.id}>
             {(i === 0 || items[i - 1].group !== item.group) && <div className="palette-group eyebrow">{item.group}</div>}
@@ -182,7 +184,7 @@ export default function CommandPalette() {
                 )}
               </span>
               {item.locked && <Lock className="palette-lock" aria-label="Private" />}
-              {item.hint && <span className="key mono">{item.hint}</span>}
+              {item.hint && <span className={item.shortcut ? 'key mono shortcut' : 'key mono'}>{item.hint}</span>}
             </button>
           </li>
         ))}

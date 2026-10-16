@@ -50,7 +50,7 @@ export default function LabelSettings() {
         <div className="settings-card" style={{ paddingBlock: 6 }}>
           {labels.map((l) => (
             <div key={l.id} className="member" style={{ gridTemplateColumns: '14px minmax(0, 1fr) auto' }}>
-              <button type="button" onClick={() => setOpen(open === l.id ? null : l.id)} aria-label={`Change color of ${l.name}`} style={{ width: 14, height: 14, padding: 0, border: 0, borderRadius: '50%', background: l.color }} />
+              <button type="button" className="hit" onClick={() => setOpen(open === l.id ? null : l.id)} aria-label={`Change color of ${l.name}`} style={{ width: 14, height: 14, padding: 0, border: 0, borderRadius: '50%', background: l.color }} />
               <div style={{ minWidth: 0 }}>
                 <input className="checklist-text" defaultValue={l.name} key={l.name} maxLength={40} aria-label="Label name" onBlur={(e) => e.target.value.trim() && e.target.value.trim() !== l.name && labelActions.update(l.id, { name: e.target.value.trim() })} onKeyDown={(e) => e.key === 'Enter' && e.currentTarget.blur()} />
                 <div className="member-sub">{usage[l.id] ?? 0} tasks</div>
