@@ -50,7 +50,7 @@ export default function AuthView() {
   } else if (needsSetup) {
     panel = restoring ? <RestorePanel onBack={() => setRestoring(false)} /> : <JoinPanel mode="setup" onRestore={() => setRestoring(true)} />;
   } else if (holderJoin && holderGate) {
-    const requirement = `You need at least ${formatUnits(holderGate.minimum, holderGate.decimals)} ${holderGate.symbol} in this wallet, and you’ll need to keep holding it to sign in later.`;
+    const requirement = `Your wallet needs at least ${formatUnits(holderGate.minimum, holderGate.decimals)} ${holderGate.symbol}. Keep at least that much in it to keep signing in.`;
     panel = <JoinPanel mode="holder" workspaceName={workspace.name} requirement={requirement} onBack={() => setHolderJoin(false)} />;
   } else {
     panel = <LoginPanel onHolderJoin={holderGate ? () => setHolderJoin(true) : undefined} />;

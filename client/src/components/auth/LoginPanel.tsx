@@ -10,7 +10,7 @@ import WalletStatus from './WalletStatus';
 import NoWalletPanel from './NoWalletPanel';
 
 export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void }) {
-  const workspace = useStore((s) => s.workspace);
+  const workspaceName = useStore((s) => s.workspace.name.trim());
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const flow = useWalletFlow();
@@ -32,8 +32,8 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
 
   return (
     <div className="auth-card">
-      <h1>Sign in to {workspace.name}</h1>
-      <p className="lead">Your wallet is your account. You sign a short message, nothing is sent and nothing costs gas.</p>
+      <h1>Sign in to {workspaceName || 'Nil'}</h1>
+      <p className="lead">Your wallet is your account. You approve a short message in it. Nothing is sent and it costs nothing.</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <button type="button" className="btn btn-primary btn-lg" onClick={() => flow.start(signIn)} disabled={busy}>
         {busy ? <Spinner size={15} /> : <Wallet />} Sign in with your wallet
@@ -42,7 +42,7 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
       <div className="auth-links">
         {onHolderJoin ? (
           <button type="button" className="btn btn-ghost btn-sm" onClick={onHolderJoin}>
-            Hold NOX? Join without an invite
+            Have NOX tokens? Join without an invite
           </button>
         ) : (
           <span className="muted">New here? Ask an admin for an invite link.</span>
