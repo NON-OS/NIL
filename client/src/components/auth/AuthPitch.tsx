@@ -1,24 +1,30 @@
+import NilLogo from '../brand/NilLogo';
 import BrandArt from '../brand/BrandArt';
 import Resolve from '../brand/Resolve';
 import Arc from '../brand/Arc';
 
-// Plain, factual, checkable: what NØNOS does, with the actual primitives named.
+// What Nil does in plain words, each line something a careful reader could go and check.
 const FACTS = [
-  ['Sign in with an Ethereum wallet', 'No email, no password, no phone number.'],
-  ['Docs encrypted in your browser', 'X25519 and AES-256-GCM. The server stores ciphertext.'],
-  ['Bounties paid wallet to wallet', 'NOX goes straight to the contributor. The transfer is checked on-chain.'],
-  ['Proof of work anyone can verify', 'Ed25519-signed receipts, checked offline in any browser.'],
+  ['Encrypted in your browser', 'Private tasks and docs are locked with keys from your wallet. The server only ever stores scrambled text.'],
+  ['Sign in with your wallet', 'No email, no password, no phone number.'],
+  ['Pay anyone for a task', 'NOX or USDC goes wallet to wallet and is checked on-chain. Nil never holds the money.'],
+  ['Decide together', 'Anonymous votes weighted by NOX and Zero-State Passes. Only the totals come out.'],
 ];
 
 export default function AuthPitch() {
   return (
     <aside className="auth-side">
       <Arc className="auth-arc" />
-      <BrandArt kind="logo" height={44} />
+      <div className="auth-brand">
+        <NilLogo height={44} />
+        <span className="auth-by">
+          by <BrandArt kind="logo" height={16} />
+        </span>
+      </div>
       <div className="auth-pitch">
-        <span className="eyebrow">Self-hosted workspace · v3</span>
+        <span className="eyebrow">Tasks · Docs · Payments · Votes</span>
         <h2>
-          <Resolve text="Private work your team can prove." />
+          <Resolve text="The private task app for you and your team." />
         </h2>
         <ol className="auth-facts">
           {FACTS.map(([title, detail], i) => (
@@ -32,7 +38,7 @@ export default function AuthPitch() {
           ))}
         </ol>
       </div>
-      <small className="eyebrow auth-foot">AGPL-3.0 · No trackers · No third-party requests</small>
+      <small className="eyebrow auth-foot">Open source · AGPL-3.0 · No trackers</small>
     </aside>
   );
 }

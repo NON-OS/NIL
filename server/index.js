@@ -19,7 +19,7 @@ const server = http.createServer(createApp());
 attachRealtime(server);
 
 server.listen(config.port, config.host, () => {
-  console.log(`NØNOS is running on http://localhost:${config.port} (AI assist ${config.ai.enabled ? 'on' : 'off'})`);
+  console.log(`Nil is running on http://localhost:${config.port} (AI assist ${config.ai.enabled ? 'on' : 'off'})`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

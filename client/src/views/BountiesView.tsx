@@ -97,7 +97,7 @@ export default function BountiesView() {
         {owed.length > 0 && (
           <section className="settings-section">
             <h2>Ready to pay</h2>
-            <p>Finished work with an unpaid bounty. {isAdmin ? 'Paying opens your wallet; NØNOS confirms the transfer on-chain.' : 'An admin will pay these to the contributor’s wallet.'}</p>
+            <p>Finished work with an unpaid bounty. {isAdmin ? 'Paying opens your wallet; Nil confirms the transfer on-chain.' : 'An admin will pay these to the contributor’s wallet.'}</p>
             <div className="settings-card bounty-list" style={{ padding: 0 }}>
               {owed.map((t) => {
                 const person = t.assigneeId ? users[t.assigneeId] : undefined;
@@ -165,7 +165,7 @@ export default function BountiesView() {
         {data && data.payments.length > 0 && (
           <section className="settings-section">
             <h2>Payments</h2>
-            <p>Every transfer NØNOS checked on-chain. {isAdmin ? 'Only admins and the person paid can see these, because a transaction reveals the receiving wallet.' : 'Only you and the admins can see your payments.'}</p>
+            <p>Every transfer Nil checked on-chain. {isAdmin ? 'Only admins and the person paid can see these, because a transaction reveals the receiving wallet.' : 'Only you and the admins can see your payments.'}</p>
             <PaymentList payments={data.payments} onChange={refresh} />
           </section>
         )}

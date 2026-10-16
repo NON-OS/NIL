@@ -16,7 +16,7 @@ function bytesAt(hex, headIndex) {
 }
 
 // The ERC-5564 announcements a transaction emitted from the configured announcer contract.
-// They're what lets a payee find a stealth payout from the chain alone, with no NØNOS server.
+// They're what lets a payee find a stealth payout from the chain alone, with no Nil server.
 export default async function readAnnouncement(txHash) {
   await nodeReady();
   const receipt = await rpc('eth_getTransactionReceipt', [txHash]);

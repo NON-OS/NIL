@@ -1,6 +1,17 @@
 # Changelog
 
-All notable changes to NØNOS are listed here, newest first.
+All notable changes to Nil, the task app made by NØNOS, are listed here, newest first. Versions up to 3.0.0 were released under the NØNOS name.
+
+## Unreleased
+
+### Changed
+
+- **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
+- New workspaces start with an empty name instead of NØNOS.
+
+### Fixed
+
+- A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
 
 ## 3.0.0 (2026-10-15)
 

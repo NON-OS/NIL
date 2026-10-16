@@ -1,6 +1,6 @@
-# Deploying NØNOS in production
+# Deploying Nil in production
 
-This guide puts NØNOS on a Linux VPS with Docker, behind Caddy for automatic HTTPS. It ends with an optional Tor onion service, backups, upgrades, a pre-launch checklist and troubleshooting.
+This guide puts Nil on a Linux VPS with Docker, behind Caddy for automatic HTTPS. It ends with an optional Tor onion service, backups, upgrades, a pre-launch checklist and troubleshooting.
 
 The commands assume Debian or Ubuntu, a domain called `nonos.example.com` and the code in `/opt/nonos`. Change them to match yours.
 
@@ -13,12 +13,12 @@ browser ──HTTPS──> Caddy (ports 80, 443) ──> nonos:3000 (Docker netw
                                                └─ outbound: your Ethereum node, Anthropic (only if AI is on)
 ```
 
-NØNOS has no port open to the internet. Only Caddy does.
+Nil has no port open to the internet. Only Caddy does.
 
 ## 1. Pick a server
 
 - **Size.** 2 vCPU, 2 GB RAM and 20 GB of SSD is a comfortable start for a team of a few dozen people. These are starting points, not measured limits. Building the Docker image on the server uses most of that memory. With 1 GB of RAM, add swap for the build (but see the note on swap in memory-only mode, [docs/ZERO-STATE.md](ZERO-STATE.md)).
-- **One instance.** NØNOS uses SQLite, and keeps live updates and rate limits in memory. Run exactly one copy. Don't put it behind a load balancer with several replicas.
+- **One instance.** Nil uses SQLite, and keeps live updates and rate limits in memory. Run exactly one copy. Don't put it behind a load balancer with several replicas.
 - **Software.** Docker Engine with the Compose plugin, version 2.24.4 or newer (the compose files use `!reset` and `!override`). Check with `docker compose version`. Install Docker from the official instructions at docs.docker.com/engine/install.
 - **Outbound access.** The server needs HTTPS out to your Ethereum node, to Anthropic if you turn AI on, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building.
 - **A wallet.** You sign in with an Ethereum wallet in your browser (an extension such as MetaMask or Rabby, or a wallet's in-app browser). Have one ready, plus a second wallet to link as a backup.
@@ -47,7 +47,7 @@ sudo ufw allow 443/udp      # HTTP/3, optional
 sudo ufw enable
 ```
 
-Docker writes its own firewall rules for published ports, and those skip ufw. That is why this guide never publishes NØNOS's port 3000 on the host. Only Caddy publishes ports.
+Docker writes its own firewall rules for published ports, and those skip ufw. That is why this guide never publishes Nil's port 3000 on the host. Only Caddy publishes ports.
 
 ## 4. Get the code
 
@@ -59,7 +59,7 @@ sudo git checkout <release>          # the release tag or branch you want to run
 
 Build from a fresh clone like this. The image never takes local data: `.dockerignore` leaves out data folders, databases, capsules, exports, `.env` files and keys wherever they sit (a development copy keeps its database under `server/data/`, for example), and the Dockerfile removes any that still slip into the server folder. A fresh clone is still the cleanest starting point.
 
-## 5. Configure NØNOS
+## 5. Configure Nil
 
 ```bash
 sudo cp .env.example .env
@@ -76,7 +76,7 @@ SOURCE_URL=https://github.com/<you>/nonos
 ```
 
 - `APP_URL` must be exactly the address people type. Wallets show this domain in the sign-in message.
-- `TRUST_PROXY=1` tells NØNOS that Caddy sits in front. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's.
+- `TRUST_PROXY=1` tells Nil that Caddy sits in front. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's.
 - `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
 
 Then decide on these:
@@ -103,7 +103,7 @@ nonos.example.com {
 }
 ```
 
-Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers NØNOS reads. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
+Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers Nil reads. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
 
 ```
 {
@@ -118,7 +118,7 @@ Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket
 # whenever you run `docker compose` in /opt/nonos.
 services:
   nonos:
-    # no port on the host: only Caddy reaches NØNOS, over the Docker network
+    # no port on the host: only Caddy reaches Nil, over the Docker network
     ports: !reset []
 
   caddy:
@@ -146,7 +146,7 @@ To keep `git status` clean, list both files in `.git/info/exclude`:
 printf 'Caddyfile\ndocker-compose.override.yml\n' | sudo tee -a .git/info/exclude
 ```
 
-**Prefer Caddy from your distribution's packages?** Then skip the `caddy` service, publish NØNOS on the loopback interface only, and point Caddy at it:
+**Prefer Caddy from your distribution's packages?** Then skip the `caddy` service, publish Nil on the loopback interface only, and point Caddy at it:
 
 ```yaml
 services:
@@ -179,7 +179,7 @@ curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security
 
 The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set.
 
-The NØNOS container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
+The Nil container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
 
 ## 8. First sign-in and the first admin
 
@@ -210,7 +210,7 @@ Then review these settings:
 
 ## 9. Optional: Tor onion service
 
-NØNOS can also be reached as a Tor onion service. Details are in [docs/TOR.md](TOR.md). Since v3, a wallet is the only way to sign in, and Tor Browser ships without wallet extensions, so plan how your team will sign in first.
+Nil can also be reached as a Tor onion service. Details are in [docs/TOR.md](TOR.md). Since v3, a wallet is the only way to sign in, and Tor Browser ships without wallet extensions, so plan how your team will sign in first.
 
 **Onion and HTTPS together.** When you pass `-f`, Compose stops loading the override file automatically, so list it:
 
@@ -219,7 +219,7 @@ sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f dock
 sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.tor.yml exec tor cat /var/lib/tor/nonos/hostname
 ```
 
-Keep `APP_URL` set to your HTTPS address. Onion visitors then see that domain in the wallet sign-in message, and their wallet may warn that it doesn't match the site. All onion visitors reach NØNOS from the Tor container's address, so they share one set of rate limits.
+Keep `APP_URL` set to your HTTPS address. Onion visitors then see that domain in the wallet sign-in message, and their wallet may warn that it doesn't match the site. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
 
 **Onion only.** Skip Caddy. Create a local `docker-compose.onion.yml` with:
 
@@ -241,7 +241,7 @@ Leave `TRUST_PROXY` empty and `APP_URL` empty (or set it to `http://<your-addres
 
 ### What to back up
 
-Everything NØNOS stores is in the `nonos-data` volume, mounted at `/data` in the container. With the code in `/opt/nonos`, the volume is called `nonos_nonos-data` (check with `docker volume ls`).
+Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the container. With the code in `/opt/nonos`, the volume is called `nonos_nonos-data` (check with `docker volume ls`).
 
 | Path in `/data` | What it is |
 |---|---|
@@ -259,7 +259,7 @@ This script takes a consistent database snapshot with SQLite's `VACUUM INTO`, co
 
 ```sh
 #!/bin/sh
-# Backs up NØNOS while it runs: a consistent database snapshot, the signing key and the uploads.
+# Backs up Nil while it runs: a consistent database snapshot, the signing key and the uploads.
 set -eu
 cd /opt/nonos
 STAMP=$(date +%F-%H%M)
@@ -299,7 +299,7 @@ Then copy the archives off the server, encrypted.
 
 ### Cold backup
 
-Stopping NØNOS for a moment lets you copy the whole volume as it is:
+Stopping Nil for a moment lets you copy the whole volume as it is:
 
 ```bash
 cd /opt/nonos
@@ -339,7 +339,7 @@ Sessions in the backup stay valid, so people who were signed in when it was take
 
 ### Restore from a capsule
 
-Start NØNOS on a server with an empty volume. Open the site, choose **Moving servers? Restore from an encrypted capsule**, pick the file and enter the passphrase. Everyone signs in again afterwards. Capsules larger than `MAX_CAPSULE_MB` (4096 by default) are refused.
+Start Nil on a server with an empty volume. Open the site, choose **Moving servers? Restore from an encrypted capsule**, pick the file and enter the passphrase. Everyone signs in again afterwards. Capsules larger than `MAX_CAPSULE_MB` (4096 by default) are refused.
 
 ### Test your restores
 
@@ -417,7 +417,7 @@ sudo docker compose exec nonos wget -qO- http://127.0.0.1:3000/healthz
 
 **"No account here uses this wallet."** That wallet isn't linked to any account. Sign in with a linked wallet, or ask an admin for an invite.
 
-**"NØNOS couldn't reach its Ethereum node."** `NOX_RPC_URL` is wrong, the node is down, or outbound HTTPS is blocked.
+**"Nil couldn't reach its Ethereum node."** `NOX_RPC_URL` is wrong, the node is down, or outbound HTTPS is blocked.
 
 **"The Ethereum node is on chain …, but this server expects chain …"** `NOX_RPC_URL` points at a different network than `NOX_CHAIN_ID`.
 
@@ -425,7 +425,7 @@ sudo docker compose exec nonos wget -qO- http://127.0.0.1:3000/healthz
 
 **A payment stays pending.** It counts after `NOX_CONFIRMATIONS` blocks (3 by default) and is re-checked every minute. If the transaction never appears on-chain, it fails after 24 hours. A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address). Fix the cause, remove the failed payment and record the transaction again.
 
-**Errors saying a NØNOS subscription is needed (HTTP 402).** `PLAN_TREASURY` is set and the plan has lapsed. Pay in **Settings → Plan**, or unset `PLAN_TREASURY` for community mode on your own server.
+**Errors saying Nil Pro is needed (HTTP 402).** `PLAN_TREASURY` is set and the plan has lapsed. Pay in **Settings → Plan**, or unset `PLAN_TREASURY` for community mode on your own server.
 
 **"AI assist is off."** `ANTHROPIC_API_KEY` is not set, or the container wasn't recreated after setting it.
 

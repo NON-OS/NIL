@@ -1,7 +1,7 @@
 import '../components/auth/Auth.css';
 import { useEffect, useState } from 'react';
 import AuthPitch from '../components/auth/AuthPitch';
-import BrandArt from '../components/brand/BrandArt';
+import NilLogo from '../components/brand/NilLogo';
 import LoginPanel from '../components/auth/LoginPanel';
 import JoinPanel from '../components/auth/JoinPanel';
 import RestorePanel from '../components/auth/RestorePanel';
@@ -58,7 +58,7 @@ export default function AuthView() {
       <main className="auth-main">
         <div className="auth-stack">
           <div className="auth-mobile-brand">
-            <BrandArt kind="logo" height={42} />
+            <NilLogo height={42} />
           </div>
           {panel}
         </div>

@@ -26,7 +26,7 @@ export default function RestorePanel({ onBack }: { onBack: () => void }) {
   return (
     <form className="auth-card" onSubmit={submit}>
       <h1>Restore a workspace</h1>
-      <p className="lead">Bring everything over from another NØNOS server: tasks, people, files and proofs. Then sign in as you normally do.</p>
+      <p className="lead">Bring everything over from another Nil server: tasks, people, files and proofs. Then sign in as you normally do.</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
       <label className="field">
         <span>Capsule file</span>

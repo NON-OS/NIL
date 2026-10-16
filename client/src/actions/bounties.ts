@@ -25,10 +25,10 @@ const announced = (id: string, txHash: string) => http.post<{ payment: Payment }
 const bounties = {
   overview: () => http.get<BountyOverview>('/bounties'),
 
-  // The payer's own wallet sends the reward token straight to the contributor. NØNOS only
+  // The payer's own wallet sends the reward token straight to the contributor. Nil only
   // builds the transfer and afterwards checks the result on-chain; it never touches the funds.
   // When the contributor has private payouts on, the tokens go to a fresh one-time address
-  // only they can open, announced on-chain so they can find it without NØNOS.
+  // only they can open, announced on-chain so they can find it without Nil.
   async pay(task: Task) {
     const { nox, users, rewards, stealth } = store.get();
     const token = rewards.find((t) => t.symbol === task.bountyToken);

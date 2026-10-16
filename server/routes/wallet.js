@@ -50,7 +50,7 @@ router.post(
     } else if (mode === 'setup') {
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
       pending.name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
-      pending.workspaceName = check.text(req.body.workspaceName || 'NØNOS', 'Workspace name', { min: 1, max: 60 });
+      pending.workspaceName = check.text(req.body.workspaceName || 'My team', 'Workspace name', { min: 1, max: 60 });
     } else if (mode === 'invite') {
       const invite = liveInvite(req.body.inviteToken);
       if (!invite) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');

@@ -23,22 +23,13 @@
   color: var(--ink);
 }
 
-.sidebar-brand .ws-mark {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  min-width: 0;
-  font-weight: 600;
-  font-size: var(--text-lg);
-}
-
-.sidebar-brand .ws-mark span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+/* the app, then the workspace it has open: "Nil / NØNOS" */
+.sidebar-brand svg {
+  flex: none;
 }
 
 .sidebar-brand .ws-name {
+  min-width: 0;
   overflow: hidden;
   color: var(--muted);
   font-size: var(--text-sm);

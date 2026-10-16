@@ -83,7 +83,7 @@ export default function ExtractModal() {
               aria-label="Notes"
             />
             <p className="hint" style={{ marginTop: 8 }}>
-              Your notes are sent to the AI service only for this request and aren’t stored by NØNOS.
+              Your notes are sent to the AI service only for this request and aren’t stored by Nil.
             </p>
           </>
         ) : (

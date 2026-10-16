@@ -19,8 +19,8 @@ export default async function readCapsule(file, passphrase, outDir) {
   fs.readSync(fd, header, 0, header.length, 0);
   fs.readSync(fd, tag, 0, tag.length, size - format.tagLength);
   fs.closeSync(fd);
-  if (!header.subarray(0, 8).equals(format.magic)) throw HttpError.badRequest('That isn’t a NØNOS capsule.');
-  if (header[8] !== format.version) throw HttpError.badRequest('This capsule was made by a newer NØNOS. Update this server first.');
+  if (!header.subarray(0, 8).equals(format.magic)) throw HttpError.badRequest('That isn’t a Nil capsule.');
+  if (header[8] !== format.version) throw HttpError.badRequest('This capsule was made by a newer version of Nil. Update this server first.');
 
   const salt = header.subarray(9, 25);
   const iv = header.subarray(25, 37);

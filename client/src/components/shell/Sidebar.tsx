@@ -1,7 +1,7 @@
 import './Sidebar.css';
 import { useMemo } from 'react';
 import { Plus, Search } from 'lucide-react';
-import BrandArt from '../brand/BrandArt';
+import NilLogo from '../brand/NilLogo';
 import Avatar from '../ui/Avatar';
 import UserMenu from './UserMenu';
 import RunningTimer from '../time/RunningTimer';
@@ -45,12 +45,10 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
       <div className={cx('sidebar-scrim', open && 'open')} onClick={() => ui.sidebar(false)} />
       <nav className={cx('sidebar', open && 'open')} aria-label="Main">
         <div className="sidebar-brand">
-          {/^N[OØ]NOS$/i.test(workspace.name) ? (
-            <BrandArt kind="logo" height={42} />
-          ) : (
-            <span className="ws-mark">
-              <BrandArt kind="mark" height={26} label="" />
-              <span>{workspace.name}</span>
+          <NilLogo height={30} />
+          {workspace.name && (
+            <span className="ws-name" title={workspace.name}>
+              <span aria-hidden="true">/</span> {workspace.name}
             </span>
           )}
           <span className={cx('conn-dot', !connected && 'off')} title={connected ? 'Live: changes sync instantly' : 'Reconnecting…'} />

@@ -1,7 +1,7 @@
 {
-  "name": "NØNOS",
-  "short_name": "NØNOS",
-  "description": "Private, self-hosted work for teams: tasks, encrypted docs, NOX bounties, signed votes and proof of work. Sign in with your wallet.",
+  "name": "Nil",
+  "short_name": "Nil",
+  "description": "The private task app for you and your team, by NØNOS: encrypted tasks and docs, NOX bounties, anonymous votes and proof of work. Sign in with your wallet.",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

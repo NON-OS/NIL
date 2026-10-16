@@ -1,18 +1,18 @@
 # Proof of Contribution format
 
-NØNOS gives every finished task a **work receipt**, and every confirmed bounty payment a **payment receipt**, both signed by the workspace. People collect their receipts into a **proof file** and share it with whoever needs to check their work: a DAO, a grant program, a client, an employer. The format is open and small, so anyone can write a verifier.
+Nil gives every finished task a **work receipt**, and every confirmed bounty payment a **payment receipt**, both signed by the workspace. People collect their receipts into a **proof file** and share it with whoever needs to check their work: a DAO, a grant program, a client, an employer. The format is open and small, so anyone can write a verifier.
 
 A receipt is trustworthy because it carries an Ed25519 signature from the workspace that issued it. Checking that signature needs no blockchain. A payment receipt also names an Ethereum transaction, so anyone can look the payment up on-chain as a second, independent check.
 
 ## Workspace key
 
-Each NØNOS server generates an Ed25519 key pair on first use. It's stored in `DATA_DIR/keys/receipts-ed25519.pem`, outside the database, so a leaked database dump can't be used to forge receipts. Capsules carry the key, so a moved workspace keeps its identity.
+Each Nil server generates an Ed25519 key pair on first use. It's stored in `DATA_DIR/keys/receipts-ed25519.pem`, outside the database, so a leaked database dump can't be used to forge receipts. Capsules carry the key, so a moved workspace keeps its identity.
 
 The public key is published at:
 
 ```
 GET https://<workspace-domain>/.well-known/nonos-proof-key
-{ "name": "NØNOS", "algorithm": "Ed25519", "key": "<base64url, 32 bytes>", "fingerprint": "dac6-f4fb-e063-2afb" }
+{ "name": "Nil", "algorithm": "Ed25519", "key": "<base64url, 32 bytes>", "fingerprint": "dac6-f4fb-e063-2afb" }
 ```
 
 The fingerprint is the first 8 bytes of `SHA-256(raw public key)`, written as hex in groups of four.
@@ -51,7 +51,7 @@ Signed when a task is marked done, for its assignee (or for whoever finished it,
   "task": { "commit": "9550b0bc…", "ref": "NON-3" },
   "type": "nonos.receipt",
   "v": 1,
-  "workspace": { "key": "1Iwuq…", "name": "NØNOS" }
+  "workspace": { "key": "1Iwuq…", "name": "Nil" }
 }
 ```
 
@@ -82,7 +82,7 @@ Signed when the server has confirmed a bounty payment on-chain: the right token 
   "task": { "commit": "9550b0bc…", "ref": "NON-3" },
   "type": "nonos.payment",
   "v": 1,
-  "workspace": { "key": "1Iwuq…", "name": "NØNOS" }
+  "workspace": { "key": "1Iwuq…", "name": "Nil" }
 }
 ```
 
@@ -106,7 +106,7 @@ A payment receipt has no `completedAt`. The payer's address is not in the receip
   "type": "nonos.proof",
   "v": 1,
   "exportedAt": "2026-10-15T12:00:00.000Z",
-  "workspace": { "name": "NØNOS", "key": "1Iwuq…" },
+  "workspace": { "name": "Nil", "key": "1Iwuq…" },
   "contributor": { "name": "Jane Doe" },
   "receipts": [
     { "body": "<canonical receipt JSON string>", "sig": "<base64url>", "reveal": null },

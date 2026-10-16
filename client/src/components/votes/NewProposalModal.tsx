@@ -67,7 +67,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             value={form.weighting}
             onChange={(v) => set({ weighting: v as 'equal' | 'power' })}
             className="btn"
-            width={240}
+            width={340}
           >
             {form.weighting === 'power' ? 'Voting power' : 'One person, one vote'}
           </Picker>

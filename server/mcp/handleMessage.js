@@ -22,13 +22,13 @@ function listing() {
 function call(params, user, scope) {
   const tool = byName.get(params?.name);
   if (!tool) return { error: [-32602, `Unknown tool: ${params?.name}`] };
-  if (tool.write && scope !== 'write') return { result: { isError: true, content: [{ type: 'text', text: 'This key is read-only. Create a key with write access in NØNOS settings to change things.' }] } };
+  if (tool.write && scope !== 'write') return { result: { isError: true, content: [{ type: 'text', text: 'This key is read-only. Create a key with write access in Nil settings to change things.' }] } };
   try {
     const data = tool.run(params.arguments ?? {}, user, scope);
     return { result: { content: [{ type: 'text', text: JSON.stringify(data, null, 2) }], structuredContent: data } };
   } catch (err) {
     // tool failures go back to the model as readable errors, not protocol errors
-    const message = err instanceof HttpError ? err.message : 'Something went wrong on the NØNOS server.';
+    const message = err instanceof HttpError ? err.message : 'Something went wrong on the Nil server.';
     if (!(err instanceof HttpError)) console.error('[mcp]', err);
     return { result: { isError: true, content: [{ type: 'text', text: message }] } };
   }
@@ -47,8 +47,8 @@ export default function handleMessage(message, user, scope) {
       return reply(id, {
         protocolVersion: VERSIONS.includes(params?.protocolVersion) ? params.protocolVersion : VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'nonos', title: 'NØNOS', version: appVersion },
-        instructions: `You are connected to the NØNOS workspace "${ws?.name}" as ${user.name}. Task keys look like ${ws?.taskPrefix}-12. You see exactly what ${user.name} can see; private tasks of others and encrypted docs are never available. ${scope === 'write' ? 'This key can create and change tasks.' : 'This key is read-only.'}`,
+        serverInfo: { name: 'nonos', title: 'Nil', version: appVersion },
+        instructions: `You are connected to the Nil workspace "${ws?.name}" as ${user.name}. Task keys look like ${ws?.taskPrefix}-12. You see exactly what ${user.name} can see; private tasks of others and encrypted docs are never available. ${scope === 'write' ? 'This key can create and change tasks.' : 'This key is read-only.'}`,
       });
     }
     case 'ping':

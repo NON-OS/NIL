@@ -11,7 +11,7 @@ async function walletCeremony(body: Record<string, unknown>) {
   return http.post('/auth/wallet/verify', { challengeId, signature });
 }
 
-// An Ethereum wallet is the only key to NONOS. No email, no password, no biometrics.
+// An Ethereum wallet is the only key to Nil. No email, no password, no biometrics.
 const identity = {
   async walletLogin() {
     await walletCeremony({ mode: 'login' });

@@ -1,6 +1,6 @@
 import '../components/proofs/Proofs.css';
 import { useEffect, useState } from 'react';
-import BrandArt from '../components/brand/BrandArt';
+import NilLogo from '../components/brand/NilLogo';
 import StatusIcon from '../components/ui/StatusIcon';
 import Spinner from '../components/ui/Spinner';
 import Markdown from '../components/ui/Markdown';
@@ -35,7 +35,7 @@ export default function SharePage({ token }: { token: string }) {
   return (
     <div className="verify-standalone">
       <header>
-        <BrandArt kind="logo" height={42} />
+        <NilLogo height={42} />
         <span className="eyebrow">Read-only share</span>
       </header>
       <div className="page page-narrow">

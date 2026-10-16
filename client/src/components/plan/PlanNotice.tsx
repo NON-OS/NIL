@@ -11,7 +11,7 @@ export default function PlanNotice({ what }: { what: string }) {
   return (
     <div className="plan-notice" role="status">
       <span>
-        <strong>{what} need the NØNOS plan.</strong> Everything already here stays readable.
+        <strong>{what} need Nil Pro.</strong> Everything already here stays readable.
         {!isAdmin && ' An admin can renew it.'}
       </span>
       {isAdmin && (

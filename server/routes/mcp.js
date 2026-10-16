@@ -15,9 +15,9 @@ router.use((req, res, next) => {
   const auth = apiToken(req);
   if (!auth) {
     res.setHeader('WWW-Authenticate', 'Bearer realm="nonos", error="invalid_token"');
-    return res.status(401).json({ error: 'Send a NØNOS personal access key as "Authorization: Bearer nonos_pat_…".' });
+    return res.status(401).json({ error: 'Send a Nil personal access key as "Authorization: Bearer nonos_pat_…".' });
   }
-  if (!plan.status().unlocked) return res.status(402).json({ error: 'Connecting AI assistants needs an active NØNOS subscription.' });
+  if (!plan.status().unlocked) return res.status(402).json({ error: 'Connecting AI assistants needs Nil Pro.' });
   req.mcp = auth;
   next();
 });

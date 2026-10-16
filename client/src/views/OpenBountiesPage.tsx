@@ -2,7 +2,7 @@ import '../components/proofs/Proofs.css';
 import '../components/bounty/Bounty.css';
 import { useEffect, useState } from 'react';
 import { CheckCircle2, Coins } from 'lucide-react';
-import BrandArt from '../components/brand/BrandArt';
+import NilLogo from '../components/brand/NilLogo';
 import Spinner from '../components/ui/Spinner';
 import ApplyForm from '../components/bounty/ApplyForm';
 import http from '../api/http';
@@ -25,13 +25,13 @@ export default function OpenBountiesPage() {
   return (
     <div className="verify-standalone">
       <header>
-        <BrandArt kind="logo" height={42} />
+        <NilLogo height={42} />
         <a className="btn btn-sm" href="/" onClick={router.link('/')}>
           Sign in
         </a>
       </header>
       <div className="page page-narrow">
-        <span className="eyebrow">{data?.workspace ?? 'NØNOS'} · open bounties</span>
+        <span className="eyebrow">{data?.workspace ? `${data.workspace} · open bounties` : 'Open bounties'}</span>
         <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 500, margin: '6px 0 6px' }}>Get paid for work, wallet to wallet</h1>
         <p className="muted" style={{ marginBottom: 20, maxWidth: '62ch' }}>
           These tasks are open to anyone. Apply by signing with your wallet; if the team accepts, you sign in with the same wallet, deliver, and the reward is sent straight to you, with a signed receipt for your proof of work.

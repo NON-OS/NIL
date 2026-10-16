@@ -33,7 +33,7 @@ export default function createApp() {
     res.set('Access-Control-Allow-Origin', '*').json({ name: ws.name, algorithm: 'Ed25519', key: signingKey.publicKey(), fingerprint: signingKey.fingerprint() });
   });
 
-  // An open feed of publicly listed bounties, for anyone to index: other NØNOS servers,
+  // An open feed of publicly listed bounties, for anyone to index: other Nil servers,
   // aggregators, bots. Only tasks a team explicitly listed ever appear here.
   app.get('/.well-known/nonos-bounties.json', (req, res) => {
     res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'public, max-age=60').json(listedBounties());
@@ -60,7 +60,7 @@ export default function createApp() {
       res.sendFile(path.join(DIST, 'index.html'));
     });
   } else {
-    app.get('/', (req, res) => res.type('text').send('NØNOS API is running. Run `npm run build` for the web app, or `npm run dev` and open http://localhost:5173.'));
+    app.get('/', (req, res) => res.type('text').send('Nil API is running. Run `npm run build` for the web app, or `npm run dev` and open http://localhost:5173.'));
   }
 
   app.use((err, req, res, next) => {

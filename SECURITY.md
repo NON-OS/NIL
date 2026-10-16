@@ -1,6 +1,6 @@
 # Security policy
 
-NØNOS exists to keep a team's work private. Security reports are taken seriously and handled quickly.
+Nil exists to keep a team's work private. Security reports are taken seriously and handled quickly.
 
 ## Reporting a vulnerability
 
@@ -20,9 +20,9 @@ Out of scope: your hosting provider, your reverse proxy setup, social engineerin
 
 ## Design summary
 
-No part of NØNOS's own code has had an independent security audit. See [Honest limits](README.md#honest-limits) in the README.
+No part of Nil's own code has had an independent security audit. See [Honest limits](README.md#honest-limits) in the README.
 
-- Sign-in: an Ethereum wallet is the only way in. There are no passwords, passkeys or email. The server writes an EIP-4361 message, nonces are single-use and expire after 5 minutes, and the signer is recovered with EIP-191 using `@noble/curves` (secp256k1) and `@noble/hashes` (Keccak-256). Both libraries are widely used, and their own repositories list independent third-party audits of earlier versions. The versions NØNOS pins are newer than the audited ones.
+- Sign-in: an Ethereum wallet is the only way in. There are no passwords, passkeys or email. The server writes an EIP-4361 message, nonces are single-use and expire after 5 minutes, and the signer is recovered with EIP-191 using `@noble/curves` (secp256k1) and `@noble/hashes` (Keccak-256). Both libraries are widely used, and their own repositories list independent third-party audits of earlier versions. The versions Nil pins are newer than the audited ones.
 - Sessions, invites, share links and access keys: random tokens, stored only as SHA-256 hashes. Cookies are `HttpOnly` and `SameSite=Lax`, with `Secure` and the `__Host-` prefix over HTTPS.
 - Every write needs a custom header plus a same-origin check. A strict CSP is sent, with no inline scripts and no third-party hosts.
 - Encrypted docs: each person's X25519 key is derived in the browser with HKDF-SHA256 from a deterministic wallet signature over a message bound to the workspace's signing key and the account. Each doc has its own AES-256-GCM key, sealed to every reader with an ephemeral X25519 key agreement. The server stores only ciphertext and sealed keys.

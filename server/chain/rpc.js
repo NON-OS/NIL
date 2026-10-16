@@ -3,7 +3,7 @@ import HttpError from '../lib/HttpError.js';
 
 let nextId = 1;
 
-const unreachable = (detail) => new HttpError(502, `NØNOS couldn’t reach its Ethereum node (${detail}). Try again in a minute.`);
+const unreachable = (detail) => new HttpError(502, `Nil couldn’t reach its Ethereum node (${detail}). Try again in a minute.`);
 
 // One JSON-RPC call to the node in NOX_RPC_URL. No cookies, no redirects, and a hard
 // timeout so a slow node can't hold requests open.

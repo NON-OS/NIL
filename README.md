@@ -1,14 +1,14 @@
-# NØNOS
+# Nil
 
-NØNOS is a self-hosted workspace for small teams. It covers tasks, end-to-end encrypted docs, bounties paid in crypto, votes and signed proof of work. You run it on your own server. People sign in with an Ethereum wallet and nothing else: no email, no password.
+Nil is the private task app for you and your team, made by NØNOS. It covers tasks, end-to-end encrypted docs, bounties paid in crypto, votes and signed proof of work. You run it on your own server. People sign in with an Ethereum wallet and nothing else: no email, no password.
 
-NØNOS uses the NOX token on Ethereum. Bounties are paid in NOX or USDC, voting power comes from NOX held, NOX staked and Zero-State Passes (ZSPs), and an optional NOX subscription unlocks the paid tools on servers that charge for them.
+Nil uses the NOX token on Ethereum. Bounties are paid in NOX or USDC, voting power comes from NOX held, NOX staked and Zero-State Pass NFTs, and Nil Pro, paid in NOX, unlocks the paid tools on servers that charge for them.
 
 This is version 3.0.0. See [CHANGELOG.md](CHANGELOG.md) for what changed.
 
 Free software under the [GNU AGPL v3 or later](LICENSE).
 
-> **Status.** No part of NØNOS's own code has had an independent security audit. Encrypted weighted votes are in beta (see [Honest limits](#honest-limits)).
+> **Status.** No part of Nil's own code has had an independent security audit. Encrypted weighted votes are in beta (see [Honest limits](#honest-limits)).
 
 ## Contents
 
@@ -51,7 +51,7 @@ Free software under the [GNU AGPL v3 or later](LICENSE).
 - **Live updates.** Changes appear for everyone at once. You can see who is online, who is looking at the same task and who is typing.
 - **Quick add.** For example, `Send investor update friday !high +GE @me every week` sets the due date, priority, project, assignee and repeat schedule in one line.
 - **Command palette and shortcuts.** `⌘K` / `Ctrl+K` jumps to any task, project or page. Press `?` for every shortcut.
-- **Installable app.** NØNOS is a progressive web app. Install it on a phone or desktop. Its service worker caches only the app's own files, never data from the API.
+- **Installable app.** Nil is a progressive web app. Install it on a phone or desktop. Its service worker caches only the app's own files, never data from the API.
 
 ### End-to-end encrypted docs
 
@@ -66,7 +66,7 @@ Free software under the [GNU AGPL v3 or later](LICENSE).
 ### Bounties and payouts
 
 - **Bounties in NOX or USDC.** Admins put a reward on a task. The list of reward tokens is configurable (`REWARD_TOKENS`). NOX is always first.
-- **Paid wallet to wallet.** The admin's own wallet sends the tokens to the contributor's first linked wallet. NØNOS never holds funds. The server only reads the chain.
+- **Paid wallet to wallet.** The admin's own wallet sends the tokens to the contributor's first linked wallet. Nil never holds funds. The server only reads the chain.
 - **Checked on-chain.** A payment counts only when the right token contract moved at least the full amount from an allowed payer to the right address, after enough confirmations (3 by default). Pending payments are re-checked every minute.
 - **Treasury addresses.** Besides admins' own wallets, up to 10 extra addresses (for example a Safe multisig) can pay. Paste the transaction hash to record a payment made elsewhere.
 - **Payment receipts.** A confirmed payment gets a signed receipt that joins the contributor's proof of work. It names the transaction, the token, the amount and the address that received the payment.
@@ -96,7 +96,7 @@ There are three kinds of vote. Admins create them, with 2 to 8 options and a len
 
 ### AI
 
-- **Connect your own assistant (MCP).** NØNOS has a Model Context Protocol endpoint at `/mcp`. Claude or any MCP client connects with a personal access key that you create in **Settings → Connect AI**. Keys are shown once, stored as hashes, read-only or read-write, can expire and can be revoked. The assistant acts as you and sees exactly what you see. Other people's private tasks and encrypted docs are never reachable. Tools: `whoami`, `workspace_summary`, `list_tasks`, `get_task`, `list_projects`, `create_task`, `update_task`, `add_comment`.
+- **Connect your own assistant (MCP).** Nil has a Model Context Protocol endpoint at `/mcp`. Claude or any MCP client connects with a personal access key that you create in **Settings → Connect AI**. Keys are shown once, stored as hashes, read-only or read-write, can expire and can be revoked. The assistant acts as you and sees exactly what you see. Other people's private tasks and encrypted docs are never reachable. Tools: `whoami`, `workspace_summary`, `list_tasks`, `get_task`, `list_projects`, `create_task`, `update_task`, `add_comment`.
 - **Built-in AI (optional).** With an Anthropic API key on the server, Claude can break a task into steps, draft a description, turn meeting notes into tasks, write a weekly team brief, draft text in a doc and write the narrative for a status deck. It is off unless you set `ANTHROPIC_API_KEY`. Text goes to Anthropic only when someone clicks an AI button, and only what that feature needs.
 
 ### Status decks
@@ -109,11 +109,11 @@ There are three kinds of vote. Admins create them, with 2 to 8 options and a len
 - **Encrypted capsules.** Admins download the whole workspace (database, uploaded files and the signing key) as one AES-256-GCM file locked with a passphrase. Restore it on any fresh server.
 - **Exports.** A CSV of tasks for anyone, and a readable JSON backup for admins.
 - **Zero-state controls.** Erase finished work, comments and history after a number of days you choose. An owner can erase the whole workspace. A memory-only mode keeps nothing on disk. See [docs/ZERO-STATE.md](docs/ZERO-STATE.md).
-- **Tor.** Run NØNOS as an onion service with one extra compose file. See [docs/TOR.md](docs/TOR.md).
+- **Tor.** Run Nil as an onion service with one extra compose file. See [docs/TOR.md](docs/TOR.md).
 
 ## Privacy model
 
-What NØNOS protects, and what it doesn't.
+What Nil protects, and what it doesn't.
 
 **Who can see what inside the workspace**
 
@@ -129,7 +129,7 @@ What NØNOS protects, and what it doesn't.
 
 **What leaves your server**
 
-- **The browser loads nothing from other hosts.** No analytics, no trackers, no CDNs, no third-party fonts or scripts. Fonts are bundled and the zero-knowledge circuit files are served by your server. The Content Security Policy sets `default-src 'self'` and `connect-src 'self'`, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, outside NØNOS's control.
+- **The browser loads nothing from other hosts.** No analytics, no trackers, no CDNs, no third-party fonts or scripts. Fonts are bundled and the zero-knowledge circuit files are served by your server. The Content Security Policy sets `default-src 'self'` and `connect-src 'self'`, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, outside Nil's control.
 - **The Ethereum node.** The server reads the chain through `NOX_RPC_URL` to check payments, balances, stakes and passes. That node sees which addresses and transactions your server looks up, and your server's IP address. The default is a public node (`ethereum-rpc.publicnode.com`). Privacy-minded teams should point it at their own node. `NOX_RPC_URL=off` turns every on-chain feature off.
 - **Anthropic**, only if you set `ANTHROPIC_API_KEY`, and only when someone uses an AI button. Draft with AI in a doc sends your instruction and, if you choose, the doc's text. That text is decrypted in your browser and leaves it for that request.
 - **Your own AI assistant**, if you connect one over MCP. Whatever it reads goes to that assistant's provider.
@@ -207,7 +207,7 @@ For a public server with HTTPS, follow [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ### With plain Node
 
-Requires Node.js 22.13 or newer (NØNOS uses the built-in `node:sqlite`).
+Requires Node.js 22.13 or newer (Nil uses the built-in `node:sqlite`).
 
 ```bash
 npm ci
@@ -244,14 +244,14 @@ All settings are environment variables. Every one is optional. [.env.example](.e
 
 ## Honest limits
 
-- **Nothing is audited.** No part of NØNOS's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
+- **Nothing is audited.** No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
 - **Encrypted weighted votes are beta.** The ballot circuit (`circuits/ballot.circom`) has not been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2 (recorded in `circuits/CEREMONY.json`) was a development ceremony: all contributions ran on one machine. Whoever ran it could, in principle, forge proofs. Rerun phase 2 with independent contributors (see `scripts/zk-ballot.mjs`) before relying on these votes for anything that matters.
 - **Trustees.** In an encrypted vote, two trustees acting together could decrypt individual ballots. That shows each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
 - **Small groups.** Anonymous votes hide who voted what among the members who voted. In a small team, or a lopsided result, totals alone can reveal choices.
 - **Network metadata.** Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
 - **One server, one process.** The database is SQLite, live updates and rate limits are in memory. Run a single instance.
 - **Wallets.** Sign-in needs an injected EIP-1193 wallet (a browser extension or a wallet's in-app browser). WalletConnect is not supported. Tor Browser ships without wallet extensions. If you lose every wallet linked to your account, you lose the account, so link a second one.
-- **Deterministic signatures.** Encrypted docs, private payouts and anonymous voting derive keys from a wallet signature. Wallets that sign the same message differently each time can't use them. NØNOS checks this on first use.
+- **Deterministic signatures.** Encrypted docs, private payouts and anonymous voting derive keys from a wallet signature. Wallets that sign the same message differently each time can't use them. Nil checks this on first use.
 - **Never lose `DATA_DIR/keys`.** The signing key there signs every receipt and is part of every person's key derivation. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, and nobody can re-derive their docs, private payout or voting keys. Back it up with the database. Renaming the workspace is safe: the messages people sign to derive those keys name the workspace by this key, not by its name.
 - **Private tasks aren't encrypted.** Only docs are end-to-end encrypted. See [Privacy model](#privacy-model).
 - **On-chain data is public**, and private payouts don't hide the payer, token, amount or timing.
@@ -336,4 +336,4 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) for house rules.
 
 ## Licence
 
-NØNOS is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. If you run a modified version for others over a network, offer them its source (set `SOURCE_URL`). See [LICENSE](LICENSE).
+Nil is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. If you run a modified version for others over a network, offer them its source (set `SOURCE_URL`). See [LICENSE](LICENSE).
