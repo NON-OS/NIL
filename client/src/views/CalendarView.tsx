@@ -1,13 +1,16 @@
 import './CalendarView.css';
 import { useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
-import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { CalendarDays, Plus } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import FilterBar from '../components/shell/FilterBar';
+import MonthNav from '../components/calendar/MonthNav';
+import CalendarAgenda from '../components/calendar/CalendarAgenda';
 import StatusIcon from '../components/ui/StatusIcon';
 import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import useFilter from '../hooks/useFilter';
+import useMediaQuery from '../hooks/useMediaQuery';
 import taskActions from '../actions/tasks';
 import detail from '../actions/detail';
 import ui from '../actions/ui';
@@ -15,6 +18,7 @@ import filterTasks from '../lib/filterTasks';
 import dates from '../lib/dates';
 import meta from '../lib/meta';
 import cx from '../lib/cx';
+import media from '../lib/media';
 import type Task from '../types/Task';
 
 const PER_DAY = 4;
@@ -92,6 +96,7 @@ export default function CalendarView() {
   const [filter, setFilter] = useFilter('calendar');
   const [month, setMonth] = useState(dates.today());
   const [dragging, setDragging] = useState<Task | null>(null);
+  const phone = useMediaQuery(media.phone);
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }));
 
   const tasks = useMemo(() => filterTasks(all, filter, { meId, prefix }), [all, filter, meId, prefix]);
@@ -113,28 +118,20 @@ export default function CalendarView() {
     if (dueDate !== task.dueDate) taskActions.update(task.id, { dueDate });
   };
 
+  // the agenda brings its own month switcher, so the phone header stays uncrowded
+  if (phone) {
+    return (
+      <div className="main">
+        <ViewHeader title="Calendar" icon={<CalendarDays size={17} />} />
+        <FilterBar filter={filter} onChange={setFilter} />
+        <CalendarAgenda month={month} onMonth={setMonth} byDay={byDay} unscheduled={unscheduled} />
+      </div>
+    );
+  }
+
   return (
     <div className="main">
-      <ViewHeader
-        title="Calendar"
-        icon={<CalendarDays size={17} />}
-        actions={
-          <div className="cal-nav">
-            <button type="button" className="icon-btn" onClick={() => setMonth(dates.addMonths(month, -1))} aria-label="Previous month">
-              <ChevronLeft />
-            </button>
-            <h2>
-              {dates.MONTHS_LONG[dates.parse(month).getMonth()]} {month.slice(0, 4)}
-            </h2>
-            <button type="button" className="icon-btn" onClick={() => setMonth(dates.addMonths(month, 1))} aria-label="Next month">
-              <ChevronRight />
-            </button>
-            <button type="button" className="btn" onClick={() => setMonth(dates.today())}>
-              Today
-            </button>
-          </div>
-        }
-      />
+      <ViewHeader title="Calendar" icon={<CalendarDays size={17} />} actions={<MonthNav month={month} onChange={setMonth} />} />
       <FilterBar filter={filter} onChange={setFilter} />
       <DndContext sensors={sensors} onDragStart={({ active }) => setDragging(all.find((t) => t.id === active.id) ?? null)} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         <div className="cal-wrap">
