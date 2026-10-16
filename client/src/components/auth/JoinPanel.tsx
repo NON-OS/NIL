@@ -2,6 +2,10 @@ import { useState, type FormEvent } from 'react';
 import { Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import identity from '../../actions/identity';
+import useWalletFlow from '../../hooks/useWalletFlow';
+import WalletPicker from './WalletPicker';
+import WalletStatus from './WalletStatus';
+import NoWalletPanel from './NoWalletPanel';
 import type JoinDetails from '../../types/JoinDetails';
 
 interface Props {
@@ -25,8 +29,9 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const flow = useWalletFlow();
+
+  const join = async () => {
     setError('');
     setBusy(true);
     try {
@@ -37,6 +42,14 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
       setBusy(false);
     }
   };
+
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    flow.start(join);
+  };
+
+  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} />;
+  if (flow.stage === 'pick') return <WalletPicker wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} onBack={flow.back} />;
 
   return (
     <form className="auth-card" onSubmit={submit} noValidate>
@@ -58,6 +71,7 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
       <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim()}>
         {busy ? <Spinner size={14} /> : <Wallet />} {mode === 'setup' ? 'Create workspace with your wallet' : 'Join with your wallet'}
       </button>
+      <WalletStatus flow={flow} />
       <p className="method-hint">Signing proves you own the wallet. It is not a transaction and costs nothing.</p>
       {(onRestore || onBack) && (
         <div className="auth-links">

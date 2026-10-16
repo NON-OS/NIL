@@ -4,11 +4,16 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import identity from '../../actions/identity';
 import router from '../../lib/router';
+import useWalletFlow from '../../hooks/useWalletFlow';
+import WalletPicker from './WalletPicker';
+import WalletStatus from './WalletStatus';
+import NoWalletPanel from './NoWalletPanel';
 
 export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void }) {
   const workspace = useStore((s) => s.workspace);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const flow = useWalletFlow();
 
   const signIn = async () => {
     setError('');
@@ -22,14 +27,18 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
     }
   };
 
+  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} />;
+  if (flow.stage === 'pick') return <WalletPicker wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} onBack={flow.back} />;
+
   return (
     <div className="auth-card">
       <h1>Sign in to {workspace.name}</h1>
       <p className="lead">Your wallet is your account. You sign a short message, nothing is sent and nothing costs gas.</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
-      <button type="button" className="btn btn-primary btn-lg" onClick={signIn} disabled={busy}>
+      <button type="button" className="btn btn-primary btn-lg" onClick={() => flow.start(signIn)} disabled={busy}>
         {busy ? <Spinner size={15} /> : <Wallet />} Sign in with your wallet
       </button>
+      <WalletStatus flow={flow} />
       <div className="auth-links">
         {onHolderJoin ? (
           <button type="button" className="btn btn-ghost btn-sm" onClick={onHolderJoin}>
