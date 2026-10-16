@@ -22,7 +22,11 @@ export default async function taskHandover() {
         const { key } = await taskKeys.open(task.sealed);
         await save(task, { sealed: { ...task.sealed, keys: { ...task.sealed.keys, ...(await taskKeys.wrap(key, missing)) } } });
       } else if (task.private && !task.sealed && (task.creatorId === me || task.assigneeId === me)) {
-        putTask((await patchTask(task, { private: true })).task);
+        // The store can be ahead of the server: an edit that is making this task private right
+        // now shows it as private before it's sealed. Only a task the server itself still holds
+        // as private and plain is one from before encryption.
+        const { task: fresh } = await http.get<{ task: Task }>(`/tasks/${task.id}/detail`);
+        if (fresh.private && !fresh.sealed) putTask((await patchTask(fresh, { private: true })).task);
       }
     } catch {
       // tried again on the next unlock
