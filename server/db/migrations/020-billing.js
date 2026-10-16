@@ -84,6 +84,8 @@ const billing = `
   -- what the subscription had already counted moves over unchanged
   INSERT INTO billing_state (key, value) SELECT 'plan', value FROM settings WHERE key = 'plan';
   DELETE FROM settings WHERE key = 'plan';
+  -- paid plans had no seat count; they carry on covering the people they have now
+  UPDATE billing_state SET value = json_set(value, '$.seatLimit', (SELECT COUNT(*) FROM users WHERE deactivated = 0 AND role != 'guest')) WHERE key = 'plan';
   INSERT INTO billing_state (key, value) SELECT 'trialStart', CAST(created_at AS TEXT) FROM workspace WHERE id = 1;
   INSERT INTO billing_payments (id, tx_hash, from_address, amount, status, problem, block_number, created_at, checked_at, final_at)
     SELECT id, tx_hash, from_address, amount,
