@@ -1,0 +1,21 @@
+# Caddy for one self-hosted Nil workspace. NIL_DOMAIN and ACME_EMAIL come from /opt/nil/.env
+# through docker-compose.yml. Caddy keeps no access log unless you add a log directive.
+{
+	email {$ACME_EMAIL}
+}
+
+{$NIL_DOMAIN} {
+	encode zstd gzip
+	# The app sends its own security headers; these only fill in for Caddy's own error pages.
+	header {
+		-Server
+		?Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		?X-Content-Type-Options "nosniff"
+		?X-Frame-Options "DENY"
+		?Referrer-Policy "no-referrer"
+	}
+	reverse_proxy nil:3000 {
+		# keep live connections through a config reload instead of cutting them
+		stream_close_delay 5m
+	}
+}

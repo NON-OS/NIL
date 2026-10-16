@@ -1,0 +1,10 @@
+// Written by deploy/provision.sh. Ubuntu's 50unattended-upgrades already limits automatic
+// updates to security fixes; Docker comes from its own repository and is upgraded by hand.
+Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+Unattended-Upgrade::Remove-Unused-Dependencies "true";
+// A kernel fix needs a reboot, which takes every workspace offline for a minute or two.
+// provision.sh --auto-reboot HH:MM turns it on for that time (UTC); otherwise reboot by hand
+// in a quiet hour when /var/run/reboot-required exists.
+Unattended-Upgrade::Automatic-Reboot "@AUTO_REBOOT@";
+Unattended-Upgrade::Automatic-Reboot-WithUsers "true";
+Unattended-Upgrade::Automatic-Reboot-Time "@REBOOT_TIME@";
