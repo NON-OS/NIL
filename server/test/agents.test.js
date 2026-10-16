@@ -101,6 +101,7 @@ test('an agent sees its projects and its own tasks, and never a private task', a
   const handedOver = (await ana('POST', '/api/tasks', { title: 'Beta bug for Scout', projectId: ids.beta, assigneeId: ids.scout })).data.task;
   const hidden = await tool(key, 'get_task', { key: `NON-${outside.number}` });
   assert.equal(hidden.isError, true);
+  assert.equal(hidden.content[0].text, `NON-${outside.number} is outside this agent’s projects. An admin can add its project in Settings → Agents.`);
   assert.equal((await tool(key, 'get_task', { key: `NON-${handedOver.number}` })).structuredContent.title, 'Beta bug for Scout');
   const listed = (await tool(key, 'list_tasks')).structuredContent.tasks.map((t) => t.title);
   assert.ok(listed.includes('Crash on login') && listed.includes('Beta bug for Scout'));
@@ -108,7 +109,9 @@ test('an agent sees its projects and its own tasks, and never a private task', a
   assert.deepEqual((await tool(key, 'list_projects')).structuredContent.projects.map((p) => p.name), ['Alpha']);
 
   const secret = (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana), projectId: ids.alpha })).data.task;
-  assert.equal((await tool(key, 'get_task', { key: `NON-${secret.number}` })).isError, true);
+  // a private task answers exactly like one that doesn't exist
+  assert.equal((await tool(key, 'get_task', { key: `NON-${secret.number}` })).content[0].text, `There’s no task NON-${secret.number} you can see.`);
+  assert.equal((await tool(key, 'get_task', { key: 'NON-9999' })).content[0].text, 'There’s no task NON-9999 you can see.');
   assert.equal((await tool(key, 'search_tasks', { query: 'a' })).structuredContent.tasks.some((t) => t.private), false);
   assert.equal((await tool(key, 'workspace_summary')).structuredContent.open, 2);
   const refused = await ana('PATCH', `/api/tasks/${secret.id}`, { assigneeId: ids.scout });

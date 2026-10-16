@@ -10,7 +10,8 @@ const PLAN = { status: 402, code: 'plan_required', message: 'Connecting AI assis
 // signed-in browser into either endpoint.
 export default function principalFromRequest(req) {
   const auth = apiToken(req);
-  if (!auth) return { error: { status: 401, code: 'unauthorized', message: 'Send a Nil access key as "Authorization: Bearer nonos_pat_…" or an agent key ("nonos_agt_…").' } };
+  if (!auth && !req.headers.authorization) return { error: { status: 401, code: 'unauthorized', message: 'Send a Nil access key as "Authorization: Bearer nonos_pat_…" or an agent key ("nonos_agt_…").' } };
+  if (!auth) return { error: { status: 401, code: 'unauthorized', message: 'That access key isn’t valid. It may be mistyped, expired, revoked or replaced by a new one. Agent keys are in Settings → Agents, personal keys in Settings → Connect AI.' } };
   if (auth.user.kind !== 'agent') {
     if (!plan.status().unlocked) return { error: PLAN };
     return { principal: { user: auth.user, scope: auth.scope, agent: null, tokenId: auth.tokenId, key: `token:${auth.tokenId}` } };

@@ -253,7 +253,13 @@ test('errors have one shape; keys, rate limits and arguments are checked', async
   assert.equal(missing.status, 401);
   assert.equal(missing.data.error.code, 'unauthorized');
   assert.match(missing.headers.get('www-authenticate'), /Bearer/);
-  assert.equal((await rest('nonos_agt_wrong', 'GET', '/me')).status, 401);
+  assert.match(missing.data.error.message, /Send a Nil access key/);
+  const wrong = await rest('nonos_agt_wrong', 'GET', '/me');
+  assert.equal(wrong.status, 401);
+  assert.match(wrong.data.error.message, /That access key isn’t valid/);
+  const wrongOverMcp = await mcp('nonos_agt_wrong', 'ping');
+  assert.equal(wrongOverMcp.status, 401);
+  assert.match(wrongOverMcp.body.error, /That access key isn’t valid/);
   const unknown = await rest(keys.helper, 'GET', '/nope');
   assert.deepEqual(Object.keys(unknown.data.error).sort(), ['code', 'message', 'status']);
   assert.equal(unknown.status, 404);
