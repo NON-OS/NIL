@@ -189,6 +189,151 @@ const power = Object.freeze({
   zspPower: /^\d+$/.test(env.VOTE_ZSP_POWER ?? '') ? env.VOTE_ZSP_POWER : '100000',
 });
 
+// ---------------------------------------------------------------------------------------------
+// Nil Pro billing, NOX perks and the fair holder door
+// ---------------------------------------------------------------------------------------------
+// Prices are in USD. A workspace pays an invoice in USDC at face value or in NOX at a discount;
+// every amount it asks for ends in a short suffix that tells its payment apart from anyone
+// else's, so a transfer from any wallet or exchange can be matched to the right invoice.
+
+// "12" or "12.50" as micro-USD (USDC's precision). Null for anything else.
+function microUsd(value) {
+  if (!/^\d{1,9}(\.\d{1,6})?$/.test(value)) return null;
+  const [whole, fraction = ''] = value.split('.');
+  return Number(whole) * 1_000_000 + Number(fraction.padEnd(6, '0'));
+}
+
+function envUsd(name, fallback, { positive = false } = {}) {
+  const raw = (env[name] ?? '').trim();
+  if (!raw) return microUsd(fallback);
+  const value = microUsd(raw);
+  if (value !== null && (!positive || value > 0)) return value;
+  configWarning(`${name}=${raw} isn’t an amount of US dollars${positive ? ' above zero' : ''}, like 12 or 12.50. Using the default, ${fallback}.`);
+  return microUsd(fallback);
+}
+
+// A billing contract. Like the other contracts, a mainnet default applies only on mainnet;
+// elsewhere it has to be named, and a server that charges is told when one is missing.
+function envAddress(name, mainnet, withoutIt) {
+  const raw = (env[name] ?? '').trim();
+  if (raw === 'off') return null;
+  if (validAddress(raw)) return raw.toLowerCase();
+  const fallback = mainnet && chainId === 1 ? mainnet.toLowerCase() : null;
+  if (raw) configWarning(`${name} isn’t a valid Ethereum address (${ADDRESS_RULE}). ${fallback ? `Using the default, ${mainnet}.` : withoutIt}`);
+  else if (mainnet && !fallback && (env.PLAN_TREASURY ?? '').trim() && !rpcOff) configWarning(`${name} isn’t set, and its default is a mainnet contract, but NOX_CHAIN_ID is ${chainId}. ${withoutIt}`);
+  return fallback;
+}
+
+function envFlag(name, fallback) {
+  const raw = (env[name] ?? '').trim().toLowerCase();
+  if (!raw) return fallback;
+  if (['true', '1', 'yes', 'on'].includes(raw)) return true;
+  if (['false', '0', 'no', 'off'].includes(raw)) return false;
+  configWarning(`${name}=${raw} isn’t true or false. Using the default, ${fallback}.`);
+  return fallback;
+}
+
+// A positive decimal like 0.0042, kept as text so no precision is lost on the way to BigInt.
+function envDecimal(name, fallback) {
+  const raw = (env[name] ?? '').trim();
+  if (!raw) return fallback;
+  if (/^\d{1,12}(\.\d{1,18})?$/.test(raw) && /[1-9]/.test(raw)) return raw;
+  configWarning(`${name}=${raw} isn’t a positive decimal number. ${fallback ? `Using the default, ${fallback}.` : 'Leaving it unset.'}`);
+  return fallback;
+}
+
+function envUrl(name) {
+  const raw = (env[name] ?? '').trim();
+  if (!raw) return null;
+  try {
+    if (['http:', 'https:'].includes(new URL(raw).protocol)) return raw;
+  } catch {}
+  configWarning(`${name} isn’t an http or https address. Leaving it unset.`);
+  return null;
+}
+
+// "10000:10,100000:25": staking at least 10,000 NOX takes 10% off, 100,000 takes 25%.
+function stakerTiers(raw) {
+  if (!raw || raw === 'none') return Object.freeze([]);
+  const tiers = raw.split(',').map((entry) => entry.trim().split(':'));
+  const valid = tiers.every(([stake, percent]) => /^\d{1,15}$/.test(stake ?? '') && /^\d{1,2}$/.test(percent ?? '') && Number(stake) > 0 && Number(percent) > 0);
+  if (!valid) {
+    configWarning('PLAN_STAKER_TIERS isn’t a list of stake:percent pairs like 10000:10,100000:25 (percent below 100). Staker discounts are off.');
+    return Object.freeze([]);
+  }
+  return Object.freeze(tiers.map(([stake, percent]) => Object.freeze({ stake, percent: Number(percent) })).sort((a, b) => Number(BigInt(a.stake) - BigInt(b.stake))));
+}
+
+// "3/50": this server is workspace number 3 of 50 that share PLAN_TREASURY. Each one then
+// draws invoice suffixes from its own share, so no two workspaces can ever ask for the same amount.
+function invoiceSlot(raw, digits) {
+  if (!raw) return null;
+  const match = /^(\d+)\/(\d+)$/.exec(raw);
+  const index = match ? Number(match[1]) : NaN;
+  const count = match ? Number(match[2]) : NaN;
+  if (!(count >= 1 && index < count && Math.floor((10 ** digits - 1) / count) >= 1)) {
+    configWarning(`PLAN_INVOICE_SLOT=${raw} isn’t index/count with an index below the count and room for every slot in PLAN_SUFFIX_DIGITS. Invoices fall back to random suffixes.`);
+    return null;
+  }
+  return Object.freeze({ index, count });
+}
+
+const suffixDigits = envNumber('PLAN_SUFFIX_DIGITS', 4, { min: 2, max: 6 });
+const invoiceKey = (env.PLAN_INVOICE_KEY ?? '').trim();
+if (invoiceKey && invoiceKey.length < 16) configWarning('PLAN_INVOICE_KEY is shorter than 16 characters. Use a long random secret.');
+const slot = invoiceSlot((env.PLAN_INVOICE_SLOT ?? '').trim(), suffixDigits);
+if (slot && !invoiceKey) configWarning('PLAN_INVOICE_SLOT is set without PLAN_INVOICE_KEY, so anyone reading the treasury’s transfers can tell which payments came from the same workspace.');
+if ((env.PLAN_PRICE ?? '').trim()) configWarning('PLAN_PRICE is no longer read. Nil Pro is priced in US dollars: set PLAN_PRICE_USD and PLAN_SEAT_USD.');
+
+const usdc = envAddress('PLAN_USDC', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48', 'Invoices can’t be paid in USDC until it’s set.');
+const billing = Object.freeze({
+  priceUsd: envUsd('PLAN_PRICE_USD', '12', { positive: true }),
+  seatUsd: envUsd('PLAN_SEAT_USD', '3'),
+  usdc: usdc ? Object.freeze({ symbol: 'USDC', address: usdc, decimals: envNumber('PLAN_USDC_DECIMALS', 6, { min: suffixDigits, max: 77 }) }) : null,
+  noxDiscount: envNumber('PLAN_NOX_DISCOUNT', 20, { max: 90 }),
+  stakerTiers: stakerTiers((env.PLAN_STAKER_TIERS ?? '10000:10,100000:25').trim()),
+  invoiceHours: envNumber('PLAN_INVOICE_HOURS', 24, { min: 1, max: 24 * 14 }),
+  lateDays: envNumber('PLAN_LATE_DAYS', 7, { max: 90 }),
+  invoicesPerDay: envNumber('PLAN_INVOICES_PER_DAY', 10, { min: 1 }),
+  suffixDigits,
+  // exchanges and many wallets refuse amounts with more decimal places than this
+  amountDecimals: envNumber('PLAN_AMOUNT_DECIMALS', 8, { min: suffixDigits, max: 18 }),
+  slot,
+  invoiceKey: invoiceKey || null,
+  logBlocks: envNumber('PLAN_LOG_BLOCKS', 2000, { min: 10 }),
+  treasuryName: (env.PLAN_TREASURY_NAME ?? '').trim().slice(0, 60) || 'the treasury',
+  remindDays: Object.freeze([...new Set((env.PLAN_REMIND_DAYS || '7,1').split(',').map((d) => Number(d.trim())).filter((d) => Number.isInteger(d) && d > 0))].sort((a, b) => b - a)),
+  proForZsp: envFlag('PRO_FOR_ZSP', true),
+  perkCheckHours: envNumber('PLAN_PERK_CHECK_HOURS', 6, { min: 1 }),
+  burnShare: envNumber('BURN_SHARE', 0, { max: 100 }),
+  burnReportUrl: envUrl('BURN_REPORT_URL'),
+  oracle: Object.freeze({
+    pool: envAddress('PLAN_NOX_POOL', null, 'NOX is priced with PLAN_NOX_USD alone.'),
+    weth: envAddress('PLAN_WETH', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', 'NOX is priced with PLAN_NOX_USD alone.'),
+    ethUsdFeed: envAddress('PLAN_ETH_USD_FEED', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', 'NOX is priced with PLAN_NOX_USD alone.'),
+    twapMinutes: envNumber('PLAN_TWAP_MINUTES', 30, { min: 5, max: 24 * 60 }),
+    feedMaxAgeMinutes: envNumber('PLAN_FEED_MAX_AGE_MINUTES', 120, { min: 1 }),
+    // USD per whole NOX, as decimal text; the oracle's answer must sit between the bounds
+    minUsd: envDecimal('PLAN_NOX_USD_MIN', '0.000001'),
+    maxUsd: envDecimal('PLAN_NOX_USD_MAX', '1000'),
+    manualUsd: envDecimal('PLAN_NOX_USD', null),
+  }),
+});
+
+// Finality for every token payment: a transfer counts once its block is finalized. Nodes on
+// chains without the `finalized` tag fall back to this many blocks under the head.
+const finality = Object.freeze({
+  depth: envNumber('NOX_FINALITY_DEPTH', 64, { min: 1 }),
+});
+
+// The holder door counts NOX held, NOX staked and Zero-State Passes (each worth this many NOX),
+// and keeps checking members who came in through it.
+const holders = Object.freeze({
+  zspWorth: String(envNumber('HOLDER_ZSP_NOX', 100000)),
+  recheckHours: envNumber('HOLDER_RECHECK_HOURS', 6, { min: 1 }),
+  graceDays: envNumber('HOLDER_GRACE_DAYS', 3),
+});
+
 // Anonymous votes (Semaphore). Every proof uses one circuit depth, so one set of circuit files
 // serves every group size up to 2^depth voters; `npm run zk:fetch` downloads the matching files.
 const semaphore = Object.freeze({
@@ -232,6 +377,9 @@ const config = Object.freeze({
   stealth,
   semaphore,
   power,
+  billing,
+  finality,
+  holders,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

@@ -26,6 +26,7 @@ export default async function recordPayment(actor, taskId, txHash, stealth = nul
   if (!payee) throw HttpError.badRequest('Assign the task to someone before paying its bounty.');
   if (!payee.address) throw HttpError.badRequest('That person has no wallet linked.');
   if (sql.get('SELECT 1 FROM payments WHERE tx_hash = ?', hash)) throw new HttpError(409, 'That transaction was already recorded for another payment.');
+  if (sql.get('SELECT 1 FROM billing_payments WHERE tx_hash = ?', hash)) throw new HttpError(409, 'That transaction pays for Nil Pro, so it can’t pay a bounty too.');
 
   let to = payee.address.toLowerCase();
   let hidden = { ephemeral: null, viewTag: null, announceTx: null };

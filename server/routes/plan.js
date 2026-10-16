@@ -1,50 +1,117 @@
 import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
-import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import requireAdmin from '../auth/requireAdmin.js';
+import rateLimit from '../auth/rateLimit.js';
 import plan from '../services/plan.js';
-import verifyPlanPayment from '../services/verifyPlanPayment.js';
 import guestScope from '../services/guestScope.js';
+import quote from '../billing/quote.js';
+import createInvoice from '../billing/createInvoice.js';
+import invoiceView from '../billing/invoiceView.js';
+import nameTransaction from '../billing/nameTransaction.js';
+import cancelInvoice from '../billing/cancelInvoice.js';
+import retryInvoice from '../billing/retryInvoice.js';
+import creditBalance from '../billing/creditBalance.js';
+import revenue from '../billing/revenue.js';
+import watchInvoices from '../jobs/watchInvoices.js';
 
 const router = express.Router();
-const TX = /^0x[0-9a-f]{64}$/;
+const perAdmin = (max, windowMs = 60_000) => rateLimit({ windowMs, max, key: (req) => `plan:${req.user.id}`, message: 'Too many billing requests at once. Wait a minute.' });
+const reads = perAdmin(60);
+const writes = perAdmin(60);
 
-const toPayment = (r) => ({ id: r.id, txHash: r.tx_hash, status: r.status, problem: r.problem, amount: r.amount, periods: r.periods, createdAt: r.created_at, confirmedAt: r.confirmed_at });
+function invoiceOr404(id) {
+  const view = invoiceView(id);
+  if (!view) throw HttpError.notFound('That invoice');
+  return { invoice: view, plan: plan.status() };
+}
+
+function enforced() {
+  if (!plan.status().enforced) throw HttpError.badRequest('This server runs in community mode: everything is already unlocked.');
+}
 
 router.get('/plan', route((req) => (guestScope.of(req.user.id) ? { unlocked: plan.status().unlocked } : plan.status())));
-router.get('/plan/payments', requireAdmin, route(() => sql.all('SELECT * FROM plan_payments ORDER BY created_at DESC LIMIT 100').map(toPayment)));
 
-// An admin's wallet sends NOX to the treasury; the transaction hash comes here to be checked.
-router.post(
-  '/plan/payments',
+// The price as it would be invoiced right now, shown before anyone pays.
+router.get(
+  '/plan/quote',
   requireAdmin,
+  reads,
   route(async (req) => {
-    if (!plan.status().enforced) throw HttpError.badRequest('This server runs in community mode: everything is already unlocked.');
-    const hash = String(req.body?.txHash ?? '').trim().toLowerCase();
-    if (!TX.test(hash)) throw HttpError.badRequest('That doesn’t look like a transaction hash.');
-    if (sql.get('SELECT 1 FROM plan_payments WHERE tx_hash = ?', hash) || sql.get('SELECT 1 FROM payments WHERE tx_hash = ?', hash)) throw new HttpError(409, 'That transaction was already recorded.');
-    const id = newId();
-    sql.run('INSERT INTO plan_payments (id, payer_id, tx_hash, created_at) VALUES (?, ?, ?, ?)', id, req.user.id, hash, Date.now());
-    try {
-      await verifyPlanPayment(id);
-    } catch {
-      // the node hiccuped; the background check will retry
-    }
-    return { payment: toPayment(sql.get('SELECT * FROM plan_payments WHERE id = ?', id)), plan: plan.status() };
+    const q = await quote({ kind: req.query.kind || 'periods', periods: req.query.periods ?? 1, people: req.query.people });
+    return { ...q, staked: String(q.staked), tokens: q.tokens.map((t) => ({ symbol: t.symbol, address: t.address, decimals: t.decimals, rate: String(t.rate), rateSource: t.rateSource, usd: t.usd, minimum: String(t.minimum) })) };
+  }),
+);
+
+router.get(
+  '/plan/invoices',
+  requireAdmin,
+  route(() => ({
+    invoices: sql.all('SELECT id FROM billing_invoices ORDER BY number DESC LIMIT 50').map((r) => invoiceView(r.id)),
+    credit: creditBalance(),
+    plan: plan.status(),
+  })),
+);
+
+router.post(
+  '/plan/invoices',
+  requireAdmin,
+  writes,
+  route(async (req) => {
+    enforced();
+    const id = await createInvoice(req.user, { kind: req.body?.kind || 'periods', periods: req.body?.periods ?? 1, people: req.body?.people });
+    return invoiceOr404(id);
+  }),
+);
+
+router.get('/plan/invoices/:id', requireAdmin, reads, route((req) => invoiceOr404(req.params.id)));
+
+// The transaction that pays an invoice, from the browser wallet that just sent it or pasted
+// from anywhere else. Naming it twice is harmless.
+router.post(
+  '/plan/invoices/:id/transactions',
+  requireAdmin,
+  writes,
+  route(async (req) => {
+    enforced();
+    await nameTransaction(req.params.id, req.body?.txHash);
+    await watchInvoices().catch(() => {});
+    return invoiceOr404(req.params.id);
   }),
 );
 
 router.post(
-  '/plan/payments/:id/check',
+  '/plan/invoices/:id/check',
   requireAdmin,
+  writes,
   route(async (req) => {
-    await verifyPlanPayment(req.params.id);
-    const row = sql.get('SELECT * FROM plan_payments WHERE id = ?', req.params.id);
-    if (!row) throw HttpError.notFound('That payment');
-    return { payment: toPayment(row), plan: plan.status() };
+    invoiceOr404(req.params.id);
+    await watchInvoices();
+    return invoiceOr404(req.params.id);
   }),
 );
+
+router.post(
+  '/plan/invoices/:id/cancel',
+  requireAdmin,
+  writes,
+  route((req) => {
+    cancelInvoice(req.params.id);
+    return invoiceOr404(req.params.id);
+  }),
+);
+
+router.post(
+  '/plan/invoices/:id/retry',
+  requireAdmin,
+  writes,
+  route(async (req) => {
+    enforced();
+    return invoiceOr404(await retryInvoice(req.user, req.params.id));
+  }),
+);
+
+router.get('/plan/revenue', requireAdmin, route(() => revenue()));
 
 export default router;

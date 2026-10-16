@@ -1,51 +1,97 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
-import settingsStore from './settingsStore.js';
+import billingState from '../billing/billingState.js';
+import trialWindow from '../billing/trialWindow.js';
+import zspPerk from '../billing/zspPerk.js';
+import acceptedTokens from '../billing/acceptedTokens.js';
 
 const DAY = 86_400_000;
 
-// Until the first payment, a workspace runs on a trial counted from the day it was set up.
-// Counting from setup (not from when a treasury was configured) keeps it one window, once.
-function paidThrough(stored) {
-  if (stored.paidUntil) return { paidUntil: stored.paidUntil, trial: false };
-  const ws = sql.get('SELECT created_at FROM workspace WHERE id = 1');
-  if (!ws || config.plan.trialDays <= 0) return { paidUntil: null, trial: false };
-  return { paidUntil: ws.created_at + config.plan.trialDays * DAY, trial: true };
-}
-
-// Where the workspace's subscription stands. "unlocked" is what gates utilities: true in
-// community mode, while paid, and through the grace period after a lapse.
+// Where the workspace's Nil Pro stands. Pro comes from paid time, the trial, or a Zero-State
+// Pass held by an admin; "unlocked" is what gates the paid tools: always in community mode,
+// and otherwise while Pro is active or in the grace period after it.
 const plan = {
-  status() {
-    const enforced = Boolean(config.plan.treasury && config.nox.enabled && config.plan.price);
-    const { paidUntil, trial } = paidThrough(settingsStore.get('plan', {}));
-    const now = Date.now();
-    const active = Boolean(paidUntil && paidUntil > now);
-    const inGrace = !active && Boolean(paidUntil && paidUntil + config.plan.graceDays * DAY > now);
+  status(now = Date.now()) {
+    const enforced = Boolean(config.plan.treasury && config.nox.enabled);
+    const stored = billingState.get('plan', {});
+    const grace = config.plan.graceDays * DAY;
+    const paidUntil = stored.paidUntil ?? null;
+    const trial = trialWindow();
+    const zspUntil = zspPerk.until();
+
+    const sources = [
+      { source: 'paid', until: paidUntil, lockAt: paidUntil === null ? null : paidUntil + grace },
+      { source: 'zsp', until: zspUntil, lockAt: zspUntil === null ? null : zspUntil + grace },
+      { source: 'trial', until: trial?.until ?? null, lockAt: trial?.lockAt ?? null },
+    ].filter((s) => s.until !== null);
+    const activeUntil = sources.length ? Math.max(...sources.map((s) => s.until)) : null;
+    const lockAt = sources.length ? Math.max(...sources.map((s) => s.lockAt)) : null;
+    const active = Boolean(activeUntil && activeUntil > now);
+    const unlocked = !enforced || Boolean(lockAt && lockAt > now);
+    // paid time wins when it overlaps, since it's the one an admin chose to buy
+    const source = active ? sources.filter((s) => s.until > now).sort((a, b) => ['paid', 'zsp', 'trial'].indexOf(a.source) - ['paid', 'zsp', 'trial'].indexOf(b.source))[0].source : null;
+
     const seatsUsed = sql.get("SELECT COUNT(*) AS n FROM users WHERE deactivated = 0 AND role != 'guest'").n;
     return {
       enforced,
-      unlocked: !enforced || active || inGrace,
+      unlocked,
       active,
-      inGrace,
+      inGrace: enforced && unlocked && !active,
+      trial: source === 'trial',
+      source,
+      activeUntil,
+      lockAt,
       paidUntil,
-      trial: trial && active,
-      price: config.plan.price,
+      zsp: { enabled: zspPerk.enabled(), active: Boolean(zspUntil && zspUntil > now), checkedAt: zspPerk.get().checkedAt },
+      seatsUsed,
+      seatLimit: plan.seatLimit(sources, now),
+      freeSeats: config.plan.freeSeats,
       periodDays: config.plan.periodDays,
       maxPeriods: config.plan.maxPeriods,
       graceDays: config.plan.graceDays,
-      freeSeats: config.plan.freeSeats,
-      seatsUsed,
+      trialDays: config.plan.trialDays,
+      priceUsd: config.billing.priceUsd,
+      seatUsd: config.billing.seatUsd,
+      noxDiscount: config.billing.noxDiscount,
+      stakerTiers: config.billing.stakerTiers,
+      burnShare: config.billing.burnShare,
+      tokens: acceptedTokens().map(({ symbol, address, decimals }) => ({ symbol, address, decimals })),
       treasury: config.plan.treasury,
+      treasuryName: config.billing.treasuryName,
+      invoiceHours: config.billing.invoiceHours,
     };
   },
 
-  extend(periods) {
-    // paying during the trial adds to it, so nobody loses the days they were given
-    const current = paidThrough(settingsStore.get('plan', {})).paidUntil ?? 0;
-    const paidUntil = Math.max(current, Date.now()) + periods * config.plan.periodDays * DAY;
-    settingsStore.set('plan', { paidUntil });
+  // How many people (guests aside) the workspace may have right now. No cap while the trial or
+  // a Zero-State Pass keeps it unlocked; the seats paid for while paid time does; the free
+  // seats once nothing does. Null in community mode.
+  seatLimit(sources, now) {
+    if (!(config.plan.treasury && config.nox.enabled)) return null;
+    const unlocking = sources.filter((s) => s.lockAt > now);
+    if (unlocking.some((s) => s.source !== 'paid')) return null;
+    if (unlocking.length) return Math.max(billingState.get('plan', {}).seatLimit ?? 0, config.plan.freeSeats);
+    return config.plan.freeSeats;
+  },
+
+  // Adds paid time. Paying while Pro is active (paid or trial) adds to the end of it, so
+  // nobody loses days they already had. Returns the new paid-until.
+  extend(ms, now = Date.now()) {
+    const stored = billingState.get('plan', {});
+    const trial = trialWindow();
+    const from = Math.max(stored.paidUntil ?? 0, trial?.until ?? 0, now);
+    const paidUntil = from + ms;
+    billingState.set('plan', { ...stored, paidUntil });
     return paidUntil;
+  },
+
+  // Seats paid for. A renewal that starts after the current paid time keeps the larger count
+  // until then rather than taking seats away mid-period.
+  coverSeats(people, { renewal = false, now = Date.now() } = {}) {
+    const stored = billingState.get('plan', {});
+    const running = stored.paidUntil && stored.paidUntil > now;
+    const seatLimit = renewal && !running ? people : Math.max(stored.seatLimit ?? 0, people);
+    billingState.set('plan', { ...stored, seatLimit });
+    return seatLimit;
   },
 };
 
