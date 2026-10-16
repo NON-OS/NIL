@@ -166,6 +166,12 @@ const due = Object.freeze({
   dayHour: envNumber('DUE_DAY_HOUR', 9, { max: 23 }),
 });
 
+// Personal calendar feeds (ICS). "off" turns the feature off and every existing link with it.
+const calendarFeeds = Object.freeze({
+  enabled: env.CALENDAR_FEEDS !== 'off',
+  perHour: envNumber('CALENDAR_FEED_PER_HOUR', 30, { min: 1 }),
+});
+
 const config = Object.freeze({
   port: envNumber('PORT', 3000, { max: 65535 }),
   host: env.HOST || '0.0.0.0',
@@ -187,6 +193,7 @@ const config = Object.freeze({
   power,
   push,
   due,
+  calendarFeeds,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',

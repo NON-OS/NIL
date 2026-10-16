@@ -43,6 +43,8 @@ import anonymousBallots from './anonymousBallots.js';
 import votingKey from './votingKey.js';
 import trustees from './trustees.js';
 import push from './push.js';
+import calendarFeed from './calendarFeed.js';
+import calendarFeedSettings from './calendarFeedSettings.js';
 
 const api = express.Router();
 
@@ -53,6 +55,8 @@ api.use(wallet);
 api.use(proofKey);
 api.use(capsules);
 api.use(anonymousBallots);
+// calendar apps open a person's feed with its secret link alone, never a cookie
+api.use(calendarFeed);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
@@ -66,7 +70,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push, calendarFeedSettings]) {
   api.use(router);
 }
 
