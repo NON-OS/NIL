@@ -73,6 +73,11 @@
   gap: 10px;
 }
 
+/* switch rows borrow .filter-toggle from the filter bar, but their descriptions must wrap */
+.settings-card .filter-toggle {
+  white-space: normal;
+}
+
 .member {
   display: grid;
   grid-template-columns: 32px minmax(0, 1fr) auto;
@@ -142,8 +147,9 @@
 }
 
 @media (max-width: 760px) {
+  /* minmax(0, …) so the scrolling tab strip can't widen the column past the screen */
   .settings {
-    grid-template-columns: 1fr;
+    grid-template-columns: minmax(0, 1fr);
   }
 
   .settings-tabs {

@@ -147,7 +147,7 @@ export default function MyWorkView() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gap: 16 }}>
+          <div className="mywork-side">
           <div className="panel myday">
             <div className="panel-head">
               <h2>
