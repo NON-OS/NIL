@@ -55,13 +55,14 @@ Free software under the [GNU AGPL v3 or later](LICENSE).
 
 ### End-to-end encrypted docs
 
-- Each person's encryption key (X25519) is derived in the browser from a wallet signature. It never leaves the tab.
-- Every doc has its own AES-256-GCM key, sealed separately for each reader. The server stores only ciphertext and sealed keys.
+- Each person's keys are made in their browser. The server stores them only wrapped for each linked wallet, so any of those wallets unlocks the same keys, and an optional passphrase-locked recovery kit brings them back after losing every wallet. Once unlocked they stay in the tab's memory.
+- Keys are published with a signature from the person's wallet, which every teammate's browser checks. Browsers pin teammates' keys and share nothing with a new or changed key until you've compared its fingerprint and confirmed it. See [docs/encryption.md](docs/encryption.md).
+- Every doc has its own AES-256-GCM key, sealed separately for each reader. Each version is signed by whoever saved it, and browsers warn when the server serves an older version than one they've already opened. The server stores only ciphertext and sealed keys.
 - A doc is shared with the whole team or with chosen people. Removing someone gives the doc a new key, so they can't read later versions.
 - The last 25 versions are kept, encrypted. A save based on an old version is refused instead of overwriting someone else's work.
-- When a new teammate unlocks docs, a teammate who is online hands them the team docs automatically.
+- When a new teammate unlocks docs, team docs reach them from the first teammate who confirms their key.
 - Docs are for members. Guests don't get them.
-- The first unlock signs twice to make sure your wallet signs the same way each time. A wallet that doesn't can't hold an encryption key.
+- The first unlock asks your wallet for three signatures: the unlock message twice, to make sure your wallet signs the same way each time, and once to publish your keys. A wallet that doesn't sign deterministically can't hold your keys.
 
 ### Bounties and payouts
 
@@ -251,8 +252,8 @@ All settings are environment variables. Every one is optional. [.env.example](.e
 - **Network metadata.** Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
 - **One server, one process.** The database is SQLite, live updates and rate limits are in memory. Run a single instance.
 - **Wallets.** Sign-in needs an injected EIP-1193 wallet (a browser extension or a wallet's in-app browser). WalletConnect is not supported. Tor Browser ships without wallet extensions. If you lose every wallet linked to your account, you lose the account, so link a second one.
-- **Deterministic signatures.** Encrypted docs, private payouts and anonymous voting derive keys from a wallet signature. Wallets that sign the same message differently each time can't use them. Nil checks this on first use.
-- **Never lose `DATA_DIR/keys`.** The signing key there signs every receipt and is part of every person's key derivation. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, and nobody can re-derive their docs, private payout or voting keys. Back it up with the database. Renaming the workspace is safe: the messages people sign to derive those keys name the workspace by this key, not by its name.
+- **Deterministic signatures.** Your keys open with a key derived from a wallet signature. Wallets that sign the same message differently each time can't unlock them. Nil checks this whenever it gives a wallet a copy of your keys.
+- **Never lose `DATA_DIR/keys`.** The signing key there signs every receipt and is named in every key message people sign. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, everyone's published keys stop verifying, and nobody's wallets or recovery kits open their keys here any more. Back it up with the database. Renaming the workspace is safe: the messages people sign to derive those keys name the workspace by this key, not by its name.
 - **Files aren't encrypted.** Docs and private tasks are; attachments are stored as uploaded, which is why private tasks can't hold them yet. Reminder notes and timer notes are stored in plain form too, and only their owner sees them. See [Privacy model](#privacy-model).
 - **On-chain data is public**, and private payouts don't hide the payer, token, amount or timing.
 - **The default Ethereum node is public** and sees what your server looks up. Use your own node for privacy.

@@ -4,6 +4,17 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 ## Unreleased
 
+### Security
+
+These changes follow a security review of the encryption. Keys published before this release can't be checked, so migration 023 removes them, together with the old payout and voting key commitments. Everyone sets up their keys again on their next unlock. See [docs/encryption.md](docs/encryption.md) for the trust model.
+
+- **Signed key directory with pinning.** Publishing or resetting encryption keys needs a fresh EIP-4361 statement signed by one of the person's linked wallets, naming the site, the workspace, the account and both public keys. The server checks it, so a stolen session cookie can no longer replace someone's key. Every browser checks the signature again, pins each teammate's keys the first time it sees them, and seals nothing (docs, private-task keys, trustee shares) to a key until its person confirms the fingerprint. Docs shows when someone new appears with a key or someone's key changes, and Settings, Security lists every teammate's key.
+- **Keys that don't belong to one wallet.** Each person's identity is now a random key made in the browser and stored wrapped once per linked wallet, so any linked wallet unlocks it. An optional recovery kit (scrypt and AES-256-GCM, downloaded as a small file) restores it after an admin links a new wallet. A reset also drops the person's copies of private-task keys, so the task's other holder can hand it over again.
+- **Key messages are bound to the site.** Every message a wallet signs for keys has the EIP-4361 layout and names the site from `APP_URL`, so wallets show the domain and warn on other sites. Private payout and voting keys now come from the identity instead of a separate signature that could be replayed. The browser refuses to sign any sign-in or ballot message from the server that looks like a key message.
+- **Trustee key setup can't be steered.** Trustees of an encrypted vote commit to their dealings before anyone reveals, and each reveal carries a Schnorr proof of knowledge for every commitment, checked by the server and by browsers. Voters rebuild the vote key from the trustees' commitments and refuse a different one from the server. Each trustee's browser checks the shares dealt to it as soon as the key is set up, and a bad share stops the vote from taking ballots. The audit file carries the commitments and proofs.
+- **Signed, versioned encrypted content.** Doc versions and private-task text are signed with the writer's Ed25519 key, and doc ciphertext is bound to its version number. Content without a valid signature stays locked or read-only, and browsers warn when the server serves an older version of a doc than one they've opened.
+- System notifications for private tasks say "A private task" instead of showing the decrypted title.
+
 ### Added
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
@@ -11,7 +22,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 ### Changed
 
-- **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
+- **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro.
 - New workspaces start with an empty name instead of NØNOS.
 
 ### Fixed
