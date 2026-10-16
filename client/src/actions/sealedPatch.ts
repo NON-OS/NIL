@@ -3,22 +3,26 @@ import vault from './vault';
 import taskKeys, { type TaskKey } from './taskKeys';
 import taskSeal from './taskSeal';
 import commentText from './commentText';
+import moveFiles from './moveFiles';
 import type Task from '../types/Task';
 import type TaskPatch from '../types/TaskPatch';
 import type Comment from '../types/Comment';
+import type Attachment from '../types/Attachment';
 
 const WORDS = ['title', 'description', 'checklist'] as const;
 
-// Every comment on the task, moved to a new key, or back to plain text when `to` is null.
-async function moveComments(task: Task, to: TaskKey | null) {
-  const { comments } = await http.get<{ comments: Comment[] }>(`/tasks/${task.id}/detail`);
-  return Promise.all(
+// Every comment and file on the task, moved to a new key, or back to plain when `to` is null.
+// Comments go first: they're re-encrypted in memory, so failing there leaves nothing uploaded.
+async function moveContents(task: Task, to: TaskKey | null) {
+  const { comments, attachments } = await http.get<{ comments: Comment[]; attachments: Attachment[] }>(`/tasks/${task.id}/detail`);
+  const moved = await Promise.all(
     comments.map(async (c) => {
       const open = await commentText.open(task, c);
       if (open.locked) throw new Error('A comment on this task can’t be opened here, so the task can’t change who can read it.');
       return { id: c.id, body: to ? await commentText.seal(to, c.authorId, open.body) : open.body };
     }),
   );
+  return { comments: moved, files: await moveFiles(task, attachments, to) };
 }
 
 // Turns an edit made in plain text into what the server accepts for a private task. Making a
@@ -38,11 +42,11 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   const words = { title: next.title, description: next.description, checklist: next.checklist };
   const rest = Object.fromEntries(Object.entries(patch).filter(([k]) => !(WORDS as readonly string[]).includes(k)));
 
-  if (opening) return { ...rest, private: false, ...words, comments: await moveComments(task, null) };
+  if (opening) return { ...rest, private: false, ...words, ...(await moveContents(task, null)) };
   if (sealing || rehoming) {
     const fresh = taskKeys.fresh();
     const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId]);
-    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys), comments: await moveComments(task, fresh) };
+    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys), ...(await moveContents(task, fresh)) };
   }
   return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys) };
 }

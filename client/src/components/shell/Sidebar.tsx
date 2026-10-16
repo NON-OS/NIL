@@ -1,6 +1,6 @@
 import './Sidebar.css';
 import { useMemo } from 'react';
-import { Plus, Search } from 'lucide-react';
+import { CircleHelp, Plus, Search } from 'lucide-react';
 import NilLogo from '../brand/NilLogo';
 import Avatar from '../ui/Avatar';
 import UserMenu from './UserMenu';
@@ -114,6 +114,9 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
         <RunningTimer />
         <div className="sidebar-foot">
           <UserMenu />
+          <a className="icon-btn" href="/help" onClick={link('/help')} aria-current={path.startsWith('/help') ? 'page' : undefined} title="Help" aria-label="Help">
+            <CircleHelp />
+          </a>
         </div>
       </nav>
     </>

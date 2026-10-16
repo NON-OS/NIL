@@ -286,6 +286,23 @@
   font-weight: 500;
 }
 
+/* an encrypted file's name decrypts and saves it rather than linking to it */
+button.file-name {
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
+}
+
+button.file-name:hover {
+  text-decoration: underline;
+}
+
+.file-locked .file-name {
+  color: var(--muted);
+  font-weight: 400;
+}
+
 .timeline {
   display: grid;
   gap: 10px;

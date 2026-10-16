@@ -7,6 +7,7 @@ import { spawn } from 'node:child_process';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import SETUP_TOKEN from './helpers/setupToken.js';
 
 let srv;
 const base = () => srv.base;
@@ -33,7 +34,7 @@ test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh ser
   const capsule = new Uint8Array(await res.arrayBuffer());
   assert.equal(Buffer.from(capsule.subarray(0, 8)).toString(), 'NONOSCAP');
   assert.equal(Buffer.from(capsule).includes(Buffer.from('Ship the pitch deck')), false);
-  const pass = (p) => ({ 'Content-Type': 'application/octet-stream', 'X-Capsule-Passphrase': Buffer.from(p).toString('base64') });
+  const pass = (p) => ({ 'Content-Type': 'application/octet-stream', 'X-Capsule-Passphrase': Buffer.from(p).toString('base64'), 'X-Setup-Token': SETUP_TOKEN });
   assert.equal((await owner('POST', '/api/auth/restore', capsule, pass('correct horse capsule staple'))).status, 409);
 
   const freshDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nonos-restore-'));

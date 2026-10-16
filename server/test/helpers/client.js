@@ -1,3 +1,5 @@
+import SETUP_TOKEN from './setupToken.js';
+
 // A minimal browser stand-in: keeps its own cookie and sends the CSRF header.
 export default function client(base) {
   let cookie = '';
@@ -23,9 +25,11 @@ export default function client(base) {
     return { status: res.status, data, headers: res.headers };
   };
   call.cookie = () => cookie;
-  // Runs the whole Sign-In with Ethereum ceremony for one of the wallet modes.
+  // Runs the whole Sign-In with Ethereum ceremony for one of the wallet modes. Setup sends the
+  // test servers' setup token unless `extra` says otherwise.
   call.wallet = async (w, mode, extra = {}) => {
-    const challenge = await call('POST', '/api/auth/wallet/challenge', { address: w.address, mode, ...extra });
+    const token = mode === 'setup' ? { setupToken: SETUP_TOKEN } : {};
+    const challenge = await call('POST', '/api/auth/wallet/challenge', { address: w.address, mode, ...token, ...extra });
     if (challenge.status !== 200) return challenge;
     return call('POST', '/api/auth/wallet/verify', { challengeId: challenge.data.challengeId, signature: w.sign(challenge.data.message) });
   };

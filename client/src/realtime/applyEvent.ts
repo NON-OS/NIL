@@ -3,12 +3,20 @@ import records from '../state/records';
 import putTask from '../state/putTask';
 import type TaskDetail from '../types/TaskDetail';
 import type Comment from '../types/Comment';
+import type Attachment from '../types/Attachment';
 import commentText from '../actions/commentText';
+import fileSeal from '../actions/fileSeal';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
   const task = store.get().tasks[comment.taskId];
   return task ? commentText.open(task, comment) : Promise.resolve(comment);
+};
+
+// so does a file's name and type; a file that moved to a new key arrives again and replaces the old copy
+const openFile = (file: Attachment) => {
+  const task = store.get().tasks[file.taskId];
+  return task ? fileSeal.open(task, file) : Promise.resolve(file);
 };
 
 // Changes the open task panel only if it's showing the task the event is about.
@@ -97,7 +105,11 @@ export default function applyEvent(event: any): void {
       patchDetail(event.taskId, (d) => ({ comments: d.comments.filter((c) => c.id !== event.id) }));
       break;
     case 'attachment':
-      patchDetail(event.attachment.taskId, (d) => ({ attachments: d.attachments.some((a) => a.id === event.attachment.id) ? d.attachments : [...d.attachments, event.attachment] }));
+      void openFile(event.attachment).then((file) =>
+        patchDetail(file.taskId, (d) => ({
+          attachments: d.attachments.some((a) => a.id === file.id) ? d.attachments.map((a) => (a.id === file.id ? file : a)) : [...d.attachments, file],
+        })),
+      );
       break;
     case 'attachment.delete':
       patchDetail(event.taskId, (d) => ({ attachments: d.attachments.filter((a) => a.id !== event.id) }));

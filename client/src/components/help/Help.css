@@ -1,0 +1,173 @@
+.help {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  flex: 1;
+  align-items: start;
+}
+
+/* the topic list stays put while a long page scrolls past it */
+.help-nav {
+  position: sticky;
+  top: var(--topbar-h);
+  display: flex;
+  flex-direction: column;
+  height: calc(100dvh - var(--topbar-h));
+  border-right: 1px solid var(--line);
+}
+
+.help.standalone .help-nav {
+  top: 0;
+  height: 100dvh;
+}
+
+.help-search {
+  position: relative;
+  display: block;
+  padding: 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.help-search svg {
+  position: absolute;
+  top: 50%;
+  left: 22px;
+  width: 14px;
+  height: 14px;
+  color: var(--muted);
+  transform: translateY(-50%);
+}
+
+.help-search .input {
+  padding-left: 30px;
+}
+
+.help-topics {
+  flex: 1;
+  overflow: auto;
+  padding: 6px 6px 32px;
+}
+
+.help-group {
+  padding: 14px 10px 4px;
+}
+
+.help-topic {
+  display: block;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  color: var(--ink-2);
+  text-decoration: none;
+}
+
+.help-topic:hover {
+  background: var(--surface-3);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.help-topic[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.help-hit {
+  display: grid;
+  gap: 2px;
+  padding-block: 8px;
+}
+
+.help-hit strong {
+  font-weight: 550;
+}
+
+.help-hit small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  line-height: 1.45;
+}
+
+.help-hit mark {
+  border-radius: 3px;
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.help-empty {
+  padding: 12px 10px;
+  font-size: var(--text-sm);
+}
+
+.help-article {
+  min-width: 0;
+  padding: 28px clamp(20px, 5vw, 64px) 80px;
+}
+
+.help-article .md {
+  max-width: 720px;
+  margin-inline: auto;
+  color: var(--ink-2);
+  font-size: 14.5px;
+  line-height: 1.65;
+}
+
+.help-article .md h3,
+.help-article .md h4,
+.help-article .md h5 {
+  color: var(--ink);
+  scroll-margin-top: calc(var(--topbar-h) + 16px);
+}
+
+.help-article .md h3 {
+  margin-bottom: 0.4em;
+  font-family: var(--font-display);
+  font-size: var(--text-2xl);
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.help-article .md h4 {
+  margin-top: 1.8em;
+  font-family: var(--font-display);
+  font-size: var(--text-xl);
+  font-weight: 500;
+  letter-spacing: -0.01em;
+}
+
+.help-article .md h5 {
+  margin-top: 1.4em;
+  font-size: var(--text-lg);
+}
+
+.help-article .md a {
+  color: var(--accent-text);
+}
+
+.help-article .md pre {
+  font-size: var(--text-sm);
+}
+
+.help-back {
+  display: none;
+  margin-bottom: 12px;
+}
+
+@media (max-width: 860px) {
+  .help {
+    grid-template-columns: 1fr;
+  }
+
+  .help-nav {
+    position: static;
+    height: auto;
+    border-right: 0;
+  }
+
+  .help.has-topic .help-nav,
+  .help:not(.has-topic) .help-article {
+    display: none;
+  }
+
+  .help-back {
+    display: inline-flex;
+  }
+}

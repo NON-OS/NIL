@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { lazy, Suspense, useState } from 'react';
 import Sidebar from './components/shell/Sidebar';
 import AppEffects from './components/shell/AppEffects';
 import TaskDrawer from './components/drawer/TaskDrawer';
@@ -34,6 +34,14 @@ import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 import BackupWalletNudge from './components/shell/BackupWalletNudge';
 
+// The help center carries every docs page as text, so it loads only when someone opens it.
+const HelpView = lazy(() => import('./views/HelpView'));
+const helpFallback = (
+  <div className="loading-screen">
+    <Spinner size={18} />
+  </div>
+);
+
 function Screen({ segments }: { segments: string[] }) {
   const [first, second] = segments;
   switch (first) {
@@ -65,6 +73,12 @@ function Screen({ segments }: { segments: string[] }) {
       return <ProofsView />;
     case 'verify':
       return <VerifyView />;
+    case 'help':
+      return (
+        <Suspense fallback={helpFallback}>
+          <HelpView />
+        </Suspense>
+      );
     case 'projects':
       return second ? <ProjectView key={second} projectId={second} /> : <NotFoundView />;
     default:
@@ -100,7 +114,15 @@ export default function App() {
   if (phase === 'auth' || (segments[0] === 'reset' && segments[1])) {
     return (
       <>
-        {segments[0] === 'verify' ? <VerifyView standalone /> : <AuthView />}
+        {segments[0] === 'verify' ? (
+          <VerifyView standalone />
+        ) : segments[0] === 'help' ? (
+          <Suspense fallback={helpFallback}>
+            <HelpView standalone />
+          </Suspense>
+        ) : (
+          <AuthView />
+        )}
         <Toasts />
       </>
     );

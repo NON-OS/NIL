@@ -2,6 +2,8 @@ import ApiError from './ApiError';
 
 let onSessionEnded: (() => void) | null = null;
 
+const OFFLINE = 'You seem to be offline. Check your connection and try again.';
+
 async function request<T>(method: string, url: string, body?: unknown, extraHeaders: Record<string, string> = {}, credentials: RequestCredentials = 'same-origin'): Promise<T> {
   // X-NONOS is the server's CSRF check; same-origin fetches are the only ones that can send it.
   const headers: Record<string, string> = { 'X-NONOS': '1', ...extraHeaders };
@@ -16,7 +18,7 @@ async function request<T>(method: string, url: string, body?: unknown, extraHead
   try {
     res = await fetch(`/api${url}`, { method, headers, body: payload, credentials, cache: 'no-store' });
   } catch {
-    throw new ApiError(0, 'You seem to be offline. Check your connection and try again.');
+    throw new ApiError(0, OFFLINE);
   }
 
   if (res.status === 401 && !url.startsWith('/auth/')) onSessionEnded?.();
@@ -31,12 +33,26 @@ async function request<T>(method: string, url: string, body?: unknown, extraHead
   return data as T;
 }
 
+// A file's raw bytes, for the browser to decrypt or re-encrypt itself.
+async function bytes(url: string) {
+  let res: Response;
+  try {
+    res = await fetch(`/api${url}`, { credentials: 'same-origin', cache: 'no-store' });
+  } catch {
+    throw new ApiError(0, OFFLINE);
+  }
+  if (res.status === 401) onSessionEnded?.();
+  if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => null))?.error ?? `Request failed (${res.status}).`);
+  return new Uint8Array(await res.arrayBuffer());
+}
+
 const http = {
   get: <T>(url: string) => request<T>('GET', url),
   post: <T>(url: string, body: unknown = {}) => request<T>('POST', url, body),
   put: <T>(url: string, body: unknown = {}) => request<T>('PUT', url, body),
   patch: <T>(url: string, body: unknown = {}) => request<T>('PATCH', url, body),
   del: <T>(url: string) => request<T>('DELETE', url),
+  bytes,
   // sent without the session cookie, so the server can't tell whose request it is
   anonymous: <T>(url: string, body: unknown) => request<T>('POST', url, body, {}, 'omit'),
   send: <T>(url: string, body: Blob, headers: Record<string, string>) => request<T>('POST', url, body, { 'Content-Type': 'application/octet-stream', ...headers }),

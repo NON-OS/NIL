@@ -12,6 +12,7 @@ import AssigneePicker from '../pickers/AssigneePicker';
 import ProjectPicker from '../pickers/ProjectPicker';
 import LabelPicker from '../pickers/LabelPicker';
 import LabelChips from '../task/LabelChips';
+import HelpLink from '../help/HelpLink';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import taskActions from '../../actions/tasks';
@@ -120,6 +121,7 @@ export default function QuickAdd() {
           >
             <Lock size={14} /> <span>{draft.private ? 'Private · encrypted' : 'Private'}</span>
           </button>
+          <HelpLink topic="private-tasks" label="How private tasks work" newTab />
           {draft.recurrence && (
             <span className="chip">
               <Repeat size={12} /> {meta.recurrence[draft.recurrence]}

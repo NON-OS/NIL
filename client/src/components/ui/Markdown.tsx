@@ -1,43 +1,35 @@
 import './Markdown.css';
 import { Fragment, type ReactNode } from 'react';
+import inline from './markdownInline';
+import headingId from '../../lib/headingId';
+import type LinkRenderer from '../../types/LinkRenderer';
+
+interface Props {
+  text: string;
+  // draws links that aren't web or mail addresses; without it they show as plain text
+  renderLink?: LinkRenderer;
+  // gives headings ids, so a link can point at a section
+  anchors?: boolean;
+}
+
+const TABLE_RULE = /^\s*\|?[\s:|-]*-{3,}[\s:|-]*$/;
+const cells = (row: string) => row.trim().replace(/^\|/, '').replace(/\|$/, '').split('|').map((c) => c.trim());
 
 // A deliberately small Markdown subset rendered to React elements.
 // Nothing is ever injected as HTML, so user text can't smuggle in markup or script.
-const INLINE = /(`[^`]+`)|(\*\*[^*]+\*\*)|(~~[^~]+~~)|(\*[^*\s][^*]*\*|_[^_\s][^_]*_)|(\[[^\]]+\]\([^)\s]+\))|(https?:\/\/[^\s<>()]+[^\s<>().,;:!?'"])|((?:^|(?<=\s))@[A-Za-z0-9][\w.-]*)/g;
-
-function safeHref(url: string) {
-  return /^(https?:|mailto:)/i.test(url) ? url : null;
-}
-
-function inline(text: string, keyPrefix: string): ReactNode[] {
-  const out: ReactNode[] = [];
-  let last = 0;
-  let i = 0;
-  for (const m of text.matchAll(INLINE)) {
-    const start = m.index ?? 0;
-    if (start > last) out.push(text.slice(last, start));
-    const t = m[0];
-    const key = `${keyPrefix}-${i++}`;
-    if (m[1]) out.push(<code key={key}>{t.slice(1, -1)}</code>);
-    else if (m[2]) out.push(<strong key={key}>{inline(t.slice(2, -2), key)}</strong>);
-    else if (m[3]) out.push(<s key={key}>{inline(t.slice(2, -2), key)}</s>);
-    else if (m[4]) out.push(<em key={key}>{inline(t.slice(1, -1), key)}</em>);
-    else if (m[5]) {
-      const [, label, url] = /^\[([^\]]+)\]\(([^)\s]+)\)$/.exec(t)!;
-      const href = safeHref(url);
-      out.push(href ? <a key={key} href={href} target="_blank" rel="noopener noreferrer nofollow">{label}</a> : label);
-    } else if (m[6]) out.push(<a key={key} href={t} target="_blank" rel="noopener noreferrer nofollow">{t}</a>);
-    else if (m[7]) out.push(<span key={key} className="mention">{t}</span>);
-    last = start + t.length;
-  }
-  if (last < text.length) out.push(text.slice(last));
-  return out;
-}
-
-export default function Markdown({ text }: { text: string }) {
+export default function Markdown({ text, renderLink, anchors = false }: Props) {
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
   const blocks: ReactNode[] = [];
+  const ids = new Map<string, number>();
   let i = 0;
+
+  // repeated headings get -1, -2… like GitHub, so every anchor stays unique
+  const idFor = (title: string) => {
+    const base = headingId(title.replace(/`/g, ''));
+    const seen = ids.get(base) ?? 0;
+    ids.set(base, seen + 1);
+    return seen ? `${base}-${seen}` : base;
+  };
 
   while (i < lines.length) {
     const line = lines[i];
@@ -55,8 +47,30 @@ export default function Markdown({ text }: { text: string }) {
     const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     if (heading) {
       const Tag = (['h3', 'h4', 'h5'] as const)[heading[1].length - 1];
-      blocks.push(<Tag key={key}>{inline(heading[2], key)}</Tag>);
+      blocks.push(<Tag key={key} id={anchors ? idFor(heading[2]) : undefined}>{inline(heading[2], key, renderLink)}</Tag>);
       i++;
+      continue;
+    }
+
+    if (/^\s*\|/.test(line) && TABLE_RULE.test(lines[i + 1] ?? '')) {
+      const head = cells(line);
+      const rows: string[][] = [];
+      i += 2;
+      while (i < lines.length && /^\s*\|/.test(lines[i])) rows.push(cells(lines[i++]));
+      blocks.push(
+        <div key={key} className="md-table">
+          <table>
+            <thead>
+              <tr>{head.map((c, j) => <th key={j}>{inline(c, `${key}-h${j}`, renderLink)}</th>)}</tr>
+            </thead>
+            <tbody>
+              {rows.map((row, r) => (
+                <tr key={r}>{row.map((c, j) => <td key={j}>{inline(c, `${key}-${r}-${j}`, renderLink)}</td>)}</tr>
+              ))}
+            </tbody>
+          </table>
+        </div>,
+      );
       continue;
     }
 
@@ -70,10 +84,10 @@ export default function Markdown({ text }: { text: string }) {
           task ? (
             <li key={i} className="task">
               <input type="checkbox" checked={task[1] !== ' '} readOnly disabled />
-              {inline(task[2], `${key}-${i}`)}
+              {inline(task[2], `${key}-${i}`, renderLink)}
             </li>
           ) : (
-            <li key={i}>{inline(content, `${key}-${i}`)}</li>
+            <li key={i}>{inline(content, `${key}-${i}`, renderLink)}</li>
           ),
         );
         i++;
@@ -85,7 +99,7 @@ export default function Markdown({ text }: { text: string }) {
     if (/^>\s?/.test(line)) {
       const quote: string[] = [];
       while (i < lines.length && /^>\s?/.test(lines[i])) quote.push(lines[i++].replace(/^>\s?/, ''));
-      blocks.push(<blockquote key={key}>{inline(quote.join(' '), key)}</blockquote>);
+      blocks.push(<blockquote key={key}>{inline(quote.join(' '), key, renderLink)}</blockquote>);
       continue;
     }
 
@@ -101,7 +115,7 @@ export default function Markdown({ text }: { text: string }) {
         {para.map((p, j) => (
           <Fragment key={j}>
             {j > 0 && <br />}
-            {inline(p, `${key}-${j}`)}
+            {inline(p, `${key}-${j}`, renderLink)}
           </Fragment>
         ))}
       </p>,

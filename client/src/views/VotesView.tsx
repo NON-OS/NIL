@@ -11,6 +11,7 @@ import toast from '../state/toast';
 import votes from '../actions/votes';
 import type Proposal from '../types/Proposal';
 import isAdminUser from '../lib/isAdmin';
+import HelpLink from '../components/help/HelpLink';
 
 export default function VotesView() {
   const isAdmin = useStore((s) => isAdminUser(s.me));
@@ -32,7 +33,17 @@ export default function VotesView() {
 
   return (
     <div className="main">
-      <ViewHeader title="Votes" icon={<Vote size={17} />} subtitle="Decide together, with signed or anonymous ballots anyone can recount." actions={start} />
+      <ViewHeader
+        title="Votes"
+        icon={<Vote size={17} />}
+        subtitle="Decide together, with signed or anonymous ballots anyone can recount."
+        actions={
+          <>
+            <HelpLink topic="votes" label="How votes work" />
+            {start}
+          </>
+        }
+      />
       <div className="page page-narrow">
         <PlanNotice what="New votes" />
         {!list ? (

@@ -1,16 +1,11 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import { bytesToHex, hexToBytes, utf8ToBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
+import checksumAddress from '../lib/checksumAddress.js';
 import personalHash from './personalHash.js';
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const SIGNATURE = /^0x[0-9a-fA-F]{130}$/;
-
-function checksum(address) {
-  const lower = address.toLowerCase().slice(2);
-  const hash = bytesToHex(keccak_256(utf8ToBytes(lower)));
-  return `0x${[...lower].map((c, i) => (parseInt(hash[i], 16) >= 8 ? c.toUpperCase() : c)).join('')}`;
-}
 
 // Sign-In with Ethereum (EIP-4361). The server writes the whole message, so verifying is
 // just recovering the signer and comparing it to the address the message was written for.
@@ -20,7 +15,7 @@ const siwe = {
   message({ host, origin, address, statement, nonce, chainId, issuedAt, expiresAt }) {
     return [
       `${host} wants you to sign in with your Ethereum account:`,
-      checksum(address),
+      checksumAddress(address),
       '',
       statement,
       '',

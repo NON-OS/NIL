@@ -15,11 +15,13 @@ import privacy from './migrations/014-privacy.js';
 import votePower from './migrations/015-vote-power.js';
 import encryptedBallots from './migrations/016-encrypted-ballots.js';
 import sealedTasks from './migrations/017-sealed-tasks.js';
+import sealedFiles from './migrations/018-sealed-files.js';
+import purgeIndexes from './migrations/019-purge-indexes.js';
 import signInResets from './migrations/025-sign-in-resets.js';
 
 // Append new migrations to the end. Never edit one that has shipped.
 // An object entry with `rebuild: true` runs with foreign keys off, which SQLite
 // needs for table rebuilds; foreign keys are re-checked before committing.
-const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, signInResets];
+const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, signInResets];
 
 export default migrations;

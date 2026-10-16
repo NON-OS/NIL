@@ -16,6 +16,9 @@ export default function restoreCapsule(dir) {
   const incoming = new DatabaseSync(restoredDb);
   try {
     migrate(incoming);
+  } catch (err) {
+    if (err.code === 'SCHEMA_TOO_NEW') throw HttpError.badRequest('That capsule comes from a newer version of Nil. Upgrade this server first, then restore it.');
+    throw err;
   } finally {
     incoming.close();
   }

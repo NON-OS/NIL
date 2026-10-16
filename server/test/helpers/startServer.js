@@ -2,12 +2,14 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { once } from 'node:events';
+import SETUP_TOKEN from './setupToken.js';
 
 // Boots a private NONOS instance for one test file. Must run before anything imports the
 // server, because configuration is read from the environment at import time.
 export default async function startServer({ chain, env = {} } = {}) {
   const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nonos-test-'));
   process.env.DATA_DIR = dataDir;
+  process.env.SETUP_TOKEN = SETUP_TOKEN;
   Object.assign(process.env, env);
   if (chain) {
     chain.server.listen(0);

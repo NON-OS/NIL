@@ -15,6 +15,7 @@ import Picker from '../ui/Picker';
 import LabelChips from '../task/LabelChips';
 import BountyField from '../bounty/BountyField';
 import DueBadge from '../task/DueBadge';
+import HelpLink from '../help/HelpLink';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import meta from '../../lib/meta';
@@ -121,6 +122,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
         ) : (
           <span className="prop-static">{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
         )}
+        <HelpLink topic="private-tasks" label="How private tasks work" />
       </Row>
       {(task.bounty || isAdmin) && (
         <Row icon={<Coins size={14} />} label="Bounty">

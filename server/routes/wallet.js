@@ -12,6 +12,7 @@ import siwe from '../auth/siwe.js';
 import walletSignature from '../auth/walletSignature.js';
 import currentUser from '../auth/currentUser.js';
 import signIn from '../auth/signIn.js';
+import setupToken from '../auth/setupToken.js';
 import liveInvite from '../services/liveInvite.js';
 import createAccount from '../services/createAccount.js';
 import addCredential from '../services/addCredential.js';
@@ -54,6 +55,7 @@ router.post(
       pending.userId = user.id;
     } else if (mode === 'setup') {
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
+      setupToken.check(req.body.setupToken);
       pending.name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
       pending.workspaceName = check.text(req.body.workspaceName || 'My team', 'Workspace name', { min: 1, max: 60 });
     } else if (mode === 'invite') {
@@ -126,7 +128,8 @@ router.post(
       if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)}. Joining without an invite needs at least ${nox(gate.minimum)}.`);
     }
     const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, inviteHash: pending.inviteHash, address: pending.address });
-    if (pending.mode !== 'setup') publishUser(id);
+    if (pending.mode === 'setup') setupToken.discard();
+    else publishUser(id);
     return signIn(req, res, id);
   }),
 );

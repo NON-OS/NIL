@@ -14,6 +14,7 @@ import tokenAmount from '../../lib/tokenAmount';
 import shortAddress from '../../lib/shortAddress';
 import isAdminUser from '../../lib/isAdmin';
 import type PlanPayment from '../../types/PlanPayment';
+import HelpLink from '../help/HelpLink';
 
 export default function PlanSettings() {
   const status = useStore((s) => s.plan);
@@ -40,7 +41,9 @@ export default function PlanSettings() {
   return (
     <>
       <section className="settings-section">
-        <h2>Plan</h2>
+        <h2>
+          Plan <HelpLink topic="nox-and-nil-pro" label="How Nil Pro works" />
+        </h2>
         <p>Tasks, projects, goals, encrypted docs, time tracking, reminders, share links and exports are free forever. The plan unlocks the tools below for the whole workspace.</p>
         <div className="settings-card">
           <div className="plan-head">

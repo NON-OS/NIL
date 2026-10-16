@@ -8,6 +8,7 @@ import accessKeys from '../../actions/accessKeys';
 import dates from '../../lib/dates';
 import PlanNotice from '../plan/PlanNotice';
 import type AccessKey from '../../types/AccessKey';
+import HelpLink from '../help/HelpLink';
 
 const EXPIRY = [
   { value: '30', label: 'Expires in 30 days' },
@@ -67,7 +68,9 @@ export default function AiSettings() {
   return (
     <>
       <section className="settings-section">
-        <h2>Connect your AI assistant</h2>
+        <h2>
+          Connect your AI assistant <HelpLink topic="ai-assistants" label="How AI assistants connect" />
+        </h2>
         <p>
           Nil speaks the Model Context Protocol, so Claude and other assistants can read your tasks, create them and post updates for you. The assistant uses a personal key, acts as you, and sees exactly what you see. Other people’s private tasks and encrypted docs are never reachable.
         </p>

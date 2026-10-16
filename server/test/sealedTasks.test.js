@@ -117,7 +117,7 @@ test('opening a task up again brings its plain text back, comments included', as
   assert.equal((await detail(owner, task.id)).comments[0].body, 'Back in the open');
 });
 
-test('files, assistants and proofs stay away from what they can’t read', async () => {
+test('plain files, assistants and proofs stay away from what they can’t read', async () => {
   const task = (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana), recurrence: 'weekly', dueDate: '2026-10-20' })).data.task;
   const upload = await fetch(`${base()}/api/tasks/${task.id}/attachments`, { method: 'POST', headers: { Cookie: ana.cookie(), 'X-NONOS': '1', 'X-Filename': 'ring.jpg', 'Content-Type': 'image/jpeg' }, body: Buffer.from('jpeg') });
   assert.equal(upload.status, 400);

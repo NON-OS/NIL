@@ -24,6 +24,7 @@ import taskKey from '../lib/taskKey';
 import type BountyOverview from '../types/BountyOverview';
 import type Task from '../types/Task';
 import isAdminUser from '../lib/isAdmin';
+import HelpLink from '../components/help/HelpLink';
 
 const sum = (tasks: Task[]) => amountsByToken(tasks.map((t) => ({ amount: t.bounty!, token: t.bountyToken })));
 
@@ -74,9 +75,12 @@ export default function BountiesView() {
         icon={<Coins size={17} />}
         subtitle={`${rewards.map((r) => r.symbol).join(' or ') || 'NOX'} rewards, paid wallet to wallet`}
         actions={
-          <a className="btn" href="/open" target="_blank" rel="noopener noreferrer">
-            Public board{listedCount ? ` · ${listedCount}` : ''}
-          </a>
+          <>
+            <HelpLink topic="bounties-and-payouts" label="How bounties work" />
+            <a className="btn" href="/open" target="_blank" rel="noopener noreferrer">
+              Public board{listedCount ? ` · ${listedCount}` : ''}
+            </a>
+          </>
         }
       />
       <div className="page page-narrow">

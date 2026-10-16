@@ -3,6 +3,7 @@ import { KeyRound, Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import ConfirmButton from '../ui/ConfirmButton';
 import vault from '../../actions/vault';
+import HelpLink from '../help/HelpLink';
 
 // What end-to-end encryption means here, in three plain steps, and the one button to unlock.
 export default function DocsLocked() {
@@ -28,7 +29,9 @@ export default function DocsLocked() {
     <div className="docs-locked">
       <div className="docs-locked-card">
         <KeyRound size={28} style={{ margin: '0 auto', color: 'var(--accent-text)' }} />
-        <h2>Docs are end-to-end encrypted</h2>
+        <h2>
+          Docs are end-to-end encrypted <HelpLink topic="encrypted-docs" label="How encrypted docs work" />
+        </h2>
         <p>Only teammates you share a doc with can read it. This server stores scrambled text it has no key for, titles included.</p>
         <ol>
           <li>
