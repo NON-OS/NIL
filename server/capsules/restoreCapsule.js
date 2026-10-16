@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import db from '../db/connection.js';
+import dataTables from '../db/dataTables.js';
 import migrate from '../db/migrate.js';
 import uploadDir from '../lib/uploadDir.js';
 import HttpError from '../lib/HttpError.js';
@@ -20,7 +21,8 @@ export default function restoreCapsule(dir) {
     incoming.close();
   }
 
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((t) => t.name);
+  // triggers rebuild the search index as the task and comment rows go in
+  const tables = dataTables(db);
   db.exec('PRAGMA foreign_keys = OFF');
   db.exec(`ATTACH DATABASE '${restoredDb.replace(/'/g, "''")}' AS capsule`);
   try {

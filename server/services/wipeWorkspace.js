@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import db from '../db/connection.js';
+import dataTables from '../db/dataTables.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import hub from '../realtime/hub.js';
@@ -7,7 +8,7 @@ import hub from '../realtime/hub.js';
 // The owner's "erase everything": every row, every file, the signing key. The server goes
 // back to a fresh install and everyone is signed out.
 export default function wipeWorkspace() {
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((t) => t.name);
+  const tables = dataTables(db);
   db.exec('PRAGMA foreign_keys = OFF');
   try {
     db.exec('BEGIN IMMEDIATE');
