@@ -290,6 +290,11 @@
   display: none;
 }
 
+/* kept a step away from Print and Download */
+.doc-toolbar .doc-delete {
+  margin-left: 12px;
+}
+
 @media (max-width: 860px) {
   .doc-toolbar .only-mobile {
     display: inline-flex;
