@@ -1,0 +1,73 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="referrer" content="no-referrer" />
+    <meta name="description" content="A Nil workspace for your team, hosted by the NØNOS foundation. Sign in with your wallet." />
+    <title>Hosted Nil</title>
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
+    <link rel="preload" href="/assets/fonts/geist.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="/assets/signup.css" />
+    <script src="/assets/signup.js" defer></script>
+  </head>
+  <body>
+    <header class="top">
+      <a class="brand" href="/"><img src="/assets/favicon.svg" alt="" width="22" height="22" /><span>Nil</span></a>
+      <span class="by">hosted by NØNOS</span>
+    </header>
+
+    <main id="app" data-domain="{{domain}}" data-pow="{{powBits}}">
+      <h1>A workspace for your team, hosted by NØNOS</h1>
+      <p class="lead">Tasks, docs, bounties and votes, with docs and private tasks encrypted in your browser. Free to start. Nil Pro is paid from inside your workspace. You sign in with your wallet: no email, no password.</p>
+
+      <section id="step-name" class="card">
+        {{closedNotice}}
+        <form id="signup-form" novalidate>
+          <label for="name">Workspace address</label>
+          <div class="address">
+            <input id="name" name="name" type="text" autocomplete="off" autocapitalize="off" spellcheck="false" minlength="{{nameMin}}" maxlength="{{nameMax}}" required aria-describedby="name-hint"{{disabled}} />
+            <span class="suffix">.{{domain}}</span>
+          </div>
+          <p id="name-hint" class="hint" aria-live="polite">Lowercase letters, digits and dashes, {{nameMin}} to {{nameMax}} characters.</p>
+          <button type="submit" id="go" class="primary"{{disabled}}>Create with my wallet</button>
+          <p class="fine">Your wallet asks you to sign a short message that names the address. Signing is free and sends no transaction.</p>
+        </form>
+      </section>
+
+      <section id="step-wait" class="card" hidden>
+        <h2>Creating <span class="mono" id="wait-name"></span></h2>
+        <p>This usually takes less than a minute. Keep this page open.</p>
+        <div class="progress" aria-hidden="true"><span></span></div>
+      </section>
+
+      <section id="step-done" class="card" hidden>
+        <h2>Your workspace is ready</h2>
+        <ol class="steps">
+          <li>
+            Copy your setup code. It is shown only once, and it is what proves the workspace is yours.
+            <div class="code"><code id="setup-code"></code><button type="button" id="copy">Copy</button></div>
+          </li>
+          <li>Open <a id="ws-link" href="/" rel="noopener noreferrer"></a> and enter the code when it asks for it.</li>
+          <li>Create the workspace there with the same wallet. You become its owner.</li>
+        </ol>
+      </section>
+
+      <p id="error" class="error" role="alert" hidden></p>
+
+      <section class="facts">
+        <h2>What NØNOS can and can’t see</h2>
+        <ul>
+          <li><strong>Encrypted in your browser.</strong> Docs and private tasks, titles and comments included. NØNOS stores them and can’t read them.</li>
+          <li><strong>Stored in plain form.</strong> Team tasks and their comments, files, goals and the member list. They live in your workspace’s own storage on NØNOS’s server. NØNOS doesn’t look at them, but as the host it could.</li>
+          <li><strong>Nothing else.</strong> This page sets no cookies, loads nothing from other sites and runs no analytics.</li>
+        </ul>
+        <p>You can always move to your own server with an encrypted export, and self-hosting Nil stays free.</p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      {{footer}}
+    </footer>
+  </body>
+</html>
