@@ -64,7 +64,17 @@ router.put(
     enabled();
     const endpoint = endpointOf(req.body);
     if (!pushEndpoint(endpoint)) throw HttpError.badRequest('This browser’s push service isn’t allowed on this server.');
-    const row = subscriptions.save(req.user.id, tokenHash(sessionCookie.read(req)), { endpoint, ...keysOf(req.body), ...settingsOf(req.body) });
+    const keys = keysOf(req.body);
+    let settings = settingsOf(req.body);
+    // A browser that swapped its subscription on its own sends the new one in place of the old.
+    // It's taken only if the old one was this person's, so nobody inherits someone else's opt-in.
+    if (req.body?.replaces !== undefined) {
+      const old = typeof req.body.replaces === 'string' ? subscriptions.find(req.user.id, req.body.replaces) : null;
+      if (!old) throw HttpError.notFound('That device’s subscription');
+      settings = { showNames: Boolean(old.show_names), ...(old.time_zone ? { timeZone: old.time_zone } : {}), ...settings };
+      subscriptions.drop(old.id);
+    }
+    const row = subscriptions.save(req.user.id, tokenHash(sessionCookie.read(req)), { endpoint, ...keys, ...settings });
     return state(req.user.id, row);
   }),
 );

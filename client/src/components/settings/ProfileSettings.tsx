@@ -4,32 +4,16 @@ import Avatar from '../ui/Avatar';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import people from '../../actions/people';
-import storage from '../../lib/storage';
 import shortAddress from '../../lib/shortAddress';
 
 export default function ProfileSettings() {
   const me = useStore((s) => s.me)!;
   const [name, setName] = useState(me.name);
   const [title, setTitle] = useState(me.title);
-  const [desktop, setDesktop] = useState(() => storage.get('desktop-notifications', false) && typeof Notification !== 'undefined' && Notification.permission === 'granted');
 
   const saveProfile = async (e: FormEvent) => {
     e.preventDefault();
     if (await people.updateMe({ name, title })) toast.show('Profile saved.', { tone: 'success' });
-  };
-
-  const toggleDesktop = async () => {
-    if (desktop) {
-      setDesktop(false);
-      storage.set('desktop-notifications', false);
-      return;
-    }
-    if (typeof Notification === 'undefined') return toast.show('This browser doesn’t support desktop notifications.', { tone: 'error' });
-    const permission = await Notification.requestPermission();
-    const on = permission === 'granted';
-    setDesktop(on);
-    storage.set('desktop-notifications', on);
-    if (!on) toast.show('Notifications are blocked for this site in your browser settings.', { tone: 'error' });
   };
 
   return (
@@ -63,21 +47,6 @@ export default function ProfileSettings() {
           </div>
         </form>
       </section>
-
-      <section className="settings-section">
-        <h2>Notifications</h2>
-        <div className="settings-card">
-          <label className="filter-toggle" style={{ justifyContent: 'space-between' }}>
-            <span>
-              <strong>Desktop notifications</strong>
-              <br />
-              <span className="muted">Show a system notification when you’re mentioned or assigned while Nil is in the background.</span>
-            </span>
-            <button type="button" className="toggle" role="switch" aria-checked={desktop} onClick={toggleDesktop} aria-label="Desktop notifications" />
-          </label>
-        </div>
-      </section>
-
     </>
   );
 }

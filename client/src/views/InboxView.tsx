@@ -10,6 +10,7 @@ import useNow from '../hooks/useNow';
 import inbox from '../actions/inbox';
 import detail from '../actions/detail';
 import describeNotification from '../lib/describeNotification';
+import noticeLead from '../lib/noticeLead';
 import dates from '../lib/dates';
 import cx from '../lib/cx';
 import type InboxItem from '../types/InboxItem';
@@ -92,6 +93,7 @@ export default function InboxView() {
                 {g.items.map((n) => {
                   const actor = n.actorId ? users[n.actorId] : undefined;
                   const task = n.taskId ? tasks[n.taskId] : undefined;
+                  const lead = noticeLead(n);
                   return (
                     <li key={n.id}>
                       <button type="button" className={cx('inbox-item', !!n.readAt && 'read')} onClick={() => open(n)}>
@@ -99,7 +101,7 @@ export default function InboxView() {
                         <Avatar user={actor} size={28} />
                         <span className="inbox-text">
                           <span>
-                            <strong>{n.type === 'reminder' ? 'Reminder' : n.type === 'application' ? n.data.name : actor?.name ?? 'Someone'}</strong> {n.type === 'reminder' ? '' : describeNotification(n)}{' '}
+                            <strong>{lead ?? (n.type === 'application' ? n.data.name : actor?.name ?? 'Someone')}</strong> {lead ? '' : describeNotification(n)}{' '}
                           </span>
                           <span className="task">
                             {task && <span className="key mono">{prefix}-{task.number}</span>}

@@ -240,6 +240,14 @@ test('a dead subscription is dropped, and signing out stops pushes to that brows
   const [hello] = messages(laptop, await service.since(mark));
   assert.equal(hello.title, 'Notifications are on');
 
+  // a browser that swaps its subscription keeps its settings, but only for the same person
+  await ana('PATCH', '/api/push/subscription', { endpoint: laptop.subscription.endpoint, showNames: false });
+  const swapped = pushBrowser(HOST);
+  assert.equal((await ben('PUT', '/api/push/subscription', { ...swapped.subscription, replaces: laptop.subscription.endpoint })).status, 404);
+  const replaced = await ana('PUT', '/api/push/subscription', { ...swapped.subscription, replaces: laptop.subscription.endpoint });
+  assert.deepEqual(replaced.data, { device: { showNames: false, timeZone: 'Europe/Stockholm' }, devices: 1 });
+  assert.equal((await ana('POST', '/api/push/test', { endpoint: laptop.subscription.endpoint })).status, 404);
+
   await subscribe(ana, pushBrowser(HOST));
   assert.equal((await ana('GET', '/api/push')).data.devices, 2);
   assert.deepEqual((await ana('DELETE', '/api/push/subscriptions')).data, { device: null, devices: 0 });
