@@ -11,11 +11,13 @@ import notify from './notify.js';
 import issueReceipt from '../proofs/issueReceipt.js';
 import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
+import resolveDue from './resolveDue.js';
 
 // `legacy` lets the server copy a recurring private task from before encryption existed;
 // everything that comes from a browser or an assistant has to be sealed to be private.
 export default function createTask(actor, input, { legacy = false } = {}) {
   const p = parseTaskPatch({ status: 'todo', priority: 0, ...input });
+  const due = resolveDue(null, p);
   // A private task is encrypted in the browser before it gets here, and only then.
   if (p.private && !p.sealed && !legacy) throw HttpError.badRequest('A private task is encrypted in your browser before it’s saved. Create it in Nil.');
   if (p.sealed && !p.private) throw HttpError.badRequest('Only private tasks are encrypted.');
@@ -40,11 +42,11 @@ export default function createTask(actor, input, { legacy = false } = {}) {
 
     sql.run(
       `INSERT INTO tasks (id, number, title, description, status, priority, project_id, goal_id, assignee_id, creator_id,
-         due_date, start_date, estimate, labels, checklist, recurrence, bounty, bounty_token, private, sealed, position, created_at, updated_at, completed_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         due_date, due_at, due_tz, start_date, estimate, labels, checklist, recurrence, bounty, bounty_token, private, sealed, position, created_at, updated_at, completed_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
       id, number, p.title, p.description ?? '', p.status, p.priority,
       p.projectId ?? null, p.goalId ?? null, p.assigneeId ?? null, actor.id,
-      p.dueDate ?? null, p.startDate ?? null, p.estimate ?? null,
+      p.dueDate ?? null, due.dueAt ?? null, due.dueTz ?? null, p.startDate ?? null, p.estimate ?? null,
       JSON.stringify(p.labels ?? []), JSON.stringify(p.checklist ?? []), p.recurrence ?? null, p.bounty ?? null, p.bounty ? p.bountyToken ?? null : null, p.private ? 1 : 0, p.sealed ? JSON.stringify(p.sealed) : null,
       position, now, now, p.status === 'done' ? now : null,
     );

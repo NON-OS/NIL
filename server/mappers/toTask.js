@@ -15,6 +15,8 @@ export default function toTask(row) {
     assigneeId: row.assignee_id,
     creatorId: row.creator_id,
     dueDate: row.due_date,
+    // the due moment in UTC when the task has a time, else null
+    dueAt: row.due_at ?? null,
     startDate: row.start_date,
     estimate: row.estimate,
     labels: parseJSON(row.labels, []),

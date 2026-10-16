@@ -15,6 +15,7 @@ import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
 import resealComments from './resealComments.js';
 import scrubPlaintext from './scrubPlaintext.js';
+import resolveDue from './resolveDue.js';
 
 const COLUMNS = {
   title: 'title',
@@ -25,6 +26,7 @@ const COLUMNS = {
   goalId: 'goal_id',
   assigneeId: 'assignee_id',
   dueDate: 'due_date',
+  dueAt: 'due_at',
   startDate: 'start_date',
   estimate: 'estimate',
   labels: 'labels',
@@ -77,6 +79,12 @@ export default function updateTask(actor, id, body, { today } = {}) {
   const existing = visibleTask(id, actor);
 
   const patch = parseTaskPatch(body);
+  // the zone stays on the server; teammates see the due moment, not where it was set
+  const { dueTz, ...due } = resolveDue(existing.id, patch);
+  const timeSet = 'dueTime' in patch;
+  delete patch.dueTime;
+  delete patch.timeZone;
+  Object.assign(patch, due);
   if ('private' in patch && patch.private !== existing.private && actor.id !== existing.creatorId && actor.id !== existing.assigneeId) {
     throw HttpError.forbidden('Only the person who created this task or its assignee can change who sees it.');
   }
@@ -123,6 +131,11 @@ export default function updateTask(actor, id, body, { today } = {}) {
   const recurs = statusChange?.after === 'done' && recurrence;
   if (recurs) sets.push('recurrence = NULL');
 
+  if (dueTz !== undefined) {
+    sets.push('due_tz = ?');
+    params.push(dueTz);
+  }
+
   sets.push('updated_at = ?');
   params.push(now);
 
@@ -144,7 +157,9 @@ export default function updateTask(actor, id, body, { today } = {}) {
   if (statusChange?.after === 'done') issueReceipt(task, actor.id);
   else if (statusChange?.before === 'done') revokeReceipts(id);
   // once sealed, the history keeps no trace of the words that were there
-  logTaskChanges(id, actor.id, task.sealed ? changes.filter((c) => !PLAIN.includes(c.key)) : changes);
+  // a due moment that only moved with its date isn't news; a new time is
+  const logged = changes.filter((c) => !(task.sealed && PLAIN.includes(c.key)) && !(c.key === 'dueAt' && !timeSet));
+  logTaskChanges(id, actor.id, logged);
   notifyTaskChanges(task, actor.id, changes);
   publishTask(id, existing);
 
