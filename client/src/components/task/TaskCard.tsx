@@ -30,8 +30,8 @@ interface Props {
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
-// The card is the drag source and a mouse target; the title, status and assignee are its
-// keyboard and screen reader controls, so nothing interactive sits inside another control.
+// The card is only the drag source. Its title is the button that opens it, stretched over
+// the whole card in CSS, with status, Move and assignee above; no control sits inside another.
 function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style, dragProps }: Props) {
   const project = useStore((s) => (task.projectId ? s.projects[task.projectId] : undefined));
   const assignee = useStore((s) => (task.assigneeId ? s.users[task.assigneeId] : undefined));
@@ -46,7 +46,6 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
       ref={innerRef}
       style={style}
       className={cx('card', dragging && 'dragging', overlay && 'overlay', meta.isClosed(task.status) && 'closed')}
-      onClick={() => detail.open(task)}
       aria-label={`${taskKey(task)} ${task.title}`}
       {...dragProps}
     >
