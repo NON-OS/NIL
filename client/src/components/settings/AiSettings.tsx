@@ -145,7 +145,7 @@ export default function AiSettings() {
           <p style={{ margin: 0 }}>
             {aiOn
               ? 'Claude is on for this workspace: break tasks into steps, write descriptions, turn notes into tasks, draft docs and write deck narratives. Only the text a feature needs is sent to Anthropic, and only when someone clicks it.'
-              : 'Built-in AI is off. An admin can turn it on by setting ANTHROPIC_API_KEY on the server. Connecting your own assistant above works either way.'}
+              : 'Built-in AI is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server. Connecting your own assistant above works either way.'}
           </p>
         </div>
       </section>

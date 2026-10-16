@@ -1,8 +1,8 @@
 interface UsageWindow {
   input: number;
   output: number;
-  // estimated, in US dollars, from the agent's prices per million tokens
-  cost: number;
+  // estimated, in US dollars, from the agent's prices per million tokens; null without prices
+  cost: number | null;
   runs: number;
   failed: number;
   apiCalls: number;

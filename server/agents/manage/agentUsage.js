@@ -3,7 +3,8 @@ import sql from '../../db/sql.js';
 const DAY = 86_400_000;
 
 // Tokens, estimated cost and runs for one agent: today (since local midnight) and the last 30 days.
-export default function agentUsage(agentId) {
+// The cost is null for an agent without prices, since nothing was estimated.
+export default function agentUsage(agentId, { priced = true } = {}) {
   const midnight = new Date();
   midnight.setHours(0, 0, 0, 0);
   const sum = (since) =>
@@ -14,8 +15,9 @@ export default function agentUsage(agentId) {
       agentId, since,
     );
   const calls = (since) => sql.get("SELECT COUNT(*) AS n FROM agent_audit WHERE agent_id = ? AND via IN ('mcp', 'rest') AND created_at >= ?", agentId, since).n;
-  const today = sum(midnight.getTime());
-  const month = sum(Date.now() - 30 * DAY);
+  const withCost = (row) => (priced ? row : { ...row, cost: null });
+  const today = withCost(sum(midnight.getTime()));
+  const month = withCost(sum(Date.now() - 30 * DAY));
   return {
     today: { ...today, apiCalls: calls(midnight.getTime()) },
     last30Days: { ...month, apiCalls: calls(Date.now() - 30 * DAY) },

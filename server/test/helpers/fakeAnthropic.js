@@ -20,7 +20,7 @@ function stream({ text, tool, inputTokens = 120, outputTokens = 40 }) {
     );
   }
   return [
-    event('message_start', { message: { id: `msg_${Date.now()}`, type: 'message', role: 'assistant', model: 'claude-opus-5-5', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: inputTokens, output_tokens: 1 } } }),
+    event('message_start', { message: { id: `msg_${Date.now()}`, type: 'message', role: 'assistant', model: 'test-model', content: [], stop_reason: null, stop_sequence: null, usage: { input_tokens: inputTokens, output_tokens: 1 } } }),
     ...blocks,
     event('message_delta', { delta: { stop_reason: tool ? 'tool_use' : 'end_turn', stop_sequence: null }, usage: { output_tokens: outputTokens } }),
     event('message_stop', {}),

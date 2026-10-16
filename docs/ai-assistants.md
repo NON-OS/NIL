@@ -48,7 +48,7 @@ The endpoint is `/mcp` on your server, using the MCP streamable HTTP transport w
 
 ## Built-in AI
 
-When whoever runs the server sets `ANTHROPIC_API_KEY`, these features appear:
+When whoever runs the server sets `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the name of the Anthropic model to use), these features appear:
 
 | Where | Button | What it does |
 |---|---|---|

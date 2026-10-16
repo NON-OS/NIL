@@ -50,7 +50,7 @@ export default function RunList({ agentId }: { agentId: string }) {
                   <span className="muted">a task you can’t see or that was erased</span>
                 )}
                 <span className="muted">
-                  {TRIGGER[run.trigger] ?? run.trigger} · {formatUsage.tokens(run.inputTokens + run.outputTokens)} tokens · {formatUsage.cost(run.cost)} · {dates.ago(run.createdAt)}
+                  {TRIGGER[run.trigger] ?? run.trigger} · {formatUsage.tokens(run.inputTokens + run.outputTokens)} tokens{run.cost > 0 ? ` · ${formatUsage.cost(run.cost)}` : ''} · {dates.ago(run.createdAt)}
                 </span>
               </div>
               {(run.status === 'queued' || run.status === 'running') && (

@@ -54,7 +54,7 @@ Every setting is an environment variable. All of them are optional except `APP_U
 | `NOX_RPC_URL` | required, except on localhost | The Ethereum node to use, or `off` to turn on-chain features off. A server whose `APP_URL` is a localhost address falls back to a public node, with a warning |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |
 | `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro, in USDC or NOX. Unset means community mode |
-| `ANTHROPIC_API_KEY` | none | Turns on built-in AI |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | none | Both together turn on built-in AI. There's no default model |
 
 Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `MAX_CAPSULE_MB`), sign-in (`SIGNIN_CHAIN_TIMEOUT_SECONDS`, `SIGNIN_RESET_HOURS`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_FINALITY_DEPTH`, `NOX_EXPLORER`), bounty payments (`PAYMENT_INTENT_DAYS`, `PAYMENT_WATCH_DAYS`), Nil Pro (`PLAN_PRICE_USD`, `PLAN_SEAT_USD`, `PLAN_FREE_SEATS`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_TRIAL_DAYS`, the NOX price and the perks), the token-holder door (`HOLDER_ZSP_NOX`, `HOLDER_RECHECK_HOURS`, `HOLDER_GRACE_DAYS`), private payouts, voting power and anonymous votes, push notifications (`PUSH_NOTIFICATIONS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_SERVICES`), due notes (`DUE_SOON_MINUTES`, `DUE_DAY_HOUR`) and calendar feeds (`CALENDAR_FEEDS`, `CALENDAR_FEED_PER_HOUR`).
 
@@ -72,7 +72,7 @@ Leave `PLAN_TREASURY` unset to run in community mode, with every tool unlocked. 
 
 ### Built-in AI
 
-With `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`) set, text goes to Anthropic only when someone clicks an AI button. Leave it unset and no task data ever goes there. Connecting your own assistant over MCP works either way. See [AI assistants](ai-assistants.md).
+With `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`) and `ANTHROPIC_MODEL` set, text goes to Anthropic only when someone clicks an AI button. Leave it unset and no task data ever goes there. Connecting your own assistant over MCP works either way. See [AI assistants](ai-assistants.md).
 
 ### Tor and memory-only mode
 

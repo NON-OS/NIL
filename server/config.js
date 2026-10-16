@@ -476,8 +476,18 @@ function agentDoneStatus(value) {
   return 'in_review';
 }
 
+// No model is assumed: model names change faster than this code. Built-in AI needs
+// ANTHROPIC_MODEL; built-in agents on Anthropic use AGENT_MODEL, then ANTHROPIC_MODEL, or the
+// model entered on the agent.
+const anthropicKey = Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN);
+const aiModel = (env.ANTHROPIC_MODEL ?? '').trim() || null;
+const agentModel = (env.AGENT_MODEL ?? '').trim() || aiModel;
+if (anthropicKey && !aiModel) {
+  configWarning(`An Anthropic key is set, but ANTHROPIC_MODEL isn’t, so built-in AI stays off. Set ANTHROPIC_MODEL to the name of the Anthropic model to use.${agentModel ? '' : ' Built-in agents on Anthropic need a model name too: set AGENT_MODEL, or enter one on each agent.'}`);
+}
+
 const agents = Object.freeze({
-  model: env.AGENT_MODEL || 'claude-opus-5-5',
+  model: agentModel,
   effort: agentEffort((env.AGENT_EFFORT ?? '').trim()),
   thinking: env.AGENT_THINKING === 'off' ? 'off' : 'adaptive',
   maxSteps: envNumber('AGENT_MAX_STEPS', 12, { min: 1, max: 100 }),
@@ -501,8 +511,9 @@ const agents = Object.freeze({
   webhookDisableAfter: envNumber('AGENT_WEBHOOK_DISABLE_AFTER', 20, { min: 1 }),
   webhookToleranceSeconds: envNumber('AGENT_WEBHOOK_TOLERANCE_SECONDS', 300, { min: 30 }),
   dueSoonHours: envNumber('AGENT_DUE_SOON_HOURS', 24, { min: 1 }),
-  priceIn: envAmount('AGENT_PRICE_INPUT_PER_MTOK', 4),
-  priceOut: envAmount('AGENT_PRICE_OUTPUT_PER_MTOK', 20),
+  // dollars per million tokens for the cost estimate of Anthropic runs; unset means no estimate
+  priceIn: envAmount('AGENT_PRICE_INPUT_PER_MTOK', null),
+  priceOut: envAmount('AGENT_PRICE_OUTPUT_PER_MTOK', null),
 });
 
 const config = Object.freeze({
@@ -543,8 +554,10 @@ const config = Object.freeze({
   payments,
   holders,
   ai: Object.freeze({
-    enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
-    model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
+    enabled: anthropicKey && Boolean(aiModel),
+    // the key alone is enough for built-in agents, which can name their own model
+    hasKey: anthropicKey,
+    model: aiModel,
     // a hard stop per attempt; retries cover rate limits and brief outages
     timeoutMs: envNumber('AI_TIMEOUT_SECONDS', 120, { min: 1 }) * SECOND,
     maxRetries: envNumber('AI_MAX_RETRIES', 1, { max: 10 }),

@@ -40,6 +40,8 @@ export default function anthropicProvider(agent) {
     },
 
     async step(state, { signal, maxTokens }) {
+      // an agent made while AGENT_MODEL was set, which has since been removed
+      if (!agent.model) throw new ProviderError('This agent has no model name. Enter one in Settings → Agents, or set AGENT_MODEL on the server.');
       const params = {
         model: agent.model,
         max_tokens: maxTokens,

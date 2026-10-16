@@ -108,7 +108,8 @@ export default async function executeRun(row, signal) {
       const turn = await provider.step(state, { signal: abort, maxTokens: config.agents.maxOutputTokens });
       usage.input += turn.usage.input;
       usage.output += turn.usage.output;
-      const cost = (usage.input / 1e6) * agent.price.in + (usage.output / 1e6) * agent.price.out;
+      // 0 when the agent has no prices: Settings then shows token counts only
+      const cost = agent.price ? (usage.input / 1e6) * agent.price.in + (usage.output / 1e6) * agent.price.out : 0;
       sql.run('UPDATE agent_runs SET input_tokens = ?, output_tokens = ?, cost = ? WHERE id = ?', usage.input, usage.output, cost, run.id);
       log.add('model', { input: turn.usage, output: turn.text || (turn.calls.length ? `Calls ${turn.calls.map((c) => c.name).join(', ')}` : '(no text)') });
 

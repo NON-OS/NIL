@@ -18,7 +18,7 @@ import draftDoc from '../ai/draftDoc.js';
 const router = express.Router();
 
 router.use('/ai', (req, res, next) => {
-  if (!config.ai.enabled) return res.status(503).json({ error: 'AI assist is off. An admin can turn it on by setting ANTHROPIC_API_KEY on the server.' });
+  if (!config.ai.enabled) return res.status(503).json({ error: 'AI assist is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server.' });
   next();
 });
 router.use('/ai', rateLimit({ windowMs: 60_000, max: 12, key: (req) => `ai:${req.user.id}`, message: 'That’s a lot of AI requests. Give it a minute.' }));

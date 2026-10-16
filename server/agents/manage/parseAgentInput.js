@@ -51,10 +51,11 @@ export default async function parseAgentInput(body, existing = null) {
   if (has('priceIn')) out.priceIn = price(body.priceIn, 'Input price');
   if (has('priceOut')) out.priceOut = price(body.priceOut, 'Output price');
 
-  if (runner === 'anthropic' && !config.ai.enabled) throw HttpError.badRequest('The Anthropic runner needs ANTHROPIC_API_KEY set on the server.');
+  const model = Object.hasOwn(out, 'model') ? out.model : existing?.model;
+  if (runner === 'anthropic' && !config.ai.hasKey) throw HttpError.badRequest('The Anthropic runner needs ANTHROPIC_API_KEY set on the server.');
+  if (runner === 'anthropic' && !(model || config.agents.model)) throw HttpError.badRequest('Give the name of the Anthropic model this agent runs on. The server has no AGENT_MODEL to fall back to.');
   if (runner === 'openai') {
     const endpoint = out.endpoint ?? existing?.endpoint;
-    const model = out.model ?? existing?.model;
     if (!endpoint || !model) throw HttpError.badRequest('An OpenAI-compatible runner needs the endpoint URL and the model name.');
     if (out.endpoint) {
       try {

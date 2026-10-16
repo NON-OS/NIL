@@ -9,13 +9,14 @@ export default interface AgentOptions {
   allowLocalEndpoints: boolean;
   webhookToleranceSeconds: number;
   defaults: {
-    model: string;
+    // null when the server sets no AGENT_MODEL: a built-in agent on Anthropic then needs its own
+    model: string | null;
     doneStatus: Status | 'none';
     maxSteps: number;
     maxRunTokens: number;
     maxDayTokens: number;
     rateLimit: number;
-    priceIn: number;
-    priceOut: number;
+    priceIn: number | null;
+    priceOut: number | null;
   };
 }

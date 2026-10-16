@@ -240,3 +240,28 @@ test('billing settings default sensibly and say so when a value can’t be used'
   // a slot without a key works, but the warning says what it gives away
   assert.match(hosted.warnings.join('\n'), /PLAN_INVOICE_SLOT is set without PLAN_INVOICE_KEY/);
 });
+
+test('no model is assumed: built-in AI needs ANTHROPIC_MODEL, agents fall back to it, prices start unset', () => {
+  const none = load({});
+  assert.deepEqual([none.config.ai.enabled, none.config.ai.model, none.config.agents.model, none.config.agents.priceIn, none.config.agents.priceOut], [false, null, null, null, null]);
+
+  const keyOnly = load({ ANTHROPIC_API_KEY: 'sk-test-key' });
+  assert.deepEqual([keyOnly.config.ai.enabled, keyOnly.config.ai.hasKey, keyOnly.config.agents.model], [false, true, null]);
+  assert.equal(keyOnly.warnings.length, 1);
+  assert.match(keyOnly.warnings[0], /ANTHROPIC_MODEL isn’t, so built-in AI stays off\. Set ANTHROPIC_MODEL.*AGENT_MODEL/);
+
+  const shared = load({ ANTHROPIC_API_KEY: 'sk-test-key', ANTHROPIC_MODEL: 'test-model' });
+  assert.deepEqual([shared.config.ai.enabled, shared.config.ai.model, shared.config.agents.model, shared.warnings], [true, 'test-model', 'test-model', []]);
+  const own = load({ ANTHROPIC_AUTH_TOKEN: 'token', ANTHROPIC_MODEL: 'test-model', AGENT_MODEL: 'test-agent-model' });
+  assert.equal(own.config.agents.model, 'test-agent-model');
+  // a model for agents only still leaves built-in AI off, and says so without asking for AGENT_MODEL
+  const agentsOnly = load({ ANTHROPIC_API_KEY: 'sk-test-key', AGENT_MODEL: 'test-model' });
+  assert.equal(agentsOnly.config.ai.enabled, false);
+  assert.doesNotMatch(agentsOnly.warnings.join('\n'), /AGENT_MODEL/);
+
+  const priced = load({ AGENT_PRICE_INPUT_PER_MTOK: '2.5', AGENT_PRICE_OUTPUT_PER_MTOK: '10' });
+  assert.deepEqual([priced.config.agents.priceIn, priced.config.agents.priceOut], [2.5, 10]);
+  const typo = load({ AGENT_PRICE_INPUT_PER_MTOK: 'four' });
+  assert.equal(typo.config.agents.priceIn, null);
+  assert.match(typo.warnings[0], /AGENT_PRICE_INPUT_PER_MTOK=four .*Leaving it unset\./);
+});

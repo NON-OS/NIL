@@ -39,7 +39,7 @@ before(async () => {
   anthropic = await fakeAnthropic();
   chat = await fakeChatCompletions();
   srv = await startServer({
-    env: { ANTHROPIC_API_KEY: 'test-key-not-real', ANTHROPIC_BASE_URL: anthropic.url, AGENT_ALLOW_LOCAL_ENDPOINTS: 'true', AGENT_RUN_TIMEOUT_SECONDS: '2', AGENT_RETRIES: '2' },
+    env: { ANTHROPIC_API_KEY: 'test-key-not-real', ANTHROPIC_BASE_URL: anthropic.url, AGENT_MODEL: 'test-model', AGENT_PRICE_INPUT_PER_MTOK: '4', AGENT_PRICE_OUTPUT_PER_MTOK: '20', AGENT_ALLOW_LOCAL_ENDPOINTS: 'true', AGENT_RUN_TIMEOUT_SECONDS: '2', AGENT_RETRIES: '2' },
   });
   sql = (await import('../db/sql.js')).default;
   worker = (await import('../agents/runner/worker.js')).default;
@@ -319,7 +319,7 @@ test('runs survive a restart, and cancelling, pausing, the time limit and the ki
 
 test('the OpenAI-compatible runner works against any chat completions server', async () => {
   providerFor.replace(null);
-  const made = await owner('POST', '/api/agents', { name: 'Local', color: '#2f8a3b', access: 'write', projectIds: [ids.alpha], runner: 'openai', endpoint: `${chat.url}/v1`, model: 'llama3.1:8b', apiKey: 'sk-local-test-key-1234567890' });
+  const made = await owner('POST', '/api/agents', { name: 'Local', color: '#2f8a3b', access: 'write', projectIds: [ids.alpha], runner: 'openai', endpoint: `${chat.url}/v1`, model: 'test-model', apiKey: 'sk-local-test-key-1234567890' });
   assert.equal(made.status, 200, JSON.stringify(made.data));
   assert.equal(made.data.agent.hasApiKey, true);
   assert.equal(JSON.stringify(made.data).includes('sk-local-test-key'), false);
@@ -332,11 +332,11 @@ test('the OpenAI-compatible runner works against any chat completions server', a
   const run = await settled(t.id);
   assert.equal(run.status, 'done', run.error);
   assert.equal(run.input_tokens, 470);
-  assert.equal(run.cost, 0, 'a local model costs nothing per token by default');
+  assert.equal(run.cost, 0, 'no cost is estimated without prices on the agent');
   const [first, second] = chat.requests.slice(-2);
   assert.equal(first.path, '/v1/chat/completions');
   assert.equal(first.headers.authorization, 'Bearer sk-local-test-key-1234567890');
-  assert.equal(first.body.model, 'llama3.1:8b');
+  assert.equal(first.body.model, 'test-model');
   assert.equal(first.body.tool_choice, 'auto');
   assert.equal(first.body.messages[0].role, 'system');
   assert.ok(first.body.tools.some((tool) => tool.type === 'function' && tool.function.name === 'get_task' && tool.function.parameters.required[0] === 'key'));
@@ -373,7 +373,7 @@ test('the Anthropic runner streams through the official SDK with adaptive thinki
   assert.match(first.headers['anthropic-beta'], /server-side-fallback-2026-07-01/);
   assert.equal(first.headers['x-api-key'], 'test-key-not-real');
   assert.equal(first.body.stream, true);
-  assert.equal(first.body.model, 'claude-opus-5-5');
+  assert.equal(first.body.model, 'test-model');
   assert.deepEqual(first.body.thinking, { type: 'adaptive' });
   assert.deepEqual(first.body.output_config, { effort: 'high' });
   assert.equal(first.body.fallbacks, 'default');

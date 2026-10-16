@@ -241,7 +241,7 @@ test('outbound requests refuse private, loopback, link-local and metadata addres
   const bad = await owner('PUT', `/api/agents/${ids.agent}/webhook`, { url: 'http://169.254.169.254/latest/meta-data' });
   assert.equal(bad.status, 400);
   assert.match(bad.data.error, /metadata/);
-  const model = await owner('POST', '/api/agents', { name: 'Local', runner: 'openai', model: 'llama3.1', endpoint: 'http://169.254.169.254/v1' });
+  const model = await owner('POST', '/api/agents', { name: 'Local', runner: 'openai', model: 'test-model', endpoint: 'http://169.254.169.254/v1' });
   assert.equal(model.status, 400);
 });
 

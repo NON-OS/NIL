@@ -13,6 +13,7 @@ export default interface AgentRun {
   model: string | null;
   inputTokens: number;
   outputTokens: number;
+  // 0 when the agent has no prices
   cost: number;
   stepCount: number;
   summary: string | null;
