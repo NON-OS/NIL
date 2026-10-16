@@ -22,6 +22,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Faint text is darker (4.97:1 on white instead of 3.16:1), and the backlog, canceled and in-progress status icons clear 3:1. Body text is at least 13px; only metadata such as dates, keys and counts uses the 12px size.
 - Icon buttons in the task panel and the docs toolbar show their names as tooltips with a mouse. On touch and narrow screens the task panel prints the names under its tools, and the docs toolbar moves history, download and print into a menu with Delete set apart at the bottom.
 - Unassigned tasks show an outlined assign icon instead of a dashed question mark.
+- Initials on light member colours (ochre, teal, moss, sky, persimmon) are ink instead of white, which was as low as 3.25:1.
 - Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
 - The comment box only mentions Ctrl+Enter where there is likely a keyboard.
 

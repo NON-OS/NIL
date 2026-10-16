@@ -1,6 +1,7 @@
 import './Avatar.css';
 import { UserRoundPlus } from 'lucide-react';
 import cx from '../../lib/cx';
+import textOn from '../../lib/textOn';
 import type User from '../../types/User';
 
 function initials(name: string) {
@@ -27,7 +28,7 @@ export default function Avatar({ user, size = 22, online = false, title }: Props
   return (
     <span
       className={cx('avatar', online && 'avatar-online')}
-      style={{ width: size, height: size, fontSize: size * 0.4, background: user.color }}
+      style={{ width: size, height: size, fontSize: size * 0.4, background: user.color, color: textOn(user.color) }}
       title={title ?? user.name}
       aria-label={user.name}
     >
