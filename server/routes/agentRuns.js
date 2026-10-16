@@ -11,6 +11,7 @@ import agentOr404 from '../agents/manage/agentOr404.js';
 import approvers from '../agents/approvers.js';
 import decideApproval from '../agents/decideApproval.js';
 import toApproval from '../agents/toApproval.js';
+import forViewer from '../agents/forViewer.js';
 import toRun from '../agents/runner/toRun.js';
 import worker from '../agents/runner/worker.js';
 
@@ -36,8 +37,8 @@ router.get(
   route((req) => {
     const task = visibleTask(req.params.id, req.user, { allowDeleted: true });
     return {
-      runs: sql.all('SELECT * FROM agent_runs WHERE task_id = ? ORDER BY created_at DESC LIMIT 20', task.id).map((r) => toRun(r, { withSteps: true })),
-      approvals: sql.all('SELECT * FROM agent_approvals WHERE task_id = ? ORDER BY created_at', task.id).map(toApproval),
+      runs: sql.all('SELECT * FROM agent_runs WHERE task_id = ? ORDER BY created_at DESC LIMIT 20', task.id).map((r) => forViewer.run(toRun(r, { withSteps: true }), req.user)),
+      approvals: sql.all('SELECT * FROM agent_approvals WHERE task_id = ? ORDER BY created_at', task.id).map((r) => forViewer.approval(toApproval(r), req.user, task)),
     };
   }),
 );
@@ -50,7 +51,7 @@ router.get(
     const row = sql.get('SELECT * FROM agent_runs WHERE id = ?', req.params.id);
     const task = row?.task_id ? loadTask(row.task_id) : null;
     if (!row || (!req.user.isAdmin && !(task && canSeeTask(task, req.user)))) throw HttpError.notFound('That run');
-    return { run: toRun(row, { withSteps: true }) };
+    return { run: forViewer.run(toRun(row, { withSteps: true }), req.user) };
   }),
 );
 

@@ -21,4 +21,6 @@ export default interface AgentRun {
   startedAt: number | null;
   finishedAt: number | null;
   steps?: AgentStep[];
+  // guests see how a run went but not its log, which can quote work outside their projects
+  stepsHidden?: boolean;
 }

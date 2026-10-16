@@ -2,7 +2,7 @@ import sql from '../db/sql.js';
 import HttpError from '../lib/HttpError.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
-import toTaskViewers from '../services/toTaskViewers.js';
+import publishApproval from './publishApproval.js';
 import agentPrincipal from './agentPrincipal.js';
 import agentBlocked from './agentBlocked.js';
 import approvers from './approvers.js';
@@ -40,7 +40,7 @@ export default function decideApproval(id, decider, approve) {
   audit({ agentId: row.agent_id, actorId: decider.id, actingFor: decider.id, via: 'approval', action: `approval_${status}`, taskId: row.task_id, runId: row.run_id, outcome: status === 'failed' ? 'error' : 'ok', detail: { approvalId: id, tool: row.tool } });
 
   const approval = toApproval(sql.get('SELECT * FROM agent_approvals WHERE id = ?', id));
-  if (row.task_id) toTaskViewers(row.task_id, { type: 'agent.approval', approval });
+  publishApproval(approval);
   enqueueDelivery(row.agent_id, 'approval.decided', { approval: { id, status }, task: approval.taskKey ? { id: row.task_id, key: approval.taskKey } : null, actor: { id: decider.id, name: decider.name, kind: 'person' } });
   // a built-in agent picks up where it left off, knowing how its request went
   if (row.task_id) enqueueRun({ agentId: row.agent_id, taskId: row.task_id, trigger: 'approval', actingFor: decider.id, detail: { approvalId: id } });

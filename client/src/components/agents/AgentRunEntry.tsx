@@ -33,7 +33,13 @@ export default function AgentRunEntry({ run }: { run: AgentRun }) {
       {open && (
         <div className="agent-run-body">
           {run.error && run.status !== 'stopped' && <p className="agent-run-error">{run.error}</p>}
-          <ol className="agent-steps">{(run.steps ?? []).map((step) => <StepLine key={step.seq} step={step} />)}</ol>
+          {run.stepsHidden ? (
+            <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+              The step log isn’t shown to guests, since it can quote work outside the projects shared with you.
+            </p>
+          ) : (
+            <ol className="agent-steps">{(run.steps ?? []).map((step) => <StepLine key={step.seq} step={step} />)}</ol>
+          )}
         </div>
       )}
     </li>

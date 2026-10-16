@@ -2,7 +2,7 @@ import sql from '../db/sql.js';
 import newId from '../lib/newId.js';
 import loadTask from '../services/loadTask.js';
 import notify from '../services/notify.js';
-import toTaskViewers from '../services/toTaskViewers.js';
+import publishApproval from './publishApproval.js';
 import approvers from './approvers.js';
 import toApproval from './toApproval.js';
 import describeAction from './describeAction.js';
@@ -19,6 +19,6 @@ export default function createApproval(principal, tool, input, reasons, { taskId
   const approval = toApproval(sql.get('SELECT * FROM agent_approvals WHERE id = ?', id));
   const task = subject ? loadTask(subject) : null;
   notify([...approvers(task)], 'agent_approval', subject, principal.agent.id, { approvalId: id, title: task?.title ?? null, summary: describeAction(tool, input) });
-  if (subject) toTaskViewers(subject, { type: 'agent.approval', approval });
+  publishApproval(approval);
   return approval;
 }

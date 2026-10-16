@@ -328,7 +328,6 @@ test('the OpenAI-compatible runner works against any chat completions server', a
     { body: { choices: [{ message: { role: 'assistant', content: null, tool_calls: [{ id: 'c1', type: 'function', function: { name: 'get_task', arguments: JSON.stringify({ key: key(t) }) } }] }, finish_reason: 'tool_calls' }], usage: { prompt_tokens: 210, completion_tokens: 15 } } },
     { body: { choices: [{ message: { role: 'assistant', content: 'Looked at it: nothing to summarise yet.' }, finish_reason: 'stop' }], usage: { prompt_tokens: 260, completion_tokens: 12 } } },
   ]);
-  await sql.run('UPDATE tasks SET assignee_id = NULL WHERE id = ?', t.id);
   await ana('PATCH', `/api/tasks/${t.id}`, { assigneeId: made.data.agent.id });
   const run = await settled(t.id);
   assert.equal(run.status, 'done', run.error);
@@ -388,4 +387,24 @@ test('the Anthropic runner streams through the official SDK with adaptive thinki
   assert.ok(second.body.messages[2].content[0].content.includes(key(t)));
   assert.equal(task(t.id).status, 'in_review');
   assert.match(comments(t.id).at(-1).body, /^The checklist is empty/);
+});
+
+test('guests see how runs went, but not run logs or approvals they aren’t asked to decide', async () => {
+  const guest = client(base);
+  const inv = await owner('POST', '/api/invites', { role: 'guest', projectIds: [ids.alpha] });
+  await guest.wallet(wallet(), 'invite', { name: 'Gia Guest', inviteToken: inv.data.token });
+  const worked = sql.get("SELECT id FROM tasks WHERE title = 'Fix the login crash'").id;
+  const seen = (await guest('GET', `/api/tasks/${worked}/agent-activity`)).data;
+  assert.equal(seen.runs[0].status, 'done');
+  assert.equal(seen.runs[0].stepsHidden, true);
+  assert.deepEqual(seen.runs[0].steps, []);
+  const full = (await ana('GET', `/api/tasks/${worked}/agent-activity`)).data;
+  assert.ok(full.runs[0].steps.length > 0 && !full.runs[0].stepsHidden);
+  assert.equal((await guest('GET', `/api/agent-runs/${seen.runs[0].id}`)).data.run.stepsHidden, true);
+
+  const decided = sql.get("SELECT id FROM tasks WHERE title = 'Pick the new icon set'").id;
+  const card = (await guest('GET', `/api/tasks/${decided}/agent-activity`)).data.approvals[0];
+  assert.equal(card.summary, 'A change an agent asked for');
+  assert.deepEqual(card.input, {});
+  assert.match((await ana('GET', `/api/tasks/${decided}/agent-activity`)).data.approvals[0].summary, /assignee: Ana Park/);
 });
