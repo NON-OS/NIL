@@ -99,7 +99,7 @@ router.post(
       nonce: crypto.randomBytes(12).toString('hex'),
       issuedAt: new Date().toISOString(),
     });
-    return { ballotId: challenges.issue('vote', { proposalId: proposal.id, userId: req.user.id, choice, message }), message };
+    return { ballotId: challenges.issue('vote', { proposalId: proposal.id, userId: req.user.id, choice, message }, `user:${req.user.id}`), message };
   }),
 );
 
