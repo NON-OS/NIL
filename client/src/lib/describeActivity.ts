@@ -1,6 +1,7 @@
 import meta from './meta';
 import dates from './dates';
 import tokenAmount from './tokenAmount';
+import recurrenceRule from './recurrenceRule';
 import type Activity from '../types/Activity';
 import type State from '../types/State';
 
@@ -25,6 +26,8 @@ export default function describeActivity(a: Activity, s: Lookup): string {
       return `set priority to ${meta.priority[to as 0] ?? to}`;
     case 'dueDate':
       return to ? `set the due date to ${day(to)}` : 'removed the due date';
+    case 'dueAt':
+      return to ? `set the due time to ${dates.time(to)}` : 'removed the due time';
     case 'startDate':
       return to ? `set the start date to ${day(to)}` : 'removed the start date';
     case 'title':
@@ -43,7 +46,7 @@ export default function describeActivity(a: Activity, s: Lookup): string {
     case 'estimate':
       return to === null ? 'removed the estimate' : `estimated ${to} point${to === 1 ? '' : 's'}`;
     case 'recurrence':
-      return to ? `set it to repeat ${meta.recurrence[to as keyof typeof meta.recurrence]?.toLowerCase() ?? to}` : 'stopped it repeating';
+      return to ? `set it to repeat ${recurrenceRule.describe(to).toLowerCase()}` : 'stopped it repeating';
     case 'checklist':
       return `checked off “${a.data.text}”`;
     case 'attachment':

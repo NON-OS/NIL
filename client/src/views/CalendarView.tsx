@@ -34,6 +34,7 @@ function Chip({ task, overlay }: { task: Task; overlay?: boolean }) {
       {...listeners}
     >
       <StatusIcon status={task.status} size={11} />
+      {task.dueAt && <time className="cal-time num">{dates.time(task.dueAt)}</time>}
       <span>{task.title}</span>
     </button>
   );
@@ -98,7 +99,9 @@ export default function CalendarView() {
   const byDay = useMemo(() => {
     const map: Record<string, Task[]> = {};
     for (const t of tasks) if (t.dueDate) (map[t.dueDate] ??= []).push(t);
-    for (const list of Object.values(map)) list.sort((a, b) => Number(meta.isClosed(a.status)) - Number(meta.isClosed(b.status)) || b.priority - a.priority);
+    // open before done, then by time of day, untimed after timed, then by priority
+    const at = (t: Task) => t.dueAt ?? Number.MAX_SAFE_INTEGER;
+    for (const list of Object.values(map)) list.sort((a, b) => Number(meta.isClosed(a.status)) - Number(meta.isClosed(b.status)) || at(a) - at(b) || b.priority - a.priority);
     return map;
   }, [tasks]);
   const unscheduled = useMemo(() => tasks.filter((t) => !t.dueDate && !meta.isClosed(t.status)).sort((a, b) => b.priority - a.priority), [tasks]);

@@ -104,6 +104,23 @@ function ago(ts: number, now: number = Date.now()): string {
 }
 
 const time = (ts: number): string => new Date(ts).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' });
+
+// 'HH:MM' on this browser's clock, the form time inputs and the server use.
+const clock = (ts: number): string => {
+  const d = new Date(ts);
+  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+};
+
+// A local date and 'HH:MM' time as a timestamp.
+function at(s: string, hhmm: string): number {
+  const [y, m, d] = s.split('-').map(Number);
+  const [h, min] = hhmm.split(':').map(Number);
+  return new Date(y, m - 1, d, h, min).getTime();
+}
+
+// This browser's time zone, sent along only when a due time is set.
+const zone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 const dateTime = (ts: number): string => `${short(toISO(new Date(ts)))}, ${time(ts)}`;
 
 function greeting(d: Date = new Date()): string {
@@ -113,6 +130,6 @@ function greeting(d: Date = new Date()): string {
   return h < 18 ? 'Good afternoon' : 'Good evening';
 }
 
-const dates = { MONTHS, MONTHS_LONG, DAYS, DAYS_LONG, toISO, parse, today, addDays, addMonths, diff, weekStart, weekEnd, monthStart, monthEnd, monthGrid, relative, short, long, dueState, ago, time, dateTime, greeting };
+const dates = { MONTHS, MONTHS_LONG, DAYS, DAYS_LONG, toISO, parse, today, addDays, addMonths, diff, weekStart, weekEnd, monthStart, monthEnd, monthGrid, relative, short, long, dueState, ago, time, clock, at, zone, dateTime, greeting };
 
 export default dates;

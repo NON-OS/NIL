@@ -8,6 +8,7 @@ import detail from '../../actions/detail';
 import focus from '../../actions/focus';
 import toast from '../../state/toast';
 import taskKey from '../../lib/taskKey';
+import dates from '../../lib/dates';
 import TimerButton from '../time/TimerButton';
 import ReminderButton from '../time/ReminderButton';
 import type Task from '../../types/Task';
@@ -40,7 +41,8 @@ export default function DrawerHeader({ task }: { task: Task }) {
   const duplicate = async () => {
     setMenu(false);
     const { title, description, priority, projectId, goalId, assigneeId, dueDate, labels, checklist, estimate } = task;
-    const copyTask = await taskActions.create({ title: `${title} (copy)`, description, priority, projectId, goalId, assigneeId, dueDate, labels, estimate, private: task.private, checklist: checklist.map((i) => ({ ...i, done: false })) });
+    const dueTime = task.dueAt ? dates.clock(task.dueAt) : null;
+    const copyTask = await taskActions.create({ title: `${title} (copy)`, description, priority, projectId, goalId, assigneeId, dueDate, dueTime, labels, estimate, private: task.private, checklist: checklist.map((i) => ({ ...i, done: false })) });
     if (copyTask) detail.open(copyTask);
   };
 
