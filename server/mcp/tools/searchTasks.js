@@ -1,15 +1,14 @@
 import sql from '../../db/sql.js';
 import domain from '../../lib/domain.js';
 import toTask from '../../mappers/toTask.js';
-import visibleSql from '../../services/visibleSql.js';
+import searchTasksService from '../../services/searchTasks.js';
 import resolveRefs from '../resolveRefs.js';
 import taskOut from '../taskOut.js';
-import likePattern from '../likePattern.js';
 
 export default {
   name: 'search_tasks',
   title: 'Search tasks',
-  description: 'Full-text search over the titles and descriptions of tasks the caller can see. Title matches come first. Optionally narrow by status ("open" for anything not done or canceled) or project.',
+  description: 'Full-text search over the titles, notes, checklists and comments of tasks the caller can see. Every word must appear, in any order; words match as prefixes. Best matches first, titles weigh most. Optionally narrow by status ("open" for anything not done or canceled) or project.',
   write: false,
   http: { method: 'GET', path: '/tasks/search' },
   inputSchema: {
@@ -23,24 +22,19 @@ export default {
     required: ['query'],
     additionalProperties: false,
   },
+  // The same index and visibility rules as search in the app, so private tasks and tasks outside
+  // an agent's projects never come back.
   run(args, { user }) {
-    const visible = visibleSql(user.id);
-    const pattern = likePattern(args.query.trim());
-    const where = ['deleted_at IS NULL', visible.where, "(title LIKE ? ESCAPE '\\' OR description LIKE ? ESCAPE '\\')"];
-    const params = [...visible.params, pattern, pattern];
-    if (args.status === 'open') where.push("status NOT IN ('done', 'canceled')");
-    else if (args.status) {
-      where.push('status = ?');
-      params.push(args.status);
-    }
-    if (args.project) {
-      where.push('project_id = ?');
-      params.push(resolveRefs.project(args.project));
-    }
-    const rows = sql.all(
-      `SELECT * FROM tasks WHERE ${where.join(' AND ')} ORDER BY (title LIKE ? ESCAPE '\\') DESC, updated_at DESC LIMIT ?`,
-      ...params, pattern, args.limit ?? 20,
-    );
-    return { count: rows.length, tasks: rows.map((r) => taskOut(toTask(r))) };
+    const found = searchTasksService(user, args.query, {
+      limit: args.limit ?? 20,
+      status: args.status ?? null,
+      projectId: args.project ? resolveRefs.project(args.project) : null,
+    });
+    const tasks = found.map((hit) => ({
+      ...taskOut(toTask(sql.get('SELECT * FROM tasks WHERE id = ?', hit.id))),
+      matched: hit.field,
+      ...(hit.snippet ? { snippet: hit.snippet } : {}),
+    }));
+    return { count: tasks.length, tasks };
   },
 };
