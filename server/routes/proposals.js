@@ -75,8 +75,9 @@ router.post(
     // the census of an anonymous vote needs the snapshot first when it's weighted
     if (anonymous) voterGroups.start(id);
     if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
-    const everyone = sql.all('SELECT id FROM users WHERE deactivated = 0').map((u) => u.id);
-    notify(everyone, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
+    // votes are for members; guests can't open them, so they don't hear about them either
+    const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest'").map((u) => u.id);
+    notify(members, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', id), req.user) };
   }),

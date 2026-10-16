@@ -12,6 +12,7 @@ import eraseUser from '../services/eraseUser.js';
 import toUser from '../mappers/toUser.js';
 import voterGroups from '../votes/voterGroups.js';
 import guestScope from '../services/guestScope.js';
+import lostAccess from '../services/lostAccess.js';
 
 const router = express.Router();
 
@@ -37,7 +38,9 @@ router.patch(
       else voterGroups.join(row.id);
       if (role !== 'guest') sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
       guestScope.forget(row.id);
+      lostAccess.user(row.id);
       hub.setAdmin(row.id, role === 'owner' || role === 'admin');
+      hub.presenceChanged();
     }
     // The projects a guest can see. Changing them takes effect on their next request.
     if (Array.isArray(req.body.projects)) {
@@ -47,6 +50,8 @@ router.patch(
         for (const id of req.body.projects.filter((p) => typeof p === 'string')) sql.run('INSERT OR IGNORE INTO project_guests (project_id, user_id) SELECT id, ? FROM projects WHERE id = ?', row.id, id);
       });
       guestScope.forget(row.id);
+      lostAccess.user(row.id);
+      hub.presenceChanged();
     }
     // Lets someone who joined by holding NOX stay without the balance check.
     if (req.body.keepWithoutNox === true) sql.run("UPDATE users SET joined_via = 'invite' WHERE id = ? AND joined_via = 'holder'", row.id);

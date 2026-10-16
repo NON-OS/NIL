@@ -26,9 +26,11 @@ function handleMessage(ws, raw) {
     return;
   }
   if (msg?.type === 'presence') {
-    // Presence goes to everyone, so looking at a private task shows up as looking at nothing.
+    // Looking at a private task shows up as looking at nothing, and nobody can claim to be on
+    // a task they can't open. Each viewer is then sent only what they may see.
     const id = typeof msg.viewing === 'string' ? msg.viewing.slice(0, 32) : null;
-    const viewing = id && !loadTask(id)?.private ? id : null;
+    const task = id ? loadTask(id) : null;
+    const viewing = task && !task.private && canSeeTask(task, { id: client.userId }) ? id : null;
     if (viewing !== client.viewing) {
       client.viewing = viewing;
       hub.presenceChanged();
@@ -61,7 +63,7 @@ export default function attachRealtime(server) {
       ws.on('message', (raw) => handleMessage(ws, raw));
       ws.on('close', () => hub.remove(ws));
       ws.on('error', () => hub.remove(ws));
-      ws.send(JSON.stringify({ type: 'hello', presence: hub.presence() }));
+      ws.send(JSON.stringify({ type: 'hello', presence: hub.presenceFor({ id: user.id, isAdmin: user.isAdmin }) }));
     });
   });
 

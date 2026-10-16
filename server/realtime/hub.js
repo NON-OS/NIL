@@ -1,3 +1,5 @@
+import presenceFor from './presenceFor.js';
+
 // Every open socket, plus who it belongs to, the session it opened with, and which task it's looking at.
 const clients = new Map();
 let presenceTimer = null;
@@ -72,14 +74,16 @@ const hub = {
     closeWhere((c) => c.session === sessionHash);
   },
 
-  presence: presenceSnapshot,
+  // what one viewer may see of who's online and where
+  presenceFor: (viewer) => presenceFor(presenceSnapshot(), viewer),
 
   // Joins and leaves often come in bursts (tab reloads), so batch them.
   presenceChanged() {
     if (presenceTimer) return;
     presenceTimer = setTimeout(() => {
       presenceTimer = null;
-      hub.broadcast({ type: 'presence', presence: presenceSnapshot() });
+      const snapshot = presenceSnapshot();
+      hub.broadcast((viewer) => ({ type: 'presence', presence: presenceFor(snapshot, viewer) }));
     }, 150);
   },
 };

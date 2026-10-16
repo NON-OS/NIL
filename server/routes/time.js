@@ -7,6 +7,7 @@ import HttpError from '../lib/HttpError.js';
 import csvCell from '../lib/csvCell.js';
 import hub from '../realtime/hub.js';
 import visibleTask from '../services/visibleTask.js';
+import visibleSql from '../services/visibleSql.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import toTimeEntry from '../mappers/toTimeEntry.js';
 
@@ -99,14 +100,17 @@ router.get(
   route((req, res) => {
     const { from, to } = range(req.query);
     const { taskPrefix } = publicWorkspace();
+    // your own hours stay yours, but a task you can no longer open shows no number or title
+    const visible = visibleSql(req.user.id, 't');
     const rows = sql.all(
-      `SELECT e.*, t.number, t.title, t.sealed FROM time_entries e LEFT JOIN tasks t ON t.id = e.task_id
+      `SELECT e.*, t.number, t.title, t.sealed FROM time_entries e LEFT JOIN tasks t ON t.id = e.task_id AND ${visible.where}
        WHERE e.user_id = ? AND e.started_at >= ? AND e.started_at < ? AND e.ended_at IS NOT NULL ORDER BY e.started_at`,
-      req.user.id, from, to,
+      ...visible.params, req.user.id, from, to,
     );
     const lines = [['Start', 'End', 'Minutes', 'Task', 'Title', 'Note'].join(',')];
     for (const r of rows) {
-      lines.push([new Date(r.started_at).toISOString(), new Date(r.ended_at).toISOString(), Math.round((r.ended_at - r.started_at) / 60_000), r.number ? `${taskPrefix}-${r.number}` : '', r.sealed ? 'Private task (encrypted)' : r.title ?? '', r.note].map(csvCell).join(','));
+      const title = r.sealed ? 'Private task (encrypted)' : r.number ? r.title : r.task_id ? 'A task you can no longer open' : '';
+      lines.push([new Date(r.started_at).toISOString(), new Date(r.ended_at).toISOString(), Math.round((r.ended_at - r.started_at) / 60_000), r.number ? `${taskPrefix}-${r.number}` : '', title, r.note].map(csvCell).join(','));
     }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
     res.setHeader('Content-Disposition', 'attachment; filename="nil-timesheet.csv"');
