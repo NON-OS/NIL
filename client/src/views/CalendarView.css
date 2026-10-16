@@ -136,6 +136,12 @@
   white-space: nowrap;
 }
 
+.cal-chip .cal-time {
+  flex: none;
+  color: var(--muted);
+  font-weight: 500;
+}
+
 .cal-chip.closed span {
   color: var(--muted);
   text-decoration: line-through;

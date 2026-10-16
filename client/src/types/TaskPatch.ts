@@ -1,6 +1,7 @@
 import type Task from './Task';
 
-type TaskPatch = { listed?: boolean } & Partial<
+// dueTime is 'HH:MM' on this browser's clock, or null to drop the time and keep the date.
+type TaskPatch = { listed?: boolean; dueTime?: string | null } & Partial<
   Pick<
     Task,
     | 'title'

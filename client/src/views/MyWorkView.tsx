@@ -70,13 +70,14 @@ export default function MyWorkView() {
   const carryOver = focus.filter((f) => f.day < today).map((f) => byId[f.taskId]).filter((t) => t && !meta.isClosed(t.status));
 
   const add = async () => {
-    const parsed = parseQuickAdd(draft, { users: Object.values(users), projects: Object.values(projects), labels: Object.values(labels), meId: me.id, today });
+    const parsed = parseQuickAdd(draft, { users: Object.values(users), projects: Object.values(projects), labels: Object.values(labels), meId: me.id, today, now: dates.clock(Date.now()) });
     if (!parsed.title) return;
     setDraft('');
     await taskActions.create({
       title: parsed.title,
       assigneeId: parsed.assigneeId ?? me.id,
       dueDate: parsed.dueDate ?? null,
+      dueTime: parsed.dueTime ?? null,
       priority: parsed.priority ?? 0,
       projectId: parsed.projectId ?? null,
       labels: parsed.labels,

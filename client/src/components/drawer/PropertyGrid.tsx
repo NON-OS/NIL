@@ -22,6 +22,7 @@ import meta from '../../lib/meta';
 import dates from '../../lib/dates';
 import type Task from '../../types/Task';
 import isAdminUser from '../../lib/isAdmin';
+import recurrenceRule from '../../lib/recurrenceRule';
 
 const ESTIMATES = [0, 1, 2, 3, 5, 8, 13].map((n) => ({ value: String(n), label: n === 0 ? 'No estimate' : `${n} point${n === 1 ? '' : 's'}` }));
 
@@ -68,7 +69,13 @@ export default function PropertyGrid({ task }: { task: Task }) {
         </AssigneePicker>
       </Row>
       <Row icon={<CalendarDays size={14} />} label="Due">
-        <DatePicker value={task.dueDate} onChange={(dueDate) => update({ dueDate })} title="Due date">
+        <DatePicker
+          value={task.dueDate}
+          onChange={(dueDate) => update({ dueDate })}
+          time={task.dueAt ? dates.clock(task.dueAt) : null}
+          onTimeChange={(dueTime) => update({ dueTime, ...(dueTime && !task.dueDate ? { dueDate: dates.today() } : {}) })}
+          title="Due date"
+        >
           {task.dueDate ? <DueBadge task={task} /> : empty('No due date')}
           {task.dueDate && <span className="muted">{dates.long(task.dueDate)}</span>}
         </DatePicker>
@@ -80,7 +87,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
       </Row>
       <Row icon={<Repeat size={14} />} label="Repeat">
         <RecurrencePicker value={task.recurrence} onChange={(recurrence) => update({ recurrence, ...(recurrence && !task.dueDate ? { dueDate: dates.today() } : {}) })}>
-          {task.recurrence ? <span>{meta.recurrence[task.recurrence]}</span> : empty('Doesn’t repeat')}
+          {task.recurrence ? <span>{recurrenceRule.describe(task.recurrence)}</span> : empty('Doesn’t repeat')}
         </RecurrencePicker>
       </Row>
       <Row icon={<FolderKanban size={14} />} label="Project">

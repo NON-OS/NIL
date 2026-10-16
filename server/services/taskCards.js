@@ -5,7 +5,7 @@ import toTaskCard from '../mappers/toTaskCard.js';
 // is only counted, and a sealed task leaves its encrypted notes behind. SQLite's JSON functions
 // fail the whole query on one malformed value, so each is guarded: a bad row shows up as a task
 // without steps rather than taking everyone's app down with it.
-const COLUMNS = `id, number, title, status, priority, project_id, goal_id, assignee_id, creator_id, due_date, start_date,
+const COLUMNS = `id, number, title, status, priority, project_id, goal_id, assignee_id, creator_id, due_date, due_at, start_date,
   estimate, labels, recurrence, bounty, bounty_token, bounty_state, private, listed_at, position, comment_count,
   attachment_count, created_at, updated_at, completed_at, deleted_at,
   CASE WHEN json_valid(checklist) THEN json_array_length(checklist) END AS steps_total,

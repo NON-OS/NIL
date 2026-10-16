@@ -4,6 +4,7 @@ import newId from '../lib/newId.js';
 import domain from '../lib/domain.js';
 import HttpError from '../lib/HttpError.js';
 import rewardToken from '../lib/rewardToken.js';
+import recurrenceRule from '../lib/recurrenceRule.js';
 import parseSeal from './parseSeal.js';
 
 function checklist(value) {
@@ -23,6 +24,13 @@ function labels(value) {
     if (!sql.get('SELECT 1 FROM labels WHERE id = ?', id)) throw HttpError.badRequest('One of those labels was deleted. Pick again.');
   }
   return ids;
+}
+
+function recurrence(value) {
+  if (!value) return null;
+  const stored = recurrenceRule.normalize(value);
+  if (!stored) throw HttpError.badRequest('Repeat isn’t valid.');
+  return stored;
 }
 
 function assignee(value) {
@@ -46,11 +54,14 @@ export default function parseTaskPatch(body) {
   if (has('goalId')) out.goalId = check.ref('goals', body.goalId, 'Goal');
   if (has('assigneeId')) out.assigneeId = assignee(body.assigneeId);
   if (has('dueDate')) out.dueDate = check.date(body.dueDate, 'Due date');
+  if (has('dueTime')) out.dueTime = check.time(body.dueTime, 'Due time');
+  // the zone a due time was picked in, so it stays put when the date moves or the task repeats
+  if (has('timeZone')) out.timeZone = check.timeZone(body.timeZone);
   if (has('startDate')) out.startDate = check.date(body.startDate, 'Start date');
   if (has('estimate')) out.estimate = check.number(body.estimate, 'Estimate', { min: 0, max: 1000, integer: true });
   if (has('labels')) out.labels = labels(body.labels);
   if (has('checklist')) out.checklist = checklist(body.checklist);
-  if (has('recurrence')) out.recurrence = body.recurrence ? check.oneOf(body.recurrence, domain.recurrences, 'Repeat') : null;
+  if (has('recurrence')) out.recurrence = recurrence(body.recurrence);
   if (has('private')) out.private = Boolean(body.private);
   if (has('sealed')) out.sealed = parseSeal(body.sealed);
   if (has('listed')) out.listedAt = body.listed ? Date.now() : null;

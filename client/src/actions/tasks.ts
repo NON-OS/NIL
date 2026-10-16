@@ -15,7 +15,7 @@ import patchTask from './patchTask';
 
 // A new private task is sealed here before it leaves the browser: its words go out encrypted
 // under a fresh key that only the creator and the assignee hold.
-async function sealedNew(input: Partial<Task>) {
+async function sealedNew(input: Partial<Task> & { dueTime?: string | null }) {
   await vault.unlock();
   const { title = '', description = '', checklist = [], ...rest } = input;
   const fresh = taskKeys.fresh();
@@ -23,10 +23,22 @@ async function sealedNew(input: Partial<Task>) {
   return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys) };
 }
 
+type NewTask = Partial<Task> & { dueTime?: string | null };
+
+// A due time only means something on a clock, so this browser's time zone goes with it.
+const withZone = <T extends object>(body: T): T => ((body as { dueTime?: unknown }).dueTime ? { ...body, timeZone: dates.zone() } : body);
+
+// What the due moment becomes after a patch, worked out here so the list updates at once.
+function dueAtAfter(task: Task, date: string | null | undefined, time: string | null | undefined) {
+  const day = date === undefined ? task.dueDate : date;
+  const clock = time === undefined ? (task.dueAt ? dates.clock(task.dueAt) : null) : time;
+  return day && clock ? dates.at(day, clock) : null;
+}
+
 const tasks = {
-  async create(input: Partial<Task>): Promise<Task | null> {
+  async create(input: NewTask): Promise<Task | null> {
     try {
-      const { task } = await http.post<{ task: Task }>('/tasks', input.private ? await sealedNew(input) : input);
+      const { task } = await http.post<{ task: Task }>('/tasks', withZone(input.private ? await sealedNew(input) : input));
       putTask(task);
       return task;
     } catch (err) {
@@ -39,11 +51,13 @@ const tasks = {
   async update(id: string, patch: TaskPatch, { quiet = false } = {}) {
     const before = store.get().tasks[id];
     if (!before) return null;
-    const optimistic = { ...before, ...patch };
+    const { dueTime, listed, ...fields } = patch;
+    const optimistic: Task = { ...before, ...fields };
+    if ('dueDate' in patch || 'dueTime' in patch) optimistic.dueAt = dueAtAfter(before, fields.dueDate, dueTime);
     if (patch.status && patch.status !== before.status) optimistic.completedAt = patch.status === 'done' ? Date.now() : null;
     putTask(optimistic);
     try {
-      const res = await patchTask(before, patch, { today: dates.today() });
+      const res = await patchTask(before, patch, { today: dates.today(), ...(dueTime ? { timeZone: dates.zone() } : {}) });
       putTask(res.task);
       if (res.spawned) {
         putTask(res.spawned);

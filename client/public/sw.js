@@ -74,3 +74,63 @@ self.addEventListener('fetch', (event) => {
 
   if (request.mode === 'navigate') event.respondWith(page(event));
 });
+
+// ---------------------------------------------------------------------------------------------
+// Push notifications. Separate from the caching above: this part only shows what the server
+// pushed, opens the right task when a notification is clicked, and keeps the subscription alive.
+// ---------------------------------------------------------------------------------------------
+
+// Every push is shown: Safari takes push away from sites that receive one without showing it.
+// The message holds only what the person allowed; for a private task that's "Reminder" or
+// "A private task is due" and the task's id, never its words.
+self.addEventListener('push', (event) => {
+  let message = {};
+  try {
+    message = event.data ? event.data.json() : {};
+  } catch {}
+  const text = (value) => (typeof value === 'string' ? value : '');
+  event.waitUntil(
+    self.registration.showNotification(text(message.title) || 'Nil', {
+      body: text(message.body),
+      tag: text(message.tag) || undefined,
+      icon: '/icons/icon-192.png',
+      data: { task: text(message.task) || null },
+    }),
+  );
+});
+
+// Focuses a Nil window that's already open and tells it which task to show, or opens one.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const taskId = event.notification.data?.task ?? null;
+  const url = taskId ? `/?open-task=${encodeURIComponent(taskId)}` : '/inbox';
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
+      const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
+      if (!open) return self.clients.openWindow(url);
+      await open.focus();
+      open.postMessage({ type: 'nil:open', taskId });
+    }),
+  );
+});
+
+// A browser sometimes swaps a subscription on its own. The new one goes to the server in place
+// of the old, which the server accepts only from the person the old one belonged to.
+self.addEventListener('pushsubscriptionchange', (event) => {
+  const old = event.oldSubscription;
+  const key = old?.options?.applicationServerKey;
+  if (!key) return;
+  event.waitUntil(
+    self.registration.pushManager
+      .subscribe({ userVisibleOnly: true, applicationServerKey: key })
+      .then((fresh) =>
+        fetch('/api/push/subscription', {
+          method: 'PUT',
+          credentials: 'same-origin',
+          headers: { 'Content-Type': 'application/json', 'X-NONOS': '1' },
+          body: JSON.stringify({ endpoint: fresh.endpoint, keys: fresh.toJSON().keys, replaces: old.endpoint }),
+        }),
+      )
+      .catch(() => {}),
+  );
+});

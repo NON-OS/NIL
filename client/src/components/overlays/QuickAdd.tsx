@@ -22,9 +22,14 @@ import parseQuickAdd from '../../lib/parseQuickAdd';
 import dates from '../../lib/dates';
 import meta from '../../lib/meta';
 import taskKey from '../../lib/taskKey';
+import recurrenceRule from '../../lib/recurrenceRule';
 import type Task from '../../types/Task';
 
-const TOKEN_LABEL = { date: 'Due', priority: 'Priority', label: 'Label', project: 'Project', assignee: 'Assignee', repeat: 'Repeats' } as const;
+type Draft = Partial<Task> & { dueTime?: string | null };
+
+const TOKEN_LABEL = { date: 'Due', time: 'At', priority: 'Priority', label: 'Label', project: 'Project', assignee: 'Assignee', repeat: 'Repeats' } as const;
+
+const dueLabel = (date: string, time?: string | null) => (time ? `${dates.relative(date)} ${dates.time(dates.at(date, time))}` : dates.relative(date));
 
 export default function QuickAdd() {
   const defaults = useStore((s) => s.quickAdd.defaults) ?? {};
@@ -34,22 +39,24 @@ export default function QuickAdd() {
   const meId = useStore((s) => s.me?.id ?? null);
   const [text, setText] = useState('');
   const [description, setDescription] = useState('');
-  const [picked, setPicked] = useState<Partial<Task>>({});
+  const [picked, setPicked] = useState<Draft>({});
   const [keepOpen, setKeepOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const parsed = useMemo(
-    () => parseQuickAdd(text, { users: Object.values(users).filter((u) => !u.deactivated), projects: Object.values(projects), labels: Object.values(labels), meId, today: dates.today() }),
+    () => parseQuickAdd(text, { users: Object.values(users).filter((u) => !u.deactivated), projects: Object.values(projects), labels: Object.values(labels), meId, today: dates.today(), now: dates.clock(Date.now()) }),
     [text, users, projects, labels, meId],
   );
 
   // Precedence: what you pick by hand beats what was typed, which beats the view's defaults.
-  const fromText: Partial<Task> = Object.fromEntries(
-    Object.entries({ dueDate: parsed.dueDate, priority: parsed.priority, projectId: parsed.projectId, assigneeId: parsed.assigneeId, recurrence: parsed.recurrence }).filter(([, v]) => v !== undefined),
+  const fromText: Draft = Object.fromEntries(
+    Object.entries({ dueDate: parsed.dueDate, dueTime: parsed.dueTime, priority: parsed.priority, projectId: parsed.projectId, assigneeId: parsed.assigneeId, recurrence: parsed.recurrence }).filter(([, v]) => v !== undefined),
   );
-  const draft: Partial<Task> = { status: 'todo', priority: 0, ...defaults, ...fromText, ...picked };
+  const draft: Draft = { status: 'todo', priority: 0, ...defaults, ...fromText, ...picked };
+  // clearing the date clears its time with it
+  if (!draft.dueDate) draft.dueTime = null;
   draft.labels = [...new Set([...(defaults.labels ?? []), ...parsed.labels, ...(picked.labels ?? [])])];
-  const set = (patch: Partial<Task>) => setPicked((p) => ({ ...p, ...patch }));
+  const set = (patch: Draft) => setPicked((p) => ({ ...p, ...patch }));
   const assignee = draft.assigneeId ? users[draft.assigneeId] : undefined;
   const project = draft.projectId ? projects[draft.projectId] : undefined;
 
@@ -88,7 +95,7 @@ export default function QuickAdd() {
         <div className="quickadd-tokens" aria-live="polite">
           {parsed.tokens.map((t) => (
             <span key={`${t.kind}${t.start}`} className="chip">
-              {TOKEN_LABEL[t.kind]}: {t.kind === 'date' && parsed.dueDate ? dates.relative(parsed.dueDate) : t.text}
+              {TOKEN_LABEL[t.kind]}: {t.kind === 'date' && parsed.dueDate ? dates.relative(parsed.dueDate) : t.kind === 'time' && parsed.dueTime ? dates.time(dates.at(dates.today(), parsed.dueTime)) : t.kind === 'repeat' && parsed.recurrence ? recurrenceRule.describe(parsed.recurrence) : t.text}
             </span>
           ))}
         </div>
@@ -106,8 +113,14 @@ export default function QuickAdd() {
           <ProjectPicker value={draft.projectId ?? null} onChange={(projectId) => set({ projectId })}>
             {project ? <i style={{ width: 9, height: 9, borderRadius: 2, background: project.color }} /> : <FolderKanban size={14} />} <span>{project?.name ?? 'Project'}</span>
           </ProjectPicker>
-          <DatePicker value={draft.dueDate ?? null} onChange={(dueDate) => set({ dueDate })} title="Due date">
-            <CalendarDays size={14} /> <span>{draft.dueDate ? dates.relative(draft.dueDate) : 'Due date'}</span>
+          <DatePicker
+            value={draft.dueDate ?? null}
+            onChange={(dueDate) => set({ dueDate })}
+            time={draft.dueTime ?? null}
+            onTimeChange={(dueTime) => set({ dueTime, ...(dueTime && !draft.dueDate ? { dueDate: dates.today() } : {}) })}
+            title="Due date"
+          >
+            <CalendarDays size={14} /> <span>{draft.dueDate ? dueLabel(draft.dueDate, draft.dueTime) : 'Due date'}</span>
           </DatePicker>
           <LabelPicker value={draft.labels} onChange={(next) => set({ labels: next })}>
             <Tag size={14} /> {draft.labels.length ? <LabelChips ids={draft.labels} max={2} /> : <span>Labels</span>}
@@ -124,14 +137,14 @@ export default function QuickAdd() {
           <HelpLink topic="private-tasks" label="How private tasks work" newTab />
           {draft.recurrence && (
             <span className="chip">
-              <Repeat size={12} /> {meta.recurrence[draft.recurrence]}
+              <Repeat size={12} /> {recurrenceRule.describe(draft.recurrence)}
             </span>
           )}
         </div>
       </div>
       <div className="quickadd-foot">
         <p className="hint">
-          Type naturally: <span className="mono">tomorrow !high #bug +web @me every week</span>
+          Type naturally: <span className="mono">Call Ana friday at 3pm !high @me</span> or <span className="mono">Pay rent every month on the 1st</span>
         </p>
         <label className="filter-toggle">
           <button type="button" className="toggle" role="switch" aria-checked={keepOpen} onClick={() => setKeepOpen((v) => !v)} aria-label="Create more" />

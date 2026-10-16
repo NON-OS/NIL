@@ -33,8 +33,9 @@ export default function restoreCapsule(dir) {
         db.exec(`DELETE FROM main."${table}"`);
         db.exec(`INSERT INTO main."${table}" SELECT * FROM capsule."${table}"`);
       }
-      // everyone signs in again on the new server
+      // everyone signs in again on the new server, and turns push on again there
       db.exec('DELETE FROM main.sessions');
+      db.exec('DELETE FROM main.push_subscriptions');
       db.exec('COMMIT');
     } catch (err) {
       db.exec('ROLLBACK');

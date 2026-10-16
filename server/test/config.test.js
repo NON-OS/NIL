@@ -36,14 +36,14 @@ test('a clean configuration starts without warnings', () => {
 test('empty values count as unset and get the defaults, never 0', () => {
   const names = ['PORT', 'SESSION_DAYS', 'TRASH_DAYS', 'MAX_UPLOAD_MB', 'MAX_CAPSULE_MB', 'NOX_CHAIN_ID', 'NOX_DECIMALS', 'NOX_CONFIRMATIONS', 'NOX_EXPLORER', 'PLAN_TREASURY', 'PLAN_PRICE', 'PLAN_PERIOD_DAYS', 'PLAN_GRACE_DAYS', 'PLAN_FREE_SEATS', 'PLAN_MAX_PERIODS', 'PLAN_TRIAL_DAYS', 'STEALTH_ANNOUNCE_CHECK_DAYS', 'SEMAPHORE_DEPTH',
     'NOX_TOKEN', 'NOX_STAKING', 'ZSP_CONTRACT', 'STEALTH_ANNOUNCER', 'REWARD_TOKENS', 'NOX_RPC_TIMEOUT_SECONDS', 'NOX_MISSING_TX_HOURS', 'MAX_JSON_KB', 'NOTIFICATION_DAYS', 'USED_INVITE_DAYS',
-    'JOB_PURGE_SECONDS', 'JOB_PAYMENTS_SECONDS', 'JOB_VOTES_SECONDS', 'JOB_REMINDERS_SECONDS', 'JOB_OPTIMIZE_SECONDS', 'AI_TIMEOUT_SECONDS', 'AI_MAX_RETRIES', 'SHUTDOWN_TIMEOUT_SECONDS', 'DB_JOURNAL_LIMIT_MB',
+    'JOB_PURGE_SECONDS', 'JOB_PAYMENTS_SECONDS', 'JOB_VOTES_SECONDS', 'JOB_REMINDERS_SECONDS', 'JOB_DUE_ALERTS_SECONDS', 'JOB_OPTIMIZE_SECONDS', 'AI_TIMEOUT_SECONDS', 'AI_MAX_RETRIES', 'SHUTDOWN_TIMEOUT_SECONDS', 'DB_JOURNAL_LIMIT_MB',
     'SETUP_TOKEN', 'LOG_FORMAT', 'STRICT_CONFIG'];
   const { config, warnings } = load(Object.fromEntries(names.map((n) => [n, ''])));
   assert.deepEqual(warnings, []);
   assert.deepEqual([config.nox.token, config.power.staking, config.power.zsp, config.stealth.announcer], ['0x0a26c80be4e060e688d7c23addb92cbb5d2c9eca', '0xa94d6009790ba13597a1e1b7cf4e1531ea513613', '0x7b575dd8e8b111c52ab1e872924d4efd4df403df', '0x55649e01b5df198d18d95b5cc5051630cfd45564']);
   assert.deepEqual(config.rewards.map((t) => t.symbol), ['NOX', 'USDC']);
   assert.deepEqual([config.nox.rpcTimeoutMs, config.nox.missingTxMs, config.maxJsonBytes, config.readNotificationDays, config.usedInviteDays], [10_000, 24 * 3_600_000, 1024 * 1024, 90, 30]);
-  assert.deepEqual(config.jobs, { purgeMs: 3_600_000, paymentsMs: 60_000, votesMs: 60_000, remindersMs: 60_000, optimizeMs: 3_600_000 });
+  assert.deepEqual(config.jobs, { purgeMs: 3_600_000, paymentsMs: 60_000, votesMs: 60_000, remindersMs: 60_000, dueAlertsMs: 60_000, optimizeMs: 3_600_000 });
   assert.deepEqual([config.ai.timeoutMs, config.ai.maxRetries, config.shutdownTimeoutMs, config.dbJournalLimitBytes, config.setupToken], [120_000, 1, 20_000, 64 * 1024 * 1024, null]);
   assert.deepEqual([config.port, config.sessionDays, config.trashDays, config.maxUploadBytes, config.maxCapsuleBytes], [3000, 30, 30, 25 * 1024 * 1024, 4096 * 1024 * 1024]);
   assert.deepEqual([config.nox.chainId, config.nox.decimals, config.nox.confirmations, config.nox.explorer], [1, 18, 3, 'https://etherscan.io']);

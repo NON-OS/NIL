@@ -10,6 +10,7 @@ import gracefulShutdown from './lib/gracefulShutdown.js';
 import appVersion from './lib/appVersion.js';
 import log from './lib/log.js';
 import settleStaged from './services/settleStaged.js';
+import vapidKeys from './push/vapidKeys.js';
 
 try {
   const { from, to, snapshot } = migrate(db, { snapshotDir: config.dataDir });
@@ -21,6 +22,8 @@ try {
 }
 // nothing is mid-upload before the server listens, so every staged copy can be settled now
 settleStaged();
+// made before any request can ask for it, so two first requests can't race to create it
+if (config.push.enabled) vapidKeys.ensure();
 
 setupToken.prepare();
 const jobs = startJobs();

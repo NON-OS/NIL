@@ -23,13 +23,14 @@ The Inbox collects your notifications. You get one when:
 - someone changes the due date of a task assigned to you,
 - a bounty is paid to you,
 - an admin starts a vote,
-- a reminder you set comes due.
+- a reminder you set comes due,
+- a task you have is due soon or due today.
 
 Admins also hear when someone applies for a bounty on the public board.
 
 The tabs show **All**, **Unread** or only **Mentions**. Click a notification to open its task, or click **Mark all read**. Read notifications are deleted after 90 days. The number in the browser tab's title is your unread count.
 
-To get a notification from your computer even when Nil is in the background, turn on **Desktop notifications** in **Settings → Profile** and allow them when your browser asks. They show who did what and the task title, never the text of a comment, since lock screens can show them.
+To hear about these when Nil is closed, turn on push notifications in **Settings → Notifications**, on each device you want them on. See [Time and reminders](time-and-reminders.md#push-notifications). **Desktop notifications**, on the same tab, show a system notification while Nil is open in a background tab. Neither one ever shows the text of a comment, since lock screens can show them.
 
 ## Board
 
@@ -53,7 +54,13 @@ Select rows to change many tasks at once, as described in [Tasks](tasks.md#chang
 
 ## Calendar
 
-The Calendar puts tasks on a month grid by due date. Drag a task to another day to move its due date. The plus on a day creates a task due that day. A day shows four tasks; click "more" to see the rest. The arrows change the month.
+The Calendar puts tasks on a month grid by due date. Tasks with a due time show it and come first on their day, in time order. Drag a task to another day to move its due date; its time stays the same. The plus on a day creates a task due that day. A day shows four tasks; click "more" to see the rest. The arrows change the month.
+
+### Your tasks in your own calendar app
+
+In **Settings → Notifications**, under **Calendar feed**, click **Create calendar link**. Paste the link into Google Calendar, Apple Calendar or Outlook as a calendar to subscribe to, or click **Open in calendar app**. It lists the open tasks assigned to you that have a due date. Calendar apps check it every so often, usually within a few hours, so changes show up there late.
+
+The link works without signing in, so anyone who has it sees those tasks: their names, dates and links. A private task shows only as "Private task", with no title, link or project. Keep the link to yourself. **Make a new link** stops the old one at once, and **Turn off** deletes it. It also stops working if you leave the workspace.
 
 ## Projects
 

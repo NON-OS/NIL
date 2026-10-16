@@ -18,6 +18,8 @@ export default interface Task {
   assigneeId: string | null;
   creatorId: string | null;
   dueDate: string | null;
+  // the due moment when the task has a time, shown on each reader's own clock
+  dueAt: number | null;
   startDate: string | null;
   estimate: number | null;
   labels: string[];

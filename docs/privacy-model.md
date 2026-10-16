@@ -37,17 +37,18 @@ For a private task, the server still knows that it exists, who created it, who i
 
 Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDNs, third-party fonts or third-party scripts. The fonts and the zero-knowledge circuit files are served by your own server. The Content Security Policy only allows connections to the server itself, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, which Nil doesn't control.
 
-The server itself contacts other hosts in two cases:
+The server itself contacts other hosts in these cases:
 
 - Its Ethereum node, set by `NOX_RPC_URL`, to check payments, balances, stakes and Zero-State Passes, and to pass on the transactions you sign when you move a private payout. That node sees which addresses and transactions your server looks up, and your server's IP address. The default is a public node. Privacy-minded teams should run their own. `NOX_RPC_URL=off` turns every on-chain feature off.
 - Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs. See [AI assistants](ai-assistants.md#built-in-ai).
+- The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
 
 If you connect your own AI assistant over MCP, the assistant fetches from Nil, and whatever it reads goes on to that assistant's provider.
 
 ## What is public on purpose
 
 - On-chain payments are public, like any Ethereum transaction. [Private payouts](private-payouts.md) hide which person a payout belongs to, but the payer, the token, the amount and the time are still visible. Moving funds from a one-time address to a wallet people know links them.
-- Without signing in, anyone can see the workspace name, whether the token-holder door is open and its minimum, the public proof key, the [public bounty board](public-bounty-board.md) and any share link they hold.
+- Without signing in, anyone can see the workspace name, whether the token-holder door is open and its minimum, the public proof key, the [public bounty board](public-bounty-board.md), any share link they hold, and the tasks in any [calendar feed](views.md#your-tasks-in-your-own-calendar-app) link they hold.
 
 ## How the server protects data
 

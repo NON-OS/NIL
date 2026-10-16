@@ -3,6 +3,7 @@ import hub from '../realtime/hub.js';
 import toNotification from '../mappers/toNotification.js';
 import loadTask from './loadTask.js';
 import canSeeTask from './canSeeTask.js';
+import pushNotification from '../push/pushNotification.js';
 
 // Never notifies the person who did the thing, anyone who's been removed, or anyone who can't
 // open the task: a notification quotes its title, and sometimes a comment.
@@ -25,5 +26,6 @@ export default function notify(userIds, type, taskId, actorId, data = {}) {
     );
     const notification = toNotification(sql.get('SELECT * FROM notifications WHERE id = ?', lastInsertRowid));
     hub.toUser(userId, { type: 'notification', notification });
+    pushNotification(userId, notification);
   }
 }

@@ -8,12 +8,13 @@ You can set most fields while you type the title. Nil picks these out and shows 
 
 | Type this | To set | Examples |
 |---|---|---|
-| A date | Due date | `today`, `tomorrow`, `friday`, `next week`, `in 3 days`, `oct 20`, `2026-11-02`, `eow` (end of week), `eom` (end of month) |
+| A date | Due date | `today`, `tomorrow`, `friday`, `next week`, `in 3 days`, `in two weeks`, `on the 1st`, `oct 20`, `2026-11-02`, `eow` (end of week), `eom` (end of month) |
+| A time | Due time | `at 3pm`, `5pm`, `15:30`, `noon` |
 | `!` and a priority | Priority | `!urgent`, `!high`, `!medium`, `!low`, or `p1` (urgent) to `p4` (low) |
 | `#` and a label | Label | `#bug` |
 | `+` and a project key or name | Project | `+web` |
 | `@` and a name | Assignee | `@ana`, or `@me` for yourself |
-| How often it repeats | Repeat | `daily`, `weekdays`, `every week`, `every 2 weeks`, `monthly` |
+| How often it repeats | Repeat | `daily`, `weekdays`, `every week`, `every 3 days`, `every other week`, `every monday`, `monthly`, `every month on the 15th` |
 
 For example, `Send investor update friday !high +GE @me every week` creates a task called "Send investor update", due Friday, high priority, in the project with the key GE, assigned to you and repeating every week.
 
@@ -21,6 +22,7 @@ A few details:
 
 - Labels and projects must already exist. Labels live in **Settings → Labels**.
 - A short day name only counts as a date after "on", "by", "due" or "next", so a title like "Sun damage report" stays as it is.
+- A time without a day means the next time the clock shows it: `5pm` typed at 6 pm is tomorrow at 5 pm.
 - Whatever you pick with the buttons under the title wins over what you typed.
 
 Turn on **Create more** to keep the box open for the next task. Click **Private** to make the task [private and encrypted](private-tasks.md) from its first save.
@@ -36,7 +38,7 @@ Click a task to open its panel. At the top you can change:
 | Status | Backlog, To do, In progress, In review, Done, Canceled |
 | Priority | Urgent, High, Medium, Low, No priority |
 | Assignee | Anyone in the workspace |
-| Due and Start | A date |
+| Due and Start | A date. Due can also have a time |
 | Repeat | See [Repeating tasks](#repeating-tasks) |
 | Project and Goal | One of each |
 | Labels | Any number |
@@ -58,13 +60,19 @@ People who follow a task hear about new comments and status changes. You follow 
 
 Drop files onto the task panel, or click **Attach**. Files are stored on your server, up to 25 MB each unless the server allows more. Images and PDFs open in the browser. Other files download, so a file can never run inside Nil. Whoever uploaded a file, or an admin, can remove it.
 
-Files aren't encrypted, which is why they can't be added to a private task.
+Files on team tasks are stored as they are. On a [private task](private-tasks.md), your browser encrypts each file before it uploads.
 
 ## Repeating tasks
 
-Set **Repeat** to Every day, Every weekday, Every week, Every 2 weeks or Every month. When you mark a repeating task done, Nil creates the next one with the next due date. If you finished late, the new due date skips forward past today, so the new task isn't overdue the moment it appears. Its checklist starts unticked.
+Set **Repeat** to Every day, Every weekday, Every week, Every 2 weeks or Every month. Quick add can set other rules too, such as every 3 days, every other week, every Monday or every month on the 15th (or the last day). When you mark a repeating task done, Nil creates the next one with the next due date. If you finished late, the new due date skips forward past today, so the new task isn't overdue the moment it appears. Its checklist starts unticked.
 
-A task that gets a repeat but has no due date is given today as its due date.
+A task that gets a repeat but has no due date is given today as its due date. A due time repeats on the same clock time in the time zone it was set in, so 9:00 stays 9:00 when daylight saving time starts or ends.
+
+## Due times
+
+A due date can have a time. Pick it in the date picker, or type it in quick add. Lists, board cards, the calendar and the task panel show it on your own clock, so a teammate in another time zone sees the same moment in their time. Once the time has passed, the task shows as overdue.
+
+Whoever has the task gets a "Due soon" note 30 minutes before its due time. A task due on a day without a time gets a "Due today" note at 9 am on that person's clock instead, one note for all of that day's tasks. The server's operator can change both.
 
 ## Change many tasks at once
 

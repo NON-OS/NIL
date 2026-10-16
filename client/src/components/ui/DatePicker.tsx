@@ -1,6 +1,6 @@
 import './DatePicker.css';
 import { useRef, useState, type ReactNode } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Clock } from 'lucide-react';
 import Popover from './Popover';
 import dates from '../../lib/dates';
 import cx from '../../lib/cx';
@@ -11,6 +11,9 @@ interface Props {
   children: ReactNode;
   title: string;
   className?: string;
+  // a due time as 'HH:MM'; with onTimeChange set, the picker offers a time too
+  time?: string | null;
+  onTimeChange?: (time: string | null) => void;
 }
 
 function quickPicks(today: string) {
@@ -26,13 +29,30 @@ function quickPicks(today: string) {
   ];
 }
 
-export default function DatePicker({ value, onChange, children, title, className = 'prop-btn' }: Props) {
+export default function DatePicker({ value, onChange, children, title, className = 'prop-btn', time = null, onTimeChange }: Props) {
   const today = dates.today();
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(value ?? today);
+  const [clock, setClock] = useState(time ?? '');
+  const sent = useRef<string | null>(time);
   const anchor = useRef<HTMLButtonElement>(null);
 
+  // A time input changes with every keystroke, so the time is saved once: when you leave the
+  // field, press Enter or close the picker, whichever comes first.
+  const commitTime = () => {
+    const next = clock || null;
+    if (!onTimeChange || next === sent.current) return;
+    sent.current = next;
+    onTimeChange(next);
+  };
+
+  const close = () => {
+    commitTime();
+    setOpen(false);
+  };
+
   const pick = (v: string | null) => {
+    commitTime();
     onChange(v);
     setOpen(false);
   };
@@ -49,12 +69,14 @@ export default function DatePicker({ value, onChange, children, title, className
         onClick={(e) => {
           e.stopPropagation();
           setMonth(value ?? today);
+          setClock(time ?? '');
+          sent.current = time;
           setOpen((o) => !o);
         }}
       >
         {children}
       </button>
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} width={272}>
+      <Popover anchor={anchor} open={open} onClose={close} width={272}>
         <div className="datepicker">
           <div className="datepicker-quick">
             {quickPicks(today).map((q) => (
@@ -93,6 +115,39 @@ export default function DatePicker({ value, onChange, children, title, className
               </button>
             ))}
           </div>
+          {onTimeChange && (
+            <div className="datepicker-time">
+              <Clock size={14} aria-hidden="true" />
+              <input
+                className="input"
+                type="time"
+                step={300}
+                value={clock}
+                aria-label="Due time"
+                onChange={(e) => setClock(e.target.value)}
+                onBlur={commitTime}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    e.preventDefault();
+                    close();
+                  }
+                }}
+              />
+              {time && (
+                <button
+                  type="button"
+                  className="btn btn-ghost btn-sm"
+                  onClick={() => {
+                    setClock('');
+                    sent.current = null;
+                    onTimeChange(null);
+                  }}
+                >
+                  No time
+                </button>
+              )}
+            </div>
+          )}
           {value && (
             <button type="button" className="btn btn-ghost btn-sm" style={{ marginTop: 8, width: '100%' }} onClick={() => pick(null)}>
               Clear date

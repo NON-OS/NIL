@@ -1,7 +1,8 @@
 import '../components/settings/Settings.css';
-import { BadgeCheck, Bot, Building2, Database, FolderKanban, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
+import { BadgeCheck, BellRing, Bot, Building2, Database, FolderKanban, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import ProfileSettings from '../components/settings/ProfileSettings';
+import NotificationSettings from '../components/settings/NotificationSettings';
 import SecuritySettings from '../components/settings/SecuritySettings';
 import WorkspaceSettings from '../components/settings/WorkspaceSettings';
 import TeamSettings from '../components/settings/TeamSettings';
@@ -16,6 +17,7 @@ import useStore from '../state/useStore';
 
 const TABS = [
   { id: 'profile', label: 'Profile', icon: UserRound, view: ProfileSettings },
+  { id: 'notifications', label: 'Notifications', icon: BellRing, view: NotificationSettings },
   { id: 'security', label: 'Sign-in & security', icon: ShieldCheck, view: SecuritySettings },
   { id: 'team', label: 'Team', icon: Users, view: TeamSettings },
   { id: 'workspace', label: 'Workspace', icon: Building2, view: WorkspaceSettings },
@@ -30,7 +32,7 @@ export default function SettingsView() {
   const { query } = useRoute();
   const guest = useStore((s) => s.guest);
   // guests manage their own account; workspace-wide settings belong to members
-  const tabs = guest ? TABS.filter((t) => ['profile', 'security', 'ai'].includes(t.id)) : TABS;
+  const tabs = guest ? TABS.filter((t) => ['profile', 'notifications', 'security', 'ai'].includes(t.id)) : TABS;
   const active = tabs.find((t) => t.id === query.get('tab')) ?? tabs[0];
   const View = active.view;
 

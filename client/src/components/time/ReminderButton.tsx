@@ -4,6 +4,7 @@ import { AlarmClock, X } from 'lucide-react';
 import Popover from '../ui/Popover';
 import toast from '../../state/toast';
 import reminders from '../../actions/reminders';
+import useStore from '../../state/useStore';
 import reminderPresets from '../../lib/reminderPresets';
 import dates from '../../lib/dates';
 import type Reminder from '../../types/Reminder';
@@ -19,6 +20,7 @@ export default function ReminderButton({ taskId }: { taskId: string }) {
   const [open, setOpen] = useState(false);
   const [list, setList] = useState<Reminder[]>([]);
   const [custom, setCustom] = useState(() => localInput(Date.now() + 3600_000));
+  const dueAt = useStore((s) => s.tasks[taskId]?.dueAt ?? null);
 
   const refresh = () => reminders.list().then((all) => setList(all.filter((r) => r.taskId === taskId))).catch(() => {});
   useEffect(() => {
@@ -45,7 +47,7 @@ export default function ReminderButton({ taskId }: { taskId: string }) {
         <div className="reminder-pop">
           <span className="eyebrow">Remind me</span>
           <div className="presets menu-list" style={{ padding: 0 }}>
-            {reminderPresets().map((p) => (
+            {reminderPresets(new Date(), dueAt).map((p) => (
               <button key={p.label} type="button" className="menu-item" onClick={() => add(p.at)}>
                 {p.label}
               </button>

@@ -47,6 +47,6 @@ Admins manage people under **Settings → Team → Members**. Click the role nex
 
 ## Your profile
 
-In **Settings → Profile** you can change your name, the line that describes your role on the team (for example "Head of Growth") and the colour of your avatar. You can also turn on desktop notifications there.
+In **Settings → Profile** you can change your name, the line that describes your role on the team (for example "Head of Growth") and the colour of your avatar. Notifications have their own tab, **Settings → Notifications**, described in [Time and reminders](time-and-reminders.md#push-notifications).
 
 Teammates see the name you picked. Only admins can see wallet addresses.

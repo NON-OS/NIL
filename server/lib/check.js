@@ -2,6 +2,8 @@ import HttpError from './HttpError.js';
 import sql from '../db/sql.js';
 
 const DATE = /^\d{4}-\d{2}-\d{2}$/;
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
+const ZONE = /^[A-Za-z][A-Za-z0-9_+\-/]{0,63}$/;
 const COLOR = /^#[0-9a-fA-F]{6}$/;
 const TABLES = new Set(['users', 'projects', 'goals', 'labels', 'tasks']);
 
@@ -24,6 +26,23 @@ const check = {
     if (value === undefined || value === null || value === '') return null;
     if (typeof value !== 'string' || !DATE.test(value) || Number.isNaN(Date.parse(value))) fail(`${field} must be a date like 2026-03-31.`);
     return value;
+  },
+
+  // a wall-clock time like 15:30, or null
+  time(value, field) {
+    if (value === undefined || value === null || value === '') return null;
+    if (typeof value !== 'string' || !TIME.test(value)) fail(`${field} must be a time like 15:30.`);
+    return value;
+  },
+
+  // an IANA time zone name the server knows, like Europe/Stockholm
+  timeZone(value) {
+    if (typeof value !== 'string' || !ZONE.test(value)) fail('Time zone isn’t valid.');
+    try {
+      return new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone;
+    } catch {
+      fail('Time zone isn’t valid.');
+    }
   },
 
   number(value, field, { min = -1e12, max = 1e12, integer = false } = {}) {
