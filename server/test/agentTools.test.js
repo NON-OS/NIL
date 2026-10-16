@@ -144,6 +144,29 @@ test('write tools work over both transports, within scope, with idempotency on R
   assert.equal((await tool(keys.helper, 'mark_inbox_read', { ids: ids_ })).structuredContent.unread, 0);
 });
 
+test('the remaining tools work over the other transport too', async () => {
+  const free = (await ana('POST', '/api/tasks', { title: 'Sort the bug inbox', projectId: ids.alpha })).data.task;
+  assert.equal((await tool(keys.helper, 'claim_task', { key: k(free) })).structuredContent.claimed.assignee, 'Helper');
+  assert.equal((await tool(keys.helper, 'start_time_entry', { key: k(free) })).structuredContent.running.task, k(free));
+  assert.equal((await rest(keys.helper, 'POST', '/time/stop')).data.stopped.minutes, 0);
+
+  const watched = await rest(keys.helper, 'PUT', `/tasks/${k(ids.other)}/watch`, {});
+  assert.equal(watched.status, 404, 'a task outside its reach can’t be watched');
+  const watching = await rest(keys.helper, 'PUT', `/tasks/${k(ids.task)}/watch`, {});
+  assert.deepEqual(watching.data, { key: k(ids.task), watching: true });
+  assert.ok((await ana('GET', `/api/tasks/${ids.task.id}/detail`)).data.watchers.includes(ids.helper));
+  assert.equal((await tool(keys.helper, 'watch_task', { key: k(ids.task), watching: false })).structuredContent.watching, false);
+  assert.equal((await tool(keys.reader, 'watch_task', { key: k(ids.task) })).structuredContent.watching, true, 'watching is fine for a read-only agent');
+
+  const deletion = await rest(keys.helper, 'DELETE', `/tasks/${k(free)}`);
+  assert.equal(deletion.status, 202);
+  assert.deepEqual(deletion.data.approval.reasons, ['deletes the task']);
+  assert.equal(deletion.data.approval.task, k(free));
+  const approved = await owner('POST', `/api/agent-approvals/${deletion.data.approval.id}/approve`);
+  assert.equal(approved.data.approval.result.deleted, k(free));
+  assert.ok(sql.get('SELECT deleted_at FROM tasks WHERE id = ?', free.id).deleted_at);
+});
+
 test('risky changes wait for a person: assigning people, deleting, leaving scope, bulk', async () => {
   const toAna = await rest(keys.helper, 'PATCH', `/tasks/${k(ids.task)}`, { assignee: 'Ana Park' });
   assert.equal(toAna.status, 202);

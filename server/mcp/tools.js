@@ -14,6 +14,7 @@ import createTaskTool from './tools/createTaskTool.js';
 import updateTaskTool from './tools/updateTaskTool.js';
 import claimTask from './tools/claimTask.js';
 import addCommentTool from './tools/addCommentTool.js';
+import watchTask from './tools/watchTask.js';
 import deleteTask from './tools/deleteTask.js';
 import startTimeEntry from './tools/startTimeEntry.js';
 import stopTimeEntry from './tools/stopTimeEntry.js';
@@ -39,6 +40,7 @@ const tools = [
   updateTaskTool,
   claimTask,
   addCommentTool,
+  watchTask,
   deleteTask,
   startTimeEntry,
   stopTimeEntry,

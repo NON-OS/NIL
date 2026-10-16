@@ -68,6 +68,7 @@ The same tools serve MCP, the REST API and built-in agents:
 | `update_task` | `PATCH /tasks/{key}` | Status, priority, due date, assignee, project, labels, checklist items |
 | `claim_task` | `POST /tasks/{key}/claim` | Take an unassigned task and start it |
 | `add_comment` | `POST /tasks/{key}/comments` | Comment, with @mentions |
+| `watch_task` | `PUT /tasks/{key}/watch` | Start or stop watching a task |
 | `delete_task` | `DELETE /tasks/{key}` | Move a task to the trash (agents need approval) |
 | `start_time_entry` | `POST /time/start` | Start the caller's own timer |
 | `stop_time_entry` | `POST /time/stop` | Stop it |
@@ -326,7 +327,9 @@ None of that is relied on to keep you safe. The server enforces the rules whatev
 
 Every change an agent makes appears in the task's history under the agent's name, with "for <person>" when it acted for someone: the person who assigned or mentioned it, or who approved its request. Each agent's **Audit trail** lists every tool call it made, with the outcome, and every change an admin made to the agent.
 
-Run logs and the audit trail quote task text, so they follow the workspace's retention settings for comments and history, and a run's log is erased with its task.
+Run logs and the audit trail quote task text, so they follow the workspace's retention settings for comments and history, and a run's log is erased with its task. A run's log can quote other tasks the agent read, so guests see how a run went but not its log, and see an approval card's details only when they are asked to decide it.
+
+Webhook secrets and model API keys are sealed with a key kept beside the database (`DATA_DIR/keys/agents-secrets.key`), not in it. Encrypted backups (capsules) carry that key, so a restored server keeps working; erasing the workspace deletes it.
 
 ## Configuration
 

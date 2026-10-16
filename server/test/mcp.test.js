@@ -68,7 +68,7 @@ test('handshake: version negotiation, notifications and the tool list', async ()
   const list = (await rpc(keys.read, 'tools/list')).body.result.tools;
   assert.deepEqual(list.map((t) => t.name).sort(), [
     'add_comment', 'claim_task', 'create_task', 'delete_task', 'get_approval', 'get_task', 'list_goals', 'list_labels', 'list_people', 'list_projects',
-    'list_tasks', 'mark_inbox_read', 'my_assignments', 'my_inbox', 'search_tasks', 'start_time_entry', 'stop_time_entry', 'update_task', 'whoami', 'workspace_summary',
+    'list_tasks', 'mark_inbox_read', 'my_assignments', 'my_inbox', 'search_tasks', 'start_time_entry', 'stop_time_entry', 'update_task', 'watch_task', 'whoami', 'workspace_summary',
   ]);
   assert.equal(list.find((t) => t.name === 'delete_task').annotations.destructiveHint, true);
   assert.equal(list.find((t) => t.name === 'create_task').annotations.readOnlyHint, false);
