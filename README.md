@@ -79,7 +79,7 @@ Free software under the [GNU AGPL v3 or later](LICENSE).
 There are three kinds of vote. Admins create them, with 2 to 8 options and a length of 1 to 60 days.
 
 - **Signed votes.** Each ballot is signed by one of the voter's linked wallets. A vote counts one per person or by voting power. Results can stay hidden until the vote closes. The app shows each person only their own choice. Admins can download a recount file (the **Audit file** button) with every signed ballot, and that file lists each ballot's wallet address and choice. Use an anonymous vote when choices must stay secret from admins.
-- **Anonymous votes (Semaphore).** Each member's voting key is a Semaphore identity derived from a wallet signature. Only its public commitment reaches the server. Ballots are zero-knowledge proofs made in the browser and sent without the session cookie, after a short random delay. One ballot per member per vote, which they can change. Each ballot counts once, without weight. The recount file holds the voter group, every accepted root and every proof, but no names.
+- **Anonymous votes (Semaphore).** Each member's voting key is a Semaphore identity derived from a wallet signature. Only its public commitment reaches the server, when the member first unlocks their keys or clicks **Join anonymous votes**, never together with a ballot. Ballots are zero-knowledge proofs made in the browser and sent without the session cookie. The server holds each ballot until the hour it arrived in has ended, then counts that hour's ballots together in random order and stores only the hour, so neither the live count nor the database shows when a ballot came in. One ballot per member per vote, which they can change. Each ballot counts once, without weight. The recount file holds the voter group, every accepted root and every proof, ordered by nullifier and stamped with the hour only, but no names.
 - **Encrypted weighted votes (beta).** Anonymous ballots weighted by voting power. Each ballot encrypts the voter's power into the chosen option, with a Groth16 proof (NØNOS's own circuit, `circuits/ballot.circom`) that the power is the voter's real snapshotted power and the option is real. Three trustees, chosen by the admin, set up a shared key. The server adds up the encrypted ballots. After the vote closes, any two trustees decrypt only the totals, each with a proof that they used their real share. A wrong partial decryption is caught, and one trustee alone learns nothing. Trustees must be members who have unlocked encrypted docs. This feature is beta: the circuit has not been audited, and its trusted setup is a development ceremony (see [Honest limits](#honest-limits)).
 
 ### Proof of contribution
@@ -117,11 +117,11 @@ What Nil protects, and what it doesn't.
 
 **Who can see what inside the workspace**
 
-- Wallet addresses, last-seen times, stealth meta-addresses and voting-key commitments are shown only to admins and to the person themselves.
+- Wallet addresses, last-seen times and stealth meta-addresses are shown only to admins and to the person themselves. Voting-key commitments are shown only to the person themselves, so an admin can't match a key to a name.
 - Private tasks are shown only to their creator and assignee. Admins don't see them either.
 - Your timesheet and reminders are yours alone.
 - Docs are end-to-end encrypted. The server and its operator see only ciphertext, plus who can read each doc and when it changed.
-- In anonymous votes, ballots carry no session cookie and are matched to no account. Your browser recognises your own ballot by recomputing its nullifier.
+- In anonymous votes, ballots carry no session cookie and are matched to no account. They are counted an hour at a time, so the count doesn't move the moment you vote. Your browser recognises your own ballot by recomputing its nullifier once it's counted.
 
 **What the server operator can see**
 
@@ -248,7 +248,8 @@ All settings are environment variables. `APP_URL` is required, and so is `NOX_RP
 - **Encrypted weighted votes are beta.** The ballot circuit (`circuits/ballot.circom`) has not been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2 (recorded in `circuits/CEREMONY.json`) was a development ceremony: all contributions ran on one machine. Whoever ran it could, in principle, forge proofs. Rerun phase 2 with independent contributors (see `scripts/zk-ballot.mjs`) before relying on these votes for anything that matters.
 - **Trustees.** In an encrypted vote, two trustees acting together could decrypt individual ballots. That shows each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
 - **Small groups.** Anonymous votes hide who voted what among the members who voted. In a small team, or a lopsided result, totals alone can reveal choices.
-- **Network metadata.** Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
+- **Network metadata.** Anonymous ballots carry no cookie, and the server stores only the hour they were cast in, but the server process and any proxy still see the IP address and moment each ballot arrives. Someone watching live traffic could match a ballot with the signed-in requests from the same address. Use Tor if that matters.
+- **Joining a vote shows in the voter list.** A member who joins after a vote opens is added to its group, and a ballot proven against that newer group was cast after they joined. Joining well before voting, for example when you first unlock your keys, keeps the two apart.
 - **One server, one process.** The database is SQLite, live updates and rate limits are in memory. Run a single instance.
 - **Wallets.** Sign-in needs an injected EIP-1193 wallet (a browser extension or a wallet's in-app browser). WalletConnect is not supported. Tor Browser ships without wallet extensions. If you lose every wallet linked to your account, you lose the account, so link a second one.
 - **Deterministic signatures.** Encrypted docs, private payouts and anonymous voting derive keys from a wallet signature. Wallets that sign the same message differently each time can't use them. Nil checks this on first use.

@@ -29,14 +29,17 @@ const encryptedVotes = {
     await http.put(`/proposals/${proposal.id}/dealing`, await dealShares(proposal.id, position, recipients));
   },
 
+  // Returns when the ballot joins the count: the end of the hour it arrived in.
   async cast(proposal: Proposal, choice: number) {
-    const identity = await anonymousVotes.ensureKey();
+    const identity = await anonymousVotes.identity();
     const fresh = (await http.get<Proposal[]>('/proposals')).find((p) => p.id === proposal.id);
     if (!fresh?.encrypted?.publicKey) throw new Error('This vote isn’t open yet.');
+    if (!anonymousVotes.joined(fresh)) throw new Error('You don’t have a seat in this vote.');
     const { default: proveEncryptedBallot } = await import('../lib/ballot/proveEncryptedBallot');
     const { proof, publicSignals } = await proveEncryptedBallot(identity, fresh, choice);
     await jitter();
-    await http.anonymous('/anonymous-ballots/' + proposal.id, { proof, publicSignals });
+    const { countsAt } = await http.anonymous<{ countsAt: number }>('/anonymous-ballots/' + proposal.id, { proof, publicSignals });
+    return countsAt;
   },
 
   // A trustee's partial decryption of the totals, proven correct, after the vote closes.

@@ -94,7 +94,11 @@ test('an encrypted vote needs three trustees with encryption keys, and a census 
   const vote = res.data.proposal;
   ids.vote = vote.id;
   // owner 1000, ana 250 + one ZSP at 100, cy 4000 + 1000 staked; ben holds nothing and isn't in the census
-  assert.deepEqual(vote.anonymous.members.map((m) => m.power), ['1000', '350', '5000']);
+  const powerOf = (n) => vote.anonymous.members.find((m) => m.commitment === identity[n].commitment.toString())?.power;
+  assert.deepEqual(['owner', 'ana', 'cy', 'ben'].map(powerOf), ['1000', '350', '5000', undefined]);
+  // seats go in key order, so a seat's position says nothing about who sits in it
+  const seats = vote.anonymous.members.map((m) => m.commitment);
+  assert.deepEqual(seats, [...seats].sort());
   assert.equal(vote.encrypted.publicKey, null);
   assert.equal(vote.totals, null);
 });
@@ -117,11 +121,16 @@ test('the vote key appears only once all three trustees have dealt, and only tru
 
 test('weighted ballots are proven and encrypted; nobody sees totals before decryption', async () => {
   const vote = await getVote(ids.vote);
-  for (const [n, choice] of [['owner', 0], ['ana', 1], ['cy', 0]]) assert.equal((await ballot(ids.vote, await proveBallot(n, vote, choice))).status, 200);
+  for (const [n, choice] of [['owner', 0], ['ana', 1], ['cy', 0]]) {
+    const res = await ballot(ids.vote, await proveBallot(n, vote, choice));
+    assert.equal(res.status, 200);
+    assert.equal(res.data.countsAt % 3_600_000, 0);
+  }
   // Ana changes her mind: same nullifier, replaced, still three ballots
   assert.equal((await ballot(ids.vote, await proveBallot('ana', vote, 2))).status, 200);
+  // held until the hour ends: nothing anyone can see moves when a ballot arrives
   const now = await getVote(ids.vote);
-  assert.deepEqual([now.voters, now.totals, now.anonymous.nullifiers.length], [3, null, 3]);
+  assert.deepEqual([now.voters, now.totals, now.anonymous.nullifiers.length], [0, null, 0]);
 });
 
 test('forged and misdirected ballots are refused', async () => {
@@ -166,7 +175,9 @@ test('the audit file lets anyone re-verify every ballot and redo the decryption'
   assert.equal(audit.type, 'nonos.encrypted-vote-audit');
   for (const n of ['Erik', 'ana', 'cy']) assert.ok(!JSON.stringify(audit).includes(`"${n}"`));
   const roots = new Set(audit.roots.filter((r) => !r.revoked).map((r) => r.root));
+  assert.equal(audit.ballots.length, 3);
   for (const b of audit.ballots) {
+    assert.match(b.castAt, /T\d\d:00:00\.000Z$/);
     assert.equal(await groth16.verify(KEY, b.publicSignals, b.proof), true);
     assert.ok(roots.has(b.publicSignals[0]));
     assert.equal(b.publicSignals[34], audit.circuit.scope);

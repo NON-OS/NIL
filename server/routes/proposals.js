@@ -21,6 +21,7 @@ import toProposal from '../mappers/toProposal.js';
 import config from '../config.js';
 import voterGroups from '../votes/voterGroups.js';
 import voteScope from '../votes/voteScope.js';
+import heldBallots from '../votes/heldBallots.js';
 import fieldHash from '../votes/fieldHash.js';
 
 const router = express.Router();
@@ -35,7 +36,11 @@ function openProposal(id) {
 
 router.get(
   '/proposals',
-  route((req) => sql.all('SELECT * FROM proposals ORDER BY closed_at IS NOT NULL, created_at DESC LIMIT 200').map((row) => toProposal(row, req.user))),
+  route((req) => {
+    // anonymous ballots whose hour has ended join the count when someone next looks
+    if (heldBallots.release()) hub.broadcast({ type: 'proposals' });
+    return sql.all('SELECT * FROM proposals ORDER BY closed_at IS NOT NULL, created_at DESC LIMIT 200').map((row) => toProposal(row, req.user));
+  }),
 );
 
 router.post(
@@ -143,10 +148,13 @@ router.get(
   '/proposals/:id/audit',
   requireAdmin,
   route((req) => {
+    heldBallots.release({ proposalId: req.params.id });
     const row = sql.get('SELECT * FROM proposals WHERE id = ?', req.params.id);
     if (!row) throw HttpError.notFound('That vote');
     // anyone can recount an anonymous vote: check each proof against an accepted root, that
     // every nullifier appears once, and the scope. Names never appear because they're never known.
+    // Ballots list in nullifier order and carry only the hour they were cast in, so neither
+    // their order nor their time can be matched with who was online.
     if (row.anonymous && row.weighting === 'power') {
       return {
         type: 'nonos.encrypted-vote-audit',
@@ -158,7 +166,7 @@ router.get(
         roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
         publicKey: parseJSON(row.public_key, null),
         trustees: sql.all('SELECT position, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => ({ position: t.position, commitments: parseJSON(t.dealing, {}).commitments ?? null, partial: parseJSON(t.partial, null) })),
-        ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY created_at', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: new Date(b.created_at).toISOString() })),
+        ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY nullifier', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: new Date(heldBallots.hourOf(b.created_at)).toISOString() })),
       };
     }
     if (row.anonymous) {
@@ -169,7 +177,7 @@ router.get(
         semaphore: { version: '4', depth: config.semaphore.depth, scope: voteScope(row.id) },
         group: voterGroups.members(row.id),
         roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
-        ballots: sql.all('SELECT choice, proof, created_at FROM anonymous_ballots WHERE proposal_id = ? ORDER BY created_at', row.id).map((b) => ({ choice: b.choice, proof: JSON.parse(b.proof), castAt: new Date(b.created_at).toISOString() })),
+        ballots: sql.all('SELECT choice, proof, created_at FROM anonymous_ballots WHERE proposal_id = ? ORDER BY nullifier', row.id).map((b) => ({ choice: b.choice, proof: JSON.parse(b.proof), castAt: new Date(heldBallots.hourOf(b.created_at)).toISOString() })),
       };
     }
     return {

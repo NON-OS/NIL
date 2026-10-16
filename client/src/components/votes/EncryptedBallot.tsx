@@ -1,17 +1,20 @@
 import { useEffect, useState } from 'react';
 import { KeyRound, LockKeyhole } from 'lucide-react';
 import Spinner from '../ui/Spinner';
+import JoinVote from './JoinVote';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import privateKeys from '../../state/privateKeys';
 import anonymousVotes from '../../actions/anonymousVotes';
 import encryptedVotes from '../../actions/encryptedVotes';
+import dates from '../../lib/dates';
 import type Proposal from '../../types/Proposal';
 
 // An anonymous vote weighted by voting power. Ballots are encrypted in the browser with a key
 // three trustees hold together; only the summed totals are ever decrypted, by any two of them.
 export default function EncryptedBallot({ proposal, open, onChange }: { proposal: Proposal; open: boolean; onChange: () => void }) {
   const users = useStore((s) => s.users);
+  const key = useStore((s) => s.me?.semaphoreCommitment ?? null);
   const [busy, setBusy] = useState<string | null>(null);
   const [mine, setMine] = useState<{ voted: boolean; choice?: number }>({ voted: false });
   const enc = proposal.encrypted!;
@@ -25,12 +28,12 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
     if (privateKeys.get()) anonymousVotes.mine(proposal).then((voted) => setMine((m) => ({ ...m, voted }))).catch(() => {});
   }, [proposal]);
 
-  const run = async (key: string, fn: () => Promise<unknown>, done: string, after?: () => void) => {
-    setBusy(key);
+  const run = async <T,>(action: string, fn: () => Promise<T>, done: string | ((result: T) => string), after?: () => void) => {
+    setBusy(action);
     try {
-      await fn();
+      const result = await fn();
       after?.();
-      toast.show(done, { tone: 'success' });
+      toast.show(typeof done === 'function' ? done(result) : done, { tone: 'success' });
       onChange();
     } catch (err) {
       toast.error(err);
@@ -56,10 +59,12 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
   const canDecrypt = !open && !proposal.totals && seat !== null && !enc.trustees.find((t) => t.position === seat)?.decrypted;
   return (
     <>
-      {open && (
+      {open && !key && <JoinVote onJoined={onChange} />}
+      {open && key && !anonymousVotes.joined(proposal, key) && <p className="muted proposal-anon">You had no voting power when this vote opened, so you have no seat in it.</p>}
+      {open && anonymousVotes.joined(proposal, key) && (
         <div className="proposal-options" role="group" aria-label="Your encrypted vote">
           {proposal.options.map((option, i) => (
-            <button key={option} type="button" className="btn" aria-pressed={mine.choice === i} disabled={busy !== null} onClick={() => run(`vote-${i}`, () => encryptedVotes.cast(proposal, i), 'Ballot encrypted, proven and counted. Nobody can tell it was yours or how much weight it carried.', () => setMine({ voted: true, choice: i }))}>
+            <button key={option} type="button" className="btn" aria-pressed={mine.choice === i} disabled={busy !== null} onClick={() => run(`vote-${i}`, () => encryptedVotes.cast(proposal, i), (countsAt) => `Ballot encrypted and proven. It joins the count at ${dates.time(countsAt)} with the others from this hour. Nobody can tell it was yours or how much weight it carried.`, () => setMine({ voted: true, choice: i }))}>
               {busy === `vote-${i}` && <Spinner size={13} />} {busy === `vote-${i}` ? 'Encrypting and proving…' : option}
             </button>
           ))}
