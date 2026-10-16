@@ -1,5 +1,4 @@
 import sql from '../../db/sql.js';
-import hub from '../../realtime/hub.js';
 import agentSettings from '../agentSettings.js';
 import worker from '../runner/worker.js';
 import audit from '../audit.js';
@@ -13,6 +12,5 @@ export default function setAgentsEnabled(enabled, admin) {
     sql.run("UPDATE webhook_deliveries SET status = 'canceled', last_error = 'All agents were switched off.' WHERE status = 'pending'");
   }
   audit({ agentId: null, actorId: admin.id, via: 'admin', action: enabled ? 'agents_switched_on' : 'agents_switched_off', outcome: 'ok' });
-  hub.broadcast({ type: 'agents.settings', settings });
   return settings;
 }
