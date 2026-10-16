@@ -1,0 +1,11 @@
+{
+  "name": "nil-live-agent-checks",
+  "private": true,
+  "type": "module",
+  "description": "Opt-in checks of Nil's agents against real clients and a real model. See docs/development.md.",
+  "dependencies": {
+    "@modelcontextprotocol/client": "2.3.1",
+    "@modelcontextprotocol/sdk": "1.32.1",
+    "playwright": "1.56.1"
+  }
+}

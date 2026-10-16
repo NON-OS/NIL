@@ -20,6 +20,31 @@ npm run zk:ballot   # rebuild the encrypted-ballot circuit and rerun its setup (
 
 `npm run zk:ballot` needs the Perpetual Powers of Tau file in `PTAU`. `BEACON_RPC` and `CONTRIBUTORS` change the node used for the beacon block hash and the number of phase-2 contributions. These variables are read from your shell, not from `.env`.
 
+## Live agent checks
+
+`npm test` covers agents with simulated clients and models. `scripts/live/agents/` checks them against real ones: the official MCP TypeScript SDK (both the current and the older package), a REST client built only from the OpenAPI document, a webhook receiver that verifies signatures the way [AI agents](ai-agents.md) describes, a browser, and a real model behind an OpenAI-compatible endpoint. It's opt-in and never part of `npm test`. Each check starts its own Nil from this checkout with a fresh workspace, on port 3917 (`LIVE_PORT`), with the webhook receiver on 4700 (`AGENT_SERVICE_PORT`).
+
+The checks that need no model take about a minute:
+
+```bash
+scripts/live/agents/run.sh
+```
+
+That runs `mcp`, `rest`, `approvals`, `privacy`, `addresses` and `webhooks`. The first run installs the harness's own dependencies into `scripts/live/agents/node_modules`. Logs, each server's data and screenshots go to a temporary folder named at the end, or to `LIVE_DIR`.
+
+The rest need a model that supports tool calling, served by Ollama:
+
+```bash
+LOCAL_MODEL=<model> scripts/live/agents/startOllama.sh
+scripts/live/agents/run.sh service runner injection limits
+```
+
+`startOllama.sh` starts Ollama with a 16,384-token context, pulls the model and names it `local-agent`, which the checks use; set `LOCAL_MODEL_URL` and `LOCAL_MODEL` to use another server or name. On four CPU cores a model of about 4 billion parameters at 4-bit takes 1 to 5 minutes per run, so `runner` alone can take half an hour. The checks hold the server to what it guarantees (runs finish, risky requests wait for approval, no checklist item is ticked without its work, nothing private leaks) and print what the model wrote, since a small model's wording changes from run to run.
+
+`ui` drives Settings → Agents and the task timeline in Chromium. It needs `npm run build` first and Playwright's browser (`npx --prefix scripts/live/agents playwright install chromium`). With `LIVE_UI_RUN=1` it also starts a built-in run and opens its log.
+
+To try the Python examples from the agents guide, install `openai-agents`, `langchain`, `langchain-openai`, `langgraph` and `requests` in a virtual environment and run `scripts/live/agents/frameworks/openaiAgents.py` or `langchainAgent.py` against a running server, with `NIL` and `NIL_AGENT_KEY` set.
+
 ## Project layout
 
 ```
@@ -53,7 +78,7 @@ client/src/
 client/public/zk/ circuit files served to browsers
 docs/             these pages, also bundled into the app as its help center
 circuits/         encrypted-ballot circuit and its setup record
-scripts/          zk:fetch, zk:ballot and brand tools
+scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live agent checks (scripts/live/agents)
 deploy/tor/       Tor onion service image
 marketing/        video kits; not part of the app or the Docker image
 ```
