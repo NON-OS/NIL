@@ -33,6 +33,9 @@ export default function startScheduler(ctx) {
   every(ctx.config.health.intervalSec * 1000, job('health', async () => {
     await health();
     await checkHost(ctx);
+    // costs nothing when the routes are current; after a reload Caddy refused (or missed while
+    // it restarted) it tries again, so the routes always catch up with the database
+    await ctx.routes.sync().catch(() => {});
   }));
   const usage = every(ctx.config.usage.intervalMin * 60_000, job('usage', async () => {
     await collectUsage(ctx);
