@@ -1,4 +1,5 @@
 import sql from '../db/sql.js';
+import config from '../config.js';
 import HttpError from '../lib/HttpError.js';
 import tools from '../mcp/tools.js';
 import agentBlocked from './agentBlocked.js';
@@ -67,6 +68,11 @@ export default function runTool(principal, name, args, { via, runId = null, acti
     return { ok: true, data };
   } catch (err) {
     if (err instanceof NeedsApproval) {
+      // a stuck or misbehaving agent can't bury the people who approve under cards
+      if (sql.get("SELECT COUNT(*) AS n FROM agent_approvals WHERE agent_id = ? AND status = 'pending'", agent.id).n >= config.agents.maxPendingApprovals) {
+        record('denied', { reason: 'too many pending approvals', reasons: err.reasons });
+        return failure(429, 'too_many_approvals', `${config.agents.maxPendingApprovals} of this agent’s requests are already waiting for approval. Wait until people have decided them.`);
+      }
       const approval = createApproval(principal, name, input, err.reasons, { taskId: err.taskId, runId, actingFor });
       record('pending_approval', { approvalId: approval.id, reasons: err.reasons }, approval.taskId);
       return { ok: false, pending: approval };

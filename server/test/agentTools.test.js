@@ -27,7 +27,7 @@ async function both(key, name, args, method, path, body) {
 }
 
 before(async () => {
-  srv = await startServer({ env: { AGENT_BULK_LIMIT: '3', AGENT_RATE_LIMIT: '1000' } });
+  srv = await startServer({ env: { AGENT_BULK_LIMIT: '3', AGENT_RATE_LIMIT: '1000', AGENT_MAX_PENDING_APPROVALS: '3' } });
   sql = (await import('../db/sql.js')).default;
   tools = (await import('../mcp/tools.js')).default;
   await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NØNOS' });
@@ -213,6 +213,17 @@ test('risky changes wait for a person: assigning people, deleting, leaving scope
   assert.match(made[3].data.approval.reasons[0], /more than 3 tasks within 10 minutes/);
   // touching a task already changed in the window isn't a new one
   assert.equal((await rest(keys.helper, 'PATCH', `/tasks/${made[0].data.created.key}`, { priority: 'low' })).status, 200);
+});
+
+test('an agent can only have so many requests waiting for approval', async () => {
+  sql.run("UPDATE agent_approvals SET status = 'declined' WHERE status = 'pending'");
+  const asks = [];
+  for (let i = 0; i < 4; i++) asks.push(await rest(keys.helper, 'POST', '/tasks', { title: `Elsewhere ${i}`, project: 'Beta' }));
+  assert.deepEqual(asks.map((r) => r.status), [202, 202, 202, 429]);
+  assert.equal(asks[3].data.error.code, 'too_many_approvals');
+  assert.equal(sql.get("SELECT COUNT(*) AS n FROM agent_approvals WHERE agent_id = ? AND status = 'pending'", ids.helper).n, 3);
+  await owner('POST', `/api/agent-approvals/${asks[0].data.approval.id}/decline`);
+  assert.equal((await rest(keys.helper, 'POST', '/tasks', { title: 'Elsewhere again', project: 'Beta' })).status, 202);
 });
 
 test('read-only agents and tool allowlists are enforced', async () => {

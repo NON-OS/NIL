@@ -163,6 +163,7 @@ const agents = Object.freeze({
   idempotencyHours: envNumber('AGENT_IDEMPOTENCY_HOURS', 24, { min: 1 }),
   bulkLimit: envNumber('AGENT_BULK_LIMIT', 5, { min: 1 }),
   bulkWindowMs: envNumber('AGENT_BULK_WINDOW_MINUTES', 10, { min: 1 }) * 60_000,
+  maxPendingApprovals: envNumber('AGENT_MAX_PENDING_APPROVALS', 20, { min: 1 }),
   allowLocalEndpoints: env.AGENT_ALLOW_LOCAL_ENDPOINTS === 'true',
   webhookTimeoutMs: envNumber('AGENT_WEBHOOK_TIMEOUT_SECONDS', 10, { min: 1, max: 60 }) * 1000,
   webhookMaxAttempts: envNumber('AGENT_WEBHOOK_MAX_ATTEMPTS', 8, { min: 1, max: 20 }),

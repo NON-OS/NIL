@@ -196,7 +196,7 @@ Errors always look like this:
 | 403 | `read_only`, `tool_not_allowed`, `agent_paused`, `origin_not_allowed` |
 | 404 | `not_found`, `unknown_tool` |
 | 409 | `conflict`, `idempotency_conflict` |
-| 429 | `rate_limited`, with `Retry-After` |
+| 429 | `rate_limited`, with `Retry-After`; `too_many_approvals` when 20 requests already wait |
 | 503 | `agents_disabled` (an admin switched all agents off) |
 
 Each agent has its own rate limit, 60 requests a minute by default. Responses carry `RateLimit-Limit`, `RateLimit-Remaining` and `RateLimit-Reset`.
@@ -351,6 +351,7 @@ All settings are optional. See `.env.example` for the full list with comments.
 | `AGENT_RATE_LIMIT` | `60` | Requests a minute per agent key |
 | `AGENT_BULK_LIMIT` | `5` | Tasks an agent may change before approval is needed |
 | `AGENT_BULK_WINDOW_MINUTES` | `10` | The window for the bulk limit |
+| `AGENT_MAX_PENDING_APPROVALS` | `20` | Requests one agent may have waiting for approval |
 | `AGENT_ALLOW_LOCAL_ENDPOINTS` | `false` | Allow private and loopback addresses for webhooks and model endpoints |
 | `AGENT_WEBHOOK_MAX_ATTEMPTS` | `8` | Attempts per delivery |
 | `AGENT_WEBHOOK_DISABLE_AFTER` | `20` | Failed attempts in a row before a webhook switches off |
