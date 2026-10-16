@@ -6,10 +6,11 @@ import publicWorkspace from '../../services/publicWorkspace.js';
 export default {
   name: 'workspace_summary',
   title: 'Workspace summary',
-  description: 'Numbers for a quick status check: open, in progress, overdue, finished in the last 7 days, and what is assigned to the user.',
+  description: 'Numbers for a quick status check: open, in progress, overdue, finished in the last 7 days, and what is assigned to the caller.',
   write: false,
+  http: { method: 'GET', path: '/summary' },
   inputSchema: { type: 'object', properties: {}, additionalProperties: false },
-  run(args, user) {
+  run(args, { user }) {
     const v = visibleSql(user.id);
     const count = (extra, ...params) => sql.get(`SELECT COUNT(*) AS n FROM tasks WHERE deleted_at IS NULL AND ${v.where} AND ${extra}`, ...v.params, ...params).n;
     const today = calendar.today();
