@@ -15,7 +15,7 @@ const owner = client(base);
 const ownerWallet = wallet();
 
 before(async () => {
-  srv = await startServer({ chain, env: { SIGNIN_CHAIN_TIMEOUT_MS: '600' } });
+  srv = await startServer({ chain, env: { SIGNIN_CHAIN_TIMEOUT_SECONDS: '1' } });
   await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
 });
 after(() => srv.close());
@@ -92,13 +92,13 @@ test('a node that is too slow gets a clear error instead of a hanging sign-in', 
   const w = smartWallet();
   chain.addSmartWallet(w);
   await join(w, 'Eve');
-  chain.setCallDelay(1500);
+  chain.setCallDelay(2500);
   try {
     const started = Date.now();
     const res = await client(base).wallet(w, 'login');
     assert.equal(res.status, 503);
     assert.match(res.data.error, /smart wallet.*didn’t finish in time/);
-    assert.ok(Date.now() - started < 1400, 'the configured timeout applies');
+    assert.ok(Date.now() - started < 2300, 'the configured timeout applies');
   } finally {
     chain.setCallDelay(0);
   }
