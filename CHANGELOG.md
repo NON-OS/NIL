@@ -8,15 +8,22 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **Every wallet in the browser is found.** Nil now finds installed wallet extensions through EIP-6963. With more than one, it asks which to use, showing each wallet's own name and icon, and remembers the choice on that device. Wallets that only set `window.ethereum` still work.
+- **Help for people without a wallet.** Signing in on a device with no wallet now explains what a wallet is, why Nil uses one, and that signing in costs nothing and sends nothing. Computers get links to a few wallets' official sites and a QR code that opens the same page on a phone. Phones, including iPhone Safari and the installed app, get "Open Nil in your wallet app" links for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Nil loads nothing from these wallets, and the QR code is drawn in the browser.
+- **Smart-contract wallets can sign in**, including passkey wallets such as Coinbase Smart Wallet. Plain wallets are still checked first, without asking the Ethereum node. Other signatures are checked on the configured chain with EIP-1271, or EIP-6492 for a wallet that isn't deployed yet, within `SIGNIN_CHAIN_TIMEOUT_MS` (8 seconds by default). Bounty applications accept them too. Signed ballots in votes still need a plain wallet.
+- **Reset sign-in.** In Settings → Team, an admin can reset the sign-in of someone who lost every wallet. The link works once, expires after `SIGNIN_RESET_HOURS` (24 by default), lets that person link a new wallet to the same account with the same history, tasks and role, and signs them out on every other device. Their old wallets can then be removed. Resetting an owner needs a second admin to approve when there are two or more other admins. With only one, that admin has to confirm a clear warning first. Every step, and every wallet linked or removed, goes into a sign-in history that keeps account ids only, never links or addresses. Migration 025 adds its two tables.
+- Right after sign-up, and in Settings → Sign-in & security while you have only one wallet, Nil suggests linking a backup.
 
 ### Changed
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
+- The sign-in screen uses plain words. It no longer mentions gas or on-chain checks, and "Hold NOX? Join without an invite" now reads "Have NOX tokens? Join without an invite".
 
 ### Fixed
 
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
+- A workspace without a name showed "Sign in to" with nothing after it, and asked wallets to sign "Sign in to ." Both now say Nil.
 
 ## 3.0.0 (2026-10-15)
 
