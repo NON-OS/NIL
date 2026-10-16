@@ -2,8 +2,10 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
+import settleStaged from '../services/settleStaged.js';
 
-const DAY = 86_400_000;
+const HOUR = 3_600_000;
+const DAY = 24 * HOUR;
 
 // Runs hourly. Trash and dead sessions always go; the workspace's zero-state policies
 // decide how long finished work, comments and history stay.
@@ -33,6 +35,9 @@ export default function purge() {
   }
 
   if (policy.activityDays) sql.run('DELETE FROM activity WHERE created_at < ?', now - policy.activityDays * DAY);
+
+  // copies staged for a seal or an open-up that never went through; one takes seconds, not an hour
+  settleStaged({ olderThan: HOUR });
 
   sql.tx(() => {
     sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - 90 * DAY);

@@ -29,5 +29,5 @@ No part of Nil's own code has had an independent security audit. See [Honest lim
 - Private payout and voting keys: derived the same way from a separate signature, so a leak of one set never exposes the other. They live only in the browser tab.
 - Receipts: Ed25519, with the key stored outside the database and titles hidden behind salted commitments.
 - Capsules: AES-256-GCM with a key from scrypt (N=2^17). The header is bound as associated data. Only allow-listed paths can be extracted, and restore only works on an empty server.
-- Uploads: random file names, owner-only permissions, and forced download for anything that isn't an image or PDF.
+- Uploads: random file names, owner-only permissions, and forced download for anything that isn't an image or PDF. Files on private tasks are encrypted in the browser under a key of their own, wrapped under the task's key, and the server stores and serves them only as opaque bytes under a generic name.
 - Docker images: local data, databases, `.env` files and keys are kept out of the build context, and removed again before the runtime image is assembled.

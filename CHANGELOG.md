@@ -7,7 +7,8 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 ### Added
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
-- AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **Files on private tasks are encrypted too.** Each file gets its own random key and is encrypted in the browser with AES-256-GCM, its name and type included, and that key is wrapped under the task's key. The server stores ciphertext under a generic name, serves it only as a download, refuses plain uploads to a private task and keeps file names out of its history. Reassigning a private task re-wraps the file keys only, never the files. Making a task with files private encrypts each one in the browser and swaps it in with the task, all or nothing, and opening a task up does the reverse. Migration 018 adds the column that holds each file's sealed details.
+- AI assistants can't create private tasks and see encrypted ones only as placeholders.
 
 ### Changed
 

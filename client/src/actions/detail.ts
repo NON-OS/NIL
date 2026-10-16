@@ -9,11 +9,19 @@ import type Attachment from '../types/Attachment';
 import type Activity from '../types/Activity';
 import taskKeys from './taskKeys';
 import commentText from './commentText';
+import fileSeal from './fileSeal';
+import uploadFile from './uploadFile';
 
 // Comments on a private task are opened here as they arrive, and sealed before they leave.
 const opened = (taskId: string, list: Comment[]) => {
   const task = store.get().tasks[taskId];
   return task?.sealed ? Promise.all(list.map((c) => commentText.open(task, c))) : Promise.resolve(list);
+};
+
+// Files on a private task arrive with their names and types sealed, and are opened the same way.
+const openFiles = (taskId: string, list: Attachment[]) => {
+  const task = store.get().tasks[taskId];
+  return Promise.all(list.map((a) => (task ? fileSeal.open(task, a) : a)));
 };
 
 async function outgoing(taskId: string, body: string) {
@@ -42,8 +50,8 @@ const detail = {
     socket.viewing(taskId);
     try {
       const d = await http.get<DetailResponse>(`/tasks/${taskId}/detail`);
-      const comments = await opened(taskId, d.comments);
-      if (store.get().detail?.taskId === taskId) store.set({ detail: { taskId, loading: false, ...d, comments } });
+      const [comments, attachments] = await Promise.all([opened(taskId, d.comments), openFiles(taskId, d.attachments)]);
+      if (store.get().detail?.taskId === taskId) store.set({ detail: { taskId, loading: false, ...d, comments, attachments } });
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 404)) toast.error(err);
     }
@@ -86,9 +94,13 @@ const detail = {
   },
 
   async upload(taskId: string, file: File) {
+    const task = store.get().tasks[taskId];
+    if (!task) return;
     try {
-      const { attachment } = await http.upload<{ attachment: Attachment }>(`/tasks/${taskId}/attachments`, file);
-      patchDetail(taskId, (d) => ({ attachments: d.attachments.some((a) => a.id === attachment.id) ? d.attachments : [...d.attachments, attachment] }));
+      const attachment = await uploadFile(task, file);
+      patchDetail(taskId, (d) => ({
+        attachments: d.attachments.some((a) => a.id === attachment.id) ? d.attachments.map((a) => (a.id === attachment.id ? attachment : a)) : [...d.attachments, attachment],
+      }));
     } catch (err) {
       toast.error(err);
     }
