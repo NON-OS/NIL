@@ -1,19 +1,23 @@
 import './CommandPalette.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Presentation, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Lock, Plus, Presentation, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
 import Modal from '../ui/Modal';
 import StatusIcon from '../ui/StatusIcon';
+import Highlight from '../ui/Highlight';
 import useStore from '../../state/useStore';
 import useTasks from '../../hooks/useTasks';
+import useTeamSearch from '../../hooks/useTeamSearch';
 import ui from '../../actions/ui';
 import detail from '../../actions/detail';
 import router from '../../lib/router';
 import fuzzyScore from '../../lib/fuzzyScore';
+import searchOpened from '../../lib/searchOpened';
 import meta from '../../lib/meta';
 import decks from '../../actions/decks';
 import isAdminUser from '../../lib/isAdmin';
 import cryptoOnly from '../../lib/cryptoOnly';
 import useCryptoTools from '../../hooks/useCryptoTools';
+import type SearchHit from '../../types/SearchHit';
 
 interface Item {
   id: string;
@@ -21,6 +25,10 @@ interface Item {
   title: string;
   icon: ReactNode;
   hint?: string;
+  // private tasks get a lock next to their key
+  locked?: boolean;
+  // where the words were found, when it wasn't the title
+  match?: { label: string; text: string };
   score: number;
   run: () => void;
 }
@@ -41,6 +49,8 @@ const VIEWS = [
   { title: 'Settings', to: '/settings', icon: <Settings />, keys: 'g t' },
 ];
 
+const FIELD: Record<SearchHit['field'], string> = { title: 'Title', description: 'Notes', checklist: 'Checklist', comment: 'Comment', body: 'Doc' };
+
 export default function CommandPalette() {
   const tasks = useTasks();
   const projects = useStore((s) => s.projects);
@@ -52,6 +62,7 @@ export default function CommandPalette() {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
+  const teamHits = useTeamSearch(query);
   const close = () => ui.palette(false);
   const then = (fn: () => void) => () => {
     close();
@@ -77,24 +88,54 @@ export default function CommandPalette() {
     for (const g of Object.values(goals)) add({ id: `g${g.id}`, group: 'Goals', title: g.title, icon: <Target />, run: then(() => router.navigate('/goals')) }, g.title);
 
     if (q) {
+      // titles and keys this tab knows, then what the words turned up: team tasks from the
+      // server, private tasks and docs from this browser
+      const found = new Map<string, Item>();
       const matches = tasks
         .map((t) => ({ t, score: fuzzyScore(`${prefix}-${t.number} ${t.title}`, q) + (meta.isClosed(t.status) ? -20 : 0) }))
         .filter((x) => x.score > 0)
         .sort((a, b) => b.score - a.score)
         .slice(0, 12);
       for (const { t, score } of matches) {
-        out.push({ id: `t${t.id}`, group: 'Tasks', title: t.title, icon: <StatusIcon status={t.status} size={15} />, hint: `${prefix}-${t.number}`, score: score + 30, run: then(() => detail.open(t)) });
+        found.set(t.id, { id: `t${t.id}`, group: 'Tasks', title: t.title, icon: <StatusIcon status={t.status} size={15} />, hint: `${prefix}-${t.number}`, locked: Boolean(t.sealed), score: score + 30, run: then(() => detail.open(t)) });
+      }
+      const local = searchOpened(q, tasks);
+      const privateTasks = local.filter((h) => h.kind === 'task');
+      for (const [i, hit] of [...privateTasks, ...teamHits].entries()) {
+        const match = hit.field === 'title' ? undefined : { label: FIELD[hit.field], text: hit.snippet };
+        const known = found.get(hit.id);
+        if (known) {
+          known.match ??= match;
+          continue;
+        }
+        found.set(hit.id, {
+          id: `t${hit.id}`,
+          group: 'Tasks',
+          title: hit.title,
+          icon: <StatusIcon status={hit.status ?? 'todo'} size={15} />,
+          hint: `${prefix}-${hit.number}`,
+          locked: i < privateTasks.length,
+          match,
+          score: 20 - i,
+          run: then(() => detail.open({ number: hit.number! })),
+        });
+      }
+      out.push(...found.values());
+      for (const [i, hit] of local.filter((h) => h.kind === 'doc').entries()) {
+        out.push({ id: `d${hit.id}`, group: 'Docs', title: hit.title, icon: <FileText />, locked: true, match: hit.field === 'title' ? undefined : { label: FIELD[hit.field], text: hit.snippet }, score: 20 - i, run: then(() => router.navigate(`/docs/${hit.id}`)) });
       }
     }
 
-    const order = q ? ['Tasks', 'Projects', 'Goals', 'Go to', 'Actions'] : ['Actions', 'Go to', 'Projects', 'Goals'];
+    const order = q ? ['Tasks', 'Docs', 'Projects', 'Goals', 'Go to', 'Actions'] : ['Actions', 'Go to', 'Projects', 'Goals'];
     return out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.score - a.score).slice(0, 40);
-  }, [query, tasks, projects, goals, prefix, aiOn, isAdmin, cryptoTools]);
+  }, [query, tasks, projects, goals, prefix, aiOn, isAdmin, cryptoTools, teamHits]);
 
   useEffect(() => setActive(0), [query]);
   useEffect(() => {
     listRef.current?.querySelector(`[data-index="${active}"]`)?.scrollIntoView({ block: 'nearest' });
   }, [active]);
+
+  const q = query.trim();
 
   return (
     <Modal onClose={close} width={620} label="Command palette">
@@ -103,7 +144,7 @@ export default function CommandPalette() {
         <input
           autoFocus
           value={query}
-          placeholder="Search tasks, projects, or jump anywhere…"
+          placeholder="Search tasks, docs and comments, or jump anywhere…"
           aria-label="Search"
           onChange={(e) => setQuery(e.target.value)}
           onKeyDown={(e) => {
@@ -126,7 +167,15 @@ export default function CommandPalette() {
             {(i === 0 || items[i - 1].group !== item.group) && <div className="palette-group eyebrow">{item.group}</div>}
             <button type="button" className="palette-item" data-index={i} data-active={i === active} onMouseMove={() => setActive(i)} onClick={item.run} role="option" aria-selected={i === active}>
               {item.icon}
-              <span className="title">{item.title}</span>
+              <span className="palette-text">
+                <span className="title">{q ? <Highlight text={item.title} query={q} /> : item.title}</span>
+                {item.match && (
+                  <span className="palette-snippet">
+                    {item.match.label}: <Highlight text={item.match.text} query={q} />
+                  </span>
+                )}
+              </span>
+              {item.locked && <Lock className="palette-lock" aria-label="Private" />}
               {item.hint && <span className="key mono">{item.hint}</span>}
             </button>
           </li>
@@ -147,6 +196,7 @@ export default function CommandPalette() {
         <span>
           <span className="kbd">esc</span> to close
         </span>
+        {q && <span className="palette-note">Private tasks and docs are searched only in this browser</span>}
       </div>
     </Modal>
   );
