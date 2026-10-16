@@ -115,7 +115,7 @@ router.post(
       throw new HttpError(401, 'Sign the vote with a wallet linked to your account.');
     }
     const weight = voteWeight(req.user.id, proposal);
-    if (weight === '0') throw HttpError.forbidden(`This vote counts voting power from when it opened (${config.nox.symbol} held or staked, and ZSPs), and you had none then.`);
+    if (weight === '0') throw HttpError.forbidden(`This vote counts voting power from when it opened (${config.nox.symbol} held or staked, and Zero-State Passes), and you had none then.`);
     sql.run(
       `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
@@ -207,7 +207,7 @@ router.put(
   requireAdmin,
   route((req) => {
     const value = String(req.body?.zspPower ?? '').trim();
-    if (!/^\d{1,15}$/.test(value)) throw HttpError.badRequest('Power per ZSP must be a whole number of NOX.');
+    if (!/^\d{1,15}$/.test(value)) throw HttpError.badRequest('Power per Zero-State Pass must be a whole number of NOX.');
     return { zspPower: zspPower.set(value) };
   }),
 );

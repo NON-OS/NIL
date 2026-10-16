@@ -9,6 +9,7 @@ import rateLimit from '../auth/rateLimit.js';
 import challenges from '../auth/challenges.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
+import config from '../config.js';
 import notify from '../services/notify.js';
 import listedBounties from '../services/listedBounties.js';
 import publicWorkspace from '../services/publicWorkspace.js';
@@ -45,7 +46,7 @@ router.post(
       address,
       statement: `Apply for ${item.ref} “${item.title.slice(0, 80)}” in ${publicWorkspace().name} as ${name}. This is not a transaction and costs nothing.`,
       nonce: crypto.randomBytes(12).toString('hex'),
-      chainId: 1,
+      chainId: config.nox.chainId,
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });

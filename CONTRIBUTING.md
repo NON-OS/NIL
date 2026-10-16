@@ -1,4 +1,4 @@
-# Contributing to NONOS
+# Contributing to NØNOS
 
 Thanks for helping. A few things keep the codebase pleasant to work in.
 
@@ -11,7 +11,7 @@ npm test           # API integration tests
 npm run typecheck  # strict TypeScript
 ```
 
-Node 22.13 or newer is required (NONOS uses the built-in `node:sqlite`).
+Node 22.13 or newer is required (NØNOS uses the built-in `node:sqlite`).
 
 ## House rules
 

@@ -1,6 +1,6 @@
 # Zero-state
 
-The less a server keeps, the less there is to leak, subpoena or lose. NONOS gives you three levels of control.
+The less a server keeps, the less there is to leak, subpoena or lose. NØNOS gives you three levels of control.
 
 ## 1. Retention policies
 
@@ -22,7 +22,7 @@ An **owner** can erase the entire workspace from **Settings → Data & privacy**
 
 ## 3. Memory-only mode
 
-For the strictest setups, run NONOS with its data folder in RAM. Nothing ever touches the disk, and everything disappears when the container stops or the machine reboots.
+For the strictest setups, run NØNOS with its data folder in RAM. Nothing ever touches the disk, and everything disappears when the container stops or the machine reboots.
 
 ```bash
 docker compose -f docker-compose.yml -f docker-compose.ram.yml up -d --build

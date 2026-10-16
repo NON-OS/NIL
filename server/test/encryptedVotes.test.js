@@ -11,8 +11,8 @@ import startServer from './helpers/startServer.js';
 import mockChain from './helpers/mockChain.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import trusteePartial from './helpers/trusteePartial.js';
 import fieldHash from '../votes/fieldHash.js';
-import dleqChallenge from '../votes/encrypted/dleqChallenge.js';
 import aggregateBallots from '../votes/encrypted/aggregateBallots.js';
 import trusteeKey from '../votes/encrypted/trusteeKey.js';
 import checkPartial from '../votes/encrypted/checkPartial.js';
@@ -138,23 +138,7 @@ test('forged and misdirected ballots are refused', async () => {
   await assert.rejects(proveBallot('owner', vote, 5));
 });
 
-function partialFor(position, aggregates) {
-  // x_j = Σ_i f_i(j), the trustee's share of a key nobody holds whole
-  const x = [1, 2, 3].reduce((sum, p) => (sum + lines[p][0] + lines[p][1] * BigInt(position)) % subOrder, 0n);
-  const X = mulPointEscalar(Base8, x);
-  const parsed = aggregates.map((a) => ({ c1: a.c1.map(BigInt), c2: a.c2.map(BigInt) }));
-  return {
-    d: parsed.map((a) => str(mulPointEscalar(a.c1, x))),
-    proofs: parsed.map((a) => {
-      const w = rand();
-      const d = mulPointEscalar(a.c1, x);
-      const t1 = mulPointEscalar(Base8, w);
-      const t2 = mulPointEscalar(a.c1, w);
-      const c = dleqChallenge([Base8, X, a.c1, d, t1, t2]);
-      return { t1: str(t1), t2: str(t2), z: ((w + c * x) % subOrder).toString() };
-    }),
-  };
-}
+const partialFor = (position, aggregates) => trusteePartial(lines, position, aggregates);
 
 test('after closing, two trustees decrypt the totals with proofs, and a bad partial is refused', async () => {
   assert.equal((await who.ana('POST', `/api/proposals/${ids.vote}/partial`, {})).status, 400);

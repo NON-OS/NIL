@@ -1,7 +1,7 @@
 import Anthropic from '@anthropic-ai/sdk';
 import config from '../config.js';
 
-const SYSTEM = `You are the planning assistant inside NONOS, a task system for a small, ambitious team.
+const SYSTEM = `You are the planning assistant inside NØNOS, a task system for a small, ambitious team.
 Write plain, direct English. Prefer concrete, checkable steps over generic advice.
 Never invent people, numbers or facts that aren't in the data you're given.`;
 

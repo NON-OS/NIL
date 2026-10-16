@@ -1,4 +1,5 @@
 import HttpError from '../lib/HttpError.js';
+import appVersion from '../lib/appVersion.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import tools from './tools.js';
 
@@ -46,7 +47,7 @@ export default function handleMessage(message, user, scope) {
       return reply(id, {
         protocolVersion: VERSIONS.includes(params?.protocolVersion) ? params.protocolVersion : VERSIONS[0],
         capabilities: { tools: { listChanged: false } },
-        serverInfo: { name: 'nonos', title: 'NØNOS', version: '3.0.0' },
+        serverInfo: { name: 'nonos', title: 'NØNOS', version: appVersion },
         instructions: `You are connected to the NØNOS workspace "${ws?.name}" as ${user.name}. Task keys look like ${ws?.taskPrefix}-12. You see exactly what ${user.name} can see; private tasks of others and encrypted docs are never available. ${scope === 'write' ? 'This key can create and change tasks.' : 'This key is read-only.'}`,
       });
     }

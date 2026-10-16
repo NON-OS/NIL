@@ -78,11 +78,11 @@ export default function SecuritySettings() {
         <div className="settings-card">
           <label className="filter-toggle" style={{ justifyContent: 'space-between' }}>
             <span>
-              <strong>Include my wallet address in new proofs</strong>
+              <strong>Include my wallet address in new work receipts</strong>
               <br />
-              <span className="muted">Lets DAOs and grant programs match your work to your address. Off by default because it links your work to a public identity.</span>
+              <span className="muted">Lets DAOs and grant programs match your work to your address. Off by default because it links your work to a public identity. Payment receipts always name the address a bounty was paid to.</span>
             </span>
-            <button type="button" className="toggle" role="switch" aria-checked={data.shareWallet} onClick={() => identity.shareWallet(!data.shareWallet).then(setData).catch(toast.error)} aria-label="Include wallet in proofs" />
+            <button type="button" className="toggle" role="switch" aria-checked={data.shareWallet} onClick={() => identity.shareWallet(!data.shareWallet).then(setData).catch(toast.error)} aria-label="Include wallet in work receipts" />
           </label>
         </div>
       </section>

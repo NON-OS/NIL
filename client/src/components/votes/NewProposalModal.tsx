@@ -63,7 +63,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, alignItems: 'center' }}>
           <Picker
             title="Who counts how much"
-            options={[{ value: 'equal', label: 'One person, one vote' }, ...(nox ? [{ value: 'power', label: 'Voting power', hint: `${nox.symbol} held or staked, plus ZSPs` }] : [])]}
+            options={[{ value: 'equal', label: 'One person, one vote' }, ...(nox ? [{ value: 'power', label: 'Voting power', hint: `${nox.symbol} held or staked, plus Zero-State Passes` }] : [])]}
             value={form.weighting}
             onChange={(v) => set({ weighting: v as 'equal' | 'power' })}
             className="btn"
@@ -98,7 +98,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
         )}
         {form.weighting === 'power' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Each member’s power is read from the chain when the vote opens, all at the same block: {nox?.symbol ?? 'NOX'} in their linked wallets, {nox?.symbol ?? 'NOX'} staked in the official staking contract, and their Zero-State Passes at the workspace’s power per ZSP. Tokens moved afterwards don’t change it.
+            Each member’s power is read from the chain when the vote opens, all at the same block: {nox?.symbol ?? 'NOX'} in their linked wallets, {nox?.symbol ?? 'NOX'} staked in the official staking contract, and the Zero-State Pass NFTs they hold, each worth the workspace’s power per pass. Tokens moved afterwards don’t change it.
           </p>
         )}
       </div>

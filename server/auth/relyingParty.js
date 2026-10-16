@@ -8,5 +8,5 @@ export default function relyingParty(req) {
   if (!origin && req.headers.origin && originAllowed(req)) origin = req.headers.origin.replace(/\/$/, '');
   if (!origin) origin = `${req.protocol}://${req.get('host')}`;
   const url = new URL(origin);
-  return { origin: url.origin, host: url.host, rpID: url.hostname, name: publicWorkspace()?.name ?? 'NONOS' };
+  return { origin: url.origin, host: url.host, rpID: url.hostname, name: publicWorkspace()?.name ?? 'NØNOS' };
 }

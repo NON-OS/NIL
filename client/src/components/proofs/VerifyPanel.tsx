@@ -7,13 +7,14 @@ import verifyProof from '../../lib/verifyProof';
 import dates from '../../lib/dates';
 import cx from '../../lib/cx';
 import type ProofCheck from '../../types/ProofCheck';
+import type ProofKey from '../../types/ProofKey';
 import formatUnits from '../../lib/formatUnits';
 
 export default function VerifyPanel() {
   const [result, setResult] = useState<ProofCheck | null>(null);
   const [error, setError] = useState('');
   const [over, setOver] = useState(false);
-  const [serverKey, setServerKey] = useState<{ name?: string; key?: string; fingerprint?: string } | null>(null);
+  const [serverKey, setServerKey] = useState<ProofKey | null>(null);
   const input = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -32,6 +33,8 @@ export default function VerifyPanel() {
   };
 
   const fromHere = result && serverKey?.key === result.workspace.key;
+  // payments on this server's chain link to its configured explorer; others get no link
+  const explorer = serverKey?.explorer;
   const valid = result?.items.filter((i) => i.valid).length ?? 0;
 
   return (
@@ -107,7 +110,7 @@ export default function VerifyPanel() {
                 <span className="ref mono muted">{item.ref}</span>
                 <span className={cx('title', !item.title && !item.paid && 'hidden-title')}>
                   {item.paid && (
-                    <a className="bounty-chip paid" href={item.paid.chainId === 1 ? `https://etherscan.io/tx/${item.paid.tx}` : undefined} target="_blank" rel="noopener noreferrer" title={`Transaction ${item.paid.tx}`} style={{ marginRight: 8 }}>
+                    <a className="bounty-chip paid" href={explorer && item.paid.chainId === explorer.chainId ? `${explorer.url}/tx/${item.paid.tx}` : undefined} target="_blank" rel="noopener noreferrer" title={`Transaction ${item.paid.tx}`} style={{ marginRight: 8 }}>
                       Paid {formatUnits(item.paid.amount, item.paid.decimals)} {item.paid.symbol}
                     </a>
                   )}

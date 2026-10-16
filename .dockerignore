@@ -1,6 +1,32 @@
-node_modules
+# Only source code goes into the image. Local data, databases, exports, secrets and keys never
+# do, wherever they sit in the tree: a development copy keeps its database in server/data, for
+# example. Patterns starting with **/ match at any depth, the top level included.
+
+# dependencies and build output: the image installs and builds its own
+**/node_modules
 dist
-data
-.env
+
+# data folders, databases, uploads and the receipt signing key
+**/data
+**/keys
+**/*.db
+**/*.db-*
+**/*.sqlite
+**/*.sqlite3
+
+# capsules and exports downloaded from a workspace
+**/*.capsule
+**/nonos-backup-*.json
+**/nonos-tasks-*.csv
+
+# settings, secrets and private keys
+**/.env
+**/.env.*
+**/*.pem
+**/*.key
+
+# not needed to build or run the server
 .git
-*.log
+**/*.log
+**/.DS_Store
+marketing

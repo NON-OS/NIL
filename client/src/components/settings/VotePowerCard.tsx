@@ -24,7 +24,7 @@ export default function VotePowerCard() {
     try {
       const r = await http.put<{ zspPower: string }>('/vote-power', { zspPower: value.trim() });
       setSaved(r.zspPower);
-      toast.show(`One ZSP now counts as ${Number(r.zspPower).toLocaleString()} ${symbol} in new weighted votes.`, { tone: 'success' });
+      toast.show(`One Zero-State Pass now counts as ${Number(r.zspPower).toLocaleString()} ${symbol} in new weighted votes.`, { tone: 'success' });
     } catch (err) {
       toast.error(err);
     }
@@ -37,8 +37,8 @@ export default function VotePowerCard() {
       </p>
       <div className="settings-row">
         <label className="field" style={{ minWidth: 220 }}>
-          <span>Power per ZSP, in {symbol}</span>
-          <input className="input mono" inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ''))} aria-label="Power per ZSP" />
+          <span>Power per Zero-State Pass, in {symbol}</span>
+          <input className="input mono" inputMode="numeric" value={value} onChange={(e) => setValue(e.target.value.replace(/[^\d]/g, ''))} aria-label="Power per Zero-State Pass" />
         </label>
         <button type="button" className="btn" onClick={save} disabled={!value || value === saved}>
           Save

@@ -7,10 +7,10 @@ import identityFromSignature from '../lib/crypto/identityFromSignature';
 import b64u from '../lib/crypto/b64u';
 
 async function sign() {
-  const { me, workspace } = store.get();
+  const { me } = store.get();
   const { key } = await http.get<{ key: string }>('/proofs/key');
   const { address } = await ethereum.account();
-  return ethereum.sign(keyMessage({ workspace: workspace.name, workspaceKey: key, userId: me!.id }), address);
+  return ethereum.sign(keyMessage({ workspaceKey: key, userId: me!.id }), address);
 }
 
 // Unlocks encrypted docs for this tab. The first time, it signs twice to make sure the wallet

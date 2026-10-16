@@ -1,8 +1,8 @@
 {
   "name": "nonos",
-  "version": "1.0.0",
+  "version": "3.0.0",
   "private": true,
-  "description": "NONOS — the team task system. Projects, boards, goals, insights, real-time collaboration.",
+  "description": "NØNOS: a self-hosted team workspace with wallet-only sign-in, end-to-end encrypted docs, bounties and votes in NOX, and signed proof of work.",
   "type": "module",
   "engines": {
     "node": ">=22.13.0"
@@ -14,7 +14,7 @@
     "build": "vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "typecheck": "tsc --noEmit -p tsconfig.json",
-    "test": "node --disable-warning=ExperimentalWarning --test server/test/*.test.js",
+    "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --test server/test/*.test.js",
     "zk:fetch": "node scripts/zk-fetch.mjs",
     "zk:ballot": "node scripts/zk-ballot.mjs"
   },

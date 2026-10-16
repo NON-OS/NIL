@@ -60,7 +60,7 @@ export default function createApp() {
       res.sendFile(path.join(DIST, 'index.html'));
     });
   } else {
-    app.get('/', (req, res) => res.type('text').send('NONOS API is running. Run `npm run build` for the web app, or `npm run dev` and open http://localhost:5173.'));
+    app.get('/', (req, res) => res.type('text').send('NØNOS API is running. Run `npm run build` for the web app, or `npm run dev` and open http://localhost:5173.'));
   }
 
   app.use((err, req, res, next) => {

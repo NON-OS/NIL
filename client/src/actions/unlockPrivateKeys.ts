@@ -10,9 +10,9 @@ import type PrivateKeys from '../types/PrivateKeys';
 const fingerprint = (k: PrivateKeys) => metaAddress(k.spendingKey, k.viewingKey);
 
 async function sign() {
-  const { me, workspace } = store.get();
+  const { me } = store.get();
   const [{ key }, { address }] = await Promise.all([http.get<{ key: string }>('/proofs/key'), ethereum.account()]);
-  return ethereum.sign(privateKeysMessage({ workspace: workspace.name, workspaceKey: key, userId: me!.id }), address);
+  return ethereum.sign(privateKeysMessage({ workspaceKey: key, userId: me!.id }), address);
 }
 
 // Derives your private keys from a wallet signature. Setting them up for the first time signs

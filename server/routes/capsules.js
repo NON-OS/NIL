@@ -15,7 +15,6 @@ import readCapsule from '../capsules/readCapsule.js';
 import restoreCapsule from '../capsules/restoreCapsule.js';
 
 const router = express.Router();
-const MAX_CAPSULE = Number(process.env.MAX_CAPSULE_MB || 4096) * 1024 * 1024;
 let restoring = false;
 
 function passphraseFrom(value) {
@@ -61,12 +60,12 @@ router.post(
       let received = 0;
       req.on('data', (chunk) => {
         received += chunk.length;
-        if (received > MAX_CAPSULE) req.destroy(new Error('too large'));
+        if (received > config.maxCapsuleBytes) req.destroy(new Error('too large'));
       });
       try {
         await pipeline(req, fs.createWriteStream(file, { mode: 0o600 }));
       } catch {
-        throw new HttpError(received > MAX_CAPSULE ? 413 : 400, received > MAX_CAPSULE ? 'That capsule is larger than this server accepts (MAX_CAPSULE_MB).' : 'The upload was interrupted. Try again.');
+        throw new HttpError(received > config.maxCapsuleBytes ? 413 : 400, received > config.maxCapsuleBytes ? 'That capsule is larger than this server accepts (MAX_CAPSULE_MB).' : 'The upload was interrupted. Try again.');
       }
       const out = path.join(work, 'out');
       fs.mkdirSync(out);

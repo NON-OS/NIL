@@ -58,9 +58,12 @@ api.use(requireAuth);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
 api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
-// The subscription unlocks votes, the holder door and every AI feature.
+// The subscription unlocks opening votes, the holder door and every AI feature.
 api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
-api.use('/proposals', (req, res, next) => (req.method === 'POST' && !req.path.endsWith('/close') ? requirePlan(req, res, next) : next()));
+// Only opening a vote is gated. Any vote that exists was opened while the paid tools were
+// unlocked, so after a lapse its ballots, trustee setup, closing and the partial decryptions
+// that reveal its totals keep working: billing never leaves a vote stuck halfway.
+api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
 for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
   api.use(router);

@@ -1,8 +1,11 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+
+const PACKAGE = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
 let srv;
 const base = () => srv.base;
@@ -56,6 +59,7 @@ test('handshake: version negotiation, notifications and the tool list', async ()
   const init = await rpc(keys.read, 'initialize', { protocolVersion: '2025-06-18', capabilities: {}, clientInfo: { name: 'test', version: '1' } });
   assert.equal(init.body.result.protocolVersion, '2025-06-18');
   assert.equal(init.body.result.serverInfo.name, 'nonos');
+  assert.equal(init.body.result.serverInfo.version, PACKAGE.version);
   assert.match(init.body.result.instructions, /read-only/);
   assert.equal((await rpc(keys.read, 'initialize', { protocolVersion: '1999-01-01' })).body.result.protocolVersion, '2025-11-25');
   const note = await fetch(`${base()}/mcp`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${keys.read}` }, body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) });
