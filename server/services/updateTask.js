@@ -1,4 +1,5 @@
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import HttpError from '../lib/HttpError.js';
 import loadTask from './loadTask.js';
 import visibleTask from './visibleTask.js';
@@ -137,6 +138,8 @@ export default function updateTask(actor, id, body, { today } = {}) {
     lostAccess.task(id);
   });
 
+  // the plain text a task had before it was sealed mustn't linger in the write-ahead log
+  if (sealing.first) checkpoint();
   const task = loadTask(id);
   if (statusChange?.after === 'done') issueReceipt(task, actor.id);
   else if (statusChange?.before === 'done') revokeReceipts(id);

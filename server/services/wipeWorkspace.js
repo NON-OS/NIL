@@ -1,5 +1,6 @@
 import fs from 'node:fs';
 import db from '../db/connection.js';
+import checkpoint from '../db/checkpoint.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import hub from '../realtime/hub.js';
@@ -21,6 +22,7 @@ export default function wipeWorkspace() {
   }
   // secure_delete already zeroed the freed pages; VACUUM also shrinks the file
   db.exec('VACUUM');
+  checkpoint();
   for (const name of fs.readdirSync(uploadDir)) fs.rmSync(`${uploadDir}/${name}`, { force: true });
   fs.rmSync(signingKey.file, { force: true });
   signingKey.forget();

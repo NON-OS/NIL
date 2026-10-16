@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import uploadDir from '../lib/uploadDir.js';
 
 // Permanently removes tasks with their comments, files and history. Receipts keep their
@@ -16,5 +17,6 @@ export default function eraseTasks(ids) {
     }
   });
   for (const id of files) fs.rm(path.join(uploadDir, id), { force: true }, () => {});
+  checkpoint();
   return ids.length;
 }
