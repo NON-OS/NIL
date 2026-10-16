@@ -1,0 +1,112 @@
+# Hosted Nil: the control plane and Caddy. Workspaces are not listed here; the control plane
+# creates one container per workspace through the Docker API.
+#
+# On the server this file is /opt/nil/docker-compose.yml, next to:
+#   .env            image tags and host settings (deploy/hosted.env.example)
+#   cloud.env       control plane settings (cloud/.env.example)
+#   workspace.env   app settings every workspace shares (cloud/workspace.env.example)
+# See cloud/README.md for the whole setup.
+name: nil
+
+services:
+  control:
+    image: ${NIL_CLOUD_IMAGE:-nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    container_name: nil-control
+    restart: unless-stopped
+    env_file:
+      - path: cloud.env
+    # Set here rather than in cloud.env, so they always match the rest of this file.
+    environment:
+      CLOUD_APP_IMAGE: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION}
+      CLOUD_DATA_DIR: /var/lib/nil-cloud
+      CLOUD_CADDYFILE: /srv/caddy/Caddyfile
+      CLOUD_CADDY_CONTAINER: nil-caddy
+      CLOUD_CADDY_CONTROL: control:8080
+      CLOUD_CADDY_ASK: control:8081
+      CLOUD_PORT: "8080"
+      CLOUD_INTERNAL_PORT: "8081"
+      CLOUD_TRUST_PROXY: "1"
+      CLOUD_APP_ENV_FILE: /etc/nil/workspace.env
+    # The Docker socket makes this container as powerful as root on the host: it has to be, to
+    # create workspaces. Everything else is locked down, and nothing publishes its ports.
+    group_add:
+      - "${DOCKER_GID:?set DOCKER_GID in .env to the docker group id (getent group docker)}"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - control-data:/var/lib/nil-cloud
+      - caddy-config:/srv/caddy
+      - ./workspace.env:/etc/nil/workspace.env:ro
+      # the mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups
+      - ${NIL_BACKUP_DIR:-/mnt/nil-backups}:/backups
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=256m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 1g
+    pids_limit: 512
+    stop_grace_period: 30s
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "5"
+
+  caddy:
+    image: ${CADDY_IMAGE:-caddy:2.10.2}
+    container_name: nil-caddy
+    restart: unless-stopped
+    depends_on:
+      control:
+        condition: service_healthy
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      # only for CLOUD_TLS=wildcard; the generated Caddyfile reads it as {env.DNS_API_TOKEN}
+      DNS_API_TOKEN: ${DNS_API_TOKEN:-}
+    volumes:
+      - caddy-config:/etc/caddy:ro
+      - caddy-data:/data
+      - caddy-state:/config
+    # edge: the control plane. chain: the optional Ethereum node. The control plane attaches
+    # Caddy to every workspace's own network as well.
+    networks:
+      - edge
+      - chain
+    # an Ethereum node running on the host itself is reachable as host.docker.internal
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 2g
+    pids_limit: 1024
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "5"
+
+networks:
+  edge: {}
+  # Only Caddy and the optional Ethereum node (docker-compose.chain.yml) join this one.
+  chain:
+    internal: true
+
+volumes:
+  control-data:
+  caddy-config:
+  caddy-data:
+  caddy-state:

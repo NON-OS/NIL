@@ -2,12 +2,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import caddyfile from './caddyfile.js';
 
-// The file can carry the RPC node's credentials (see the relay in caddyfile.js), so it is
-// readable by its owner and group only. Caddy in its container reads it as root.
+// Caddy runs as root with every capability dropped, so it can't override file permissions and
+// the file has to be readable by others. It can carry the RPC node's credentials (see the relay
+// in caddyfile.js): keep it where only Caddy and the control plane can reach it, which in the
+// compose setup is a volume only those two containers mount.
 function save(file, content) {
-  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o750 });
+  fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o755 });
   fs.writeFileSync(`${file}.tmp`, content);
-  fs.chmodSync(`${file}.tmp`, 0o640);
+  fs.chmodSync(`${file}.tmp`, 0o644);
   fs.renameSync(`${file}.tmp`, file);
 }
 

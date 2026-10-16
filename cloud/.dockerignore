@@ -1,0 +1,13 @@
+# Only the control plane's code goes into its image: no tests, no local data, no keys.
+**/node_modules
+test
+data
+caddy
+docker-compose*.yml
+**/*.db
+**/*.db-*
+**/.env
+**/*.env
+**/*.key
+**/*.nilbackup
+**/*.log
