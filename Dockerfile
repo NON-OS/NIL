@@ -20,7 +20,8 @@ RUN npm run build
 # still slipped into the server folder (a database, uploads, keys, settings) is removed here, in
 # a stage that is thrown away, so it can't reach a layer of the runtime image.
 COPY server ./server
-RUN find server \( -name data -o -name keys -o -name '*.db' -o -name '*.db-*' -o -name '*.sqlite' -o -name '*.sqlite3' \
+# server/keys is source code (the key directory), so only key files go, never folders named keys.
+RUN find server \( -name data -o -name '*.db' -o -name '*.db-*' -o -name '*.sqlite' -o -name '*.sqlite3' \
       -o -name '*.capsule' -o -name '.env' -o -name '.env.*' -o -name '*.pem' -o -name '*.key' \) -prune -exec rm -rf {} +
 
 # ---- runtime: server + built assets only, no dev dependencies

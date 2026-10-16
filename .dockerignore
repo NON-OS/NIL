@@ -6,9 +6,10 @@
 **/node_modules
 dist
 
-# data folders, databases, uploads and the receipt signing key
+# data folders (with their uploads and the signing keys under data/keys), databases, and a keys
+# folder at the top. Not **/keys: server/keys and client/src/components/keys are source code.
 **/data
-**/keys
+/keys
 **/*.db
 **/*.db-*
 **/*.sqlite
