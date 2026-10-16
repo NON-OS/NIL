@@ -32,6 +32,7 @@ import time from './time.js';
 import reminders from './reminders.js';
 import docs from './docs.js';
 import encryptionKeys from './encryptionKeys.js';
+import identityWraps from './identityWraps.js';
 import tokens from './tokens.js';
 import shareLinks from './shareLinks.js';
 import publicPages from './publicPages.js';
@@ -57,7 +58,7 @@ api.use(anonymousBallots);
 api.use(requireAuth);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
-api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
+api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/me/identity-wraps', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);
 // The subscription unlocks opening votes, the holder door and every AI feature.
 api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
 // Only opening a vote is gated. Any vote that exists was opened while the paid tools were
@@ -65,7 +66,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, identityWraps, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees]) {
   api.use(router);
 }
 

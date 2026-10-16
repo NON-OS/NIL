@@ -2,34 +2,70 @@ import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
-import cipherText from '../lib/cipherText.js';
 import hub from '../realtime/hub.js';
+import checkKeyStatement from '../keys/checkKeyStatement.js';
+import parseWrap from '../keys/parseWrap.js';
+import dropTaskKeys from '../keys/dropTaskKeys.js';
+import publishTask from '../services/publishTask.js';
+import toEncryptionKey from '../mappers/toEncryptionKey.js';
 
 const router = express.Router();
 
-// Public encryption keys, so browsers can seal doc keys for teammates. A 32-byte X25519 key
-// is 43 characters of base64url.
+// Every member's published keys, each with the wallet signature behind it. A key whose signing
+// wallet has since been unlinked from its owner is left out until they sign it again.
 router.get(
   '/encryption-keys',
-  route(() => sql.all('SELECT k.user_id, k.public_key FROM encryption_keys k JOIN users u ON u.id = k.user_id WHERE u.deactivated = 0').map((r) => ({ userId: r.user_id, publicKey: r.public_key }))),
+  route(() =>
+    sql
+      .all(
+        `SELECT k.*, u.deactivated FROM encryption_keys k JOIN users u ON u.id = k.user_id
+         WHERE EXISTS (SELECT 1 FROM credentials c WHERE c.user_id = k.user_id AND c.kind = 'wallet' AND c.external_id = k.address)`,
+      )
+      .map(toEncryptionKey),
+  ),
 );
 
-// Your key comes from your wallet, so it only changes if you switch to a wallet that isn't
-// linked to the old key. Resetting gives up every doc sealed to the old key.
+// Publishing your keys always takes a fresh signature from one of your wallets. Signing the same
+// keys again (after removing the wallet that signed them, say) changes nothing else. New keys
+// need `reset`: that gives up every doc and private task sealed to the old ones and every wallet
+// wrap of them, and teammates' browsers flag the change until each of them confirms it.
 router.put(
   '/me/encryption-key',
   route((req) => {
-    const publicKey = cipherText(req.body?.publicKey, 'Public key', { exact: 43 });
-    const current = sql.get('SELECT public_key FROM encryption_keys WHERE user_id = ?', req.user.id);
-    if (current?.public_key === publicKey) return { publicKey };
-    if (current && req.body?.reset !== true) throw new HttpError(409, 'You already have a different encryption key. Unlock with the wallet you used before, or reset (you’ll lose access to docs until someone shares them again).');
+    const next = checkKeyStatement(req, req.body);
+    const current = sql.get('SELECT public_key, signing_key, created_at FROM encryption_keys WHERE user_id = ?', req.user.id);
+    const same = Boolean(current) && current.public_key === next.publicKey && current.signing_key === next.signingKey;
+    if (current && !same && req.body?.reset !== true) {
+      throw new HttpError(409, 'You already have different encryption keys. Unlock with a wallet that opens them, restore your recovery kit, or reset (you’ll lose access to encrypted docs and private tasks until someone shares them again).');
+    }
+    if (current && next.createdAt <= current.created_at) throw new HttpError(409, 'A newer signature for your keys is already published.');
+    const wrap = req.body?.wrap ? parseWrap(req.body.wrap, req.user.id) : null;
+    if (!same && !wrap) throw HttpError.badRequest('Send your keys wrapped for this wallet too, or no wallet could unlock them.');
+
+    let dropped = [];
     sql.tx(() => {
-      if (current) sql.run('DELETE FROM doc_keys WHERE user_id = ?', req.user.id);
-      sql.run('INSERT INTO encryption_keys (user_id, public_key, created_at) VALUES (?, ?, ?) ON CONFLICT (user_id) DO UPDATE SET public_key = excluded.public_key, created_at = excluded.created_at', req.user.id, publicKey, Date.now());
+      if (current && !same) {
+        sql.run('DELETE FROM doc_keys WHERE user_id = ?', req.user.id);
+        sql.run('DELETE FROM identity_wraps WHERE user_id = ?', req.user.id);
+        dropped = dropTaskKeys(req.user.id);
+      }
+      sql.run(
+        `INSERT INTO encryption_keys (user_id, public_key, signing_key, address, signature, created_at) VALUES (?, ?, ?, ?, ?, ?)
+         ON CONFLICT (user_id) DO UPDATE SET public_key = excluded.public_key, signing_key = excluded.signing_key, address = excluded.address, signature = excluded.signature, created_at = excluded.created_at`,
+        req.user.id, next.publicKey, next.signingKey, next.address, next.signature, next.createdAt,
+      );
+      if (wrap) {
+        sql.run(
+          'INSERT OR REPLACE INTO identity_wraps (user_id, address, nonce, issued_at, wrapped, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+          req.user.id, wrap.address, wrap.nonce, wrap.issuedAt, wrap.wrapped, Date.now(),
+        );
+      }
     });
-    // online teammates' browsers react by sealing team docs for the newcomer
-    hub.broadcast({ type: 'docs', id: null });
-    return { publicKey };
+    for (const id of dropped) publishTask(id);
+    hub.broadcast({ type: 'keys' });
+    // online teammates' browsers react by sealing team docs for a newcomer they've confirmed
+    if (!same) hub.broadcast({ type: 'docs', id: null });
+    return toEncryptionKey({ user_id: req.user.id, public_key: next.publicKey, signing_key: next.signingKey, address: next.address, signature: next.signature, created_at: next.createdAt, deactivated: 0 });
   }),
 );
 

@@ -4,11 +4,11 @@ import crypto from 'node:crypto';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import publishKey from './helpers/publishKey.js';
 
 // The server never sees plaintext, so these tests speak its language: random base64url
 // blobs of the right sizes standing in for keys and ciphertext.
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
-const publicKey = () => blob(32);
 const wrapped = () => blob(92);
 const docId = () => blob(16);
 
@@ -18,24 +18,27 @@ const owner = client(base);
 const ana = client(base);
 const ben = client(base);
 const ids = {};
+const wallets = { owner: wallet(), ana: wallet(), ben: wallet() };
 
 before(async () => {
   srv = await startServer();
-  ids.owner = (await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' })).data.user.id;
+  ids.owner = (await owner.wallet(wallets.owner, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' })).data.user.id;
   for (const [who, c] of [['ana', ana], ['ben', ben]]) {
     const inv = await owner('POST', '/api/invites', { role: 'member' });
-    ids[who] = (await c.wallet(wallet(), 'invite', { name: who, inviteToken: inv.data.token })).data.user.id;
+    ids[who] = (await c.wallet(wallets[who], 'invite', { name: who, inviteToken: inv.data.token })).data.user.id;
   }
 });
 after(() => srv.close());
 
-test('publishing an encryption key is validated and can’t be swapped silently', async () => {
-  assert.equal((await owner('PUT', '/api/me/encryption-key', { publicKey: 'short' })).status, 400);
-  ids.ownerKey = publicKey();
-  assert.equal((await owner('PUT', '/api/me/encryption-key', { publicKey: ids.ownerKey })).status, 200);
-  assert.equal((await owner('PUT', '/api/me/encryption-key', { publicKey: ids.ownerKey })).status, 200);
-  assert.equal((await owner('PUT', '/api/me/encryption-key', { publicKey: publicKey() })).status, 409);
-  await ana('PUT', '/api/me/encryption-key', { publicKey: publicKey() });
+test('publishing an encryption key needs a wallet signature and can’t be swapped silently', async () => {
+  assert.equal((await publishKey(owner, wallets.owner, { publicKey: 'short' })).status, 400);
+  const first = await publishKey(owner, wallets.owner);
+  assert.equal(first.status, 200);
+  ids.ownerKey = first.sent.publicKey;
+  // the same keys signed again are fine; different ones need a reset
+  assert.equal((await publishKey(owner, wallets.owner, { publicKey: ids.ownerKey, signingKey: first.sent.signingKey, createdAt: Date.now() + 1 })).status, 200);
+  assert.equal((await publishKey(owner, wallets.owner)).status, 409);
+  await publishKey(ana, wallets.ana);
   const directory = (await ben('GET', '/api/encryption-keys')).data;
   assert.deepEqual(directory.map((k) => k.userId).sort(), [ids.ana, ids.owner].sort());
 });
@@ -69,7 +72,7 @@ test('team docs show up as waiting for people who don’t hold the key yet', asy
   assert.equal('titleCt' in benSees.waiting[0], false);
   // Ben can't receive a key until he publishes his own
   assert.equal((await owner('POST', `/api/docs/${id}/grants`, { grants: [{ userId: ids.ben, wrappedKey: wrapped() }] })).status, 400);
-  await ben('PUT', '/api/me/encryption-key', { publicKey: publicKey() });
+  await publishKey(ben, wallets.ben);
   assert.equal((await ana('POST', `/api/docs/${id}/grants`, { grants: [{ userId: ids.ben, wrappedKey: wrapped() }] })).status, 404);
   assert.equal((await owner('POST', `/api/docs/${id}/grants`, { grants: [{ userId: ids.ben, wrappedKey: wrapped() }] })).status, 200);
   assert.equal((await ben('GET', '/api/docs')).data.docs.length, 1);
@@ -97,7 +100,7 @@ test('removing a reader re-keys the doc and drops old revisions; only managers c
 test('resetting your key gives up every doc sealed to the old one', async () => {
   const fresh = docId();
   await owner('POST', '/api/docs', { id: fresh, titleCt: blob(40), bodyCt: blob(100), audience: 'people', grants: [{ userId: ids.owner, wrappedKey: wrapped() }, { userId: ids.ana, wrappedKey: wrapped() }] });
-  assert.equal((await ana('PUT', '/api/me/encryption-key', { publicKey: publicKey(), reset: true })).status, 200);
+  assert.equal((await publishKey(ana, wallets.ana, { reset: true })).status, 200);
   assert.equal((await ana('GET', `/api/docs/${fresh}`)).status, 404);
   assert.equal((await ana('DELETE', `/api/docs/${fresh}`)).status, 404);
   assert.equal((await owner('DELETE', `/api/docs/${fresh}`)).status, 200);

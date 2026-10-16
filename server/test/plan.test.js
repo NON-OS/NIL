@@ -1,19 +1,19 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
-import { Base8, mulPointEscalar, subOrder } from '@zk-kit/baby-jubjub';
 import startServer from './helpers/startServer.js';
 import mockChain from './helpers/mockChain.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import trusteePartial from './helpers/trusteePartial.js';
+import publishKey from './helpers/publishKey.js';
+import dealVoteKey from './helpers/dealVoteKey.js';
 
 const NOX = '0x0a26c80be4e060e688d7c23addb92cbb5d2c9eca';
 const TREASURY = '0x7777777777777777777777777777777777777777';
 const DAY = 86_400_000;
 const unit = 10n ** 18n;
 const tx = () => `0x${crypto.randomBytes(32).toString('hex')}`;
-const rand = () => BigInt(`0x${crypto.randomBytes(32).toString('hex')}`) % subOrder;
 
 let srv;
 const chain = mockChain();
@@ -23,6 +23,7 @@ const member = client(base);
 const cy = client(base);
 const ownerWallet = wallet();
 const memberWallet = wallet();
+const cyWallet = wallet();
 const ids = {};
 
 before(async () => {
@@ -95,19 +96,14 @@ test('after a lapse, votes already open still finish, and new paid things stay l
   const { default: settingsStore } = await import('../services/settingsStore.js');
   settingsStore.set('plan', { paidUntil: Date.now() + 10 * DAY });
   const inv = await owner('POST', '/api/invites', { role: 'member' });
-  ids.cy = (await cy.wallet(wallet(), 'invite', { name: 'Cy', inviteToken: inv.data.token })).data.user.id;
-  for (const who of [owner, member, cy]) await who('PUT', '/api/me/encryption-key', { publicKey: crypto.randomBytes(32).toString('base64url') });
+  ids.cy = (await cy.wallet(cyWallet, 'invite', { name: 'Cy', inviteToken: inv.data.token })).data.user.id;
+  for (const [who, w] of [[owner, ownerWallet], [member, memberWallet], [cy, cyWallet]]) assert.equal((await publishKey(who, w)).status, 200);
 
   const signed = (await owner('POST', '/api/proposals', { title: 'Opened while paid' })).data.proposal;
   const encrypted = (await owner('POST', '/api/proposals', { title: 'Encrypted, opened while paid', weighting: 'power', anonymous: true, trustees: [ids.owner, ids.member, ids.cy] })).data.proposal;
   const trustees = [[1, owner], [2, member], [3, cy]];
-  const lines = {};
-  for (const [position, who] of trustees) {
-    lines[position] = [rand(), rand()];
-    const commitments = lines[position].map((a) => mulPointEscalar(Base8, a).map(String));
-    const dealing = await who('PUT', `/api/proposals/${encrypted.id}/dealing`, { commitments, shares: { 1: 'a'.repeat(123), 2: 'b'.repeat(123), 3: 'c'.repeat(123) } });
-    assert.equal(dealing.status, 200);
-  }
+  const { lines, responses } = await dealVoteKey(encrypted.id, trustees);
+  assert.ok(responses.every((r) => r.status === 200));
 
   settingsStore.set('plan', { paidUntil: Date.now() - 30 * DAY });
   assert.equal((await owner('GET', '/api/plan')).data.unlocked, false);

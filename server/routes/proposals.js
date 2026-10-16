@@ -156,7 +156,10 @@ router.get(
         census: voterGroups.members(row.id),
         roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
         publicKey: parseJSON(row.public_key, null),
-        trustees: sql.all('SELECT position, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => ({ position: t.position, commitments: parseJSON(t.dealing, {}).commitments ?? null, partial: parseJSON(t.partial, null) })),
+        trustees: sql.all('SELECT position, commitment, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => {
+          const dealing = parseJSON(t.dealing, {});
+          return { position: t.position, commitment: t.commitment, commitments: dealing.commitments ?? null, proofs: dealing.proofs ?? null, partial: parseJSON(t.partial, null) };
+        }),
         ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY created_at', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: new Date(b.created_at).toISOString() })),
       };
     }

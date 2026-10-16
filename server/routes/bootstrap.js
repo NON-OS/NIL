@@ -15,6 +15,8 @@ import guestView from '../services/guestView.js';
 import sharingPolicy from '../services/sharingPolicy.js';
 import plan from '../services/plan.js';
 import toTimeEntry from '../mappers/toTimeEntry.js';
+import relyingParty from '../auth/relyingParty.js';
+import signingKey from '../proofs/signingKey.js';
 
 const router = express.Router();
 
@@ -66,6 +68,9 @@ router.get(
       rewards: config.nox.enabled ? config.rewards : [],
       stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei } : null,
       sourceUrl: config.sourceUrl,
+      // what key messages are bound to: the configured site (APP_URL) and the workspace's signing key
+      origin: relyingParty(req).origin,
+      workspaceKey: signingKey.publicKey(),
     };
   }),
 );

@@ -4,12 +4,12 @@ import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
 import hub from '../realtime/hub.js';
 import { addPoint } from '@zk-kit/baby-jubjub';
-import curvePoint from '../votes/encrypted/curvePoint.js';
+import parseReveal from '../votes/encrypted/parseReveal.js';
 import checkPartial from '../votes/encrypted/checkPartial.js';
 import encryptedTally from '../votes/encrypted/encryptedTally.js';
 
 const router = express.Router();
-const SEALED = /^[A-Za-z0-9_-]{100,200}$/;
+const COMMITMENT = /^[0-9a-f]{64}$/;
 
 function seat(req) {
   const proposal = sql.get('SELECT * FROM proposals WHERE id = ? AND anonymous = 1 AND weighting = ?', req.params.id, 'power');
@@ -19,25 +19,63 @@ function seat(req) {
   return { proposal, trustee };
 }
 
-// A trustee's dealing: commitments to a random line f(x) = a0 + a1·x and f(j) sealed to each
-// trustee j's encryption key. Once all three have dealt, the vote key is Σ a0·G and nobody,
-// trustees included, ever holds its private half: any two can decrypt together, none alone.
+const seats = (proposalId) => sql.all('SELECT position, commitment, dealing FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', proposalId);
+
+// Step 1 of the key setup: each trustee commits to a hash of their coefficient commitments.
+// A commitment can't be changed, so nobody can wait to see the others' and adjust their own.
+router.put(
+  '/proposals/:id/commitment',
+  route((req) => {
+    const { proposal, trustee } = seat(req);
+    const commitment = req.body?.commitment;
+    if (typeof commitment !== 'string' || !COMMITMENT.test(commitment)) throw HttpError.badRequest('That isn’t a dealing commitment.');
+    if (trustee.commitment) {
+      if (trustee.commitment === commitment) return { ok: true };
+      throw new HttpError(409, 'You already committed to a dealing for this vote.');
+    }
+    if (proposal.public_key) throw new HttpError(409, 'The trustees have already set up this vote’s key.');
+    sql.run('UPDATE proposal_trustees SET commitment = ? WHERE proposal_id = ? AND position = ? AND commitment IS NULL', commitment, proposal.id, trustee.position);
+    hub.broadcast({ type: 'proposals' });
+    return { ok: true };
+  }),
+);
+
+// Step 2, once all three have committed: a trustee's dealing. Commitments to a random line
+// f(x) = a0 + a1·x that match the earlier hash, a proof of knowledge for each, and f(j) sealed
+// to each trustee j. Once all three have revealed, the vote key is Σ a0·G and nobody, trustees
+// included, ever holds its private half: any two can decrypt together, none alone.
 router.put(
   '/proposals/:id/dealing',
   route((req) => {
     const { proposal, trustee } = seat(req);
-    if (proposal.public_key) throw new HttpError(409, 'The trustees have already set up this vote’s key.');
-    const commitments = Array.isArray(req.body?.commitments) && req.body.commitments.length === 2 ? req.body.commitments.map(curvePoint) : null;
-    const shares = req.body?.shares;
-    if (!commitments || commitments.some((c) => !c)) throw HttpError.badRequest('Those commitments aren’t valid curve points.');
-    if (!shares || ![1, 2, 3].every((j) => typeof shares[j] === 'string' && SEALED.test(shares[j]))) throw HttpError.badRequest('A dealing needs one sealed share for each trustee.');
-    sql.run('UPDATE proposal_trustees SET dealing = ?, dealt_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify({ commitments: req.body.commitments, shares: { 1: shares[1], 2: shares[2], 3: shares[3] } }), Date.now(), proposal.id, trustee.position);
+    if (proposal.public_key || trustee.dealing) throw new HttpError(409, 'Your dealing for this vote is already in.');
+    if (!trustee.commitment) throw new HttpError(409, 'Commit to your dealing first.');
+    if (!seats(proposal.id).every((t) => t.commitment)) throw new HttpError(409, 'Wait until all three trustees have committed.');
+    const dealing = parseReveal(proposal.id, trustee, req.body);
+    sql.run('UPDATE proposal_trustees SET dealing = ?, dealt_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify(dealing), Date.now(), proposal.id, trustee.position);
 
     const dealings = encryptedTally.dealingsOf(proposal.id);
     if (dealings.every(Boolean)) {
       const key = dealings.reduce((sum, d) => addPoint(sum, d[0]), [0n, 1n]);
       sql.run('UPDATE proposals SET public_key = ? WHERE id = ? AND public_key IS NULL', JSON.stringify(key.map(String)), proposal.id);
     }
+    hub.broadcast({ type: 'proposals' });
+    return { ok: true };
+  }),
+);
+
+// Step 3: each trustee's browser opens the shares sealed to it and checks them against the
+// dealers' commitments as soon as the key is set up, before anyone votes. A bad share would
+// make the totals impossible to decrypt later, so a report of one stops the vote taking ballots.
+router.post(
+  '/proposals/:id/shares-check',
+  route((req) => {
+    const { proposal, trustee } = seat(req);
+    if (!proposal.public_key) throw new HttpError(409, 'The vote key isn’t set up yet.');
+    const from = req.body?.ok === true ? null : Number(req.body?.from);
+    if (from !== null && ![1, 2, 3].includes(from)) throw HttpError.badRequest('Say which trustee’s share failed.');
+    if (trustee.shares_check) return { ok: true };
+    sql.run('UPDATE proposal_trustees SET shares_check = ? WHERE proposal_id = ? AND position = ?', from === null ? 'ok' : `bad:${from}`, proposal.id, trustee.position);
     hub.broadcast({ type: 'proposals' });
     return { ok: true };
   }),

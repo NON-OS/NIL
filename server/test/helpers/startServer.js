@@ -22,6 +22,10 @@ export default async function startServer({ chain, env = {} } = {}) {
   const { default: attachRealtime } = await import('../../realtime/attachRealtime.js');
   migrate();
   const server = createApp().listen(0);
+  // A test can keep the event loop busy for seconds (proofs, curve math) between two requests
+  // from the same client. With the default five-second keep-alive the server may drop the idle
+  // connection just as the client reuses it, and the fetch fails. close() still ends idle ones.
+  server.keepAliveTimeout = 10 * 60_000;
   attachRealtime(server);
   await once(server, 'listening');
   return {
