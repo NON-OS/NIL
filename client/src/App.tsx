@@ -17,6 +17,8 @@ import ProjectView from './views/ProjectView';
 import NotFoundView from './views/NotFoundView';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
+import useCryptoTools from './hooks/useCryptoTools';
+import cryptoOnly from './lib/cryptoOnly';
 
 // The everyday screens above load with the app. The rest arrive when first opened, so the
 // first paint of My work and the board doesn't wait on settings, charts, crypto or exports.
@@ -58,6 +60,8 @@ function ViewLoading() {
 
 function Screen({ segments }: { segments: string[] }) {
   const [first, second] = segments;
+  const cryptoTools = useCryptoTools();
+  if (!cryptoTools && cryptoOnly(`/${first}`)) return <NotFoundView />;
   switch (first) {
     case undefined:
       return <MyWorkView />;

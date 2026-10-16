@@ -19,6 +19,7 @@ import type SharingPolicy from './SharingPolicy';
 import type Plan from './Plan';
 import type StealthInfo from './StealthInfo';
 import type TaskArchive from './TaskArchive';
+import type FirstRun from './FirstRun';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -44,6 +45,8 @@ export default interface State {
   sharing: SharingPolicy;
   plan: Plan;
   stealth: StealthInfo | null;
+  // the getting-started card; null until My work asks for it
+  firstRun: FirstRun | null;
   proposalsRev: number;
   timer: TimeEntry | null;
   docsUnlocked: boolean;

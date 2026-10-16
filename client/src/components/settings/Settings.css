@@ -224,3 +224,63 @@
   margin-top: 2px;
   color: var(--warning);
 }
+
+/* switches with a sentence of explanation: the words wrap, the switch keeps its size */
+.settings-card .filter-toggle {
+  white-space: normal;
+}
+
+.settings-card .filter-toggle > span {
+  min-width: 0;
+}
+
+.settings-card .filter-toggle > .toggle {
+  flex: none;
+}
+
+.wallet-reveal {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font-size: inherit;
+}
+
+.wallet-reveal:hover {
+  text-decoration: underline;
+}
+
+.invite-kind {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+  color: var(--muted);
+}
+
+.invite-joined {
+  white-space: normal;
+}
+
+.invite-past summary {
+  width: fit-content;
+  cursor: pointer;
+}
+
+.invite-past[open] summary {
+  margin-bottom: 6px;
+}
+
+.invite-limit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.invite-limit .input {
+  width: 110px;
+}

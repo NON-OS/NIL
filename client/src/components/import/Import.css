@@ -1,0 +1,116 @@
+/* a wide preview table scrolls inside the card instead of stretching it */
+.import-card,
+.import-step {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
+.import-step {
+  display: grid;
+  gap: 14px;
+}
+
+.import-error {
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+.import-columns {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px 16px;
+}
+
+.import-preview {
+  overflow-x: auto;
+}
+
+.import-preview table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.import-preview th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line-strong);
+  color: var(--muted);
+  font-weight: 550;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.import-preview td {
+  max-width: 260px;
+  padding: 6px 8px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--line);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-preview p {
+  margin-top: 6px;
+  font-size: var(--text-sm);
+}
+
+.import-map {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.import-map legend {
+  margin-bottom: 4px;
+  padding: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.import-map label {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+}
+
+.import-map label > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.import-bar {
+  height: 8px;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface-3);
+}
+
+.import-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent-line);
+  transition: width 0.2s var(--ease);
+}
+
+.import-errors {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--danger);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 560px) {
+  .import-map label {
+    grid-template-columns: 1fr;
+    gap: 4px;
+  }
+}

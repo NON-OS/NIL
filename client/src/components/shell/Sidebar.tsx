@@ -12,6 +12,8 @@ import router from '../../lib/router';
 import meta from '../../lib/meta';
 import cx from '../../lib/cx';
 import NAV from '../../lib/navItems';
+import cryptoOnly from '../../lib/cryptoOnly';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 
 export default function Sidebar({ onNewProject }: { onNewProject: () => void }) {
@@ -26,6 +28,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
   const presence = useStore((s) => s.presence);
   const meId = useStore((s) => s.me?.id);
   const guest = useStore((s) => s.guest);
+  const cryptoTools = useCryptoTools();
 
   const projects = useMemo(() => Object.values(projectMap).filter((p) => !p.archived).sort((a, b) => a.position - b.position), [projectMap]);
   const openCounts = useMemo(() => {
@@ -65,7 +68,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
 
         <div className="sidebar-scroll">
           <div className="nav">
-            {NAV.filter((n) => !(guest && 'members' in n)).map(({ to, label, icon: Icon, key }) => (
+            {NAV.filter((n) => !(guest && 'members' in n) && (cryptoTools || !cryptoOnly(n.to))).map(({ to, label, icon: Icon, key }) => (
               <a key={to} href={to} onClick={link(to)} aria-current={path === to || (to !== '/' && path.startsWith(`${to}/`)) ? 'page' : undefined}>
                 <Icon />
                 {label}

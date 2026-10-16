@@ -46,6 +46,11 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Quick add understands more. Times ("at 3pm", "5pm", "15:30", "noon"), days of the month ("on the 1st"), "in two weeks", and repeats such as "every 3 days", "every other week", "every monday" and "every month on the 15th". A time typed without a day means the next time the clock shows it.
 - Repeat rules beyond the presets. A task can repeat every few days, weeks, months or years, or monthly on a day of the month, including the last. Rules are stored as a small subset of iCalendar's RRULE. A rule that says the same as a preset is stored as the preset, so older apps keep reading it.
 - A personal calendar feed. Settings → Notifications makes a secret ICS link for Google Calendar, Apple Calendar or Outlook that lists your open assigned tasks with a due date. Private tasks appear only as "Private task", with no title, link or project. The link works without a cookie, is rate limited (`CALENDAR_FEED_PER_HOUR`), can be replaced or turned off at any time, and stops working when a member's access is removed. Settings warns that anyone with the link sees those tasks. The database stores only the feed's id; the link also carries a MAC made with a key kept in `DATA_DIR/keys`.
+- **Everyday team or crypto team.** Setting up a workspace asks one question. An everyday team starts with bounties, votes, proof of work, private payouts and the token holder door hidden; a crypto team gets all of them. Admins can switch this in Settings, Workspace at any time, and nothing is deleted either way. With the tools off, their pages, menu entries and server routes are gone (the server answers 404), people go by name, and a wallet address shows only after a click on "Show wallet". The Nil Pro subscription works the same either way. Workspaces that existed before this keep their crypto tools on.
+- **Getting started.** After setup, the owner's My work shows a short checklist: create a project, invite people, add a task with quick add, try a private task. Each step ticks itself when it happens, and the card can be dismissed. It also offers a sample project with a website launch, an offsite and a hiring round, which can be removed again in one click.
+- **Reusable invite links.** Next to single-use links, admins can make a link several people can join through, with an expiry of 1, 7 or 30 days and an optional limit on how many. Links can be revoked, and admins see who joined through which link. Reusable links never make admins.
+- **Search by words.** The command palette finds tasks by their notes, checklists and comments as well as their titles, and marks the matching words. Team tasks are searched on the server with SQLite full-text search, under the same visibility rules as the rest of the app. Private tasks and docs never go into that index: the browser searches the ones this tab has opened, in memory only.
+- **Import from Todoist, Trello or a CSV file.** Settings, Data reads a Todoist project CSV, a Trello board JSON or any CSV with a header row in the browser, shows a preview, and lets you match its people and projects to this workspace. Tasks are then created a few at a time with progress, through the same calls the app uses everywhere. If you make them private, each one is encrypted in the browser from its first save.
 
 ### Changed
 
@@ -69,6 +74,8 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - The server refuses to start on a database written by a newer release, and says so, instead of running against a schema it doesn't know. A capsule from a newer release is refused the same way.
 - Desktop notifications moved from Settings → Profile to the new Settings → Notifications.
 - A reminder about a private task no longer keeps the task's title in the stored notification.
+- Migration 022 adds the crypto tools switch, invite use counts and the search index. Wiping the workspace and restoring a capsule now leave the index's own tables alone and rebuild it from the tasks.
+- Unused invite links are still deleted as soon as they expire. Links someone joined through are kept for `USED_INVITE_DAYS` (30) days after they end, so admins can see who came in with them.
 
 ### Fixed
 
@@ -78,6 +85,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - A missing file under `/assets/` got the app's HTML with status 200. It is a plain 404 now.
 - A capsule export kept encrypting after the browser cancelled the download. It stops now, and its plaintext database snapshot is always deleted.
 - After a deploy, the service worker could store the app's page in place of a script that no longer existed, which broke that screen until the browser's cache was cleared. It now stores only real build files. While the server restarts, an installed app opens from its stored copy instead of an error page.
+- A long explanation next to a switch in Settings could push the switch out of its card. The words wrap now.
 
 ## 3.0.0 (2026-10-15)
 

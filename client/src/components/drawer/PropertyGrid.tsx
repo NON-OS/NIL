@@ -23,6 +23,7 @@ import dates from '../../lib/dates';
 import type Task from '../../types/Task';
 import isAdminUser from '../../lib/isAdmin';
 import recurrenceRule from '../../lib/recurrenceRule';
+import useCryptoTools from '../../hooks/useCryptoTools';
 
 const ESTIMATES = [0, 1, 2, 3, 5, 8, 13].map((n) => ({ value: String(n), label: n === 0 ? 'No estimate' : `${n} point${n === 1 ? '' : 's'}` }));
 
@@ -44,6 +45,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
   const goal = useStore((s) => (task.goalId ? s.goals[task.goalId] : undefined));
   const isAdmin = useStore((s) => isAdminUser(s.me));
   const meId = useStore((s) => s.me?.id);
+  const cryptoTools = useCryptoTools();
   const canSetPrivacy = meId === task.creatorId || meId === task.assigneeId;
   const update = (patch: Parameters<typeof taskActions.update>[1]) => taskActions.update(task.id, patch);
   const empty = (text: string) => <span className="placeholder-text">{text}</span>;
@@ -131,7 +133,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
         )}
         <HelpLink topic="private-tasks" label="How private tasks work" />
       </Row>
-      {(task.bounty || isAdmin) && (
+      {cryptoTools && (task.bounty || isAdmin) && (
         <Row icon={<Coins size={14} />} label="Bounty">
           <BountyField task={task} />
         </Row>

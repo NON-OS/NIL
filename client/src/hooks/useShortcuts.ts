@@ -3,6 +3,7 @@ import isEditable from '../lib/isEditable';
 import router from '../lib/router';
 import store from '../state/store';
 import ui from '../actions/ui';
+import cryptoOnly from '../lib/cryptoOnly';
 
 const GOTO: Record<string, string> = { h: '/', i: '/inbox', b: '/board', l: '/list', c: '/calendar', g: '/goals', s: '/insights', n: '/bounties', v: '/votes', m: '/time', d: '/docs', p: '/proofs', t: '/settings' };
 
@@ -20,7 +21,7 @@ export default function useShortcuts() {
       const s = store.get();
       if (s.palette || s.quickAdd.open || s.extract) return;
 
-      if (leader && Date.now() - leader < 1200 && GOTO[e.key]) {
+      if (leader && Date.now() - leader < 1200 && GOTO[e.key] && (s.workspace.cryptoTools || !cryptoOnly(GOTO[e.key]))) {
         e.preventDefault();
         leader = 0;
         router.navigate(GOTO[e.key]);

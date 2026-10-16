@@ -1,6 +1,7 @@
 import http from '../api/http';
 import store from '../state/store';
 import keyring from '../state/keyring';
+import openedText from '../state/openedText';
 import docKeySeal from '../lib/crypto/docKeySeal';
 import docText from '../lib/crypto/docText';
 import b64u from '../lib/crypto/b64u';
@@ -26,7 +27,7 @@ async function keyFor(doc: EncryptedDoc) {
 
 async function decrypt(doc: EncryptedDoc): Promise<DocItem> {
   const key = await keyFor(doc);
-  return {
+  const item: DocItem = {
     id: doc.id,
     title: await docText.open(key, doc.id, 'title', doc.titleCt),
     body: doc.bodyCt ? await docText.open(key, doc.id, 'body', doc.bodyCt) : null,
@@ -38,6 +39,9 @@ async function decrypt(doc: EncryptedDoc): Promise<DocItem> {
     updatedAt: doc.updatedAt,
     readers: doc.readers,
   };
+  // so search in this tab can find it, for as long as the keys stay unlocked
+  openedText.rememberDoc(item);
+  return item;
 }
 
 const directory = () => http.get<{ userId: string; publicKey: string }[]>('/encryption-keys');
@@ -125,6 +129,7 @@ const docs = {
   async remove(doc: DocItem) {
     await http.del(`/docs/${doc.id}`);
     keyring.forgetDocKey(doc.id);
+    openedText.forgetDoc(doc.id);
   },
 };
 

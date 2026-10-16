@@ -2,6 +2,7 @@ import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import requireMember from '../auth/requireMember.js';
 import requirePlan from '../auth/requirePlan.js';
+import cryptoGate from '../auth/cryptoGate.js';
 import auth from './auth.js';
 import wallet from './wallet.js';
 import credentials from './credentials.js';
@@ -46,10 +47,14 @@ import trustees from './trustees.js';
 import push from './push.js';
 import calendarFeed from './calendarFeed.js';
 import calendarFeedSettings from './calendarFeedSettings.js';
+import search from './search.js';
+import firstRun from './firstRun.js';
 
 const api = express.Router();
 
 api.use(auth);
+// Workspaces with the crypto tools off answer 404 on their routes, signed in or not.
+api.use(cryptoGate);
 api.use(publicPages);
 api.use(publicBounties);
 api.use(wallet);
@@ -71,7 +76,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push, calendarFeedSettings]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push, calendarFeedSettings, search, firstRun]) {
   api.use(router);
 }
 

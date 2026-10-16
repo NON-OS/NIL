@@ -18,6 +18,7 @@ import toast from '../../state/toast';
 import taskActions from '../../actions/tasks';
 import detail from '../../actions/detail';
 import ui from '../../actions/ui';
+import firstRun from '../../actions/firstRun';
 import parseQuickAdd from '../../lib/parseQuickAdd';
 import dates from '../../lib/dates';
 import meta from '../../lib/meta';
@@ -67,6 +68,7 @@ export default function QuickAdd() {
     const task = await taskActions.create({ ...draft, title, description: description.trim() });
     setSaving(false);
     if (!task) return;
+    void firstRun.quickAdded();
     toast.show(`Created ${taskKey(task)}`, { tone: 'success', action: { label: 'Open', run: () => detail.open(task) } });
     setText('');
     setDescription('');

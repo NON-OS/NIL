@@ -36,11 +36,16 @@ function dueAtAfter(task: Task, date: string | null | undefined, time: string | 
 }
 
 const tasks = {
+  // Throws when the server refuses, for callers that report failures their own way (imports).
+  async add(input: NewTask): Promise<Task> {
+    const { task } = await http.post<{ task: Task }>('/tasks', withZone(input.private ? await sealedNew(input) : input));
+    putTask(task);
+    return task;
+  },
+
   async create(input: NewTask): Promise<Task | null> {
     try {
-      const { task } = await http.post<{ task: Task }>('/tasks', withZone(input.private ? await sealedNew(input) : input));
-      putTask(task);
-      return task;
+      return await tasks.add(input);
     } catch (err) {
       toast.error(err);
       return null;

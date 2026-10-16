@@ -17,6 +17,8 @@ import cx from '../lib/cx';
 import type Task from '../types/Task';
 import RemindersPanel from '../components/time/RemindersPanel';
 import useArchiveSince from '../hooks/useArchiveSince';
+import GettingStarted from '../components/firstRun/GettingStarted';
+import firstRun from '../actions/firstRun';
 
 const WEEK = 7 * 86_400_000;
 
@@ -73,7 +75,7 @@ export default function MyWorkView() {
     const parsed = parseQuickAdd(draft, { users: Object.values(users), projects: Object.values(projects), labels: Object.values(labels), meId: me.id, today, now: dates.clock(Date.now()) });
     if (!parsed.title) return;
     setDraft('');
-    await taskActions.create({
+    const made = await taskActions.create({
       title: parsed.title,
       assigneeId: parsed.assigneeId ?? me.id,
       dueDate: parsed.dueDate ?? null,
@@ -83,6 +85,7 @@ export default function MyWorkView() {
       labels: parsed.labels,
       recurrence: parsed.recurrence ?? null,
     });
+    if (made) void firstRun.quickAdded();
   };
 
   const delta = doneThisWeek - doneLastWeek;
@@ -106,6 +109,8 @@ export default function MyWorkView() {
             <p>{dates.long(today)}</p>
           </div>
         </div>
+
+        <GettingStarted />
 
         <div className="mywork-stats">
           <StatTile label="Due today" value={buckets.today.length} sub={buckets.today.length ? 'Let’s get them done' : 'Nothing due today'} />

@@ -1,6 +1,12 @@
 import Modal from '../ui/Modal';
 import ui from '../../actions/ui';
 import router from '../../lib/router';
+import NAV from '../../lib/navItems';
+import cryptoOnly from '../../lib/cryptoOnly';
+import useCryptoTools from '../../hooks/useCryptoTools';
+
+// jumps to sections that are hidden while the crypto tools are off
+const CRYPTO_LABELS = new Set(NAV.filter((n) => cryptoOnly(n.to)).map((n) => n.label));
 
 const GROUPS = [
   {
@@ -49,6 +55,7 @@ const GROUPS = [
 ];
 
 export default function ShortcutsHelp() {
+  const cryptoTools = useCryptoTools();
   return (
     <Modal
       title="Keyboard shortcuts"
@@ -74,7 +81,7 @@ export default function ShortcutsHelp() {
               {g.title}
             </h3>
             <dl style={{ display: 'grid', gridTemplateColumns: 'auto 1fr', gap: '8px 12px', margin: 0 }}>
-              {g.keys.map(([k, label]) => (
+              {g.keys.filter(([, label]) => cryptoTools || !CRYPTO_LABELS.has(label)).map(([k, label]) => (
                 <div key={k} style={{ display: 'contents' }}>
                   <dt style={{ display: 'flex', gap: 4 }}>
                     {k.split(' ').map((part) => (

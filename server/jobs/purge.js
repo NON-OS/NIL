@@ -43,7 +43,10 @@ export default function purge() {
   sql.tx(() => {
     sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - config.readNotificationDays * DAY);
     sql.run('DELETE FROM sessions WHERE expires_at < ?', now);
-    sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - config.usedInviteDays * DAY);
+    // unused links go once they expire; links people joined through stay a while longer, so
+    // admins can still see who came in with them
+    const history = now - config.usedInviteDays * DAY;
+    sql.run('DELETE FROM invites WHERE (uses = 0 AND expires_at < ?) OR expires_at < ? OR revoked_at < ?', now, history, history);
   });
   // what the policies above erased mustn't survive in the write-ahead log
   checkpoint();

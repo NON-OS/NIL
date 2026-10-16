@@ -4,6 +4,7 @@ import db from '../db/connection.js';
 import snapshots from '../db/snapshots.js';
 import setupToken from '../auth/setupToken.js';
 import checkpoint from '../db/checkpoint.js';
+import dataTables from '../db/dataTables.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import hub from '../realtime/hub.js';
@@ -12,7 +13,7 @@ import hub from '../realtime/hub.js';
 // before upgrades. The server goes back to a fresh install that takes the setup token again (a
 // newly printed one, unless SETUP_TOKEN is set), and everyone is signed out.
 export default function wipeWorkspace() {
-  const tables = db.prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'").all().map((t) => t.name);
+  const tables = dataTables(db);
   db.exec('PRAGMA foreign_keys = OFF');
   try {
     db.exec('BEGIN IMMEDIATE');

@@ -13,6 +13,7 @@ import publicWorkspace from './services/publicWorkspace.js';
 import healthz from './routes/healthz.js';
 import serveWebApp from './lib/serveWebApp.js';
 import log from './lib/log.js';
+import cryptoTools from './services/cryptoTools.js';
 
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
@@ -33,12 +34,14 @@ export default function createApp() {
   app.get('/.well-known/nonos-proof-key', (req, res) => {
     const ws = publicWorkspace();
     if (!ws) return res.status(404).json({ error: 'Not set up yet.' });
+    if (!ws.cryptoTools) return res.status(404).json({ error: 'This workspace doesn’t publish proofs of work.' });
     res.set('Access-Control-Allow-Origin', '*').json({ name: ws.name, algorithm: 'Ed25519', key: signingKey.publicKey(), fingerprint: signingKey.fingerprint() });
   });
 
   // An open feed of publicly listed bounties, for anyone to index: other Nil servers,
   // aggregators, bots. Only tasks a team explicitly listed ever appear here.
   app.get('/.well-known/nonos-bounties.json', (req, res) => {
+    if (!cryptoTools.on()) return res.status(404).json({ error: 'This workspace doesn’t list bounties.' });
     res.set('Access-Control-Allow-Origin', '*').set('Cache-Control', 'public, max-age=60').json(listedBounties());
   });
 
