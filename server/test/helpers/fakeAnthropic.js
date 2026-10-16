@@ -27,7 +27,8 @@ function stream({ text, tool, inputTokens = 120, outputTokens = 40 }) {
   ].join('');
 }
 
-// A local stand-in for the Anthropic API that records requests and streams scripted turns.
+// A local stand-in for the Anthropic API that records requests and streams scripted turns. A turn
+// of { error: { status, message } } answers with that API error instead, as the real API does.
 export default async function fakeAnthropic() {
   const requests = [];
   let turns = [];
@@ -37,6 +38,11 @@ export default async function fakeAnthropic() {
     req.on('end', () => {
       requests.push({ path: req.url, headers: req.headers, body: JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}') });
       const turn = turns.shift() ?? { text: 'Done.' };
+      if (turn.error) {
+        const type = turn.error.status === 400 ? 'invalid_request_error' : 'api_error';
+        res.writeHead(turn.error.status, { 'Content-Type': 'application/json' });
+        return res.end(JSON.stringify({ type: 'error', error: { type, message: turn.error.message } }));
+      }
       res.writeHead(200, { 'Content-Type': 'text/event-stream', 'Cache-Control': 'no-cache' });
       res.end(stream(turn));
     });

@@ -259,6 +259,12 @@ test('no model is assumed: built-in AI needs ANTHROPIC_MODEL, agents fall back t
   assert.equal(agentsOnly.config.ai.enabled, false);
   assert.doesNotMatch(agentsOnly.warnings.join('\n'), /AGENT_MODEL/);
 
+  assert.equal(none.config.agents.fallbacks, null);
+  assert.equal(load({ AGENT_FALLBACKS: 'default' }).config.agents.fallbacks, 'default');
+  const unknown = load({ AGENT_FALLBACKS: 'always' });
+  assert.equal(unknown.config.agents.fallbacks, null);
+  assert.match(unknown.warnings[0], /AGENT_FALLBACKS=always isn’t "default" or "off"/);
+
   const priced = load({ AGENT_PRICE_INPUT_PER_MTOK: '2.5', AGENT_PRICE_OUTPUT_PER_MTOK: '10' });
   assert.deepEqual([priced.config.agents.priceIn, priced.config.agents.priceOut], [2.5, 10]);
   const typo = load({ AGENT_PRICE_INPUT_PER_MTOK: 'four' });

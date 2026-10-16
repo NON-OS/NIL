@@ -359,7 +359,7 @@ test('the OpenAI-compatible runner works against any chat completions server', a
   assert.match(failed.error, /tools not supported/);
 });
 
-test('the Anthropic runner streams through the official SDK with adaptive thinking and fallbacks', async () => {
+test('the Anthropic runner streams through the official SDK with adaptive thinking, and no fallbacks unless asked', async () => {
   providerFor.replace(null);
   const t = await newTask({ title: 'Check the release checklist' });
   anthropic.script([{ tool: { id: 'toolu_1', name: 'get_task', input: { key: key(t) } }, inputTokens: 900, outputTokens: 50 }, { text: 'The checklist is empty, so there is nothing to check yet.', inputTokens: 1000, outputTokens: 30 }]);
@@ -370,13 +370,13 @@ test('the Anthropic runner streams through the official SDK with adaptive thinki
   assert.equal(run.output_tokens, 80);
   const [first, second] = anthropic.requests.slice(-2);
   assert.equal(first.path, '/v1/messages?beta=true');
-  assert.match(first.headers['anthropic-beta'], /server-side-fallback-2026-07-01/);
+  assert.doesNotMatch(first.headers['anthropic-beta'] ?? '', /server-side-fallback/);
+  assert.equal(first.body.fallbacks, undefined);
   assert.equal(first.headers['x-api-key'], 'test-key-not-real');
   assert.equal(first.body.stream, true);
   assert.equal(first.body.model, 'test-model');
   assert.deepEqual(first.body.thinking, { type: 'adaptive' });
   assert.deepEqual(first.body.output_config, { effort: 'high' });
-  assert.equal(first.body.fallbacks, 'default');
   assert.deepEqual(first.body.cache_control, { type: 'ephemeral' });
   assert.ok(first.body.tools.every((tool) => tool.eager_input_streaming === true && tool.input_schema.type === 'object'));
   assert.match(first.body.system, /You are Echo/);

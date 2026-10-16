@@ -1,9 +1,11 @@
 import Anthropic from '@anthropic-ai/sdk';
 import config from '../../config.js';
 import friendlyError from '../../ai/friendlyError.js';
+import log from '../../lib/log.js';
 import ProviderError from './ProviderError.js';
 
 const JSON_RETRIES = 2;
+const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
 let client;
 
 function asProviderError(err) {
@@ -22,12 +24,15 @@ function stopOf(message) {
   return message.content.some((b) => b.type === 'tool_use') ? 'tool_use' : 'end';
 }
 
-// Claude through the official SDK. Each step streams (long answers never hit an HTTP timeout)
-// and is read with finalMessage(). Thinking is adaptive, refusals fall back to Anthropic's
-// recommended model server-side, and the stable prefix (tools, system prompt) plus the growing
-// transcript are cached. The assistant's content goes back unchanged, thinking blocks included.
+// The Anthropic Messages API through the official SDK. Each step streams (long answers never
+// hit an HTTP timeout) and is read with finalMessage(). Thinking is adaptive, and the stable
+// prefix (tools, system prompt) plus the growing transcript are cached. With AGENT_FALLBACKS on,
+// a declined request is re-run server-side on the model Anthropic picks; a model that refuses
+// the setting gets the request again without it, for the rest of the run. The assistant's
+// content goes back unchanged, thinking blocks included.
 export default function anthropicProvider(agent) {
   client ??= new Anthropic();
+  let fallbacks = config.agents.fallbacks;
   return {
     model: agent.model,
 
@@ -49,9 +54,8 @@ export default function anthropicProvider(agent) {
         tools: state.tools,
         messages: state.messages,
         cache_control: { type: 'ephemeral' },
-        betas: ['server-side-fallback-2026-07-01'],
-        fallbacks: 'default',
       };
+      if (fallbacks) Object.assign(params, { betas: [FALLBACK_BETA], fallbacks });
       if (config.agents.thinking === 'adaptive') params.thinking = { type: 'adaptive' };
       if (config.agents.effort) params.output_config = { effort: config.agents.effort };
 
@@ -64,6 +68,13 @@ export default function anthropicProvider(agent) {
           break;
         } catch (err) {
           if (signal?.aborted) throw err;
+          if (fallbacks && err instanceof Anthropic.BadRequestError && /fallback/i.test(err.message)) {
+            log.warn('agents', `Anthropic didn’t accept AGENT_FALLBACKS for model ${agent.model}, so this run goes on without them.`, err);
+            fallbacks = null;
+            delete params.betas;
+            delete params.fallbacks;
+            continue;
+          }
           if (err instanceof Anthropic.APIError || attempt >= JSON_RETRIES) throw err instanceof ProviderError ? err : asProviderError(err);
         }
       }

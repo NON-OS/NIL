@@ -469,6 +469,15 @@ function agentEffort(value) {
   return 'high';
 }
 
+// Anthropic's server-side fallback to another model when a request is declined. Off unless asked
+// for: not every model or account takes it.
+function agentFallbacks(value) {
+  if (!value || value === 'off') return null;
+  if (value === 'default') return 'default';
+  configWarning(`AGENT_FALLBACKS=${value} isn’t "default" or "off". Leaving fallbacks off.`);
+  return null;
+}
+
 function agentDoneStatus(value) {
   if (!value) return 'in_review';
   if (value === 'none' || domain.statuses.includes(value)) return value;
@@ -490,6 +499,7 @@ const agents = Object.freeze({
   model: agentModel,
   effort: agentEffort((env.AGENT_EFFORT ?? '').trim()),
   thinking: env.AGENT_THINKING === 'off' ? 'off' : 'adaptive',
+  fallbacks: agentFallbacks((env.AGENT_FALLBACKS ?? '').trim()),
   maxSteps: envNumber('AGENT_MAX_STEPS', 12, { min: 1, max: 100 }),
   maxRunTokens: envNumber('AGENT_MAX_TOKENS_PER_RUN', 300_000, { min: 1000 }),
   maxDayTokens: envNumber('AGENT_MAX_TOKENS_PER_DAY', 3_000_000, { min: 1000 }),
