@@ -4,7 +4,9 @@ services:
     image: nonos:latest
     restart: unless-stopped
     ports:
-      - "3000:3000"
+      # Loopback only. Put a TLS proxy in front, such as Caddy (docs/DEPLOY.md, step 6): Nil
+      # speaks plain HTTP and should never face the internet directly.
+      - "127.0.0.1:3000:3000"
     env_file:
       - path: .env
         required: false
@@ -17,6 +19,15 @@ services:
       - no-new-privileges:true
     cap_drop:
       - ALL
+    # more than SHUTDOWN_TIMEOUT_SECONDS (20 by default), so Nil can finish open requests and
+    # close the database before Docker kills it
+    stop_grace_period: 30s
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "5"
 
 volumes:
   nonos-data:

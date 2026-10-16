@@ -7,3 +7,5 @@ services:
     tmpfs:
       - /tmp
       - /data:rw,size=1024m,mode=0700,uid=1000,gid=1000
+    # files in a tmpfs count against the container's memory, so leave room for a full /data
+    mem_limit: 2g
