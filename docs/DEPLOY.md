@@ -20,7 +20,7 @@ Nil has no port open to the internet. Only Caddy does.
 - **Size.** 2 vCPU, 2 GB RAM and 20 GB of SSD is a comfortable start for a team of a few dozen people. These are starting points, not measured limits. Building the Docker image on the server uses most of that memory. With 1 GB of RAM, add swap for the build (but see the note on swap in memory-only mode, [docs/ZERO-STATE.md](ZERO-STATE.md)).
 - **One instance.** Nil uses SQLite, and keeps live updates and rate limits in memory. Run exactly one copy. Don't put it behind a load balancer with several replicas.
 - **Software.** Docker Engine with the Compose plugin, version 2.24.4 or newer (the compose files use `!reset` and `!override`). Check with `docker compose version`. Install Docker from the official instructions at docs.docker.com/engine/install.
-- **Outbound access.** The server needs HTTPS out to your Ethereum node, to Anthropic if you turn AI on, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building.
+- **Outbound access.** The server needs HTTPS out to your Ethereum node, to Anthropic if you turn AI on, to the browser makers' push services (`PUSH_SERVICES`) once someone turns on push notifications, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building. `PUSH_NOTIFICATIONS=off` keeps the server from ever contacting a push service.
 - **A wallet.** You sign in with an Ethereum wallet in your browser (an extension such as MetaMask or Rabby, or a wallet's in-app browser). Have one ready, plus a second wallet to link as a backup.
 
 ## 2. Point DNS at the server
