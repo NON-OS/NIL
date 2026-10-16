@@ -4,15 +4,15 @@ An agent is an AI teammate. It has a name and an avatar, shows up in the assigne
 
 There are two kinds:
 
-- **External agents** run somewhere else (Claude Code, Cursor, your own program, an agent framework) and connect to Nil with their own key, over MCP or a plain REST API. They can receive webhooks when something happens.
-- **Built-in agents** run inside Nil. When someone assigns one a task or mentions it, Nil runs it on a model the admin picks: Anthropic's API, or any OpenAI-compatible endpoint, including a model on your own server.
+- External agents run somewhere else (Claude Code, Cursor, your own program, an agent framework) and connect to Nil with their own key, over MCP or a plain REST API. They can receive webhooks when something happens.
+- Built-in agents run inside Nil. When someone assigns one a task or mentions it, Nil runs it on a model the admin picks: Anthropic's API, or any OpenAI-compatible endpoint, including a model on your own server.
 
 This page covers what agents can see, how to add one, how to connect each kind, and the settings that control them.
 
 ## What agents can and can't see
 
 - An agent sees the team tasks in its projects, plus any task assigned to it. It sees people the way a guest does: admins, and the people on tasks it can see. An agent set to "all projects" sees every team task.
-- **Private tasks and docs are never visible to an agent.** They are end-to-end encrypted in people's browsers. No agent, model provider or server can read them, and you can't assign a private task to an agent. Agents are told this, and say so when asked about one.
+- Private tasks and docs are never visible to an agent. They are end-to-end encrypted in people's browsers. No agent, model provider or server can read them, and you can't assign a private task to an agent. Agents are told this, and say so when asked about one.
 - A built-in agent on **Anthropic** sends the text of the team tasks it works on (titles, descriptions, checklists and comments) to Anthropic to run the model.
 - A built-in agent on a **local model** keeps all of that on your server or network.
 - An **external agent** sends what it reads to wherever it runs and to the model provider it uses. Webhooks carry only ids and task keys, never task text.
@@ -23,15 +23,15 @@ Settings → Agents shows this disclosure for every agent, to admins and members
 
 Admins add agents in **Settings → Agents → Add agent**:
 
-- **Name and avatar colour.** People @mention and assign the agent by its name, so it has to be unique in the workspace.
-- **Short description and instructions.** A built-in agent follows the instructions on every run. Task text can't override them.
-- **Access.** Read only, or read and write.
-- **Projects.** All projects, or the ones you pick.
-- **Tools.** The tools it may use. Writing tools need write access.
-- **How it runs.** External, built in on Anthropic, or built in on an OpenAI-compatible endpoint.
-- **Model.** For a built-in agent, the model's name. On Anthropic it can be left empty when the server sets `AGENT_MODEL`; otherwise the form asks for it.
-- **Limits.** For built-in agents: steps and tokens per run, tokens per day, and the status finished work moves to (In review by default). For external agents: requests per minute. Empty fields use the workspace defaults from the server's configuration.
-- **Prices.** Optional, dollars per million tokens, only for the cost estimate. Without prices, Settings shows token counts only.
+- A name and an avatar colour. People @mention and assign the agent by its name, so it has to be unique in the workspace.
+- A short description, and instructions that a built-in agent follows on every run. Task text can't override them.
+- Its access: read only, or read and write.
+- Its projects: all of them, or the ones you pick.
+- The tools it may use. Writing tools need write access.
+- How it runs: external, built in on Anthropic, or built in on an OpenAI-compatible endpoint.
+- For a built-in agent, the model's name. On Anthropic it can be left empty when the server sets `AGENT_MODEL`; otherwise the form asks for it.
+- Limits. A built-in agent has steps and tokens per run, tokens per day, and the status finished work moves to (In review by default); an external agent has requests per minute. Empty fields use the workspace defaults from the server's configuration.
+- Prices, if you want a cost estimate, in dollars per million tokens. Without prices, Settings shows token counts only.
 
 An external agent gets its key when you create it. The key is shown once; Nil keeps only a hash. **Key** on the agent's card makes a new one and revokes the old one at once.
 
@@ -428,9 +428,9 @@ None of that is relied on to keep you safe. The server enforces the rules whatev
 
 ## Pausing, deleting and the kill switch
 
-- **Pause** stops an agent at once: its key is refused, its runs are cancelled and nothing goes to its webhook. Resume starts it fresh.
-- **Delete** revokes its key, removes its webhook, cancels its work, drops pending requests and puts its open tasks back to unassigned. Its name stays in task history and the audit trail.
-- **All agents** at the top of Settings → Agents switches every agent off at once: keys are refused, runs are cancelled and queued webhook deliveries are dropped. Turning it back on starts from a clean slate.
+- Pause stops an agent at once: its key is refused, its runs are cancelled and nothing goes to its webhook. Resume starts it fresh.
+- Delete revokes its key, removes its webhook, cancels its work, drops pending requests and puts its open tasks back to unassigned. Its name stays in task history and the audit trail.
+- The All agents switch at the top of Settings → Agents turns every agent off at once: keys are refused, runs are cancelled and queued webhook deliveries are dropped. Turning it back on starts from a clean slate.
 
 ## History and audit
 
