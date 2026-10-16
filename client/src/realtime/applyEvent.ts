@@ -2,6 +2,14 @@ import store from '../state/store';
 import records from '../state/records';
 import putTask from '../state/putTask';
 import type TaskDetail from '../types/TaskDetail';
+import type Comment from '../types/Comment';
+import commentText from '../actions/commentText';
+
+// a comment on a private task arrives encrypted and is opened before it's shown
+const openComment = (comment: Comment) => {
+  const task = store.get().tasks[comment.taskId];
+  return task ? commentText.open(task, comment) : Promise.resolve(comment);
+};
 
 // Changes the open task panel only if it's showing the task the event is about.
 function patchDetail(taskId: string, fn: (d: TaskDetail) => Partial<TaskDetail>) {
@@ -79,9 +87,11 @@ export default function applyEvent(event: any): void {
       patchDetail(event.activity.taskId, (d) => ({ activity: [...d.activity, event.activity] }));
       break;
     case 'comment':
-      patchDetail(event.comment.taskId, (d) => ({
-        comments: d.comments.some((c) => c.id === event.comment.id) ? d.comments.map((c) => (c.id === event.comment.id ? event.comment : c)) : [...d.comments, event.comment],
-      }));
+      void openComment(event.comment).then((comment) =>
+        patchDetail(comment.taskId, (d) => ({
+          comments: d.comments.some((c) => c.id === comment.id) ? d.comments.map((c) => (c.id === comment.id ? comment : c)) : [...d.comments, comment],
+        })),
+      );
       break;
     case 'comment.delete':
       patchDetail(event.taskId, (d) => ({ comments: d.comments.filter((c) => c.id !== event.id) }));

@@ -5,10 +5,11 @@ import tokenAmount from '../lib/tokenAmount.js';
 const name = (table, id, column = 'name') => (id ? sql.get(`SELECT ${column} AS v FROM ${table} WHERE id = ?`, id)?.v ?? null : null);
 
 // A task as an AI assistant reads it: names instead of ids, the key people use, no internals.
+// An encrypted private task shows only what the server itself can see: dates, status, people.
 export default function taskOut(task, { full = false } = {}) {
   const out = {
     key: `${publicWorkspace().taskPrefix}-${task.number}`,
-    title: task.title,
+    title: task.sealed ? 'Private task (encrypted)' : task.title,
     status: task.status,
     priority: ['none', 'low', 'medium', 'high', 'urgent'][task.priority],
     assignee: name('users', task.assigneeId),

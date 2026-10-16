@@ -11,6 +11,7 @@ const handle = (name: string) => name.replace(/\s+/g, '');
 export default function Composer({ taskId }: { taskId: string }) {
   const me = useStore((s) => s.me);
   const users = useStore((s) => s.users);
+  const sealed = useStore((s) => Boolean(s.tasks[taskId]?.sealed));
   const [body, setBody] = useState('');
   const [sending, setSending] = useState(false);
   const [mention, setMention] = useState<{ query: string; start: number } | null>(null);
@@ -67,7 +68,7 @@ export default function Composer({ taskId }: { taskId: string }) {
           ref={ref}
           value={body}
           rows={2}
-          placeholder="Write a comment… use @ to mention someone"
+          placeholder={sealed ? 'Write a comment. It’s encrypted, like the task.' : 'Write a comment… use @ to mention someone'}
           aria-label="Comment"
           onChange={(e) => onChange(e.target.value, e.target.selectionStart)}
           onKeyDown={(e) => {

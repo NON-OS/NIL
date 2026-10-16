@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import sealed from './helpers/sealed.js';
 
 let srv;
 const base = () => srv.base;
@@ -13,7 +14,7 @@ const USDC = (n) => (BigInt(n) * 10n ** 6n).toString();
 
 before(async () => {
   srv = await startServer();
-  await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
+  ids.owner = (await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' })).data.user.id;
   const inv = await owner('POST', '/api/invites', { role: 'member' });
   await member.wallet(wallet(), 'invite', { name: 'Mia', inviteToken: inv.data.token });
   ids.project = (await owner('POST', '/api/projects', { name: 'Docs site' })).data.project.id;
@@ -35,7 +36,7 @@ test('only explicitly listed bounties are public, and only admins list them', as
   assert.equal((await member('PATCH', `/api/tasks/${ids.listed}`, { listed: true })).status, 403);
   const noBounty = (await owner('POST', '/api/tasks', { title: 'Nope' })).data.task;
   assert.equal((await owner('PATCH', `/api/tasks/${noBounty.id}`, { listed: true })).status, 400);
-  const priv = (await owner('POST', '/api/tasks', { title: 'Secret', bounty: USDC(5), bountyToken: 'USDC', private: true })).data.task;
+  const priv = (await owner('POST', '/api/tasks', { bounty: USDC(5), bountyToken: 'USDC', private: true, sealed: sealed(ids.owner) })).data.task;
   assert.equal((await owner('PATCH', `/api/tasks/${priv.id}`, { listed: true })).status, 400);
 
   assert.equal((await owner('PATCH', `/api/tasks/${ids.listed}`, { listed: true })).status, 200);
@@ -104,7 +105,7 @@ test('assigning or hiding a listed task takes it off the board', async () => {
   const t = (await owner('POST', '/api/tasks', { title: 'Logo refresh', bounty: USDC(80), bountyToken: 'USDC' })).data.task;
   await owner('PATCH', `/api/tasks/${t.id}`, { listed: true });
   assert.equal((await fetch(`${base()}/api/public/bounties`).then((r) => r.json())).items.length, 1);
-  await owner('PATCH', `/api/tasks/${t.id}`, { private: true });
+  await owner('PATCH', `/api/tasks/${t.id}`, { private: true, sealed: sealed(ids.owner) });
   assert.equal((await fetch(`${base()}/api/public/bounties`).then((r) => r.json())).items.length, 0);
   assert.equal((await owner('GET', `/api/tasks/${t.id}/detail`)).data.task.listedAt, null);
 });

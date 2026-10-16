@@ -10,14 +10,15 @@ export default function issueReceipt(task, actorId) {
   if (!contributorId) return null;
   const person = sql.get('SELECT share_wallet FROM users WHERE id = ?', contributorId);
   const wallet = person?.share_wallet ? sql.get("SELECT external_id FROM credentials WHERE user_id = ? AND kind = 'wallet' ORDER BY created_at LIMIT 1", contributorId)?.external_id : undefined;
-  const { salt, commit } = titleCommit(task.title);
+  // an encrypted task's title is unknown here, so its receipt has none to commit to or reveal
+  const { salt, commit } = task.sealed ? { salt: null, commit: null } : titleCommit(task.title);
 
   return appendReceipt({
     type: 'nonos.receipt',
     kind: 'work',
     taskId: task.id,
     userId: contributorId,
-    title: task.title,
+    title: task.sealed ? null : task.title,
     salt,
     fields: {
       task: { ref: `${publicWorkspace().taskPrefix}-${task.number}`, commit },

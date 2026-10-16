@@ -4,7 +4,11 @@ import logActivity from './logActivity.js';
 export default function logTaskChanges(taskId, actorId, changes) {
   for (const { key, before, after } of changes) {
     if (key === 'position') continue;
-    if (key === 'description') {
+    // the server can't see what changed inside an encrypted task, only that something did
+    if (key === 'sealed') {
+      const words = (v) => v && [v.title, v.description, v.checklist].join();
+      if (after && before && words(after) !== words(before)) logActivity(taskId, actorId, 'details');
+    } else if (key === 'description') {
       logActivity(taskId, actorId, 'description');
     } else if (key === 'checklist') {
       const wasDone = new Set((before ?? []).filter((i) => i.done).map((i) => i.id));

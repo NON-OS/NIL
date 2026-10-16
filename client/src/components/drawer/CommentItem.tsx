@@ -27,7 +27,7 @@ export default function CommentItem({ comment }: { comment: Comment }) {
           </time>
           {!editing && (
             <span className="comment-actions">
-              {mine && (
+              {mine && !comment.locked && (
                 <button type="button" onClick={() => setEditing(true)}>
                   Edit
                 </button>
@@ -60,6 +60,8 @@ export default function CommentItem({ comment }: { comment: Comment }) {
               </button>
             </div>
           </div>
+        ) : comment.locked ? (
+          <p className="comment-locked">Encrypted comment. Unlock to read it.</p>
         ) : (
           <Markdown text={comment.body} />
         )}

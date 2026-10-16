@@ -5,6 +5,11 @@ import ethereum from '../lib/ethereum';
 import keyMessage from '../lib/crypto/keyMessage';
 import identityFromSignature from '../lib/crypto/identityFromSignature';
 import b64u from '../lib/crypto/b64u';
+import records from '../state/records';
+import sealedCache from '../state/sealedCache';
+import revealTask from '../state/revealTask';
+import openSealed from './openSealed';
+import taskHandover from './taskHandover';
 
 async function sign() {
   const { me } = store.get();
@@ -13,7 +18,7 @@ async function sign() {
   return ethereum.sign(keyMessage({ workspaceKey: key, userId: me!.id }), address);
 }
 
-// Unlocks encrypted docs for this tab. The first time, it signs twice to make sure the wallet
+// Unlocks encrypted docs and private tasks for this tab. The first time, it signs twice to make sure the wallet
 // signs deterministically; a wallet that doesn't would lose access to everything later.
 const vault = {
   unlocked: () => keyring.identity() !== null,
@@ -38,11 +43,18 @@ const vault = {
     }
     keyring.unlock(identity);
     store.set({ docsUnlocked: true });
+    await openSealed();
+    void taskHandover();
   },
 
+  // Forgets every key and every opened private task; they show as locked again.
   lock() {
     keyring.lock();
-    store.set({ docsUnlocked: false });
+    sealedCache.clear();
+    store.set((s) => ({
+      docsUnlocked: false,
+      tasks: records.fromList(Object.values(s.tasks).map((t) => (t.sealed ? revealTask({ ...t, locked: undefined }) : t))),
+    }));
   },
 };
 

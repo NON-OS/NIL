@@ -1,6 +1,6 @@
 import './QuickAdd.css';
 import { useMemo, useState } from 'react';
-import { CalendarDays, FolderKanban, Repeat, Tag, UserRound } from 'lucide-react';
+import { CalendarDays, FolderKanban, Lock, Repeat, Tag, UserRound } from 'lucide-react';
 import Modal from '../ui/Modal';
 import StatusIcon from '../ui/StatusIcon';
 import PriorityIcon from '../ui/PriorityIcon';
@@ -111,6 +111,15 @@ export default function QuickAdd() {
           <LabelPicker value={draft.labels} onChange={(next) => set({ labels: next })}>
             <Tag size={14} /> {draft.labels.length ? <LabelChips ids={draft.labels} max={2} /> : <span>Labels</span>}
           </LabelPicker>
+          <button
+            type="button"
+            className={`prop-btn quickadd-private${draft.private ? ' on' : ''}`}
+            aria-pressed={Boolean(draft.private)}
+            onClick={() => set({ private: !draft.private })}
+            title="Only you and the assignee can see it. Encrypted in your browser before it’s saved."
+          >
+            <Lock size={14} /> <span>{draft.private ? 'Private · encrypted' : 'Private'}</span>
+          </button>
           {draft.recurrence && (
             <span className="chip">
               <Repeat size={12} /> {meta.recurrence[draft.recurrence]}

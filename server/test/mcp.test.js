@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import sealed, { cipher } from './helpers/sealed.js';
 
 const PACKAGE = JSON.parse(fs.readFileSync(new URL('../../package.json', import.meta.url), 'utf8'));
 
@@ -98,12 +99,22 @@ test('an assistant can read, create, update and comment, within the key’s scop
   assert.equal((await callTool(keys.read, 'workspace_summary')).structuredContent.inProgress, 1);
 });
 
-test('private tasks stay private from other people’s assistants', async () => {
-  const secret = (await callTool(keys.ana, 'create_task', { title: 'Interview at another company', private: true })).structuredContent.created;
+test('assistants can’t make private tasks, and see their own only as encrypted placeholders', async () => {
+  const refused = await callTool(keys.ana, 'create_task', { title: 'Interview at another company', private: true });
+  assert.equal(refused.isError, true);
   assert.equal((await callTool(keys.read, 'list_tasks', { search: 'Interview' })).structuredContent.count, 0);
-  const peek = await callTool(keys.read, 'get_task', { key: secret.key });
-  assert.equal(peek.isError, true);
-  assert.equal((await callTool(keys.ana, 'get_task', { key: secret.key })).structuredContent.title, 'Interview at another company');
+
+  const anaId = (await ana('GET', '/api/bootstrap')).data.me.id;
+  const task = (await ana('POST', '/api/tasks', { private: true, sealed: sealed(anaId) })).data.task;
+  await ana('POST', `/api/tasks/${task.id}/comments`, { body: cipher(40), sealed: true });
+  const key = `NON-${task.number}`;
+  assert.equal((await callTool(keys.read, 'get_task', { key })).isError, true);
+  const own = (await callTool(keys.ana, 'get_task', { key })).structuredContent;
+  assert.equal(own.title, 'Private task (encrypted)');
+  assert.equal(own.description, '');
+  assert.deepEqual(own.comments.map((c) => c.text), ['(encrypted comment)']);
+  assert.equal((await callTool(keys.ana, 'update_task', { key, title: 'Leaked' })).isError, true);
+  assert.equal((await callTool(keys.ana, 'add_comment', { key, text: 'plain words' })).isError, true);
 });
 
 test('revoked keys, expired keys and removed people stop working at once', async () => {

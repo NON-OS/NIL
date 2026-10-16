@@ -4,6 +4,7 @@ import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import socket from './helpers/socket.js';
+import sealed, { cipher } from './helpers/sealed.js';
 
 let srv;
 const base = () => srv.base;
@@ -25,9 +26,9 @@ after(() => srv.close());
 
 test('a private task is invisible to everyone but its creator and assignee, admins included', async () => {
   const live = await socket(base(), owner.cookie());
-  const secret = (await ana('POST', '/api/tasks', { title: 'Draft my resignation letter', private: true })).data.task;
+  const secret = (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana) })).data.task;
   assert.equal(secret.private, true);
-  await ana('POST', `/api/tasks/${secret.id}/comments`, { body: 'note to self' });
+  await ana('POST', `/api/tasks/${secret.id}/comments`, { body: cipher(40), sealed: true });
   await settle();
 
   for (const outsider of [owner, ben]) {
@@ -37,13 +38,14 @@ test('a private task is invisible to everyone but its creator and assignee, admi
     assert.equal((await outsider('POST', `/api/tasks/${secret.id}/comments`, { body: 'hi' })).status, 404);
     assert.equal((await outsider('GET', '/api/activity')).data.some((a) => a.taskId === secret.id), false);
   }
-  assert.equal((await owner('GET', '/api/export/tasks.csv')).data.includes('resignation'), false);
-  assert.equal(JSON.stringify((await owner('GET', '/api/export/backup.json')).data).includes('resignation'), false);
+  assert.equal((await owner('GET', '/api/export/tasks.csv')).data.includes(`NON-${secret.number},`), false);
+  assert.equal(JSON.stringify((await owner('GET', '/api/export/backup.json')).data).includes(secret.id), false);
   assert.equal(JSON.stringify(live.events).includes(secret.id), false);
   live.close();
 
-  // assigning it brings in exactly one more person
-  await ana('PATCH', `/api/tasks/${secret.id}`, { assigneeId: ids.ben });
+  // assigning it brings in exactly one more person, under a fresh key
+  const comments = (await ana('GET', `/api/tasks/${secret.id}/detail`)).data.comments.map((c) => ({ id: c.id, body: cipher(40) }));
+  assert.equal((await ana('PATCH', `/api/tasks/${secret.id}`, { assigneeId: ids.ben, sealed: sealed(ids.ana, ids.ben), comments })).status, 200);
   assert.equal((await ben('GET', `/api/tasks/${secret.id}/detail`)).status, 200);
   assert.equal((await owner('GET', `/api/tasks/${secret.id}/detail`)).status, 404);
 });
@@ -55,7 +57,8 @@ test('making a task private pulls it from everyone else, live and in their inbox
 
   const live = await socket(base(), ben.cookie());
   assert.equal((await ben('PATCH', `/api/tasks/${shared.id}`, { private: true })).status, 403);
-  await ana('PATCH', `/api/tasks/${shared.id}`, { private: true });
+  const comments = (await ana('GET', `/api/tasks/${shared.id}/detail`)).data.comments.map((c) => ({ id: c.id, body: cipher(40) }));
+  assert.equal((await ana('PATCH', `/api/tasks/${shared.id}`, { private: true, sealed: sealed(ids.owner, ids.ana), comments })).status, 200);
   await settle();
   assert.ok(live.events.some((e) => e.type === 'task.gone' && e.id === shared.id));
   assert.equal(live.events.some((e) => e.type === 'task' && e.task.id === shared.id), false);
@@ -87,7 +90,7 @@ test('the timer runs one at a time, stays private to you, and exports as CSV', a
 
   const csv = (await ana('GET', '/api/time/export.csv')).data;
   assert.match(csv, /60,NON-\d+,'=cmd\|calc,Pairing/);
-  assert.equal((await owner('POST', '/api/time/start', { taskId: (await ana('POST', '/api/tasks', { title: 'mine', private: true })).data.task.id })).status, 404);
+  assert.equal((await owner('POST', '/api/time/start', { taskId: (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana) })).data.task.id })).status, 404);
 });
 
 test('a due reminder turns into a notification for its owner only', async () => {

@@ -22,9 +22,12 @@ function withoutToday(body) {
 }
 
 function bulkPatch(id, patch) {
+  const task = loadTask(id);
+  // an encrypted task needs a fresh key to change hands, which only a browser can make
+  if (task?.sealed) patch = Object.fromEntries(Object.entries(patch).filter(([key]) => key !== 'assigneeId'));
   if (!patch.labelsAdd && !patch.labelsRemove) return patch;
   const { labelsAdd = [], labelsRemove = [], ...rest } = patch;
-  const current = loadTask(id)?.labels ?? [];
+  const current = task?.labels ?? [];
   const drop = new Set(labelsRemove);
   return { ...rest, labels: [...new Set([...current, ...labelsAdd])].filter((l) => !drop.has(l)) };
 }

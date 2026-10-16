@@ -24,6 +24,8 @@ export default function toTask(row) {
     bountyToken: row.bounty ? row.bounty_token || config.nox.symbol : null,
     bountyState: row.bounty_state,
     private: Boolean(row.private),
+    // encrypted title, notes and checklist with the key wrapped per reader; null for plain tasks
+    sealed: parseJSON(row.sealed, null),
     listedAt: row.listed_at ?? null,
     position: row.position,
     commentCount: row.comment_count,

@@ -31,7 +31,7 @@ router.post('/export/capsule', requireAuth, requireAdmin, async (req, res) => {
     return res.status(400).json({ error: err.message });
   }
   res.setHeader('Content-Type', 'application/octet-stream');
-  res.setHeader('Content-Disposition', `attachment; filename="nonos-${calendar.today()}.capsule"`);
+  res.setHeader('Content-Disposition', `attachment; filename="nil-${calendar.today()}.capsule"`);
   try {
     await writeCapsule(passphrase, res);
   } catch (err) {

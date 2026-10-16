@@ -110,7 +110,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
             title="Who can see this"
             options={[
               { value: 'team', label: 'Everyone in the workspace' },
-              { value: 'private', label: 'Only the creator and assignee' },
+              { value: 'private', label: 'Only the creator and assignee', hint: 'Encrypted' },
             ]}
             value={task.private ? 'private' : 'team'}
             onChange={(v) => update({ private: v === 'private' })}

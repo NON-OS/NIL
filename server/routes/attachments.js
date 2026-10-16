@@ -38,6 +38,8 @@ router.post(
   express.raw({ type: () => true, limit: config.maxUploadBytes }),
   route((req) => {
     const task = visibleTask(req.params.id, req.user);
+    // everything on a private task is encrypted, and files aren't yet, so they stay off it
+    if (task.private) throw HttpError.badRequest('Files aren’t encrypted yet, so they can’t go on a private task.');
     if (!Buffer.isBuffer(req.body) || !req.body.length) throw HttpError.badRequest('That file is empty.');
 
     const id = newId();

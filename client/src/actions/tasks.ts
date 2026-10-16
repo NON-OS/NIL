@@ -8,11 +8,25 @@ import dates from '../lib/dates';
 import taskKey from '../lib/taskKey';
 import type Task from '../types/Task';
 import type TaskPatch from '../types/TaskPatch';
+import vault from './vault';
+import taskKeys from './taskKeys';
+import taskSeal from './taskSeal';
+import sealedPatch from './sealedPatch';
+
+// A new private task is sealed here before it leaves the browser: its words go out encrypted
+// under a fresh key that only the creator and the assignee hold.
+async function sealedNew(input: Partial<Task>) {
+  await vault.unlock();
+  const { title = '', description = '', checklist = [], ...rest } = input;
+  const fresh = taskKeys.fresh();
+  const keys = await taskKeys.wrap(fresh.key, [store.get().me!.id, input.assigneeId ?? null]);
+  return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys) };
+}
 
 const tasks = {
   async create(input: Partial<Task>): Promise<Task | null> {
     try {
-      const { task } = await http.post<{ task: Task }>('/tasks', input);
+      const { task } = await http.post<{ task: Task }>('/tasks', input.private ? await sealedNew(input) : input);
       putTask(task);
       return task;
     } catch (err) {
@@ -29,10 +43,15 @@ const tasks = {
     if (patch.status && patch.status !== before.status) optimistic.completedAt = patch.status === 'done' ? Date.now() : null;
     putTask(optimistic);
     try {
-      const res = await http.patch<{ task: Task; spawned: Task | null }>(`/tasks/${id}`, { ...patch, today: dates.today() });
+      const res = await http.patch<{ task: Task; spawned: Task | null }>(`/tasks/${id}`, { ...(await sealedPatch(before, patch)), today: dates.today() });
       putTask(res.task);
       if (res.spawned) {
         putTask(res.spawned);
+        // the server copies a private task's sealed checklist as it was; clear the ticks here
+        const copy = store.get().tasks[res.spawned.id];
+        if (copy?.sealed && !copy.locked && copy.checklist.some((i) => i.done)) {
+          void tasks.update(copy.id, { checklist: copy.checklist.map((i) => ({ ...i, done: false })) }, { quiet: true });
+        }
         if (!quiet) toast.show(`Next one is ${taskKey(res.spawned)}, due ${dates.relative(res.spawned.dueDate!)}`, { tone: 'success' });
       }
       return res.task;

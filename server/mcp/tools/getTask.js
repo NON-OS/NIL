@@ -11,8 +11,8 @@ export default {
   run(args, user) {
     const task = findTaskByKey(args.key, user);
     const comments = sql
-      .all('SELECT c.body, c.created_at, u.name FROM comments c LEFT JOIN users u ON u.id = c.author_id WHERE c.task_id = ? ORDER BY c.created_at DESC LIMIT 20', task.id)
-      .map((c) => ({ by: c.name ?? 'a former member', at: new Date(c.created_at).toISOString(), text: c.body }));
+      .all('SELECT c.body, c.sealed, c.created_at, u.name FROM comments c LEFT JOIN users u ON u.id = c.author_id WHERE c.task_id = ? ORDER BY c.created_at DESC LIMIT 20', task.id)
+      .map((c) => ({ by: c.name ?? 'a former member', at: new Date(c.created_at).toISOString(), text: c.sealed ? '(encrypted comment)' : c.body }));
     return { ...taskOut(task, { full: true }), comments };
   },
 };

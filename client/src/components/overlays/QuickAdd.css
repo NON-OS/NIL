@@ -53,6 +53,12 @@
   border: 1px solid var(--line);
 }
 
+.quickadd-private.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
 .quickadd-foot {
   display: flex;
   flex-wrap: wrap;

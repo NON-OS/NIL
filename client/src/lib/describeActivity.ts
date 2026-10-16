@@ -31,6 +31,9 @@ export default function describeActivity(a: Activity, s: Lookup): string {
       return `renamed this from “${from}”`;
     case 'description':
       return 'updated the description';
+    // an encrypted task's history can only say that its words changed, not how
+    case 'details':
+      return 'edited the private details';
     case 'projectId':
       return `moved this to ${project(to)}`;
     case 'goalId':

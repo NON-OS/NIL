@@ -8,6 +8,7 @@ import toTaskViewers from '../services/toTaskViewers.js';
 import addComment from '../services/addComment.js';
 import publishTask from '../services/publishTask.js';
 import toComment from '../mappers/toComment.js';
+import cipherText from '../lib/cipherText.js';
 
 const router = express.Router();
 
@@ -25,13 +26,15 @@ function ownComment(req, { allowAdmin = false } = {}) {
   return row;
 }
 
-router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body) })));
+router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body, { sealed: req.body?.sealed === true }) })));
 
 router.patch(
   '/comments/:id',
   route((req) => {
     const row = ownComment(req);
-    sql.run('UPDATE comments SET body = ?, edited_at = ? WHERE id = ?', check.text(req.body.body, 'Comment', { min: 1, max: 10_000 }), Date.now(), row.id);
+    // an encrypted comment stays encrypted; the browser re-seals the edit with the task's key
+    const body = row.sealed ? cipherText(req.body.body, 'Encrypted comment', { max: 60_000 }) : check.text(req.body.body, 'Comment', { min: 1, max: 10_000 });
+    sql.run('UPDATE comments SET body = ?, edited_at = ? WHERE id = ?', body, Date.now(), row.id);
     const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', row.id));
     toTaskViewers(row.task_id, { type: 'comment', comment });
     return { comment };

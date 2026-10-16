@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
+import sealed from './helpers/sealed.js';
 import socket from './helpers/socket.js';
 
 let srv;
@@ -15,7 +16,7 @@ const settle = () => new Promise((r) => setTimeout(r, 150));
 
 before(async () => {
   srv = await startServer();
-  await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
+  ids.owner = (await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' })).data.user.id;
   const inv = await owner('POST', '/api/invites', { role: 'member' });
   ids.member = (await member.wallet(wallet(), 'invite', { name: 'Mia Member', inviteToken: inv.data.token })).data.user.id;
   ids.shared = (await owner('POST', '/api/projects', { name: 'Client Website' })).data.project.id;
@@ -88,7 +89,7 @@ test('members can invite only when the workspace allows it, and never admins', a
 test('share links: off by default, read-only, private-safe, revocable', async () => {
   assert.equal((await member('POST', '/api/share-links', { kind: 'project', targetId: ids.shared })).status, 403);
   await owner('PUT', '/api/sharing', { shareLinks: true });
-  await owner('POST', '/api/tasks', { title: 'Private pricing notes', projectId: ids.shared, private: true });
+  const pricing = (await owner('POST', '/api/tasks', { projectId: ids.shared, private: true, sealed: sealed(ids.owner) })).data.task;
   const made = await member('POST', '/api/share-links', { kind: 'project', targetId: ids.shared, days: 7 });
   assert.equal(made.status, 200);
   const page = await fetch(`${base()}/api/public/share/${made.data.token}`);
@@ -96,10 +97,10 @@ test('share links: off by default, read-only, private-safe, revocable', async ()
   const view = await page.json();
   assert.equal(view.project.name, 'Client Website');
   assert.ok(view.tasks.some((t) => t.title === 'Homepage copy'));
-  assert.equal(JSON.stringify(view).includes('Private pricing'), false);
+  assert.equal(view.tasks.some((t) => t.key.endsWith(`-${pricing.number}`)), false);
   assert.equal(JSON.stringify(view).includes('Erik'), false);
 
-  const priv = (await owner('POST', '/api/tasks', { title: 'Secret', private: true, projectId: ids.shared })).data.task;
+  const priv = (await owner('POST', '/api/tasks', { private: true, sealed: sealed(ids.owner), projectId: ids.shared })).data.task;
   assert.equal((await owner('POST', '/api/share-links', { kind: 'task', targetId: priv.id })).status, 400);
   assert.equal((await guest('POST', '/api/share-links', { kind: 'task', targetId: ids.sharedTask })).status, 403);
 

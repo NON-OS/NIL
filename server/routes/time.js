@@ -100,16 +100,16 @@ router.get(
     const { from, to } = range(req.query);
     const { taskPrefix } = publicWorkspace();
     const rows = sql.all(
-      `SELECT e.*, t.number, t.title FROM time_entries e LEFT JOIN tasks t ON t.id = e.task_id
+      `SELECT e.*, t.number, t.title, t.sealed FROM time_entries e LEFT JOIN tasks t ON t.id = e.task_id
        WHERE e.user_id = ? AND e.started_at >= ? AND e.started_at < ? AND e.ended_at IS NOT NULL ORDER BY e.started_at`,
       req.user.id, from, to,
     );
     const lines = [['Start', 'End', 'Minutes', 'Task', 'Title', 'Note'].join(',')];
     for (const r of rows) {
-      lines.push([new Date(r.started_at).toISOString(), new Date(r.ended_at).toISOString(), Math.round((r.ended_at - r.started_at) / 60_000), r.number ? `${taskPrefix}-${r.number}` : '', r.title ?? '', r.note].map(csvCell).join(','));
+      lines.push([new Date(r.started_at).toISOString(), new Date(r.ended_at).toISOString(), Math.round((r.ended_at - r.started_at) / 60_000), r.number ? `${taskPrefix}-${r.number}` : '', r.sealed ? 'Private task (encrypted)' : r.title ?? '', r.note].map(csvCell).join(','));
     }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', 'attachment; filename="nonos-timesheet.csv"');
+    res.setHeader('Content-Disposition', 'attachment; filename="nil-timesheet.csv"');
     res.send(`﻿${lines.join('\r\n')}`);
   }),
 );

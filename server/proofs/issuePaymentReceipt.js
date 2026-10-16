@@ -8,13 +8,14 @@ import titleCommit from './titleCommit.js';
 // shows it publicly; the task title stays hidden behind a commitment like work receipts.
 export default function issuePaymentReceipt(payment, task) {
   const token = rewardToken(payment.token);
-  const hidden = task ? titleCommit(task.title) : { salt: null, commit: null };
+  const plain = task && !task.sealed;
+  const hidden = plain ? titleCommit(task.title) : { salt: null, commit: null };
   return appendReceipt({
     type: 'nonos.payment',
     kind: 'payment',
     taskId: task?.id ?? null,
     userId: payment.payee_id,
-    title: task?.title ?? null,
+    title: plain ? task.title : null,
     salt: hidden.salt,
     fields: {
       task: { ref: payment.task_ref, commit: hidden.commit },

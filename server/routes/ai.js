@@ -37,6 +37,7 @@ function ai(handler) {
 
 function taskFrom(req) {
   const task = visibleTask(String(req.body.taskId || ''), req.user);
+  if (task.sealed) throw HttpError.badRequest('This task is encrypted, so the AI can’t read it.');
   return task;
 }
 

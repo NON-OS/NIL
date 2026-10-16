@@ -9,7 +9,7 @@ import isAdminUser from '../../lib/isAdmin';
 
 const isImage = (a: Attachment) => /^image\/(png|jpeg|gif|webp)$/.test(a.mime);
 
-export default function Attachments({ taskId }: { taskId: string }) {
+export default function Attachments({ taskId, isPrivate }: { taskId: string; isPrivate: boolean }) {
   const attachments = useStore((s) => (s.detail?.taskId === taskId ? s.detail.attachments : null));
   const meId = useStore((s) => s.me?.id);
   const isAdmin = useStore((s) => isAdminUser(s.me));
@@ -25,6 +25,18 @@ export default function Attachments({ taskId }: { taskId: string }) {
       setUploading((n) => n - 1);
     }
   };
+
+  // everything on a private task is encrypted and files aren't yet, so they stay off it
+  if (isPrivate && !attachments?.length) {
+    return (
+      <section className="drawer-section">
+        <div className="section-head">
+          <h3>Files</h3>
+        </div>
+        <p className="hint">Files aren’t encrypted yet, so they can’t go on a private task.</p>
+      </section>
+    );
+  }
 
   return (
     <section

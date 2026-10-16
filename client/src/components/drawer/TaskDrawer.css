@@ -470,3 +470,37 @@
     grid-template-columns: 96px minmax(0, 1fr);
   }
 }
+
+/* a private task this tab can't open yet */
+.locked-task {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface-2);
+}
+
+.locked-task > svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--accent-line);
+}
+
+.locked-task > div {
+  flex: 1;
+  display: grid;
+  gap: 4px;
+}
+
+.locked-task p {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.comment-locked {
+  color: var(--muted);
+  font-size: var(--text-sm);
+  font-style: italic;
+}

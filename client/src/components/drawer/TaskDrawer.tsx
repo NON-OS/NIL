@@ -10,6 +10,7 @@ import DescriptionEditor from './DescriptionEditor';
 import Checklist from './Checklist';
 import Attachments from './Attachments';
 import Timeline from './Timeline';
+import LockedTask from './LockedTask';
 import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
 
@@ -43,13 +44,22 @@ export default function TaskDrawer({ number }: { number: number }) {
           <>
             <DrawerHeader task={task} />
             <div className="drawer-body">
-              <TitleEditor task={task} />
-              <PropertyGrid task={task} />
-              <BountyPanel task={task} />
-              <DescriptionEditor task={task} />
-              <Checklist task={task} />
-              <Attachments taskId={task.id} />
-              <Timeline taskId={task.id} />
+              {task.locked ? (
+                <>
+                  <LockedTask task={task} />
+                  <PropertyGrid task={task} />
+                </>
+              ) : (
+                <>
+                  <TitleEditor task={task} />
+                  <PropertyGrid task={task} />
+                  <BountyPanel task={task} />
+                  <DescriptionEditor task={task} />
+                  <Checklist task={task} />
+                  <Attachments taskId={task.id} isPrivate={task.private} />
+                  <Timeline taskId={task.id} />
+                </>
+              )}
             </div>
           </>
         ) : (

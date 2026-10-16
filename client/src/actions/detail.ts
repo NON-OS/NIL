@@ -7,6 +7,20 @@ import socket from '../realtime/socket';
 import type Comment from '../types/Comment';
 import type Attachment from '../types/Attachment';
 import type Activity from '../types/Activity';
+import taskKeys from './taskKeys';
+import commentText from './commentText';
+
+// Comments on a private task are opened here as they arrive, and sealed before they leave.
+const opened = (taskId: string, list: Comment[]) => {
+  const task = store.get().tasks[taskId];
+  return task?.sealed ? Promise.all(list.map((c) => commentText.open(task, c))) : Promise.resolve(list);
+};
+
+async function outgoing(taskId: string, body: string) {
+  const task = store.get().tasks[taskId];
+  if (!task?.sealed) return { body };
+  return { body: await commentText.seal(await taskKeys.open(task.sealed), store.get().me!.id, body), sealed: true };
+}
 
 interface DetailResponse {
   comments: Comment[];
@@ -28,7 +42,8 @@ const detail = {
     socket.viewing(taskId);
     try {
       const d = await http.get<DetailResponse>(`/tasks/${taskId}/detail`);
-      if (store.get().detail?.taskId === taskId) store.set({ detail: { taskId, loading: false, ...d } });
+      const comments = await opened(taskId, d.comments);
+      if (store.get().detail?.taskId === taskId) store.set({ detail: { taskId, loading: false, ...d, comments } });
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 404)) toast.error(err);
     }
@@ -41,7 +56,8 @@ const detail = {
 
   async comment(taskId: string, body: string) {
     try {
-      const { comment } = await http.post<{ comment: Comment }>(`/tasks/${taskId}/comments`, { body });
+      const sent = await http.post<{ comment: Comment }>(`/tasks/${taskId}/comments`, await outgoing(taskId, body));
+      const comment = { ...sent.comment, body, locked: false };
       patchDetail(taskId, (d) => ({ comments: d.comments.some((c) => c.id === comment.id) ? d.comments : [...d.comments, comment] }));
       return true;
     } catch (err) {
@@ -52,8 +68,9 @@ const detail = {
 
   async editComment(comment: Comment, body: string) {
     try {
-      const res = await http.patch<{ comment: Comment }>(`/comments/${comment.id}`, { body });
-      patchDetail(comment.taskId, (d) => ({ comments: d.comments.map((c) => (c.id === comment.id ? res.comment : c)) }));
+      const res = await http.patch<{ comment: Comment }>(`/comments/${comment.id}`, { body: (await outgoing(comment.taskId, body)).body });
+      const edited = { ...res.comment, body, locked: false };
+      patchDetail(comment.taskId, (d) => ({ comments: d.comments.map((c) => (c.id === comment.id ? edited : c)) }));
     } catch (err) {
       toast.error(err);
     }

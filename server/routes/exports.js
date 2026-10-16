@@ -34,7 +34,8 @@ router.get(
     for (const t of sql.all(`SELECT * FROM tasks WHERE deleted_at IS NULL AND ${visible.where} ORDER BY number`, ...visible.params).map(toTask)) {
       lines.push(
         [
-          `${taskPrefix}-${t.number}`, t.title, t.status, PRIORITY[t.priority],
+          // the server can't read an encrypted task, so neither can its export
+          `${taskPrefix}-${t.number}`, t.sealed ? 'Private task (encrypted)' : t.title, t.status, PRIORITY[t.priority],
           projects.get(t.projectId), goals.get(t.goalId), users.get(t.assigneeId),
           t.dueDate, t.startDate, t.estimate,
           t.labels.map((id) => labels.get(id)).filter(Boolean).join('; '),
@@ -44,7 +45,7 @@ router.get(
       );
     }
     res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="nonos-tasks-${calendar.today()}.csv"`);
+    res.setHeader('Content-Disposition', `attachment; filename="nil-tasks-${calendar.today()}.csv"`);
     res.send(`﻿${lines.join('\r\n')}`);
   }),
 );
@@ -55,7 +56,7 @@ router.get(
   '/export/backup.json',
   requireAdmin,
   route((req, res) => {
-    res.setHeader('Content-Disposition', `attachment; filename="nonos-backup-${calendar.today()}.json"`);
+    res.setHeader('Content-Disposition', `attachment; filename="nil-backup-${calendar.today()}.json"`);
     const visible = visibleSql(req.user.id, 't');
     const tasks = sql.all(`SELECT t.* FROM tasks t WHERE ${visible.where}`, ...visible.params);
     const ids = new Set(tasks.map((t) => t.id));

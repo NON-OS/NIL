@@ -1,4 +1,6 @@
 import http from '../api/http';
+import revealTask from '../state/revealTask';
+import openSealed from './openSealed';
 import store from '../state/store';
 import records from '../state/records';
 import toast from '../state/toast';
@@ -51,7 +53,7 @@ async function load() {
     projects: records.fromList(b.projects),
     labels: records.fromList(b.labels),
     goals: records.fromList(b.goals),
-    tasks: records.fromList(b.tasks),
+    tasks: records.fromList(b.tasks.map(revealTask)),
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
@@ -64,6 +66,7 @@ async function load() {
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });
+  void openSealed();
   socket.connect(() => load().catch(() => {}));
 }
 

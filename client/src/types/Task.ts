@@ -2,6 +2,7 @@ import type Status from './Status';
 import type Priority from './Priority';
 import type Recurrence from './Recurrence';
 import type ChecklistItem from './ChecklistItem';
+import type SealedTask from './SealedTask';
 
 export default interface Task {
   id: string;
@@ -26,6 +27,11 @@ export default interface Task {
   bountyState: 'pending' | 'paid' | null;
   // only the creator and the assignee can see a private task
   private: boolean;
+  // a private task's encrypted contents; title, description and checklist above hold the
+  // plain text once this browser has opened it
+  sealed: SealedTask | null;
+  // set in the browser: true while a sealed task can't be opened yet (locked keyring)
+  locked?: boolean;
   // set while the bounty is on the public board
   listedAt: number | null;
   position: number;
