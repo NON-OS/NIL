@@ -6,6 +6,7 @@ import HttpError from '../lib/HttpError.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import hub from '../realtime/hub.js';
 import publicWorkspace from '../services/publicWorkspace.js';
+import cryptoTools from '../services/cryptoTools.js';
 
 const router = express.Router();
 
@@ -20,6 +21,10 @@ router.patch(
       const prefix = String(req.body.taskPrefix).toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
       if (!prefix) throw HttpError.badRequest('The task prefix needs at least one letter or digit.');
       sql.run('UPDATE workspace SET task_prefix = ? WHERE id = 1', prefix);
+    }
+    if ('cryptoTools' in req.body) {
+      if (typeof req.body.cryptoTools !== 'boolean') throw HttpError.badRequest('Crypto tools are either on or off.');
+      cryptoTools.set(req.body.cryptoTools);
     }
     const workspace = publicWorkspace();
     hub.broadcast({ type: 'workspace', workspace });

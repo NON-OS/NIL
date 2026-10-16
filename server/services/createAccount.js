@@ -15,13 +15,13 @@ function workspacePrefix(name) {
 
 // Creates a person with their wallet: the first owner during setup, someone holding an
 // invite, or a NOX holder joining through the open door.
-export default function createAccount({ mode, id = newId(), name, workspaceName, inviteHash, address }) {
+export default function createAccount({ mode, id = newId(), name, workspaceName, cryptoTools = true, inviteHash, address }) {
   sql.tx(() => {
     let role = 'member';
     let guestProjects = [];
     if (mode === 'setup') {
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
-      sql.run('INSERT INTO workspace (id, name, task_prefix, created_at) VALUES (1, ?, ?, ?)', workspaceName, workspacePrefix(workspaceName), Date.now());
+      sql.run('INSERT INTO workspace (id, name, task_prefix, crypto_tools, created_at) VALUES (1, ?, ?, ?, ?)', workspaceName, workspacePrefix(workspaceName), cryptoTools ? 1 : 0, Date.now());
       role = 'owner';
     } else if (mode === 'invite') {
       const invite = sql.get('SELECT * FROM invites WHERE token_hash = ? AND used_at IS NULL AND expires_at > ?', inviteHash, Date.now());

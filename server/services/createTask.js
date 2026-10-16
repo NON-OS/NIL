@@ -11,6 +11,7 @@ import notify from './notify.js';
 import issueReceipt from '../proofs/issueReceipt.js';
 import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
+import cryptoTools from './cryptoTools.js';
 
 // `legacy` lets the server copy a recurring private task from before encryption existed;
 // everything that comes from a browser or an assistant has to be sealed to be private.
@@ -25,6 +26,7 @@ export default function createTask(actor, input, { legacy = false } = {}) {
     if (!p.sealed.keys[actor.id]) throw HttpError.badRequest('Include a key for yourself, or you couldn’t open your own task.');
     Object.assign(p, { title: '', description: '', checklist: [] });
   } else if (!p.title) throw HttpError.badRequest('Title can’t be empty.');
+  if (p.bounty && !cryptoTools.on()) throw HttpError.badRequest('Bounties are turned off in this workspace.');
   if (p.bounty && !actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
   if (p.bounty) planGate('A new bounty');
   const scope = guestScope.of(actor.id);

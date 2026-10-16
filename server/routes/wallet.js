@@ -51,6 +51,8 @@ router.post(
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
       pending.name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
       pending.workspaceName = check.text(req.body.workspaceName || 'My team', 'Workspace name', { min: 1, max: 60 });
+      // only an explicit "everyday team" hides the crypto tools; older clients and scripts keep them
+      pending.cryptoTools = req.body.cryptoTools !== false;
     } else if (mode === 'invite') {
       const invite = liveInvite(req.body.inviteToken);
       if (!invite) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
@@ -113,7 +115,7 @@ router.post(
       const held = await balanceOf(pending.address);
       if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)}. Joining without an invite needs at least ${nox(gate.minimum)}.`);
     }
-    const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, inviteHash: pending.inviteHash, address: pending.address });
+    const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, cryptoTools: pending.cryptoTools, inviteHash: pending.inviteHash, address: pending.address });
     if (pending.mode !== 'setup') publishUser(id);
     return signIn(req, res, id);
   }),

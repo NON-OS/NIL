@@ -15,6 +15,7 @@ import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
 import resealComments from './resealComments.js';
 import scrubPlaintext from './scrubPlaintext.js';
+import cryptoTools from './cryptoTools.js';
 
 const COLUMNS = {
   title: 'title',
@@ -87,6 +88,10 @@ export default function updateTask(actor, id, body, { today } = {}) {
   if (!changes.length) return { task: existing, spawned: null };
   if (patch.projectId !== undefined && guestScope.of(actor.id) && !guestScope.of(actor.id).has(patch.projectId)) {
     throw HttpError.forbidden('Guests can move tasks only between projects shared with them.');
+  }
+  // with the crypto tools off a bounty can still be taken away, but never set or listed
+  if (changes.some((c) => ['bounty', 'listedAt'].includes(c.key) && c.after) && !cryptoTools.on()) {
+    throw HttpError.badRequest('Bounties are turned off in this workspace.');
   }
   const listing = changes.find((c) => c.key === 'listedAt');
   if (listing) {

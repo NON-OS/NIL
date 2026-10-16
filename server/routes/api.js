@@ -2,6 +2,7 @@ import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import requireMember from '../auth/requireMember.js';
 import requirePlan from '../auth/requirePlan.js';
+import cryptoGate from '../auth/cryptoGate.js';
 import auth from './auth.js';
 import wallet from './wallet.js';
 import credentials from './credentials.js';
@@ -46,6 +47,8 @@ import trustees from './trustees.js';
 const api = express.Router();
 
 api.use(auth);
+// Workspaces with the crypto tools off answer 404 on their routes, signed in or not.
+api.use(cryptoGate);
 api.use(publicPages);
 api.use(publicBounties);
 api.use(wallet);
