@@ -60,12 +60,12 @@ const worker = {
   // crash. It goes back in the queue, unless it has already used up its attempts.
   recover() {
     for (const row of sql.all("SELECT id, attempts FROM agent_runs WHERE status = 'running'")) {
-      const log = stepLog(row.id);
+      const steps = stepLog(row.id);
       if (row.attempts > config.agents.retries) {
-        log.add('note', { output: 'The server stopped during this run, and it has no attempts left.', ok: false });
+        steps.add('note', { output: 'The server stopped during this run, and it has no attempts left.', ok: false });
         sql.run("UPDATE agent_runs SET status = 'failed', finished_at = ?, error = 'Interrupted by a server restart too many times.' WHERE id = ?", Date.now(), row.id);
       } else {
-        log.add('note', { output: 'The server stopped during this run. It will start again.', ok: false });
+        steps.add('note', { output: 'The server stopped during this run. It will start again.', ok: false });
         sql.run("UPDATE agent_runs SET status = 'queued', run_after = ? WHERE id = ?", Date.now(), row.id);
       }
     }

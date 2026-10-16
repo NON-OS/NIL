@@ -317,6 +317,18 @@ test('transient errors retry with a delay; other errors end the run with a comme
   assert.match(comments(broken.id).at(-1).body, /^I couldn’t finish this: The server’s AI key is invalid/);
 });
 
+test('an unexpected error inside a run ends it with a comment and a log line, not a crash', async () => {
+  use([() => {
+    throw new TypeError('something nobody expected');
+  }]);
+  const t = await newTask({ title: 'Tidy the release notes', assigneeId: ids.builder });
+  const run = await settled(t.id);
+  assert.equal(run.status, 'failed');
+  assert.equal(run.error, 'The agent stopped on an unexpected error.');
+  assert.match(comments(t.id).at(-1).body, /^I couldn’t finish this: The agent stopped on an unexpected error\./);
+  assert.ok(steps(run.id).some((s) => s.kind === 'error' && s.output === 'The agent stopped on an unexpected error.'));
+});
+
 test('runs survive a restart, and cancelling, pausing, the time limit and the kill switch stop them', async () => {
   use([{ text: 'Picked up after the restart.' }]);
   const t = await newTask({ title: 'Interrupted work' });
