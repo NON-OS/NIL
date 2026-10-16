@@ -50,9 +50,9 @@ A server that sets a treasury, such as the hosted service the NØNOS foundation 
 
 ### What NOX holders get
 
-- **A Zero-State Pass gives Pro.** If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. It's checked every few hours and whenever an invoice is made. If the pass is sold, Pro ends at the next check and the grace period follows.
-- **Staking takes money off.** When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. The discount is read when the invoice is made and locked into it.
-- **Paying in NOX costs less** than paying in USDC.
+- A Zero-State Pass gives Pro. If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. It's checked every few hours and whenever an invoice is made. If the pass is sold, Pro ends at the next check and the grace period follows.
+- Staking takes money off. When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. The discount is read when the invoice is made and locked into it.
+- Paying in NOX costs less than paying in USDC.
 
 ### Pay for Nil Pro
 
@@ -61,17 +61,17 @@ Admins pay from **Settings → Plan**:
 1. Under **Get Nil Pro**, choose how long to pay for and how many people the plan covers. The price shows line by line before anything is made: the flat fee, the seats, the staker discount, any credit, and what that comes to in USDC and in NOX.
 2. Click **Make the invoice**. It's open for 24 hours, and the NOX rate and discounts are locked for that time.
 3. Pay one of the amounts shown, in one of three ways:
-   - **From this browser's wallet**: click **Pay from this browser's wallet** and approve the transfer.
-   - **From a phone wallet**: scan the QR code. It opens the transfer, amount and all.
-   - **From an exchange or any other wallet**: copy the exact amount and the treasury address and send it. If you have the transaction hash, paste it under the invoice to have it found at once.
+   - From this browser's wallet: click **Pay from this browser's wallet** and approve the transfer.
+   - From a phone wallet: scan the QR code. It opens the transfer, amount and all.
+   - From an exchange or any other wallet: copy the exact amount and the treasury address and send it. If you have the transaction hash, paste it under the invoice to have it found at once.
 
 Send the exact amount. Its last few digits (for example the 4817 in 12.004817 USDC) tell your payment apart from everyone else's paying the same treasury, which is how a payment from any wallet or exchange finds its invoice. An exchange that rounds the amount can't be matched, so use one that sends it as is.
 
 The invoice then shows where it stands: **Waiting for payment**, **Seen, not mined yet**, **Confirming** (the payment is in a block that isn't final yet, usually under 15 minutes on Ethereum), and **Paid**. A payment counts only once its block is final.
 
-- **Underpaid**: if less arrived, the invoice shows what's missing and the exact amount to send to finish. It ends in the same digits, so it's matched to the same invoice.
-- **Overpaid**: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
-- **Expired or cancelled**: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.
+- Underpaid: if less arrived, the invoice shows what's missing and the exact amount to send to finish. It ends in the same digits, so it's matched to the same invoice.
+- Overpaid: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
+- Expired or cancelled: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.
 
 Under- and overpayments from any wallet are matched automatically on hosted servers that give each workspace its own share of suffixes (`PLAN_INVOICE_SLOT`). Elsewhere, paste the transaction hash under the invoice and it's matched the same way.
 

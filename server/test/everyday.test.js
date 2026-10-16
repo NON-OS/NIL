@@ -4,7 +4,8 @@ import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import socket from './helpers/socket.js';
-import sealed, { cipher } from './helpers/sealed.js';
+import sealed from './helpers/sealed.js';
+import cipher from './helpers/cipher.js';
 
 let srv;
 const base = () => srv.base;

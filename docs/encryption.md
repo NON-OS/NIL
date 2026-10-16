@@ -57,11 +57,11 @@ The server writes the messages for signing in and for signed ballots. A dishones
 
 ## What a server operator can still do
 
-- **Serve different app code.** All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. Running a build you trust on a server you control is the defence.
-- **See metadata:** who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
-- **Refuse service, delete data, or serve old data.** Docs warn when rolled back. Private tasks aren't versioned yet, so an older saved version of one can be served without a warning, though it is still its writer's real text.
-- **Get the first key in.** If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.
-- **Copy a private task's sealed contents onto another task.** The words are still their writer's real words.
+- Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. Running a build you trust on a server you control is the defence.
+- See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
+- Refuse service, delete data, or serve old data. Docs warn when rolled back. Private tasks aren't versioned yet, so an older saved version of one can be served without a warning, though it is still its writer's real text.
+- Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.
+- Copy a private task's sealed contents onto another task. The words are still their writer's real words.
 
 ## Recovery and moves
 

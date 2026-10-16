@@ -6,7 +6,7 @@ export default function taskContext(task) {
   return [
     `Task: ${task.title}`,
     task.description ? `Description:\n${task.description.slice(0, 6000)}` : 'Description: (none)',
-    project && `Project: ${project.name}${project.description ? ` — ${project.description.slice(0, 500)}` : ''}`,
+    project && `Project: ${project.name}${project.description ? `: ${project.description.slice(0, 500)}` : ''}`,
     goal && `Supports goal: ${goal.title}`,
     task.checklist.length && `Current checklist:\n${task.checklist.map((i) => `- [${i.done ? 'x' : ' '}] ${i.text}`).join('\n')}`,
   ]

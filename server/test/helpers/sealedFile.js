@@ -1,4 +1,4 @@
-import { cipher } from './sealed.js';
+import cipher from './cipher.js';
 
 // A file's details as a browser seals them under the task seal named: its own seal id, its
 // name and type encrypted, and its key wrapped under the task's key. Random base64url of the

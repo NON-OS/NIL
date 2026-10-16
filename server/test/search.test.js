@@ -3,7 +3,8 @@ import assert from 'node:assert/strict';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
-import sealed, { cipher } from './helpers/sealed.js';
+import sealed from './helpers/sealed.js';
+import cipher from './helpers/cipher.js';
 
 let srv;
 let sql;

@@ -62,13 +62,13 @@ NØNOS does not look at any of this, and the control plane is built so it never 
                                      Storage Box or S3 bucket, another location
 ```
 
-- **One container per workspace**, created through the Docker Engine API from the app image. Each has its own data volume, its own bridge network (so its own network namespace and no route to other workspaces), a read-only root filesystem with a small no-exec `/tmp`, no Linux capabilities, `no-new-privileges`, an init process, hard CPU, memory and process limits without swap, rotated logs and a health check on the app's own `/healthz`. The app inside is unmodified: the control plane only sets `APP_URL`, `TRUST_PROXY`, `PLAN_TREASURY` with each workspace's own invoice slot (`PLAN_INVOICE_SLOT`, `PLAN_INVOICE_KEY`), `SOURCE_URL`, `NOX_RPC_URL` and a one-time `SETUP_TOKEN`; every other app setting comes from a shared `workspace.env`.
-- **Egress**: with `CLOUD_EGRESS=rpc-only` (the default) workspace networks are Docker "internal" networks. Caddy is attached to each one, which makes it the only way in and, through its JSON-RPC relay, the only way out.
-- **Routing and TLS**: the Caddyfile is generated from the control database. Running workspaces are proxied to their container, with WebSocket connections kept open across reloads; paused ones get a short notice; anything else is a 404. Certificates are either issued on demand, only for addresses the control plane confirms through its `ask` endpoint, or one wildcard certificate through a DNS challenge.
-- **Sign-up**: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace.
-- **Upgrades**: one workspace at a time. Each is stopped, its database checkpointed inside its own volume, started on the new image (which migrates the database) and health-checked. A failure puts the checkpoint back and starts the old image. The rollout stops after `CLOUD_UPGRADE_MAX_FAILURES` failures. The app also keeps its own `pre-migration-*.db` copies in the data folder; backups leave those out.
-- **Backups**: nightly, one workspace after another. A consistent snapshot of the database (SQLite `VACUUM INTO`, taken inside the workspace) and its files are streamed straight into encryption (X25519 and AES-256-GCM, the way age does it), then to the target. The server holds public keys only.
-- **Health**: Docker runs `/healthz` in every container; the control plane restarts a workspace that stays unhealthy, alerts the operator, and stops restarting one that keeps failing. It also alerts on a degraded RAID mirror, a nearly full disk, failed backups and failed upgrades.
+- One container per workspace, created through the Docker Engine API from the app image. Each has its own data volume, its own bridge network (so its own network namespace and no route to other workspaces), a read-only root filesystem with a small no-exec `/tmp`, no Linux capabilities, `no-new-privileges`, an init process, hard CPU, memory and process limits without swap, rotated logs and a health check on the app's own `/healthz`. The app inside is unmodified: the control plane only sets `APP_URL`, `TRUST_PROXY`, `PLAN_TREASURY` with each workspace's own invoice slot (`PLAN_INVOICE_SLOT`, `PLAN_INVOICE_KEY`), `SOURCE_URL`, `NOX_RPC_URL` and a one-time `SETUP_TOKEN`; every other app setting comes from a shared `workspace.env`.
+- Egress: with `CLOUD_EGRESS=rpc-only` (the default) workspace networks are Docker "internal" networks. Caddy is attached to each one, which makes it the only way in and, through its JSON-RPC relay, the only way out.
+- Routing and TLS: the Caddyfile is generated from the control database. Running workspaces are proxied to their container, with WebSocket connections kept open across reloads; paused ones get a short notice; anything else is a 404. Certificates are either issued on demand, only for addresses the control plane confirms through its `ask` endpoint, or one wildcard certificate through a DNS challenge.
+- Sign-up: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace.
+- Upgrades: one workspace at a time. Each is stopped, its database checkpointed inside its own volume, started on the new image (which migrates the database) and health-checked. A failure puts the checkpoint back and starts the old image. The rollout stops after `CLOUD_UPGRADE_MAX_FAILURES` failures. The app also keeps its own `pre-migration-*.db` copies in the data folder; backups leave those out.
+- Backups: nightly, one workspace after another. A consistent snapshot of the database (SQLite `VACUUM INTO`, taken inside the workspace) and its files are streamed straight into encryption (X25519 and AES-256-GCM, the way age does it), then to the target. The server holds public keys only.
+- Health: Docker runs `/healthz` in every container; the control plane restarts a workspace that stays unhealthy, alerts the operator, and stops restarting one that keeps failing. It also alerts on a degraded RAID mirror, a nearly full disk, failed backups and failed upgrades.
 
 Code layout:
 
@@ -85,9 +85,9 @@ public/       the sign-up page                         test/        node --test 
 
 The service is sized for one Hetzner **EX63**: Intel Core Ultra 7 265 (20 cores), DDR5 ECC memory and NVMe drives. Order it with:
 
-- **128 GB ECC RAM.** 64 GB works without the Ethereum node; 128 GB leaves room for the node and plenty of page cache.
-- **2 × 3.84 TB NVMe in RAID 1** (Linux software RAID, mdadm). One failed drive then costs nothing, and the datacenter swaps it while the server runs. About 3.5 TB is usable.
-- **Ubuntu 24.04 LTS**, with the HWE kernel (`provision.sh --hwe-kernel`): the Core Ultra 200 series is better supported by newer kernels than 24.04's original 6.8.
+- 128 GB ECC RAM. 64 GB works without the Ethereum node; 128 GB leaves room for the node and plenty of page cache.
+- 2 × 3.84 TB NVMe in RAID 1 (Linux software RAID, mdadm). One failed drive then costs nothing, and the datacenter swaps it while the server runs. About 3.5 TB is usable.
+- Ubuntu 24.04 LTS, with the HWE kernel (`provision.sh --hwe-kernel`): the Core Ultra 200 series is better supported by newer kernels than 24.04's original 6.8.
 
 **Memory budget (128 GB)**
 
@@ -188,9 +188,9 @@ It builds the app and control plane images, writes their SBOMs and a `SHA256SUMS
 
 On the server, in `/opt/nil`:
 
-- **`cloud.env`** (created from [.env.example](.env.example), every setting explained there). At least: `CLOUD_DOMAIN`, `CLOUD_ACME_EMAIL`, `CLOUD_CONTACT`, `CLOUD_TERMS_URL`, `CLOUD_PRIVACY_URL`, `CLOUD_IMPRINT_URL` (a service run from Germany or Finland needs an imprint and a privacy policy), `CLOUD_SOURCE_URL` (the AGPL asks a hosted service to offer its source), `CLOUD_PLAN_TREASURY` (the foundation's treasury, for Nil Pro) with `CLOUD_INVOICE_KEY` (a long random secret, so no two workspaces ask for the same amount), `CLOUD_RPC_URL` (`http://reth:8545` with the node), `CLOUD_BACKUP_RECIPIENTS`, `CLOUD_BACKUP_TARGET` and `CLOUD_ALERT_WEBHOOK`. For wildcard TLS: `CLOUD_TLS=wildcard` and `CLOUD_DNS_PROVIDER`.
-- **`workspace.env`** (from [workspace.env.example](workspace.env.example)): the app settings every workspace shares, such as the Nil Pro price and trial. See the root [.env.example](../.env.example) for all of them.
-- **`.env`**: `NIL_VERSION` is already set. For wildcard TLS add `DNS_API_TOKEN`. For the Ethereum node uncomment `COMPOSE_FILE` and set `RETH_IMAGE` and `LIGHTHOUSE_IMAGE` to the clients' current stable tags.
+- `cloud.env` (created from [.env.example](.env.example), every setting explained there). At least: `CLOUD_DOMAIN`, `CLOUD_ACME_EMAIL`, `CLOUD_CONTACT`, `CLOUD_TERMS_URL`, `CLOUD_PRIVACY_URL`, `CLOUD_IMPRINT_URL` (a service run from Germany or Finland needs an imprint and a privacy policy), `CLOUD_SOURCE_URL` (the AGPL asks a hosted service to offer its source), `CLOUD_PLAN_TREASURY` (the foundation's treasury, for Nil Pro) with `CLOUD_INVOICE_KEY` (a long random secret, so no two workspaces ask for the same amount), `CLOUD_RPC_URL` (`http://reth:8545` with the node), `CLOUD_BACKUP_RECIPIENTS`, `CLOUD_BACKUP_TARGET` and `CLOUD_ALERT_WEBHOOK`. For wildcard TLS: `CLOUD_TLS=wildcard` and `CLOUD_DNS_PROVIDER`.
+- `workspace.env` (from [workspace.env.example](workspace.env.example)): the app settings every workspace shares, such as the Nil Pro price and trial. See the root [.env.example](../.env.example) for all of them.
+- `.env`: `NIL_VERSION` is already set. For wildcard TLS add `DNS_API_TOKEN`. For the Ethereum node uncomment `COMPOSE_FILE` and set `RETH_IMAGE` and `LIGHTHOUSE_IMAGE` to the clients' current stable tags.
 
 ### 7. Start
 
@@ -326,11 +326,11 @@ On the server, fill in `/opt/nil/.env` (`NIL_DOMAIN`, `ACME_EMAIL`) and `/opt/ni
 
 ## Security notes
 
-- **The control plane is as powerful as root.** It holds the Docker socket because creating containers needs it. Its own container is read-only, without capabilities, and publishes no port; its sign-up site is reached only through Caddy, and the TLS `ask` endpoint is on a separate port that is never published or proxied. Treat the `deploy` user's SSH key the same way: the docker group is root-equivalent.
-- **Isolation between workspaces** comes from separate network namespaces and networks, per-container limits, a read-only root, no capabilities and `no-new-privileges`, plus Docker's default seccomp and AppArmor profiles. What a compromised workspace can reach: Caddy (as anyone on the internet can) and the RPC relay. Not other workspaces, not the control plane, not the internet.
-- **Not done, on purpose.** Docker user namespaces (`userns-remap`) would add a layer but complicate volume ownership for the app and its backups; gVisor or Kata would add more at a performance cost. Both can be layered on later through the driver interface.
-- **Secrets on the server**: `cloud.env` (S3 keys, the alert token), the generated Caddyfile (the RPC node's credentials, if its URL carries any), setup codes until a workspace is claimed, and each workspace's data. The backup secret keys are not on the server.
-- **Supply chain**: the control plane has four dependencies (two fonts and `@noble/curves` and `@noble/hashes`, which the app already uses), pinned in `package-lock.json`. The Docker and S3 clients, the backup encryption and the tar handling use only Node's standard library.
+- The control plane is as powerful as root. It holds the Docker socket because creating containers needs it. Its own container is read-only, without capabilities, and publishes no port; its sign-up site is reached only through Caddy, and the TLS `ask` endpoint is on a separate port that is never published or proxied. Treat the `deploy` user's SSH key the same way: the docker group is root-equivalent.
+- Isolation between workspaces comes from separate network namespaces and networks, per-container limits, a read-only root, no capabilities and `no-new-privileges`, plus Docker's default seccomp and AppArmor profiles. What a compromised workspace can reach: Caddy (as anyone on the internet can) and the RPC relay. Not other workspaces, not the control plane, not the internet.
+- Not done, on purpose. Docker user namespaces (`userns-remap`) would add a layer but complicate volume ownership for the app and its backups; gVisor or Kata would add more at a performance cost. Both can be layered on later through the driver interface.
+- Secrets on the server: `cloud.env` (S3 keys, the alert token), the generated Caddyfile (the RPC node's credentials, if its URL carries any), setup codes until a workspace is claimed, and each workspace's data. The backup secret keys are not on the server.
+- Supply chain: the control plane has four dependencies (two fonts and `@noble/curves` and `@noble/hashes`, which the app already uses), pinned in `package-lock.json`. The Docker and S3 clients, the backup encryption and the tar handling use only Node's standard library.
 
 ## Development
 
