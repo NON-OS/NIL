@@ -57,9 +57,13 @@ const config = Object.freeze({
   setupToken,
   shutdownTimeoutMs: envNumber('SHUTDOWN_TIMEOUT_SECONDS', 20, { min: 1 }) * SECOND,
   maxJsonBytes: envNumber('MAX_JSON_KB', 1024, { min: 1 }) * 1024,
+  // how deep request JSON may nest; real requests stay far below this
+  maxJsonDepth: envNumber('MAX_JSON_DEPTH', 64, { min: 8 }),
   maxUploadBytes: envNumber('MAX_UPLOAD_MB', 25, { min: 1 }) * MB,
   maxCapsuleBytes: envNumber('MAX_CAPSULE_MB', 4096, { min: 1 }) * MB,
   sessionDays: envNumber('SESSION_DAYS', 30, { min: 1 }),
+  // messages one live connection may send a minute; the app sends a few, a flood gets cut off
+  realtimeMessagesPerMinute: envNumber('REALTIME_MESSAGES_PER_MINUTE', 600, { min: 10 }),
   trashDays: envNumber('TRASH_DAYS', 30),
   readNotificationDays: envNumber('NOTIFICATION_DAYS', 90),
   usedInviteDays: envNumber('USED_INVITE_DAYS', 30),

@@ -9,6 +9,7 @@ import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
 import logLimited from '../lib/logLimited.js';
 import buildId from '../lib/buildId.js';
+import config from '../config.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -70,7 +71,18 @@ function connected(ws, user, session) {
     const c = hub.get(ws);
     if (c) c.alive = true;
   });
-  ws.on('message', guarded('message', (raw) => handleMessage(ws, raw)));
+  // Each message costs a lookup and may reach every other tab, so a socket that sends far more
+  // than the app ever does is closed (1008, policy violation) instead of slowing everyone down.
+  let budget = { start: Date.now(), count: 0 };
+  ws.on(
+    'message',
+    guarded('message', (raw) => {
+      const now = Date.now();
+      if (now - budget.start > 60_000) budget = { start: now, count: 0 };
+      if (++budget.count > config.realtimeMessagesPerMinute) return ws.close(1008, 'too many messages');
+      handleMessage(ws, raw);
+    }),
+  );
   ws.on('close', () => hub.remove(ws));
   ws.on('error', () => hub.remove(ws));
   // the build lets a tab that reconnects after a deploy see it's running an old version

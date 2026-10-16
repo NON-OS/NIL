@@ -12,6 +12,7 @@ import idempotency from './idempotency.js';
 import pendingBody from '../pendingBody.js';
 import sendError from './sendError.js';
 import log from '../../lib/log.js';
+import jsonDepthLimit from '../../lib/jsonDepthLimit.js';
 
 const router = express.Router();
 const serverUrl = (req) => `${config.appUrl ?? `${req.protocol}://${req.get('host')}`}/api/agent/v1`;
@@ -40,7 +41,7 @@ router.use((req, res, next) => {
   next();
 });
 
-router.use(express.json({ limit: '256kb' }));
+router.use(express.json({ limit: '256kb', verify: jsonDepthLimit(config.maxJsonDepth) }));
 
 function handler(tool) {
   return (req, res) => {
@@ -79,6 +80,7 @@ router.use((req, res) => sendError(res, 404, 'not_found', 'No such endpoint. The
 router.use((err, req, res, next) => {
   if (err?.type === 'entity.too.large') return sendError(res, 413, 'too_large', 'The request body is too large.');
   if (err?.type === 'entity.parse.failed') return sendError(res, 400, 'invalid_json', 'The request body isn’t valid JSON.');
+  if (err?.type === 'entity.too.deep') return sendError(res, 400, 'too_deep', 'The request body is nested too deeply.');
   log.error('agent api', `${req.method} ${req.baseUrl}${req.route?.path ?? ''} failed`, err);
   sendError(res, 500, 'server_error', 'Something went wrong on the Nil server.');
 });

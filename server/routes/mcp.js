@@ -4,6 +4,8 @@ import originAllowed from '../security/originAllowed.js';
 import handleMessage from '../mcp/handleMessage.js';
 import principalFromRequest from '../agents/principalFromRequest.js';
 import agentRateLimit from '../agents/agentRateLimit.js';
+import config from '../config.js';
+import jsonDepthLimit from '../lib/jsonDepthLimit.js';
 
 const router = express.Router();
 const personalLimit = rateLimit({ windowMs: 60_000, max: 120, key: (req) => `mcp:${req.mcp.tokenId}`, message: 'Too many requests from this key. Slow down a little.' });
@@ -29,7 +31,7 @@ router.use((req, res, next) => {
   res.status(429).json({ error: 'This agent is over its request limit. Slow down a little.' });
 });
 
-router.post('/', express.json({ limit: '256kb' }), (req, res) => {
+router.post('/', express.json({ limit: '256kb', verify: jsonDepthLimit(config.maxJsonDepth) }), (req, res) => {
   if (Array.isArray(req.body)) return res.status(400).json({ jsonrpc: '2.0', id: null, error: { code: -32600, message: 'Batches are not supported.' } });
   const out = handleMessage(req.body, req.mcp);
   if (!out) return res.status(202).end();
