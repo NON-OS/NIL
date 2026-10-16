@@ -48,6 +48,33 @@
   color: var(--accent-text);
 }
 
+.drawer-head-gap {
+  flex: 1;
+}
+
+.drawer-tools {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.complete-btn {
+  margin-right: 6px;
+}
+
+.complete-btn svg {
+  color: var(--accent-line);
+}
+
+.complete-btn.closed {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.complete-btn.closed svg {
+  color: var(--ink-2);
+}
+
 .drawer-key {
   padding: 3px 7px;
   border: 1px solid var(--line);
@@ -215,6 +242,13 @@
 .checklist li:hover .icon-only,
 .checklist li .icon-only:focus-visible {
   opacity: 1;
+}
+
+.checklist-check {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  cursor: pointer;
 }
 
 .checklist input[type='checkbox'] {
@@ -427,6 +461,47 @@
   margin: 0;
 }
 
+/* no keyboard shortcut to mention where there is probably no keyboard */
+@media (pointer: coarse) {
+  .prop-row,
+  .checklist li,
+  .checklist-add {
+    min-height: var(--tap-min);
+  }
+
+  .checklist-check {
+    width: var(--tap-min);
+    margin: 0 -8px 0 -14px;
+  }
+
+  .checklist input[type='checkbox'] {
+    width: 18px;
+    height: 18px;
+  }
+
+  /* revealed on hover elsewhere; touch has no hover */
+  .checklist li .icon-only,
+  .comment-actions {
+    opacity: 1;
+  }
+
+  .comment-actions {
+    gap: 4px;
+  }
+
+  .comment-actions button {
+    min-width: var(--tap-min);
+  }
+
+  .composer-foot {
+    justify-content: flex-end;
+  }
+
+  .composer-foot .hint {
+    display: none;
+  }
+}
+
 .mention-menu {
   position: absolute;
   left: 8px;
@@ -466,6 +541,57 @@
   padding: 24px;
   color: var(--muted);
   text-align: center;
+}
+
+/* Touch and narrow screens have no hover for tooltips, so the tools drop to a row of
+   their own and print their names under the icons. */
+@media (max-width: 599px), (pointer: coarse) {
+  .drawer-head {
+    flex-wrap: wrap;
+    height: auto;
+    min-height: var(--topbar-h);
+    padding-top: 4px;
+  }
+
+  .drawer-tools {
+    display: grid;
+    flex: 1 0 100%;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    order: 1;
+    margin: 0 -10px 0 -16px;
+    padding: 2px 6px;
+    border-top: 1px solid var(--line);
+  }
+
+  .drawer-tools .icon-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    width: auto;
+    height: auto;
+    min-height: 52px;
+    padding: 4px 2px;
+  }
+
+  .drawer-tools .icon-btn::after {
+    content: attr(aria-label);
+    position: static;
+    padding: 0;
+    background: none;
+    color: inherit;
+    font-size: var(--text-xs);
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+    opacity: 1;
+    transform: none;
+  }
+
+  .drawer-tools .icon-btn.timing {
+    background: var(--accent-soft);
+  }
 }
 
 @media (max-width: 640px) {

@@ -60,7 +60,9 @@ export default function Checklist({ task }: { task: Task }) {
       <ul className="checklist">
         {items.map((item) => (
           <li key={item.id} className={item.done ? 'done' : ''}>
-            <input type="checkbox" checked={item.done} onChange={() => save(items.map((i) => (i.id === item.id ? { ...i, done: !i.done } : i)))} aria-label={item.text} />
+            <label className="checklist-check">
+              <input type="checkbox" checked={item.done} onChange={() => save(items.map((i) => (i.id === item.id ? { ...i, done: !i.done } : i)))} aria-label={item.text} />
+            </label>
             <input
               key={item.text}
               className="checklist-text"
