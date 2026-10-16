@@ -14,6 +14,7 @@ import authzResolve from './helpers/authzResolve.js';
 import authzExpect from './helpers/authzExpect.js';
 import actors from './helpers/authzActors.js';
 import listRoutes from './helpers/listRoutes.js';
+import sealed from './helpers/sealed.js';
 import rowsOpen from './helpers/authzRowsOpen.js';
 import rowsWork from './helpers/authzRowsWork.js';
 import rowsTeam from './helpers/authzRowsTeam.js';
@@ -207,6 +208,17 @@ test('routes that act on your own things never reach someone else’s', async ()
     for (const actor of ['guest', 'member', 'admin']) await authzRequest(world, actor, { method, url: routePath.replace(':id', id), body: method === 'PATCH' ? { label: 'Taken' } : undefined });
     assert.ok(await stillThere(id), `${method} ${routePath} reached the owner’s ${id}`);
   }
+});
+
+test('the list of a task’s share links is only for people who can open the task', async () => {
+  const { owner, member } = ctx.world.people;
+  const task = (await owner('POST', '/api/tasks', { title: 'Shared for now', projectId: ctx.world.ids.shared })).data.task.id;
+  assert.equal((await owner('POST', '/api/share-links', { kind: 'task', targetId: task })).status, 200);
+  assert.equal((await member('GET', `/api/share-links?kind=task&targetId=${task}`)).data.length, 1);
+  assert.equal((await owner('PATCH', `/api/tasks/${task}`, { private: true, sealed: sealed(ctx.world.ids.owner) })).status, 200);
+  const listed = await member('GET', `/api/share-links?kind=task&targetId=${task}`);
+  assert.equal(listed.status, 404, 'a private task’s links, and so the task, stay hidden from others');
+  assert.equal((await owner('GET', `/api/share-links?kind=task&targetId=${task}`)).data.length, 1);
 });
 
 test('routes that end the session they’re called with', async (t) => {
