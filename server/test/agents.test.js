@@ -82,6 +82,14 @@ test('agents never sign in and never take a paid seat', async () => {
   assert.match(team.data.error, /Settings → Agents/);
 });
 
+test('agents hear nothing about team docs: they hold no key to read them', async () => {
+  const { default: docRecipients } = await import('../services/docRecipients.js');
+  const now = Date.now();
+  sql.run("INSERT INTO docs (id, title_ct, body_ct, audience, created_by, created_at, updated_at) VALUES ('teamdoc', 'x', 'x', 'team', ?, ?, ?)", ids.owner, now, now);
+  assert.deepEqual(docRecipients('teamdoc').sort(), [ids.owner, ids.ana].sort());
+  sql.run("DELETE FROM docs WHERE id = 'teamdoc'");
+});
+
 test('agents can be assigned, mentioned and watch tasks like any teammate', async () => {
   const task = (await ana('POST', '/api/tasks', { title: 'Crash on login', projectId: ids.alpha, assigneeId: ids.scout })).data.task;
   ids.crash = task;

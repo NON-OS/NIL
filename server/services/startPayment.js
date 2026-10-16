@@ -27,6 +27,7 @@ export default async function startPayment(actor, taskId, stealth = null) {
   if (task.bountyState === 'pending') throw new HttpError(409, 'A payment for this bounty is on its way. Wait for it to confirm, or cancel it if it’s stuck.');
   const payee = task.assigneeId ? userRows.one(task.assigneeId) : null;
   if (!payee) throw HttpError.badRequest('Assign the task to someone before paying its bounty.');
+  if (payee.kind === 'agent') throw HttpError.badRequest('An agent has no wallet, so it can’t be paid a bounty. Give the task to the person who did the work to pay it.');
   if (!payee.address) throw HttpError.badRequest('That person has no wallet linked.');
   const token = rewardToken(task.bountyToken);
   // the suffix sits below at least two decimal places of price; a token with too few places

@@ -58,7 +58,7 @@ router.post(
     const trustees = anonymous && weighting === 'power' ? b.trustees : null;
     if (trustees) {
       const valid = Array.isArray(trustees) && trustees.length === 3 && new Set(trustees).size === 3 && trustees.every((t) => typeof t === 'string');
-      const eligible = valid && trustees.every((t) => sql.get("SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0 AND u.role != 'guest'", t));
+      const eligible = valid && trustees.every((t) => sql.get("SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0 AND u.role != 'guest' AND u.kind = 'human'", t));
       if (!eligible) throw HttpError.badRequest('Pick three different members who have unlocked encrypted docs as trustees.');
       if (options.length > 8) throw HttpError.badRequest('Encrypted votes can have at most 8 options.');
     }
@@ -80,8 +80,8 @@ router.post(
     // the census of an anonymous vote needs the snapshot first when it's weighted
     if (anonymous) voterGroups.start(id);
     if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
-    // votes are for members; guests can't open them, so they don't hear about them either
-    const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest'").map((u) => u.id);
+    // votes are for members; guests can't open them and agents can't vote, so neither hears about them
+    const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((u) => u.id);
     notify(members, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', id), req.user) };
