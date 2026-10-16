@@ -25,9 +25,12 @@ export default function AppEffects() {
       const s = store.get();
       const actor = n.actorId ? s.users[n.actorId]?.name ?? 'Someone' : 'Someone';
       const task = n.taskId ? s.tasks[n.taskId] : undefined;
-      // the body stays short and never includes comment text, since lock screens can show it
+      // The body stays short and never includes comment text, since lock screens can show it. A
+      // private task's title was decrypted in this tab and must not leave it: the OS keeps
+      // notifications in its own history, so those only say a private task changed.
       const heading = n.type === 'reminder' ? 'Reminder' : `${actor} ${describeNotification(n)}`;
-      const shown = new Notification(heading, { body: task?.title ?? n.data.title ?? '', tag: `nonos-${n.id}`, silent: false });
+      const body = task?.private ? 'A private task' : task?.title ?? n.data.title ?? '';
+      const shown = new Notification(heading, { body, tag: `nonos-${n.id}`, silent: false });
       shown.onclick = () => {
         window.focus();
         if (task) router.setParam('task', String(task.number));
