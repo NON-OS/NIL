@@ -59,6 +59,8 @@ export default function mockChain() {
   const pools = new Map();
   const feeds = new Map();
   const failing = new Set();
+  // requests the node refuses outright, as [match(method, params), { status, error }]
+  const faults = [];
   // every call the server made, in order, so tests can check what the node got to see and when
   const calls = [];
   const sent = [];
@@ -152,6 +154,12 @@ export default function mockChain() {
     req.on('end', async () => {
       const { id, method, params } = JSON.parse(raw);
       calls.push({ method, params, at: Date.now() });
+      const fault = faults.find(([match]) => match(method, params))?.[1];
+      if (fault) {
+        res.statusCode = fault.status;
+        res.setHeader('Content-Type', 'application/json');
+        return res.end(JSON.stringify({ jsonrpc: '2.0', id, error: fault.error }));
+      }
       let result = null;
       let error = null;
       try {
@@ -222,6 +230,13 @@ export default function mockChain() {
     setFeed: (address, { answer, decimals = 8, updatedAt = Math.floor(Date.now() / 1000) }) => feeds.set(address.toLowerCase(), { answer: BigInt(answer), decimals, updatedAt }),
     // every call to this contract reverts
     breakContract: (address) => failing.add(address.toLowerCase()),
+    // The node refuses requests that `match(method, params)` picks, the way public nodes do: by
+    // default an HTTP 403 saying old state needs a paid plan. Returns a function that lifts it.
+    refuse(match, { status = 403, error = { code: -32602, message: 'Archive requests require a personal token.' } } = {}) {
+      const entry = [match, { status, error }];
+      faults.push(entry);
+      return () => faults.splice(faults.indexOf(entry), 1);
+    },
     fixContract: (address) => failing.delete(address.toLowerCase()),
     // Records a mined ERC-20 Transfer, `depth` blocks below the current head (1 = the head).
     addTransfer({ hash, token, from, to, value, status = '0x1', depth = 6 }) {

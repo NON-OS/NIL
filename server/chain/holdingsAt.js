@@ -9,13 +9,16 @@ const STAKE_INFO = selector('getStakeInfo(address)');
 const word = (hex, i = 0) => (typeof hex === 'string' && hex.length >= 2 + (i + 1) * 64 ? BigInt(`0x${hex.slice(2 + i * 64, 2 + (i + 1) * 64)}`) : 0n);
 
 // A contract that reverts (paused, upgraded away, not deployed on this chain) counts as zero
-// rather than blocking the vote; the snapshot records what each source said.
+// rather than blocking the vote; the snapshot records what each source said. Anything else, a
+// node that can't be reached or won't serve that block, stops the snapshot: reading it as zero
+// would quietly take someone's vote away.
 async function call(to, data, block) {
   if (!to) return '0x';
   try {
     return await rpc('eth_call', [{ to, data }, block]);
-  } catch {
-    return '0x';
+  } catch (err) {
+    if (err.reverted) return '0x';
+    throw err;
   }
 }
 

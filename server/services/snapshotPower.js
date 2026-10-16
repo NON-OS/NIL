@@ -4,6 +4,7 @@ import config from '../config.js';
 import rpc from '../chain/rpc.js';
 import nodeReady from '../chain/nodeReady.js';
 import holdingsAt from '../chain/holdingsAt.js';
+import HttpError from '../lib/HttpError.js';
 import zspPower from './zspPower.js';
 
 // A few wallets at a time, with a short random pause between groups.
@@ -39,7 +40,9 @@ export default async function snapshotPower(proposalId) {
   for (let i = 0; i < wallets.length; i += BATCH) {
     if (i) await pause();
     const group = wallets.slice(i, i + BATCH);
-    const held = await Promise.all(group.map((w) => holdingsAt(w.external_id, tag)));
+    const held = await Promise.all(group.map((w) => holdingsAt(w.external_id, tag))).catch((err) => {
+      throw new HttpError(502, `Nil couldn’t read everyone’s voting power from its Ethereum node, so the vote wasn’t opened. Try again in a minute. (${err.message})`);
+    });
     group.forEach((w, k) => {
       const total = totals.get(w.user_id);
       total.nox += held[k].nox;

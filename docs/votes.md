@@ -71,6 +71,8 @@ voting power = NOX in linked wallets + NOX staked + Zero-State Passes held × po
 
 Tokens moved after that don't change anything, and people who join later have no power in that vote. [NOX, voting power and Nil Pro](nox-and-nil-pro.md#voting-power) explains each part.
 
+If the server's Ethereum node can't answer for every wallet while the power is read, because it's down or won't serve that block, the vote doesn't open and the admin is asked to try again. Nobody is ever counted as holding nothing because of a node problem. A contract that refuses the read itself, such as a paused staking contract, does count as zero for everyone, and the audit file shows it.
+
 ## Results and closing
 
 A vote closes by itself at its end time. An admin can close it early with **Close vote**, or delete it with **Delete**. Sealed results appear once it closes.

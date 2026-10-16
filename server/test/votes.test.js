@@ -102,3 +102,36 @@ test('a closed result survives a voter being erased', async () => {
   const after = (await owner('GET', '/api/proposals')).data.find((p) => p.id === before.id);
   assert.deepEqual(after.totals, before.totals);
 });
+
+test('a snapshot the node can’t serve stops the vote from opening instead of counting anyone as zero', async () => {
+  const STAKING = '0xa94d6009790ba13597a1e1b7cf4e1531ea513613';
+  const open = async (title) => owner('POST', '/api/proposals', { title, options: ['Yes', 'No'], weighting: 'power' });
+  const count = async () => (await owner('GET', '/api/proposals')).data.length;
+  const before = await count();
+
+  // the public node answers an eth_call at a block it keeps no state for with HTTP 403
+  let lift = chain.refuse((method, params) => method === 'eth_call' && params[0].to?.toLowerCase() === STAKING);
+  try {
+    const res = await open('Read at a block the node forgot');
+    assert.equal(res.status, 502);
+    assert.match(res.data.error, /voting power[\s\S]*Archive requests require a personal token/);
+  } finally {
+    lift();
+  }
+  // a node that's down altogether
+  lift = chain.refuse((method) => method === 'eth_call', { status: 503, error: { code: -32603, message: 'Service unavailable' } });
+  try {
+    assert.equal((await open('Read while the node is down')).status, 502);
+  } finally {
+    lift();
+  }
+  assert.equal(await count(), before);
+
+  // a contract that reverts really holds nothing for anyone, and the vote opens without it
+  chain.breakContract(STAKING);
+  try {
+    assert.equal((await open('Staking contract paused')).status, 200);
+  } finally {
+    chain.fixContract(STAKING);
+  }
+});
