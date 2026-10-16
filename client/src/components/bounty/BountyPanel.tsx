@@ -27,7 +27,7 @@ export default function BountyPanel({ task }: { task: Task }) {
   if (paid) {
     body = <p>Paid to {assignee?.name ?? 'the contributor'} and confirmed on-chain. A signed payment receipt is in their proof of work.</p>;
   } else if (task.bountyState === 'pending') {
-    body = <p>The payment was sent and is waiting for confirmations on Ethereum. This usually takes a minute or two.</p>;
+    body = <p>The payment was sent. It counts once its block on Ethereum is final, usually within 15 minutes. If it’s stuck, cancel it under Bounties and pay again.</p>;
   } else if (!isAdmin) {
     body = <p>{assignee ? `An admin pays this to ${assignee.name}’s wallet when the work is done.` : 'Unassigned. Take it and an admin pays your wallet when the work is done.'}</p>;
   } else if (!nox) {
@@ -56,8 +56,8 @@ export default function BountyPanel({ task }: { task: Task }) {
     body = (
       <>
         <p>
-          Your wallet sends {amount} straight to {assignee.name}. Nil never holds funds; it checks the transfer on-chain and signs a receipt.
-          {task.status !== 'done' && ' Most teams pay once the task is done.'}
+          {task.bountyState === 'underpaid' ? `Part of the bounty reached ${assignee.name}. Pay the rest the same way.` : `Your wallet sends ${amount} straight to ${assignee.name}.`} Nil never holds funds; it gives the exact amount to send, checks the transfer on-chain and signs a receipt.
+          {task.status !== 'done' && task.bountyState !== 'underpaid' && ' Most teams pay once the task is done.'}
         </p>
         <div className="bounty-actions">
           <PayButton task={task} name={assignee.name} primary={task.status === 'done'} />
@@ -74,7 +74,7 @@ export default function BountyPanel({ task }: { task: Task }) {
     <section className={cx('bounty-panel', paid && 'paid')} aria-label="Bounty">
       <div className="bounty-panel-head">
         {paid ? <CheckCircle2 /> : <Coins />}
-        {paid ? `${amount} paid` : task.bountyState === 'pending' ? `${amount} confirming…` : `${amount} bounty`}
+        {paid ? `${amount} paid` : task.bountyState === 'pending' ? `${amount} confirming…` : task.bountyState === 'underpaid' ? `${amount} bounty, partly paid` : `${amount} bounty`}
         <span className="grow" style={{ flex: 1 }} />
         <a href="/bounties" className="btn btn-ghost btn-sm" onClick={router.link('/bounties')}>
           All bounties

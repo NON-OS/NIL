@@ -105,7 +105,7 @@ export default function BountiesView() {
             <div className="settings-card bounty-list" style={{ padding: 0 }}>
               {owed.map((t) => {
                 const person = t.assigneeId ? users[t.assigneeId] : undefined;
-                const payable = isAdmin && nox && person?.address && !t.bountyState;
+                const payable = isAdmin && nox && person?.address && (!t.bountyState || t.bountyState === 'underpaid');
                 return row(t, payable ? <PayButton task={t} name={person!.name} onDone={refresh} /> : t.bountyState === 'pending' ? <span className="pay-status pending">Confirming</span> : null);
               })}
             </div>

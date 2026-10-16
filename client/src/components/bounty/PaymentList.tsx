@@ -1,4 +1,4 @@
-import { CheckCircle2, Clock, ExternalLink, EyeOff, Megaphone, XCircle } from 'lucide-react';
+import { Ban, CheckCircle2, Clock, ExternalLink, EyeOff, Megaphone, TriangleAlert, XCircle } from 'lucide-react';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
@@ -8,8 +8,9 @@ import shortAddress from '../../lib/shortAddress';
 import type Payment from '../../types/Payment';
 import isAdminUser from '../../lib/isAdmin';
 
-const ICON = { confirmed: CheckCircle2, pending: Clock, failed: XCircle };
-const LABEL = { confirmed: 'Confirmed', pending: 'Confirming', failed: 'Not accepted' };
+const ICON = { sent: Clock, confirming: Clock, paid: CheckCircle2, overpaid: CheckCircle2, underpaid: TriangleAlert, failed: XCircle, cancelled: Ban };
+const LABEL = { sent: 'Waiting to be mined', confirming: 'Confirming', paid: 'Confirmed', overpaid: 'Confirmed, overpaid', underpaid: 'Confirmed, short', failed: 'Not accepted', cancelled: 'Cancelled' };
+const TONE = { sent: 'pending', confirming: 'pending', paid: 'confirmed', overpaid: 'confirmed', underpaid: 'failed', failed: 'failed', cancelled: 'pending' };
 
 export default function PaymentList({ payments, onChange }: { payments: Payment[]; onChange: () => void }) {
   const users = useStore((s) => s.users);
@@ -21,14 +22,15 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
   return (
     <div className="settings-card bounty-list" style={{ padding: 0 }}>
       {payments.map((p) => {
-        const Icon = ICON[p.status];
+        const Icon = ICON[p.state];
         return (
           <div key={p.id} className="bounty-item" style={{ cursor: 'default' }}>
             <div style={{ minWidth: 0 }}>
               <div className="bounty-item-title">
                 <span className="mono muted">{p.taskRef}</span>
                 <span>
-                  {tokenAmount(p.amount, p.token)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
+                  {tokenAmount(p.amount, p.token, 8)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
+                  {p.state === 'underpaid' && p.expected && <span className="muted"> of {tokenAmount(p.expected, p.token, 8)}</span>}
                 </span>
                 {p.stealth && (
                   <span className="muted" title={p.announced ? 'Paid to a one-time address and announced on-chain' : 'Paid to a one-time address; not announced on-chain yet'}>
@@ -41,8 +43,8 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
                 {p.problem && <> · <span style={{ color: 'var(--danger)' }}>{p.problem}</span></>}
               </div>
             </div>
-            <span className={`pay-status ${p.status}`}>
-              <Icon /> {LABEL[p.status]}
+            <span className={`pay-status ${TONE[p.state]}`}>
+              <Icon /> {LABEL[p.state]}
             </span>
             <div className="bounty-actions">
               {nox && (
@@ -53,6 +55,11 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
               {isAdmin && p.status === 'pending' && (
                 <button type="button" className="btn btn-sm" onClick={() => act(() => bounties.check(p.id))}>
                   Check now
+                </button>
+              )}
+              {isAdmin && p.state === 'sent' && (
+                <button type="button" className="btn btn-sm btn-ghost" onClick={() => act(() => bounties.cancel(p.id))} title="Stuck? Cancel it and pay again. If it lands later anyway, it still counts.">
+                  Cancel
                 </button>
               )}
               {isAdmin && p.stealth && !p.announced && p.status === 'confirmed' && (
