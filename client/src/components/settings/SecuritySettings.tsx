@@ -9,6 +9,7 @@ import dates from '../../lib/dates';
 import shortAddress from '../../lib/shortAddress';
 import type SecurityOverview from '../../types/SecurityOverview';
 import PrivatePayouts from './PrivatePayouts';
+import HelpLink from '../help/HelpLink';
 
 export default function SecuritySettings() {
   const [data, setData] = useState<SecurityOverview | null>(null);
@@ -37,7 +38,9 @@ export default function SecuritySettings() {
   return (
     <>
       <section className="settings-section">
-        <h2>Your wallets</h2>
+        <h2>
+          Your wallets <HelpLink topic="signing-in" label="How signing in works" />
+        </h2>
         <p>Any of these can sign you in. Link a second one, like a hardware wallet, so losing a device never locks you out.</p>
         <div className="settings-card" style={{ paddingBlock: 6 }}>
           {data.credentials.map((c, i) => (

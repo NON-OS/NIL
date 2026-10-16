@@ -3,6 +3,7 @@ import CapsuleCard from './CapsuleCard';
 import RetentionCard from './RetentionCard';
 import WipeCard from './WipeCard';
 import useStore from '../../state/useStore';
+import HelpLink from '../help/HelpLink';
 
 export default function DataSettings() {
   const role = useStore((s) => s.me?.role);
@@ -13,7 +14,9 @@ export default function DataSettings() {
   return (
     <>
       <section className="settings-section">
-        <h2>Export and move</h2>
+        <h2>
+          Export and move <HelpLink topic="backups-and-moving" label="Backups and moving servers" />
+        </h2>
         <div className="settings-card">
           <div className="settings-row">
             <a className="btn" href="/api/export/tasks.csv">
@@ -31,14 +34,18 @@ export default function DataSettings() {
       </section>
 
       <section className="settings-section">
-        <h2>Zero-state</h2>
+        <h2>
+          Zero-state <HelpLink topic="zero-state" label="How zero-state works" />
+        </h2>
         <p>Keep only what you need. Old data is erased for good on the server’s hourly sweep.</p>
         <RetentionCard />
         {role === 'owner' && <WipeCard />}
       </section>
 
       <section className="settings-section">
-        <h2>Privacy</h2>
+        <h2>
+          Privacy <HelpLink topic="privacy-model" label="What the server can and can't see" />
+        </h2>
         <div className="settings-card">
           <ul className="privacy-list">
             <li><ShieldCheck /> Everything lives on your own server. No analytics, trackers or third-party scripts, and no fonts or code loaded from other sites.</li>

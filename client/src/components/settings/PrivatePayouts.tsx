@@ -4,6 +4,7 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import stealth from '../../actions/stealth';
+import HelpLink from '../help/HelpLink';
 
 // Opt-in: bounties paid to you land on a fresh one-time address every time, instead of the
 // wallet that signs you in, so nobody watching the chain can add up what you earn.
@@ -28,7 +29,9 @@ export default function PrivatePayouts() {
 
   return (
     <section className="settings-section">
-      <h2>Private payouts</h2>
+      <h2>
+        Private payouts <HelpLink topic="private-payouts" label="How private payouts work" />
+      </h2>
       <div className="settings-card">
         <label className="filter-toggle" style={{ justifyContent: 'space-between' }}>
           <span>

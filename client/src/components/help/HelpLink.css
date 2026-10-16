@@ -1,0 +1,20 @@
+.help-link {
+  display: inline-grid;
+  flex: none;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: var(--r-sm);
+  color: var(--faint);
+  vertical-align: middle;
+}
+
+.help-link:hover {
+  background: var(--surface-3);
+  color: var(--accent-text);
+}
+
+.help-link svg {
+  width: 15px;
+  height: 15px;
+}
