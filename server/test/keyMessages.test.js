@@ -1,15 +1,13 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { Identity } from '@semaphore-protocol/identity';
+import crypto from 'node:crypto';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
-import keyMessage from '../../client/src/lib/crypto/keyMessage.ts';
-import privateKeysMessage from '../../client/src/lib/crypto/privateKeysMessage.ts';
-import identityFromSignature from '../../client/src/lib/crypto/identityFromSignature.ts';
-import privateKeysFromSignature from '../../client/src/lib/crypto/privateKeysFromSignature.ts';
-
-const hex = (bytes) => Buffer.from(bytes).toString('hex');
+import keyStatement from '../../client/src/lib/crypto/keyStatement.ts';
+import unlockMessage from '../../client/src/lib/crypto/unlockMessage.ts';
+import identityFromSeed from '../../client/src/lib/crypto/identityFromSeed.ts';
+import b64u from '../../client/src/lib/crypto/b64u.ts';
 
 let srv;
 const owner = client(() => srv.base);
@@ -22,46 +20,29 @@ before(async () => {
 });
 after(() => srv.close());
 
-// What the browser does to unlock its keys: fetch the workspace key, build both messages, sign
-// them with the wallet and stretch the signatures into keys. The name is handed in too, the way
-// the app once did, so a message that starts using it again fails here.
-async function unlock() {
-  const { key, name } = (await owner('GET', '/api/proofs/key')).data;
-  const docs = keyMessage({ workspace: name, workspaceKey: key, userId });
-  const payoutsAndVotes = privateKeysMessage({ workspace: name, workspaceKey: key, userId });
-  const keys = privateKeysFromSignature(ownerWallet.sign(payoutsAndVotes));
+// What the browser signs, built the way it builds it: from the bootstrap's origin and workspace key.
+async function messages() {
+  const { origin, workspaceKey } = (await owner('GET', '/api/bootstrap')).data;
   return {
-    messages: [docs, payoutsAndVotes],
-    docsKey: hex(identityFromSignature(ownerWallet.sign(docs)).publicKey),
-    spendingKey: hex(keys.spendingKey),
-    viewingKey: hex(keys.viewingKey),
-    votingKey: new Identity(keys.semaphoreSecret).commitment.toString(),
+    unlock: unlockMessage({ origin, workspaceKey, userId, address: ownerWallet.address, nonce: 'a1b2c3d4e5f6a7b8', issuedAt: '2026-10-16T09:00:00.000Z' }),
+    statement: keyStatement({ origin, workspaceKey, userId, address: ownerWallet.address, publicKey: 'A'.repeat(43), signingKey: 'B'.repeat(43), createdAt: 1_790_000_000_000 }),
   };
 }
 
-test('renaming the workspace leaves the docs, payout and voting keys unchanged', async () => {
-  const first = await unlock();
+test('renaming the workspace leaves every key message unchanged', async () => {
+  const first = await messages();
   assert.equal((await owner('PATCH', '/api/workspace', { name: 'Renamed Collective' })).status, 200);
-  const renamed = await unlock();
-  assert.deepEqual(renamed, first);
-  for (const message of renamed.messages) {
-    assert.ok(!message.includes('NØNOS') && !message.includes('Renamed Collective'));
-  }
+  assert.deepEqual(await messages(), first);
+  for (const message of Object.values(first)) assert.ok(!message.includes('NØNOS') && !message.includes('Renamed Collective'));
 });
 
-test('the messages are readable plain text, bound to one workspace key and one account', () => {
-  const docs = keyMessage({ workspaceKey: 'key-one', userId: 'person-one' });
-  const payoutsAndVotes = privateKeysMessage({ workspaceKey: 'key-one', userId: 'person-one' });
-  assert.notEqual(docs, payoutsAndVotes);
-  for (const message of [docs, payoutsAndVotes]) {
-    // hardware wallets show anything outside printable ASCII as hex
-    assert.match(message, /^[\x20-\x7e\n]+$/);
-    assert.match(message, /It is not a transaction and costs nothing\./);
-    assert.match(message, /^Workspace key: key-one$/m);
-    assert.match(message, /^Account: person-one$/m);
-  }
-  assert.notEqual(keyMessage({ workspaceKey: 'key-two', userId: 'person-one' }), docs);
-  assert.notEqual(keyMessage({ workspaceKey: 'key-one', userId: 'person-two' }), docs);
-  assert.notEqual(privateKeysMessage({ workspaceKey: 'key-two', userId: 'person-one' }), payoutsAndVotes);
-  assert.notEqual(privateKeysMessage({ workspaceKey: 'key-one', userId: 'person-two' }), payoutsAndVotes);
+test('a key statement written by the browser module is accepted by the server', async () => {
+  const { origin, workspaceKey } = (await owner('GET', '/api/bootstrap')).data;
+  const identity = identityFromSeed(crypto.getRandomValues(new Uint8Array(32)));
+  const fields = { publicKey: b64u.encode(identity.publicKey), signingKey: b64u.encode(identity.signingKey), createdAt: Date.now(), address: ownerWallet.address };
+  const signature = ownerWallet.sign(keyStatement({ origin, workspaceKey, userId, ...fields }));
+  const wrap = { address: ownerWallet.address, nonce: 'a1b2c3d4e5f6a7b8', issuedAt: new Date().toISOString(), wrapped: crypto.randomBytes(60).toString('base64url') };
+  const res = await owner('PUT', '/api/me/encryption-key', { ...fields, signature, wrap });
+  assert.equal(res.status, 200);
+  assert.equal(res.data.publicKey, fields.publicKey);
 });

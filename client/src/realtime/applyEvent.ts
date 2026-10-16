@@ -72,6 +72,10 @@ export default function applyEvent(event: any): void {
     case 'docs':
       store.set({ docsRev: s.docsRev + 1 });
       break;
+    // someone published or re-signed encryption keys: the directory is fetched and checked again
+    case 'keys':
+      store.set({ keysRev: s.keysRev + 1 });
+      break;
     case 'timer':
       store.set({ timer: event.timer });
       break;

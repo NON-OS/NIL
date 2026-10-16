@@ -1,5 +1,6 @@
 import http from '../api/http';
 import ethereum from '../lib/ethereum';
+import assertNotKeyMessage from '../lib/crypto/assertNotKeyMessage';
 import saveBlob from '../lib/saveBlob';
 import type Proposal from '../types/Proposal';
 
@@ -23,6 +24,7 @@ const votes = {
   async cast(id: string, choice: number) {
     const { address } = await ethereum.account();
     const { ballotId, message } = await http.post<{ ballotId: string; message: string }>(`/proposals/${id}/ballot`, { choice });
+    assertNotKeyMessage(message);
     const signature = await ethereum.sign(message, address);
     return http.post<{ proposal: Proposal }>(`/proposals/${id}/vote`, { ballotId, signature }).then((r) => r.proposal);
   },

@@ -6,6 +6,7 @@ import Spinner from '../components/ui/Spinner';
 import DocsLocked from '../components/docs/DocsLocked';
 import DocList from '../components/docs/DocList';
 import DocEditor from '../components/docs/DocEditor';
+import KeyNotice from '../components/keys/KeyNotice';
 import useStore from '../state/useStore';
 import useRoute from '../hooks/useRoute';
 import toast from '../state/toast';
@@ -18,6 +19,8 @@ import type DocItem from '../types/DocItem';
 export default function DocsView() {
   const unlocked = useStore((s) => s.docsUnlocked);
   const revision = useStore((s) => s.docsRev);
+  // a newly confirmed key is a chance to hand team docs over
+  const keysRevision = useStore((s) => s.keysRev);
   const { segments } = useRoute();
   const currentId = segments[1];
   const [list, setList] = useState<{ docs: DocItem[]; waiting: { id: string; createdBy: string | null; updatedAt: number }[] } | null>(null);
@@ -26,13 +29,13 @@ export default function DocsView() {
   const refresh = useCallback(async () => {
     const next = await docs.list();
     setList(next);
-    // quietly hand team docs to teammates who unlocked after they were written
-    docs.shareWithTeam(next.docs);
+    // quietly hand team docs to teammates whose keys this person has confirmed since
+    docs.shareWithTeam(next.docs).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (unlocked) refresh().catch(toast.error);
-  }, [unlocked, revision, refresh]);
+  }, [unlocked, revision, keysRevision, refresh]);
 
   const load = useCallback(() => {
     if (!unlocked || !currentId) return setOpen(null);
@@ -73,32 +76,35 @@ export default function DocsView() {
           <Spinner size={20} />
         </div>
       ) : (
-        <div className={cx('docs', currentId && 'has-doc')}>
-          <DocList docs={list.docs} waiting={list.waiting} current={currentId} onOpen={(id) => router.navigate(`/docs/${id}`)} onNew={create} />
-          {open ? (
-            <DocEditor
-              key={open.id}
-              doc={open}
-              onChange={(doc) => {
-                setOpen(doc);
-                setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === doc.id ? { ...doc, body: d.body } : d)) });
-              }}
-              onDeleted={() => {
-                router.navigate('/docs');
-                refresh();
-              }}
-              onBack={() => router.navigate('/docs')}
-              onReload={() => {
-                load();
-                refresh();
-              }}
-            />
-          ) : (
-            <div className="docs-locked">
-              <p className="muted">{list.docs.length ? 'Pick a doc, or start a new one.' : 'Start your first encrypted doc with the + button.'}</p>
-            </div>
-          )}
-        </div>
+        <>
+          <KeyNotice reason="team docs" />
+          <div className={cx('docs', currentId && 'has-doc')}>
+            <DocList docs={list.docs} waiting={list.waiting} current={currentId} onOpen={(id) => router.navigate(`/docs/${id}`)} onNew={create} />
+            {open ? (
+              <DocEditor
+                key={open.id}
+                doc={open}
+                onChange={(doc) => {
+                  setOpen(doc);
+                  setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === doc.id ? { ...doc, body: d.body } : d)) });
+                }}
+                onDeleted={() => {
+                  router.navigate('/docs');
+                  refresh();
+                }}
+                onBack={() => router.navigate('/docs')}
+                onReload={() => {
+                  load();
+                  refresh();
+                }}
+              />
+            ) : (
+              <div className="docs-locked">
+                <p className="muted">{list.docs.length ? 'Pick a doc, or start a new one.' : 'Start your first encrypted doc with the + button.'}</p>
+              </div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );

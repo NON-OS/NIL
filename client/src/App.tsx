@@ -9,6 +9,7 @@ import ExtractModal from './components/overlays/ExtractModal';
 import DeckModal from './components/decks/DeckModal';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
+import KeyCheckModal from './components/keys/KeyCheckModal';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import AuthView from './views/AuthView';
@@ -78,6 +79,7 @@ export default function App() {
   const shortcuts = useStore((s) => s.shortcuts);
   const extract = useStore((s) => s.extract);
   const deckOpen = useStore((s) => s.deck.open);
+  const keyCheck = useStore((s) => s.keyCheck !== null);
   const { segments, query } = useRoute();
   const [newProject, setNewProject] = useState(false);
   const taskNumber = Number(query.get('task'));
@@ -116,6 +118,7 @@ export default function App() {
       {extract && <ExtractModal />}
       {deckOpen && <DeckModal />}
       {newProject && <ProjectModal onClose={() => setNewProject(false)} />}
+      {keyCheck && <KeyCheckModal />}
       <Toasts />
     </div>
   );

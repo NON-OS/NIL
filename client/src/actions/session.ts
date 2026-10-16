@@ -41,6 +41,8 @@ interface Bootstrap {
   stealth: StealthInfo | null;
   timer: TimeEntry | null;
   sourceUrl: string | null;
+  origin: string;
+  workspaceKey: string;
 }
 
 async function load() {
@@ -65,6 +67,8 @@ async function load() {
     stealth: b.stealth,
     timer: b.timer,
     sourceUrl: b.sourceUrl,
+    origin: b.origin,
+    workspaceKey: b.workspaceKey,
   });
   void openSealed();
   socket.connect(() => load().catch(() => {}));

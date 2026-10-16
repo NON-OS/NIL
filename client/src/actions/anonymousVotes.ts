@@ -15,15 +15,13 @@ const loadIdentity = async () => {
 const jitter = () => new Promise((r) => setTimeout(r, 400 + Math.random() * 1600));
 
 const anonymousVotes = {
-  // Registers your voting key (the Semaphore commitment) if it isn't yet. Returns it.
+  // Registers your voting key (the Semaphore commitment) if it isn't yet, or again after a key
+  // reset gave you a new one; the server refuses the switch while an anonymous vote is open.
   async ensureKey() {
     const identity = await loadIdentity();
     const commitment = identity.commitment.toString();
     const me = store.get().me!;
-    if (me.semaphoreCommitment && me.semaphoreCommitment !== commitment) {
-      throw new Error('This wallet unlocks a different voting key than the one you set up. Switch to the wallet you first voted with.');
-    }
-    if (!me.semaphoreCommitment) {
+    if (me.semaphoreCommitment !== commitment) {
       const { user } = await http.put<{ user: User }>('/me/semaphore', { commitment });
       const s = store.get();
       store.set({ me: { ...s.me!, ...user }, users: records.put(s.users, user) });
