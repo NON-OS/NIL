@@ -143,7 +143,7 @@ What Nil protects, and what it doesn't.
 
 - Session, invite, share-link and access-key tokens are random. Only their SHA-256 hashes are stored, so a leaked database can't be used to sign in.
 - Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix.
-- Every write needs a custom header and a same-origin check, which blocks cross-site request forgery. WebSockets and the MCP endpoint check the origin too.
+- Every write needs a custom header and an origin check against `APP_URL` (and `ALLOWED_ORIGINS`), which blocks cross-site request forgery. WebSockets and the MCP endpoint check the origin too. Wallet sign-in messages always name the configured domain, never one taken from the request, so a phishing site can't collect a signature that works here.
 - Security headers: a strict CSP with no inline or external scripts, `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, COOP and CORP, a restrictive `Permissions-Policy`, and HSTS over HTTPS.
 - Sign-in, applications, ballots, AI and other sensitive endpoints are rate-limited.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser. Everything else downloads, so an uploaded HTML file can never run.
@@ -197,7 +197,7 @@ Requires Docker with Compose v2.24 or newer.
 ```bash
 git clone <your-nonos-repo-url> nonos
 cd nonos
-cp .env.example .env        # optional: edit settings
+cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
 ```
 
@@ -222,22 +222,22 @@ node --env-file=.env --disable-warning=ExperimentalWarning server/index.js
 
 ```bash
 npm install
-npm run dev
+APP_URL=http://localhost:5173 npm run dev
 ```
 
-Open http://localhost:5173. The API runs on port 3000 and restarts on changes. The web app reloads on changes.
+Open http://localhost:5173. `APP_URL` is required everywhere, because wallet sign-in messages name that domain. The API runs on port 3000 and restarts on changes. The web app reloads on changes.
 
 ## Configuration
 
-All settings are environment variables. Every one is optional. [.env.example](.env.example) lists them all, grouped and explained. The ones that matter most:
+All settings are environment variables. `APP_URL` is required, and so is `NOX_RPC_URL` on any server people reach over the network. Everything else is optional. [.env.example](.env.example) lists them all, grouped and explained. The ones that matter most:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `APP_URL` | none | Public address, like `https://nonos.example.com`. Used in sign-in messages, origin checks and the bounty feed |
-| `TRUST_PROXY` | off | Set to `1` behind a reverse proxy. Needed for secure cookies and correct client IPs |
+| `APP_URL` | required | The address people type, like `https://nonos.example.com`. Used in sign-in messages, origin checks and the bounty feed. Never read from request headers |
+| `TRUST_PROXY` | off | The proxy's address range (`uniquelocal`, `loopback`, a subnet) or hop count, behind a reverse proxy. Needed for secure cookies and correct client IPs |
 | `DATA_DIR` | `./data` (`/data` in Docker) | Database, uploads and signing key |
 | `SOURCE_URL` | none | Link to your source code, shown in the app (the AGPL asks you to offer it) |
-| `NOX_RPC_URL` | public node | Ethereum JSON-RPC node, or `off` to turn on-chain features off |
+| `NOX_RPC_URL` | required (public node on localhost only) | Your Ethereum JSON-RPC node, or `off` to turn on-chain features off |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens as `SYMBOL:address:decimals` |
 | `PLAN_TREASURY` | none | Set only to charge a NOX subscription. Unset means community mode |
 | `ANTHROPIC_API_KEY` | none | Turns on built-in AI |
@@ -275,7 +275,7 @@ All settings are environment variables. Every one is optional. [.env.example](.e
 ## Development
 
 ```bash
-npm run dev         # API on :3000 with auto-restart, web app on :5173 with hot reload
+APP_URL=http://localhost:5173 npm run dev   # API on :3000 with auto-restart, web app on :5173 with hot reload
 npm test            # API integration tests
 npm run typecheck   # strict TypeScript for the web app
 npm run build       # production bundle into dist/

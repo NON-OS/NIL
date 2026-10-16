@@ -71,19 +71,21 @@ Set at least these:
 
 ```bash
 APP_URL=https://nonos.example.com
-TRUST_PROXY=1
+TRUST_PROXY=uniquelocal
+NOX_RPC_URL=https://<your-own-node>
 SOURCE_URL=https://github.com/<you>/nonos
 ```
 
-- `APP_URL` must be exactly the address people type. Wallets show this domain in the sign-in message.
-- `TRUST_PROXY=1` tells Nil that Caddy sits in front. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's.
+- `APP_URL` is required and must be exactly the address people type. Wallets show this domain in the sign-in message, and only this origin may make changes. Nil never reads it from the request, so a phishing site can't get a sign-in message that names its own domain. Without it, the server refuses to start.
+- `TRUST_PROXY=uniquelocal` tells Nil to believe forwarded headers only from a private address, which is where Caddy reaches it on the Docker network. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's. A hop count (`1`) also works, but only while port 3000 is closed to everything except Caddy: anyone who reaches the port directly could otherwise claim any IP address. `true` is refused.
+- `NOX_RPC_URL` is required on a server people reach over the network (see the table below), or `off`.
 - `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
 
 Then decide on these:
 
 | Variable | Recommendation |
 |---|---|
-| `NOX_RPC_URL` | Your own Ethereum node, or a provider you trust. The default public node sees every address and transaction your server looks up. Use `off` if you don't want any on-chain features |
+| `NOX_RPC_URL` | Required. Your own Ethereum node (an execution client such as Geth, Nethermind or Reth, with a consensus client), or a provider you trust. The node sees every wallet and payout address your server looks up, and from which IP. Use `off` if you don't want any on-chain features |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run NØNOS for others and charge them in NOX |
 | `ANTHROPIC_API_KEY` | Only if you want built-in AI. Text goes to Anthropic only when someone clicks an AI button |
@@ -146,7 +148,7 @@ To keep `git status` clean, list both files in `.git/info/exclude`:
 printf 'Caddyfile\ndocker-compose.override.yml\n' | sudo tee -a .git/info/exclude
 ```
 
-**Prefer Caddy from your distribution's packages?** Then skip the `caddy` service, publish Nil on the loopback interface only, and point Caddy at it:
+**Prefer Caddy from your distribution's packages?** Then skip the `caddy` service, publish Nil on the loopback interface only, and point Caddy at it. Docker hands those connections to Nil from its own private network, so `TRUST_PROXY=uniquelocal` still fits:
 
 ```yaml
 services:
@@ -177,7 +179,7 @@ curl -sI https://nonos.example.com/healthz
 curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security'
 ```
 
-The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set.
+The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set, or doesn't match the address Caddy connects from.
 
 The Nil container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
 
@@ -219,23 +221,11 @@ sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f dock
 sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.tor.yml exec tor cat /var/lib/tor/nonos/hostname
 ```
 
-Keep `APP_URL` set to your HTTPS address. Onion visitors then see that domain in the wallet sign-in message, and their wallet may warn that it doesn't match the site. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
+`docker-compose.tor.yml` removes Nil's published port. If your override publishes `127.0.0.1:3000` for a Caddy on the host, list the override after the Tor file so the port comes back.
 
-**Onion only.** Skip Caddy. Create a local `docker-compose.onion.yml` with:
+Keep `APP_URL` set to your HTTPS address and add the onion address to `ALLOWED_ORIGINS` (`ALLOWED_ORIGINS=http://<your-address>.onion`). Onion visitors then see the onion address in the wallet sign-in message. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
 
-```yaml
-services:
-  nonos:
-    ports: !reset []
-```
-
-and start with:
-
-```bash
-sudo docker compose -f docker-compose.yml -f docker-compose.tor.yml -f docker-compose.onion.yml up -d --build
-```
-
-Leave `TRUST_PROXY` empty and `APP_URL` empty (or set it to `http://<your-address>.onion`). Back up the `tor-keys` volume to keep the onion address.
+**Onion only.** Skip Caddy and follow [docs/TOR.md](TOR.md): start once to create the address, then set `APP_URL=http://<your-address>.onion` and recreate the container. The Tor file already removes the published port, so the server answers only through Tor. Leave `TRUST_PROXY` empty. Back up the `tor-keys` volume to keep the onion address.
 
 ## 10. Backups
 
@@ -374,9 +364,9 @@ sudo docker image prune -f
 - [ ] `dig +short nonos.example.com` returns the server's address.
 - [ ] `https://nonos.example.com` loads with a valid certificate, and `http://` redirects to it.
 - [ ] Port 3000 is closed from the outside: `curl -m 5 http://<server-ip>:3000/healthz` from another machine fails.
-- [ ] `.env` has `APP_URL`, `TRUST_PROXY=1` and `SOURCE_URL`, no `DATA_DIR`, and permissions `600`.
+- [ ] `.env` has `APP_URL`, `TRUST_PROXY` set to Caddy's address range (`uniquelocal`), `NOX_RPC_URL` and `SOURCE_URL`, no `DATA_DIR`, and permissions `600`.
 - [ ] Responses carry `Strict-Transport-Security` and `Content-Security-Policy`.
-- [ ] `NOX_RPC_URL` points at a node you trust (or is `off`), and the app shows no Ethereum node errors.
+- [ ] `NOX_RPC_URL` points at your own node or one you trust (or is `off`), and the app shows no Ethereum node errors.
 - [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for the plan. If set, the address, price and trial are right.
 - [ ] `REWARD_TOKENS` matches your chain.
 - [ ] You created the workspace, the name is final, and you linked a second wallet.
@@ -405,9 +395,11 @@ sudo docker compose exec nonos wget -qO- http://127.0.0.1:3000/healthz
 
 **Lines starting with `[config]` in the log at startup.** A setting in `.env` couldn't be used. Each line names the setting and says what the server does instead: the default, or community mode for an unusable `PLAN_TREASURY`. Fix the value and recreate the container.
 
+**The container keeps restarting and the log says `APP_URL is required` or `NOX_RPC_URL is required`.** Those two settings have no safe default. Set `APP_URL` to the address people type, and `NOX_RPC_URL` to your node (or `off`), then recreate the container.
+
 **The container keeps restarting with a permission or read-only error on `/data` or `./data`.** `DATA_DIR` is set in `.env`; remove it. Or the volume's files belong to the wrong user after a manual copy: fix them with the `chown -R 1000:1000 /data` step from the restore section.
 
-**"Request blocked. Reload the page and try again."** The browser's origin didn't match the server. People must use the address in `APP_URL`. Behind a proxy, `TRUST_PROXY=1` must be set. Extra addresses go in `ALLOWED_ORIGINS`.
+**"Request blocked. Reload the page and try again."** The browser's origin didn't match the server. People must use the address in `APP_URL`. Extra addresses, such as an onion address, go in `ALLOWED_ORIGINS`. The `Host` header the browser sends doesn't count.
 
 **Live updates don't connect (hovering the dot next to the logo shows "Reconnecting…").** The proxy must pass WebSocket upgrades on `/ws` (Caddy does) and the origin rules above apply.
 
