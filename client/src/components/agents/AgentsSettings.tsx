@@ -74,7 +74,7 @@ export default function AgentsSettings() {
                   {settings.changedAt && ` Last changed ${dates.ago(settings.changedAt)}${settings.changedBy && users[settings.changedBy] ? ` by ${users[settings.changedBy].name}` : ''}.`}
                 </span>
               </span>
-              <button type="button" className="toggle" role="switch" aria-checked={settings.enabled} onClick={flip} aria-label="Agents are on" />
+              <button type="button" className="toggle" role="switch" aria-checked={settings.enabled} onClick={flip} aria-label="All agents" />
             </label>
           </div>
         </section>
