@@ -1,4 +1,5 @@
 import HttpError from '../lib/HttpError.js';
+import log from '../lib/log.js';
 import appVersion from '../lib/appVersion.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import tools from './tools.js';
@@ -29,7 +30,7 @@ function call(params, user, scope) {
   } catch (err) {
     // tool failures go back to the model as readable errors, not protocol errors
     const message = err instanceof HttpError ? err.message : 'Something went wrong on the Nil server.';
-    if (!(err instanceof HttpError)) console.error('[mcp]', err);
+    if (!(err instanceof HttpError)) log.error('mcp', `The ${params.name} tool failed.`, err);
     return { result: { isError: true, content: [{ type: 'text', text: message }] } };
   }
 }

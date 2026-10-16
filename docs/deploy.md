@@ -49,7 +49,7 @@ sudo ufw allow 443/udp      # HTTP/3, optional
 sudo ufw enable
 ```
 
-Docker writes its own firewall rules for published ports, and those skip ufw. That is why this guide never publishes Nil's port 3000 on the host. Only Caddy publishes ports.
+Docker writes its own firewall rules for published ports, and those skip ufw. That is why `docker-compose.yml` publishes Nil's port 3000 on the loopback interface only (`127.0.0.1:3000`), which nothing outside the machine can reach, and the override in step 6 removes even that. Only Caddy publishes ports to the internet.
 
 ## 4. Get the code
 
@@ -75,17 +75,19 @@ Set at least these:
 APP_URL=https://nonos.example.com
 TRUST_PROXY=1
 SOURCE_URL=https://github.com/<you>/nonos
+STRICT_CONFIG=1
 ```
 
 - `APP_URL` must be exactly the address people type. Wallets show this domain in the sign-in message.
 - `TRUST_PROXY=1` tells Nil that Caddy sits in front. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's.
 - `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
+- `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an empty `APP_URL`, an https `APP_URL` without `TRUST_PROXY`, and the default public Ethereum node.
 
 Then decide on these:
 
 | Variable | Recommendation |
 |---|---|
-| `NOX_RPC_URL` | Your own Ethereum node, or a provider you trust. The default public node sees every address and transaction your server looks up. Use `off` if you don't want any on-chain features |
+| `NOX_RPC_URL` | Your own Ethereum node, or a provider you trust. The default public node sees every address and transaction your server looks up, and the server warns about it at startup. Use `off` if you don't want any on-chain features |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run NØNOS for others and charge them in NOX |
 | `ANTHROPIC_API_KEY` | Only if you want built-in AI. Text goes to Anthropic only when someone clicks an AI button |
@@ -148,14 +150,7 @@ To keep `git status` clean, list both files in `.git/info/exclude`:
 printf 'Caddyfile\ndocker-compose.override.yml\n' | sudo tee -a .git/info/exclude
 ```
 
-If you prefer Caddy from your distribution's packages, skip the `caddy` service, publish Nil on the loopback interface only, and point Caddy at it:
-
-```yaml
-services:
-  nonos:
-    ports: !override
-      - "127.0.0.1:3000:3000"
-```
+If you prefer Caddy from your distribution's packages, skip the override file. `docker-compose.yml` already publishes Nil on the loopback interface only, so point Caddy at it:
 
 ```
 nonos.example.com {
@@ -181,19 +176,28 @@ curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security
 
 The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set.
 
+`/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, and whether the Ethereum node answered the last time it was asked. It holds nothing about the workspace or its people, so it is safe to leave public.
+
 The Nil container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
 
 ## 8. First sign-in and the first admin
 
-Do this right after the first start. Until a workspace exists, anyone who reaches the server can create it, or restore a capsule into it.
+Do this right after the first start. Creating the workspace, or restoring a capsule into the empty server, needs a one-time setup token, so nobody who finds the server first can claim it. Unless you set `SETUP_TOKEN` yourself, the server makes one at first start and prints it once in the log:
+
+```bash
+sudo docker compose logs nonos | grep 'setup token'
+sudo docker compose exec nonos cat /data/setup-token     # the same token, if the log has rotated
+```
+
+The token stops working, and the file is deleted, once the workspace exists. If you set `SETUP_TOKEN` in `.env`, remove it afterwards.
 
 1. Open `https://nonos.example.com`. You see **Set up your workspace**.
-2. Enter the workspace name and your name. You can rename the workspace later in **Settings → Workspace**. People's encrypted-docs, private payout and voting keys don't depend on the name.
+2. Enter the setup token, the workspace name and your name. You can rename the workspace later in **Settings → Workspace**. People's encrypted-docs, private payout and voting keys don't depend on the name.
 3. Click **Create workspace with your wallet** and sign the message. Check that the domain in the message is yours. You are now the **owner**.
 4. Link a second wallet: **Settings → Sign-in & security → Your wallets**. Your wallets are your only way in. Nobody can add a wallet to your account for you.
 5. Add at least one more admin, ideally a second owner: **Settings → Team → Invite people**, choose **Admin**, and send the link privately. Or change the role of an existing member under **Members**. Only an owner can make someone an owner.
 
-If someone else set the workspace up before you, and there is nothing in it you need, reset it:
+If the workspace was set up by mistake, and there is nothing in it you need, reset it:
 
 ```bash
 sudo docker compose rm -sf nonos
@@ -254,6 +258,8 @@ Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the c
 | `nonos.db`, `nonos.db-wal`, `nonos.db-shm` | The SQLite database. Don't copy these files while the server runs: use a snapshot (below) |
 | `keys/receipts-ed25519.pem` | The workspace signing key. It signs receipts and is part of every person's key derivation. Without it, nobody can derive their encryption, private payout or voting keys again |
 | `uploads/` | File attachments |
+| `pre-migration-*.db` | Copies of the database the server takes before each schema upgrade. The newest three are kept |
+| `setup-token` | The one-time setup token, only until the workspace exists |
 
 Also keep `/opt/nonos/.env`, `Caddyfile` and `docker-compose.override.yml`, and the `tor-keys` volume if you use Tor. Caddy's certificates are re-issued automatically and don't need a backup.
 
@@ -286,7 +292,7 @@ docker compose exec -T nonos rm -f /data/backup.db
 # 3. keep the snapshot, not the live database files copied while the server ran
 rm -f "$WORK/nonos.db" "$WORK/nonos.db-wal" "$WORK/nonos.db-shm"
 mv "$WORK/backup.db" "$WORK/nonos.db"
-rm -rf "$WORK"/restore-* "$WORK"/capsule-*
+rm -rf "$WORK"/restore-* "$WORK"/capsule-* "$WORK"/pre-migration-*.db "$WORK"/setup-token
 
 tar -C "$DEST" -czf "$DEST/nonos-$STAMP.tar.gz" "$STAMP"
 rm -rf "$WORK"
@@ -345,7 +351,7 @@ Sessions in the backup stay valid, so people who were signed in when it was take
 
 ### Restore from a capsule
 
-Start Nil on a server with an empty volume. Open the site, choose **Moving servers? Restore from an encrypted capsule**, pick the file and enter the passphrase. Everyone signs in again afterwards. Capsules larger than `MAX_CAPSULE_MB` (4096 by default) are refused.
+Start Nil on a server with an empty volume. Open the site, choose **Moving servers? Restore from an encrypted capsule**, enter the setup token from the log (section 8), pick the file and enter the passphrase. Everyone signs in again afterwards. Capsules larger than `MAX_CAPSULE_MB` (4096 by default) are refused.
 
 ### Test your restores
 
@@ -367,7 +373,9 @@ sudo docker compose logs -f nonos
 sudo docker image prune -f
 ```
 
-- Database migrations run automatically when the server starts. They only go forward. To roll back, check out the previous release **and** restore the backup you took before upgrading.
+- Database migrations run automatically when the server starts. They only go forward. Before the first one runs, the server saves a copy of the database as `/data/pre-migration-<time>-schema-<n>.db` and says so in the log. It keeps the newest three. Each is a full copy, including anything zero-state retention has erased since, so delete them once you're happy with the upgrade.
+- An older release refuses to start on a database a newer one has upgraded, and says which schema it found. To roll back, check out the previous release **and** restore the backup you took before upgrading (or the `pre-migration-*.db` copy, in place of `nonos.db`, with the server stopped and the old `-wal` and `-shm` files removed).
+- On `docker compose up -d` or `stop`, Nil gets SIGTERM and stops cleanly: requests in progress finish, open tabs are told to reconnect, and the database is closed. `docker-compose.yml` gives it 30 seconds (`stop_grace_period`); it exits with an error if it needs longer than `SHUTDOWN_TIMEOUT_SECONDS` (20).
 - The app updates itself in open browsers on the next page load.
 - After changing only `.env`, apply it with `sudo docker compose up -d --force-recreate nonos`.
 
@@ -384,7 +392,8 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] `dig +short nonos.example.com` returns the server's address.
 - [ ] `https://nonos.example.com` loads with a valid certificate, and `http://` redirects to it.
 - [ ] Port 3000 is closed from the outside: `curl -m 5 http://<server-ip>:3000/healthz` from another machine fails.
-- [ ] `.env` has `APP_URL`, `TRUST_PROXY=1` and `SOURCE_URL`, no `DATA_DIR`, and permissions `600`.
+- [ ] `.env` has `APP_URL`, `TRUST_PROXY=1`, `SOURCE_URL` and `STRICT_CONFIG=1`, no `DATA_DIR`, and permissions `600`.
+- [ ] The startup log has no `[config]` lines, and `/healthz` shows the version you meant to deploy.
 - [ ] Responses carry `Strict-Transport-Security` and `Content-Security-Policy`.
 - [ ] `NOX_RPC_URL` points at a node you trust (or is `off`), and the app shows no Ethereum node errors.
 - [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for the plan. If set, the address, price and trial are right.
@@ -396,7 +405,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] A capsule is stored off-site with its passphrase in a password manager.
 - [ ] If built-in AI is on, your team knows what goes to Anthropic and when.
 - [ ] If you plan encrypted weighted votes: your team knows they are beta. The ballot circuit is not audited and its trusted setup in `circuits/CEREMONY.json` is a development ceremony. Rerun phase 2 with independent contributors (`scripts/zk-ballot.mjs`) before relying on them.
-- [ ] The host installs security updates (for example `unattended-upgrades`), and Docker's logs are rotated (`log-opts` in `/etc/docker/daemon.json`).
+- [ ] The host installs security updates (for example `unattended-upgrades`). `docker-compose.yml` rotates Nil's own logs (5 files of 10 MB); rotate the other containers' logs too (`log-opts` in `/etc/docker/daemon.json`).
 - [ ] If you use memory-only mode, swap is off or encrypted.
 
 ## 13. Troubleshooting
@@ -414,6 +423,18 @@ sudo docker compose exec nonos wget -qO- http://127.0.0.1:3000/healthz
 ### Caddy can't get a certificate
 
 DNS doesn't point at the server yet, or ports 80 and 443 are blocked (check the provider's firewall too). Fix it and restart Caddy with `sudo docker compose restart caddy`. Many failed attempts in a row can hit Let's Encrypt rate limits, so wait before retrying.
+
+### Lines with `[config]` in the log at startup
+
+A setting in `.env` couldn't be used, or is risky in production. Each line names the setting and says what the server does instead: the default, community mode for an unusable `PLAN_TREASURY`, or a feature left off. Fix the value and recreate the container. With `STRICT_CONFIG=1` the server doesn't start until every one is fixed.
+
+### "That setup token isn't right."
+
+Use the token from the first start's log (or `/data/setup-token`), or the `SETUP_TOKEN` in `.env`. After an owner erases the workspace, the server prints a new one.
+
+### "The database has schema …, but this version of Nil only knows up to …"
+
+The image is older than the one that last ran on this volume. Run the newer release again, or restore the backup taken before the upgrade.
 
 ### Lines starting with `[config]` in the log at startup
 
@@ -457,7 +478,7 @@ That wallet isn't linked to any account. Sign in with a linked wallet, or ask an
 
 ### A payment stays pending
 
-It counts after `NOX_CONFIRMATIONS` blocks (3 by default) and is re-checked every minute. If the transaction never appears on-chain, it fails after 24 hours. A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address). Fix the cause, remove the failed payment and record the transaction again.
+It counts after `NOX_CONFIRMATIONS` blocks (3 by default) and is re-checked every minute. If the transaction never appears on-chain, it fails after 24 hours (for bounty payments, `NOX_MISSING_TX_HOURS`). A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address). Fix the cause, remove the failed payment and record the transaction again.
 
 ### Errors saying Nil Pro is needed (HTTP 402)
 

@@ -4,6 +4,7 @@ import check from '../lib/check.js';
 import config from '../config.js';
 import calendar from '../lib/calendar.js';
 import HttpError from '../lib/HttpError.js';
+import log from '../lib/log.js';
 import rateLimit from '../auth/rateLimit.js';
 import visibleTask from '../services/visibleTask.js';
 import friendlyError from '../ai/friendlyError.js';
@@ -29,7 +30,7 @@ function ai(handler) {
     } catch (err) {
       if (err instanceof HttpError) throw err;
       const { status, message } = friendlyError(err);
-      if (status >= 500 && !err.userMessage) console.error('[ai]', err.message);
+      if (status >= 500 && !err.userMessage) log.warn('ai', 'An AI request failed.', err);
       throw new HttpError(status, message);
     }
   });

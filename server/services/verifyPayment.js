@@ -7,8 +7,6 @@ import settlePayment from './settlePayment.js';
 import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
 
-const DAY = 86_400_000;
-
 // Who may fund a bounty: the wallets of the admin who recorded it, plus treasury addresses.
 function payers(payerId) {
   const own = payerId ? sql.all("SELECT external_id FROM credentials WHERE user_id = ? AND kind = 'wallet'", payerId).map((r) => r.external_id.toLowerCase()) : [];
@@ -25,7 +23,7 @@ export default async function verifyPayment(id) {
   const token = rewardToken(payment.token);
   const found = await readTransfer(payment.tx_hash, token.address);
   if (found.state === 'unknown') {
-    if (Date.now() - payment.created_at > DAY) failPayment(payment, 'The transaction never showed up on-chain.');
+    if (Date.now() - payment.created_at > config.nox.missingTxMs) failPayment(payment, 'The transaction never showed up on-chain.');
     else sql.run('UPDATE payments SET checked_at = ? WHERE id = ?', Date.now(), id);
     return;
   }

@@ -1,5 +1,6 @@
 import config from '../config.js';
 import HttpError from '../lib/HttpError.js';
+import rpcHealth from './rpcHealth.js';
 
 let nextId = 1;
 
@@ -15,14 +16,22 @@ export default async function rpc(method, params = []) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
       redirect: 'error',
-      signal: AbortSignal.timeout(10_000),
+      signal: AbortSignal.timeout(config.nox.rpcTimeoutMs),
     });
   } catch {
+    rpcHealth.failed();
     throw unreachable('no answer');
   }
-  if (!res.ok) throw unreachable(`HTTP ${res.status}`);
+  if (!res.ok) {
+    rpcHealth.failed();
+    throw unreachable(`HTTP ${res.status}`);
+  }
   const reply = await res.json().catch(() => null);
-  if (!reply || typeof reply !== 'object') throw unreachable('unreadable reply');
+  if (!reply || typeof reply !== 'object') {
+    rpcHealth.failed();
+    throw unreachable('unreadable reply');
+  }
+  rpcHealth.answered();
   // the node answered but said no (a reverted call, a transaction short of gas): pass its reason on
   if (reply.error) throw new HttpError(502, `The Ethereum node refused: ${String(reply.error.message ?? 'no reason given').slice(0, 160)}`);
   return reply.result;

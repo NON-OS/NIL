@@ -17,7 +17,7 @@ cp .env.example .env        # optional: edit settings
 docker compose up -d --build
 ```
 
-Open `http://localhost:3000`, connect your wallet and create the workspace. You become the owner.
+Open `http://localhost:3000`, connect your wallet and create the workspace with the one-time setup token from the log (`docker compose logs nonos | grep 'setup token'`). You become the owner.
 
 With plain Node (22.13 or newer):
 
