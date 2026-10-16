@@ -15,6 +15,7 @@ import deleteWorkspace from '../provisioning/deleteWorkspace.js';
 import resizeWorkspace from '../provisioning/resizeWorkspace.js';
 import refreshWorkspace from '../provisioning/refreshWorkspace.js';
 import housekeeping from '../ops/housekeeping.js';
+import backupAll from '../backups/backupAll.js';
 import nameStatus from '../names/nameStatus.js';
 import testContext from './helpers/testContext.js';
 
@@ -195,6 +196,19 @@ test('deleting without backups needs an explicit choice, and --now removes at on
   const gone = await deleteWorkspace(ctx, ws.id, { immediately: true, exportFirst: false });
   assert.equal(gone.state, 'deleted');
   assert.equal(ctx.driver.containers.has(ws.id), false);
+});
+
+test('a workspace that never started can be deleted without an export, and isn’t backed up', async () => {
+  const ctx = testContext({ backups: true });
+  ctx.driver.fail.start = new Error('image is broken');
+  const ws = createWorkspace(ctx, { name: 'never', owner: OWNER });
+  await assert.rejects(provisionWorkspace(ctx, ws.id));
+  const summary = await backupAll(ctx);
+  assert.equal(summary.done, 0);
+  assert.deepEqual(summary.failed, []);
+  const gone = await deleteWorkspace(ctx, ws.id, { immediately: true });
+  assert.equal(gone.state, 'deleted');
+  assert.equal(ctx.store.backups.latest(ws.id), undefined);
 });
 
 test('a failed final export deletes nothing', async () => {

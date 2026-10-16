@@ -6,9 +6,11 @@ const DAY = 86_400_000;
 // Schedules a workspace for deletion: a final encrypted export first, then the workload stops
 // and the data waits out the grace period (CLOUD_DELETE_GRACE_DAYS), during which `resume`
 // brings it back untouched. `immediately` skips the wait, for abuse or a confirmed request.
-export default async function deleteWorkspace(ctx, id, { immediately = false, exportFirst = true } = {}) {
+export default async function deleteWorkspace(ctx, id, { immediately = false, exportFirst: wanted = true } = {}) {
   const workspace = ctx.store.workspaces.get(id);
   if (!workspace || workspace.state === 'deleted') throw new HttpError(404, 'No such workspace.');
+  // one that never started has nothing to export
+  const exportFirst = wanted && Boolean(workspace.lastHealthyAt);
   if (exportFirst && !ctx.backups) throw new HttpError(409, 'Backups are off, so there is nowhere to export to. Set them up, or delete without an export.');
   const from = ['active', 'stopped', 'suspended', 'failed', ...(immediately ? ['deleting'] : [])];
   const deleteAfter = ctx.store.now() + (immediately ? 0 : ctx.config.lifecycle.deleteGraceDays * DAY);

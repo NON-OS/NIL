@@ -10,7 +10,8 @@ const BACKED_UP = ['active', 'stopped', 'suspended', 'failed'];
 export default async function backupAll(ctx) {
   await ctx.backupTarget.check();
   const summary = { done: 0, failed: [] };
-  const workspaces = ctx.store.workspaces.list({ states: BACKED_UP });
+  // a workspace whose first start failed never held any data, and has no container to read from
+  const workspaces = ctx.store.workspaces.list({ states: BACKED_UP }).filter((w) => w.lastHealthyAt);
   for (const workspace of workspaces) {
     try {
       await backupWorkspace(ctx, workspace, 'scheduled');
