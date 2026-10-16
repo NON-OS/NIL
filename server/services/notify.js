@@ -1,6 +1,7 @@
 import sql from '../db/sql.js';
 import hub from '../realtime/hub.js';
 import toNotification from '../mappers/toNotification.js';
+import pushNotification from '../push/pushNotification.js';
 
 // Never notifies the person who did the thing, or anyone who's been removed.
 export default function notify(userIds, type, taskId, actorId, data = {}) {
@@ -20,5 +21,6 @@ export default function notify(userIds, type, taskId, actorId, data = {}) {
     );
     const notification = toNotification(sql.get('SELECT * FROM notifications WHERE id = ?', lastInsertRowid));
     hub.toUser(userId, { type: 'notification', notification });
+    pushNotification(userId, notification);
   }
 }

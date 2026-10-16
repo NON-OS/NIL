@@ -7,13 +7,17 @@ import purge from './jobs/purge.js';
 import checkPayments from './jobs/checkPayments.js';
 import closeProposals from './jobs/closeProposals.js';
 import sendReminders from './jobs/sendReminders.js';
+import sendDueAlerts from './jobs/sendDueAlerts.js';
+import vapidKeys from './push/vapidKeys.js';
 
 migrate();
+if (config.push.enabled) vapidKeys.ensure();
 purge();
 setInterval(purge, 60 * 60_000).unref();
 setInterval(checkPayments, 60_000).unref();
 setInterval(closeProposals, 60_000).unref();
 setInterval(sendReminders, 60_000).unref();
+setInterval(sendDueAlerts, 60_000).unref();
 
 const server = http.createServer(createApp());
 attachRealtime(server);
