@@ -1,9 +1,11 @@
 import './TaskBoard.css';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { DndContext, DragOverlay, KeyboardSensor, PointerSensor, TouchSensor, closestCorners, useSensor, useSensors, type DragEndEvent, type DragOverEvent, type DragStartEvent } from '@dnd-kit/core';
 import { arrayMove, sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import BoardColumn from './BoardColumn';
+import BoardTabs from './BoardTabs';
 import TaskCard from './TaskCard';
+import useScrollIndex from '../../hooks/useScrollIndex';
 import taskActions from '../../actions/tasks';
 import positionBetween from '../../lib/positionBetween';
 import meta from '../../lib/meta';
@@ -30,6 +32,8 @@ export default function TaskBoard({ tasks, showProject = true, defaults }: Props
   const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks]);
   const [columns, setColumns] = useState<Columns>(() => arrange(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
+  const boardRef = useRef<HTMLDivElement>(null);
+  const [shownColumn, showColumn] = useScrollIndex(boardRef);
 
   // Live updates from teammates re-arrange the board, except mid-drag.
   useEffect(() => {
@@ -78,13 +82,17 @@ export default function TaskBoard({ tasks, showProject = true, defaults }: Props
   };
 
   const tasksIn = (status: Status) => columns[status].map((id) => byId[id]).filter(Boolean);
+  const counts = Object.fromEntries(meta.statuses.map((s) => [s, columns[s].length])) as Record<Status, number>;
 
   return (
     <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={onDragStart} onDragOver={onDragOver} onDragEnd={onDragEnd} onDragCancel={() => setActiveId(null)}>
-      <div className="board">
-        {meta.boardStatuses.map((status) => (
-          <BoardColumn key={status} status={status} tasks={tasksIn(status)} showProject={showProject} defaults={defaults} />
-        ))}
+      <div className="board-wrap">
+        <BoardTabs statuses={meta.boardStatuses} counts={counts} active={shownColumn} onPick={showColumn} />
+        <div ref={boardRef} className="board">
+          {meta.boardStatuses.map((status) => (
+            <BoardColumn key={status} status={status} tasks={tasksIn(status)} showProject={showProject} defaults={defaults} />
+          ))}
+        </div>
       </div>
       <DragOverlay dropAnimation={{ duration: 180, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' }}>{activeId && byId[activeId] ? <TaskCard task={byId[activeId]} showProject={showProject} overlay /> : null}</DragOverlay>
     </DndContext>

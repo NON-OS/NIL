@@ -9,13 +9,14 @@ interface Props {
   onChange: (status: Status) => void;
   children: ReactNode;
   className?: string;
+  title?: string;
 }
 
 const OPTIONS = meta.statuses.map((s, i) => ({ value: s, label: meta.status[s], icon: <StatusIcon status={s} />, hint: String(i + 1) }));
 
-export default function StatusPicker({ value, onChange, children, className }: Props) {
+export default function StatusPicker({ value, onChange, children, className, title = 'Change status' }: Props) {
   return (
-    <Picker title="Change status" options={OPTIONS} value={value} onChange={(v) => onChange(v as Status)} className={className} width={220}>
+    <Picker title={title} options={OPTIONS} value={value} onChange={(v) => onChange(v as Status)} className={className} width={220}>
       {children}
     </Picker>
   );

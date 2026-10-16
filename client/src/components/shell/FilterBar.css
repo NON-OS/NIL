@@ -90,4 +90,39 @@
   .filter-search {
     flex: 0 0 170px;
   }
+
+  .filter-more {
+    position: sticky;
+    /* sticky offsets count from inside the bar's padding; this pins it to the screen edge */
+    right: calc(-1 * max(14px, env(safe-area-inset-right)));
+    display: grid;
+    flex: none;
+    place-items: center;
+    align-self: stretch;
+    width: 36px;
+    margin: -10px 0 -10px -6px;
+    border-left: 1px solid var(--line);
+    background: var(--bg);
+    color: var(--muted);
+  }
+
+  .filter-more svg {
+    width: 16px;
+    height: 16px;
+  }
+}
+
+@media (pointer: coarse) {
+  .filterbar {
+    padding-block: 6px;
+  }
+
+  .filter-btn,
+  .filter-search input {
+    height: var(--tap-min);
+  }
+
+  .filter-more {
+    margin-block: -6px;
+  }
 }
