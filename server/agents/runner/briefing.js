@@ -63,7 +63,7 @@ export default function briefing(run, task, { attempt = 1 } = {}) {
     ...(comments.length ? comments.map((c) => `<comment id="${c.id}" by="${fence(c.name ?? 'a former member')}${c.kind === 'agent' ? ' (agent)' : ''}" at="${new Date(c.created_at).toISOString()}">\n${fence(c.body)}\n</comment>`) : ['(no comments yet)']),
     '</comments>',
     '',
-    'Work on this now, then reply with your summary for the team.',
+    'That is everything about this task. Do the work now: tick checklist items with update_task (checklistDone) as you finish them, then reply with the work itself for the team.',
   ];
   return { text: lines.filter((l) => l !== false && l !== null && l !== undefined).join('\n'), suspicious };
 }

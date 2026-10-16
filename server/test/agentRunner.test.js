@@ -91,7 +91,7 @@ test('assigned work: the agent reads, works through its tools, ticks the checkli
   assert.equal(note.name, 'Builder');
   assert.match(note.body, /^Reproduced the crash/);
   assert.match(note.body, /Checklist items done:\n- Reproduce: Logged out after 24 hours on build 2\.4\.1/);
-  assert.match(note.body, /_2 changes made_/);
+  assert.match(note.body, /_2 changes made · 1 of 2 checklist items still open_/);
 
   const activity = sql.all('SELECT * FROM activity WHERE task_id = ? AND actor_id = ?', t.id, ids.builder);
   assert.deepEqual(activity.map((a) => a.type).sort(), ['checklist', 'comment', 'status']);
@@ -160,6 +160,8 @@ test('a checklist item is ticked only with the work for it; the run log says wha
   // the call to action is already in the reply, so the list only names the item
   assert.match(note, /Checklist items done:\n- Call to action\n/);
   assert.doesNotMatch(note, /- Three feature blurbs:/);
+  // whatever the reply says, the footer tells how much of the checklist is still open
+  assert.match(note, /3 of 4 checklist items still open/);
 });
 
 test('a result has to be work, not a claim of work', async () => {

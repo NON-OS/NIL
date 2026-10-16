@@ -177,7 +177,7 @@ export default async function executeRun(row, signal) {
       const message = err instanceof ProviderError ? err.message : 'The agent stopped on an unexpected error.';
       if (!(err instanceof ProviderError)) log.error('agents', `run ${run.id} failed`, err);
       log.add('error', { output: message, ok: false });
-      comment(runComment({ text: `I couldn’t finish this: ${message}`, stop: null, changes, pending, done, agent, secrets: knownSecrets(agent) }));
+      comment(runComment({ text: `I couldn’t finish this: ${message}`, stop: null, changes, pending, done, checklist: loadTask(task.id)?.checklist ?? [], agent, secrets: knownSecrets(agent) }));
       return finish('failed', { error: message });
     }
   }
@@ -200,7 +200,7 @@ export default async function executeRun(row, signal) {
   }
 
   const secrets = knownSecrets(agent);
-  comment(runComment({ text: final, stop, changes, pending, done, agent, secrets }));
+  comment(runComment({ text: final, stop, changes, pending, done, checklist: loadTask(task.id)?.checklist ?? [], agent, secrets }));
   const summary = runComment({ text: final, stop: null, changes, pending: [], done, agent, secrets }).slice(0, 2000);
   return finish(stop === 'done' ? 'done' : 'stopped', { summary, error: stop === 'done' ? null : stop });
 }
