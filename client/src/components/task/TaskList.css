@@ -51,3 +51,14 @@
   margin-left: auto;
   color: var(--muted);
 }
+
+@media (pointer: coarse) {
+  /* one more pixel for the bottom rule, so the button inside gets the full target */
+  .group-head {
+    height: calc(var(--tap-min) + 1px);
+  }
+
+  .group-head button.collapse {
+    align-self: stretch;
+  }
+}

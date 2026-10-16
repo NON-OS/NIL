@@ -206,3 +206,10 @@
     padding: 6px 4px;
   }
 }
+
+/* the add button waits for hover with a mouse; touch has no hover to wait for */
+@media (pointer: coarse) {
+  .cal-num .icon-only {
+    opacity: 1;
+  }
+}

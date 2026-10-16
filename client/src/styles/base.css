@@ -88,6 +88,13 @@ img {
   font-variant-ligatures: none;
 }
 
+@media (pointer: coarse) {
+  input.mono,
+  textarea.mono {
+    font-size: var(--field-text);
+  }
+}
+
 .num {
   font-variant-numeric: tabular-nums;
 }

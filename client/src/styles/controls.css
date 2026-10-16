@@ -268,3 +268,49 @@
   min-height: 28px;
   padding: 0 8px;
 }
+
+/* Touch: every control is at least --tap-min square to a finger. Text buttons get taller;
+   small icons keep their size and grow an invisible ::before hit area around them, which
+   relies on the spacing around them to stay clear of neighbours. */
+@media (pointer: coarse) {
+  .btn,
+  .btn-lg {
+    height: auto;
+    min-height: var(--tap-min);
+  }
+
+  .btn-sm {
+    position: relative;
+    height: auto;
+    min-height: 34px;
+  }
+
+  .icon-btn {
+    width: var(--tap-min);
+    height: var(--tap-min);
+  }
+
+  .prop-btn {
+    min-width: var(--tap-min);
+    min-height: var(--tap-min);
+  }
+
+  .menu-item {
+    min-height: var(--tap-min);
+  }
+
+  .icon-only,
+  .toggle,
+  .hit {
+    position: relative;
+  }
+
+  .btn-sm::before,
+  .icon-only::before,
+  .toggle::before,
+  .hit::before {
+    content: '';
+    position: absolute;
+    inset: min(0px, calc(50% - var(--tap-min) / 2));
+  }
+}

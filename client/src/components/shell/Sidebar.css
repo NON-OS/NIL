@@ -293,13 +293,17 @@
 }
 
 @media (max-width: 900px) {
+  /* hidden, not just moved off screen, so Tab and screen readers skip it while it's closed */
   .sidebar {
+    visibility: hidden;
     transform: translateX(-102%);
-    transition: transform 0.2s var(--ease);
+    transition: transform 0.2s var(--ease), visibility 0s 0.2s;
   }
 
   .sidebar.open {
+    visibility: visible;
     transform: none;
+    transition: transform 0.2s var(--ease);
   }
 
   .sidebar-scrim.open {
@@ -308,5 +312,24 @@
     z-index: 29;
     display: block;
     background: var(--scrim);
+  }
+}
+
+/* keyboard shortcuts mean nothing to a finger */
+@media (pointer: coarse) {
+  .search-btn .kbd,
+  .nav .nav-key {
+    display: none;
+  }
+
+  .search-btn,
+  .new-btn,
+  .nav a,
+  .nav-project {
+    height: var(--tap-min);
+  }
+
+  .new-btn {
+    width: var(--tap-min);
   }
 }

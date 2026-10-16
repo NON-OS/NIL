@@ -24,6 +24,13 @@
 }
 
 .row-check {
+  display: grid;
+  place-items: center;
+  align-self: stretch;
+  cursor: pointer;
+}
+
+.row-check input {
   width: 15px;
   height: 15px;
   margin: 0;
@@ -32,11 +39,17 @@
   cursor: pointer;
 }
 
-.row:hover .row-check,
-.row-check:checked,
-.row-check:focus-visible,
-.rows.selecting .row-check {
+.row:hover .row-check input,
+.row-check input:checked,
+.row-check input:focus-visible,
+.rows.selecting .row-check input {
   opacity: 1;
+}
+
+/* icon pickers sit centred in their columns, so their touch hit areas stay inside them */
+.row-cell {
+  display: grid;
+  place-items: center;
 }
 
 .row-key {
@@ -105,7 +118,30 @@
     display: none;
   }
 
-  .row-check {
+  .row-check input {
     opacity: 1;
+  }
+}
+
+/* touch: the icon columns widen to a full tap target each */
+@media (pointer: coarse) {
+  .row {
+    grid-template-columns: var(--tap-min) var(--tap-min) 64px var(--tap-min) minmax(0, 1fr) minmax(0, 150px) 86px var(--tap-min);
+    gap: 4px;
+    min-height: 48px;
+  }
+
+  .row-check input {
+    width: 18px;
+    height: 18px;
+    opacity: 1;
+  }
+}
+
+@media (pointer: coarse) and (max-width: 760px) {
+  .row {
+    grid-template-columns: var(--tap-min) var(--tap-min) minmax(0, 1fr) auto var(--tap-min);
+    gap: 2px;
+    padding-left: 0;
   }
 }

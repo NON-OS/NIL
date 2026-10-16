@@ -172,6 +172,12 @@
   }
 }
 
+@media (pointer: coarse) {
+  .settings-tabs button {
+    height: var(--tap-min);
+  }
+}
+
 .snippet {
   display: grid;
   gap: 6px;

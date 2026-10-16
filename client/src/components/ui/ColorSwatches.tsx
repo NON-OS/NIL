@@ -1,3 +1,4 @@
+import './ColorSwatches.css';
 import meta from '../../lib/meta';
 
 interface Props {
@@ -7,11 +8,12 @@ interface Props {
 
 export default function ColorSwatches({ value, onChange }: Props) {
   return (
-    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label="Color">
+    <div className="swatches" role="radiogroup" aria-label="Color">
       {meta.palette.map((c) => (
         <button
           key={c.value}
           type="button"
+          className="hit"
           role="radio"
           aria-checked={value.toLowerCase() === c.value}
           aria-label={c.name}
