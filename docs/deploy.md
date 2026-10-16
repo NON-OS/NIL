@@ -402,6 +402,23 @@ sudo docker image prune -f
 - The app updates itself in open browsers on the next page load.
 - After changing only `.env`, apply it with `sudo docker compose up -d --force-recreate nonos`.
 
+### Servers whose folder isn't called nonos
+
+Compose used to name the data volume after the folder the code is in. `docker-compose.yml` now
+fixes it as `nonos_nonos-data`, which is what a folder called `nonos` (such as `/opt/nonos`)
+always had, so those servers need nothing. If your code is in a folder with another name, copy
+the data across once before starting the new release, or Nil starts on an empty volume. With
+the code in `/srv/nil/app`, for example:
+
+```bash
+sudo docker compose down
+sudo docker volume create nonos_nonos-data
+sudo docker run --rm -v app_nonos-data:/from:ro -v nonos_nonos-data:/to alpine cp -a /from/. /to/
+sudo docker compose up -d
+```
+
+Check the site, then remove the old volume with `sudo docker volume rm app_nonos-data`.
+
 ### Upgrading from 3.0.0
 
 This release changes how encryption keys are made and checked (see [Encryption and trust](encryption.md)). Keys from 3.0.0 can't be checked, so the upgrade removes them, together with everyone's private payout and voting keys, and each person sets up new keys on their next unlock. Nothing in this release opens what was sealed to the old keys: docs and private tasks encrypted on 3.0.0 stay locked, and private payouts received on 3.0.0 can't be moved from Nil. Before upgrading, have people download the docs they want to keep with the download arrow, copy out what they need from their private tasks, and move their private payouts out (or copy each one's key with **Key**).
