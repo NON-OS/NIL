@@ -66,6 +66,15 @@ test('bootstrap sends plain tasks as cards: no notes or checklist, just step cou
   assert.ok('build' in legacy);
 });
 
+test('one malformed row costs its own step count, not everyone’s bootstrap', async () => {
+  const { task } = (await owner('POST', '/api/tasks', { title: 'Imported from elsewhere', checklist: [{ text: 'One' }] })).data;
+  sql.run("UPDATE tasks SET checklist = 'not json' WHERE id = ?", task.id);
+  const boot = await owner('GET', '/api/bootstrap?tasks=cards');
+  assert.equal(boot.status, 200);
+  assert.deepEqual(boot.data.tasks.find((t) => t.id === task.id).steps, { done: 0, total: 0 });
+  await owner('DELETE', `/api/tasks/${task.id}`);
+});
+
 test('a sealed card keeps its encrypted title, checklist and keys, but not its encrypted notes', async () => {
   const seal = sealed(ids.ana);
   const { task } = (await ana('POST', '/api/tasks', { private: true, sealed: seal })).data;

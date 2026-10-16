@@ -19,6 +19,11 @@ export default function archiveSummary(viewerId, before, { labels = false } = {}
   }
   if (!labels) return { done };
 
-  const tagged = sql.all(`SELECT label.value AS id, COUNT(*) AS n FROM tasks, json_each(tasks.labels) AS label WHERE ${where} GROUP BY label.value`, ...params);
+  // a malformed labels value would fail the whole query, so it counts as no labels
+  const tagged = sql.all(
+    `SELECT label.value AS id, COUNT(*) AS n FROM tasks, json_each(CASE WHEN json_valid(tasks.labels) THEN tasks.labels ELSE '[]' END) AS label
+     WHERE ${where} GROUP BY label.value`,
+    ...params,
+  );
   return { done, labels: Object.fromEntries(tagged.map((row) => [row.id, row.n])) };
 }
