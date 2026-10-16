@@ -4,6 +4,7 @@ import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
 
 const DAY = 86_400_000;
+const INVITE_HISTORY_DAYS = 30;
 
 // Runs hourly. Trash and dead sessions always go; the workspace's zero-state policies
 // decide how long finished work, comments and history stay.
@@ -37,6 +38,8 @@ export default function purge() {
   sql.tx(() => {
     sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - 90 * DAY);
     sql.run('DELETE FROM sessions WHERE expires_at < ?', now);
-    sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - 30 * DAY);
+    // unused links go once they expire; links people joined through stay a while longer, so
+    // admins can still see who came in with them
+    sql.run('DELETE FROM invites WHERE (uses = 0 AND expires_at < ?) OR expires_at < ? OR revoked_at < ?', now, now - INVITE_HISTORY_DAYS * DAY, now - INVITE_HISTORY_DAYS * DAY);
   });
 }
