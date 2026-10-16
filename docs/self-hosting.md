@@ -43,15 +43,15 @@ Open `http://localhost:5173`. `APP_URL` is required everywhere, because wallet s
 
 ## Settings
 
-Every setting is an environment variable, and every one is optional. An empty value counts as unset, so the default applies. `.env.example` in the source code lists them all, grouped and explained. These matter most:
+Every setting is an environment variable. All of them are optional except `APP_URL`, and `NOX_RPC_URL` on a server people reach over the network; without those the server refuses to start. An empty value counts as unset, so the default applies. `.env.example` in the source code lists them all, grouped and explained. These matter most:
 
 | Variable | Default | What it does |
 |---|---|---|
-| `APP_URL` | none | Your public address, like `https://nonos.example.com`. Used in sign-in messages, origin checks and the bounty feed |
+| `APP_URL` | required | Your public address, like `https://nonos.example.com`. Used in sign-in messages, origin checks, links in the bounty and calendar feeds, and push notifications |
 | `TRUST_PROXY` | off | Set to `1` behind a reverse proxy. Needed for secure cookies and correct visitor addresses |
 | `DATA_DIR` | `./data` (`/data` in Docker) | Database, uploads and the signing key |
 | `SOURCE_URL` | none | A link to your source code, shown in the app. The AGPL asks you to offer it if you run a modified version for others |
-| `NOX_RPC_URL` | a public node | The Ethereum node to use, or `off` to turn on-chain features off |
+| `NOX_RPC_URL` | required, except on localhost | The Ethereum node to use, or `off` to turn on-chain features off. A server whose `APP_URL` is a localhost address falls back to a public node, with a warning |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |
 | `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro in NOX. Unset means community mode |
 | `ANTHROPIC_API_KEY` | none | Turns on built-in AI |
@@ -64,7 +64,7 @@ A setting that is set but can't be used, such as a malformed number or treasury 
 
 ### Your Ethereum node
 
-The server checks payments, balances, stakes and passes through `NOX_RPC_URL`. The default public node sees every address and transaction your server looks up, and your server's IP address. Use your own node, or a provider you trust, for privacy. The server refuses a node on a different network from `NOX_CHAIN_ID`.
+The server checks payments, balances, stakes and passes through `NOX_RPC_URL`. Whatever node you name sees every address and transaction your server looks up, and your server's IP address. Use your own node, or a provider you trust, for privacy. The server refuses a node on a different network from `NOX_CHAIN_ID`.
 
 ### Charging or not
 

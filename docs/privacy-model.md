@@ -39,7 +39,7 @@ Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDN
 
 The server itself contacts other hosts in these cases:
 
-- Its Ethereum node, set by `NOX_RPC_URL`, to check payments, balances, stakes and Zero-State Passes, and to pass on the transactions you sign when you move a private payout. That node sees which addresses and transactions your server looks up, and your server's IP address. The default is a public node. Privacy-minded teams should run their own. `NOX_RPC_URL=off` turns every on-chain feature off.
+- Its Ethereum node, set by `NOX_RPC_URL`, to check payments, balances, stakes and Zero-State Passes, and to pass on the transactions you sign when you move a private payout. That node sees which addresses and transactions your server looks up, and your server's IP address. A server people reach over the network has to name one; only a server on localhost falls back to a public node. Privacy-minded teams should run their own. `NOX_RPC_URL=off` turns every on-chain feature off.
 - Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs. See [AI assistants](ai-assistants.md#built-in-ai).
 - The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
 
