@@ -9,7 +9,7 @@ What Nil encrypts in the browser, who holds which key, what teammates check for 
   - an Ed25519 key pair, which signs what you write in docs and private tasks;
   - your private payout keys (ERC-5564 spending and viewing keys) and your anonymous voting key (Semaphore).
 - The seed leaves your browser only wrapped. The server keeps one wrap per linked wallet: the seed under AES-256-GCM, with a key derived from that wallet's signature of its unlock message (below). That signature never leaves the browser, so the server can't open a wrap.
-- Any linked wallet that has a wrap unlocks the same identity. Linking a wallet while your keys are unlocked gives it a wrap too (Settings, Security, "Add the wallet in your browser").
+- Any linked wallet that has a wrap unlocks the same identity. Linking a wallet while your keys are unlocked gives it a wrap too, and **Add the wallet in your browser** under **Encryption keys** in **Settings → Sign-in & security** adds one later (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)).
 - Unlocked keys live only in the tab's memory and are wiped when you lock, sign out or reload.
 - Optional recovery kit: a small JSON file with the seed under a passphrase (scrypt with N = 2^17, r = 8, p = 1, then AES-256-GCM, the same cost as workspace capsules). Everything else in the file is bound in as additional data, so it can't be edited to claim another account or a cheaper cost.
 
@@ -31,7 +31,7 @@ The server writes the messages for signing in and for signed ballots. A dishones
 - Publishing keys, or replacing them with a reset, needs a key statement signed in the last ten minutes by one of your linked wallets. The server checks the signature, the site, the workspace and the account. A stolen session cookie alone can't publish or reset keys.
 - Every browser rebuilds each statement from the published fields and recovers the signer itself (secp256k1). A key whose statement doesn't check out is ignored.
 - The server is the only source for which wallets belong to whom, and a browser can't check that. So each browser pins every teammate's keys the first time it sees them, in local storage (public data only, per site, workspace and account), and seals nothing to a key until you confirm it. If a teammate's published keys later differ from the pinned ones, the key shows as changed, with the old and new fingerprints, and nothing new is sealed to it until you confirm the change.
-- A fingerprint is the first 80 bits of SHA-256 over both public keys, written as five groups of four hex digits. Yours is in Settings, Security. Compare fingerprints face to face or on a call, not in a message sent through the same workspace.
+- A fingerprint is the first 80 bits of SHA-256 over both public keys, written as five groups of four hex digits. Yours is under **Encryption keys** in **Settings → Sign-in & security**, and every teammate's is under **Teammates' keys**. Compare fingerprints face to face or on a call, not in a message sent through the same workspace.
 - Docs shows a notice when someone new appears with a key or someone's key changes, and anything that needs a teammate's key (sharing a doc, a private task for them, a trustee share) asks you to check it first. Team docs reach a newcomer only after a teammate has confirmed the newcomer's key.
 - Each key statement shows teammates the address of the wallet that signed it. If you'd rather they didn't see a particular wallet, link another one and sign your keys with that.
 
@@ -66,8 +66,9 @@ The server writes the messages for signing in and for signed ballots. A dishones
 ## Recovery and moves
 
 - Lost the wallet you usually use: unlock with another linked wallet that has a wrap.
-- Lost every wallet with a wrap: an admin links a new wallet to your account, you sign in with it and restore from your recovery kit. Without a kit, start over with new keys. Docs and private tasks sealed to the old keys must be shared again, teammates see your key as changed, and private payouts sent to your old keys stay with the old keys.
+- Lost every wallet with a wrap: an admin resets your sign-in, you link a new wallet with the one-time link, then restore from your recovery kit on the **Docs** screen that appears when the new wallet can't unlock. Without a kit, start over with new keys. Docs and private tasks sealed to the old keys must be shared again, teammates see your key as changed, and private payouts sent to your old keys stay with the old keys.
 - Moving the workspace to a different web address changes the unlock messages. Each member restores from their kit once, or starts over, and every browser's pins start over too, because they are stored per site.
+- Losing the workspace signing key in `DATA_DIR/keys` changes the workspace key that every message names. No wrap opens after that, and the browser refuses recovery kits made for the old workspace key, so everyone starts over. Back that key up with the database.
 
 ## Limits
 

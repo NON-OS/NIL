@@ -12,13 +12,19 @@ Your wallet proves who you are, so Nil never needs to store an email address, a 
 
 If you only lose one, sign in with another linked wallet and remove the lost one. If you lose every wallet linked to your account, ask an admin to reset your sign-in: they send you a one-time link that lets you link a new wallet to the same account. Save yourself that step by linking a second wallet now in **Settings → Sign-in & security**. See [Signing in](signing-in.md#if-you-lose-every-wallet).
 
+Your encryption keys work the same way. Any wallet you've added to them unlocks them. If you lose all of those, your recovery kit brings them back; without one, you start over with new keys. See [Keep a recovery kit](signing-in.md#keep-a-recovery-kit).
+
 ## Can I use Nil on my phone?
 
 Yes. Open your workspace's address in the browser inside your wallet app, then install it from there if you like. WalletConnect isn't supported, so a phone can't sign in for a desktop browser.
 
 ## Why does my wallet ask me to sign twice?
 
-The first time you unlock encrypted docs, private tasks, private payouts or anonymous votes, Nil asks for the same signature twice. Your encryption keys are made from that signature, so Nil checks that your wallet produces the same one every time. After that, one signature per browser tab is enough.
+Your encryption keys are stored locked to each of your wallets, and a wallet's signature of its unlock message is what opens them. So when a wallet is added to your keys, Nil asks it to sign that message twice and checks that both signatures match. The very first time, there's a third signature, which publishes your public keys so teammates can check them. After that, one signature per browser tab is enough.
+
+## Why does Nil ask me to check a teammate's keys?
+
+Your browser gets teammates' public keys from the server. Comparing a key's fingerprint with its owner, face to face or on a call, makes sure the server didn't swap in a key of its own. Nil shares nothing with a key until you've confirmed it. See [Check your teammates' keys](encrypted-docs.md#check-your-teammates-keys).
 
 ## Can admins read my private tasks?
 
@@ -50,7 +56,7 @@ Only on servers that charge for it. If you run Nil yourself, leave `PLAN_TREASUR
 
 ## How do I move to another server?
 
-An admin downloads an encrypted capsule in **Settings → Data & privacy** and restores it on the new server before anyone sets it up. Everyone signs in again with the same wallets. See [Backups and moving](backups-and-moving.md).
+An admin downloads an encrypted capsule in **Settings → Data & privacy** and restores it on the new server before anyone sets it up. Everyone signs in again with the same wallets. Keep the same web address if you can: at a new address, each person restores their encryption keys from their recovery kit once. See [Backups and moving](backups-and-moving.md#move-to-a-new-server).
 
 ## Can I use Nil over Tor?
 

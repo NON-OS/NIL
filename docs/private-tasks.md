@@ -12,9 +12,9 @@ To open a private task up again, choose **Everyone in the workspace**. Your brow
 
 ## Unlock with your wallet
 
-Private tasks use the same key as [encrypted docs](encrypted-docs.md). Until you unlock, a private task shows **Encrypted** with an **Unlock** button in its panel. Click it and sign the message in your wallet; it starts with "NONOS encryption key". The first time, you sign it twice, so Nil can check that your wallet always gives the same signature.
+Private tasks use the same keys as [encrypted docs](encrypted-docs.md#unlock-docs). Until you unlock, a private task shows **Encrypted** with an **Unlock** button in its panel. Click it and sign the message in your wallet; it starts with "Unlock my Nil encryption keys". The first time, Nil sets up your keys and your wallet signs three times.
 
-Your key lives only in that browser tab's memory and is never uploaded. When you close or reload the tab it's gone, and you unlock again next time.
+Your keys live only in that browser tab's memory once unlocked. When you close or reload the tab they're gone, and you unlock again next time.
 
 ## What is encrypted and what isn't
 
@@ -40,6 +40,7 @@ It also stores any time entries and reminders that point at the task, with their
 - A private task can't be shared with a read-only link or listed on the public bounty board.
 - Exports, including the timesheet CSV, show it as "Private task (encrypted)".
 - A status deck includes it only if you turn on **Include my private tasks**.
+- A notification from your operating system says "A private task" instead of its title, because the system keeps its own history of notifications.
 
 For everyone else, a private task doesn't exist: it isn't in their lists, live updates, notifications, activity or exports. When you look at one, your teammates don't see you as viewing anything.
 
@@ -47,7 +48,7 @@ For everyone else, a private task doesn't exist: it isn't in their lists, live u
 
 When a private task gets a new assignee, your browser makes a new key, encrypts the task and all its comments again with it, re-seals each file's key under it (the files themselves stay as they are), and seals the new key for the creator and the new assignee. The previous assignee loses access. They may still have copies of anything they read before.
 
-If the new assignee has never unlocked encrypted docs or private tasks, they have no key yet. They see the task as locked with the note "This task was sealed before you had a key". Once they have unlocked, the task opens for them after the creator next unlocks in Nil, because the creator's browser hands over the key.
+Your browser seals a task key only to keys you've confirmed. If you haven't checked the other person's key yet, Nil asks you to **Check their keys** first, as for [docs](encrypted-docs.md#check-your-teammates-keys). If you click **Not now**, or they haven't set up keys yet, the task is sealed without them and they see "This task hasn't been shared with your key yet". Once you've confirmed their key, your browser hands the task over the next time you unlock in Nil.
 
 ## Private tasks from before encryption
 
@@ -58,10 +59,10 @@ Private tasks made before encryption existed are encrypted the next time their c
 | What you see | What to do |
 |---|---|
 | Unlock with your wallet to change this private task | You haven't unlocked in this tab yet. Click **Unlock** |
-| Your key couldn't open this task | You unlocked with a different wallet from the one you first used for encryption. Switch back to it |
-| This task was sealed before you had a key | The creator's browser hands you the key the next time they unlock |
+| This task hasn't been shared with your key yet | The other person on the task hasn't confirmed your key. Ask them to check your fingerprint. Once they have, their browser hands you the task the next time they unlock |
+| This task couldn't be opened and checked here | It was sealed to keys you no longer hold, or Nil can't confirm that a teammate wrote it. If someone's key changed recently, check it under **Teammates' keys** in **Settings → Sign-in & security** |
 
-If you ever reset your encryption key (see [Encrypted docs](encrypted-docs.md#if-unlocking-fails)), private tasks sealed to your old key stay locked for you. The other person can reassign the task, which seals it under a new key that includes yours.
+If you start over with new keys (see [Encrypted docs](encrypted-docs.md#if-unlocking-fails)), Nil drops your copies of private-task keys. The other person's browser hands each task to you again once they've confirmed your new key.
 
 ## How it works
 
@@ -69,6 +70,8 @@ Each private task has its own random 256-bit key. The title, the notes, the chec
 
 The task key is sealed separately for the creator and for the assignee. Your browser makes a throwaway X25519 key pair, agrees on a secret with that person's public key, turns the secret into a wrapping key with HKDF-SHA256, and wraps the task key with AES-256-GCM. Only that person's private key can unwrap it.
 
-Your own X25519 key pair comes from a wallet signature over a fixed message that names the workspace by its signing key and names your account. HKDF-SHA256 stretches the signature into the private key. Wallets sign deterministically (RFC 6979), so the same wallet always produces the same key, and the server stores only your public key.
+Before it's encrypted, each piece of text is signed with its writer's Ed25519 key. Anyone can seal a key to your public key, so the signature, not the encryption, shows who wrote the words. A task whose words don't check out stays locked. Comments are signed for the task and their author, so they keep their signatures when the task moves to a new key.
+
+Your own keys come from a random seed your browser makes, which the server holds only locked to your wallets. [Encryption and trust](encryption.md) explains how that works and how teammates check each other's keys.
 
 The server refuses plain text for a private task, and refuses a key sealed for anyone other than the creator and the assignee. It can't check the encrypted contents, only their shape and size.

@@ -19,7 +19,7 @@ Nil works with a wallet that your browser offers to web pages:
 - the browser inside a wallet's phone app,
 - smart wallets, including passkey wallets such as Coinbase Smart Wallet, when your browser offers them.
 
-WalletConnect, where you scan a QR code with your phone, isn't supported. Hardware wallets such as Ledger and Trezor work when you connect them through an extension that supports them.
+WalletConnect, where you scan a QR code with your phone, isn't supported. Hardware wallets such as Ledger and Trezor work when you connect them through an extension that supports them. Smart wallets can sign you in but can't hold [encryption keys](#the-signatures-for-encryption-keys) yet.
 
 ### No wallet yet
 
@@ -35,6 +35,8 @@ If you lose every wallet linked to your account, you can't sign in until an admi
 
 Any linked wallet can sign you in. You can rename each one by clicking its name, and remove any of them as long as one is left. The first wallet in the list is marked "receives bounties": bounties are paid there unless you turn on [private payouts](private-payouts.md).
 
+If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
+
 ## If you lose every wallet
 
 Ask an admin to reset your sign-in. They send you a link that works once and expires after a day (the server can change this). Open it, then link a new wallet:
@@ -43,7 +45,12 @@ Ask an admin to reset your sign-in. They send you a link that works once and exp
 2. Click **Link a new wallet and sign in** and sign with the new wallet.
 3. You land on **Settings → Sign-in & security**, with the new wallet named "Wallet from your sign-in reset". Remove the wallets you lost, so nobody else can sign in with them.
 
-It's the same account: your tasks, comments, history, role and proof of work stay as they were. Using the link signs you out on every other device. Encrypted docs and private tasks were sealed to keys from your old wallet, so the new one can't open them by itself.
+It's the same account: your tasks, comments, history, role and proof of work stay as they were. Using the link signs you out on every other device.
+
+Your encryption keys were locked to your old wallets, so the new one can't open them yet. Open **Docs** and click **Unlock with your wallet**. Nil says this wallet doesn't unlock your keys yet and shows two ways forward.
+
+- If you have your [recovery kit](#keep-a-recovery-kit), pick the file under **Restore from your recovery kit**, type its passphrase and click **Restore**. Your keys come back as they were, and the new wallet unlocks them from then on.
+- If you don't, click **Start over with new keys**. Teammates are asked to confirm your new key, and docs and private tasks sealed to the old keys reach you again only once they have. See [Encrypted docs](encrypted-docs.md#if-unlocking-fails).
 
 Resetting an owner needs a second admin to approve when the workspace has two or more other admins. Every reset is written to the sign-in history admins see under **Settings → Team**.
 
@@ -53,14 +60,36 @@ Click your name at the bottom of the sidebar, then **Sign out**. To end your ses
 
 ## The signatures for encryption keys
 
-Some features ask you to sign a different message. It starts with "NONOS encryption key" or "NONOS private keys", and your browser turns the signature into encryption keys:
+[Encrypted docs](encrypted-docs.md), [private tasks](private-tasks.md), [private payouts](private-payouts.md) and [anonymous votes](votes.md) all use one set of personal keys that your browser makes the first time you unlock. The server keeps them only locked to your wallets. To open them, your wallet signs a message that starts with "Unlock my Nil encryption keys". It has the same layout as the sign-in message and names your workspace's main address. That signature never leaves your browser.
 
-- "NONOS encryption key" opens [encrypted docs](encrypted-docs.md) and [private tasks](private-tasks.md).
-- "NONOS private keys" opens [private payouts](private-payouts.md) and [anonymous votes](votes.md).
+- The first time, your wallet signs three times: the unlock message twice, then a message that starts with "Publish my Nil encryption keys". The second kind lets teammates check that your public keys are really yours.
+- Each wallet you add to your keys later signs its own unlock message twice.
+- After that, one signature per browser tab unlocks your keys.
 
-The first time, Nil asks you to sign the same message twice. It checks that your wallet gives the same signature both times, because the keys depend on it. A wallet that signs differently each time can still sign you in, but it can't hold encryption keys. MetaMask, Rabby, Ledger and Trezor all sign the same way every time.
+The unlock message is signed twice because the signature is what opens your keys. A wallet that signs the same message differently each time could never open them again, so Nil compares the two and stops with "Your wallet signs the same message differently each time, so it can't hold your keys." That wallet can still sign you in, and another of your wallets can hold your keys. MetaMask, Rabby, Ledger and Trezor work. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet.
 
-These keys belong to the wallet you first used for them. If you later unlock with another linked wallet, Nil says that wallet "unlocks a different key" and asks you to switch back.
+Your keys are listed under **Encryption keys** in **Settings → Sign-in & security**: your key fingerprint, which teammates compare with theirs, and the wallets that unlock your keys. [Encryption and trust](encryption.md) explains the design.
+
+### Add a wallet to your keys
+
+Any wallet you add unlocks the same keys, so losing one wallet doesn't lock you out of your docs.
+
+1. Link the wallet to your account first (see [Link a second wallet](#link-a-second-wallet)).
+2. In **Settings → Sign-in & security**, under **Encryption keys**, click **Unlock with your wallet** and sign with a wallet that already holds your keys.
+3. Switch your wallet to the new account, or connect the other wallet.
+4. Click **Add the wallet in your browser** and sign twice.
+
+Removing a wallet from your account also removes it from your keys. If it was the wallet that signed your public keys, teammates can't see your keys until your next unlock, when Nil asks the wallet you're using to sign them again. Your fingerprint doesn't change.
+
+### Keep a recovery kit
+
+A recovery kit is a small file with your keys locked under a passphrase you choose. It brings your keys back if you lose every wallet that holds them, after an admin [resets your sign-in](#if-you-lose-every-wallet). Without one, you'd start over with new keys and lose what was shared with the old ones.
+
+1. Unlock your keys, then go to **Encryption keys** in **Settings → Sign-in & security**.
+2. Under **Recovery kit**, type a passphrase of at least 12 characters, twice.
+3. Click **Download recovery kit**. You get a file named like `nil-recovery-kit-nonos.example.com.json`.
+
+Keep the file and the passphrase apart, for example the file on a USB stick and the passphrase in a password manager. Anyone with both can open your keys. The kit belongs to one account in one workspace. It still works after the workspace moves to a new address with a capsule. Make a new kit if you ever start over with new keys, because an old kit holds the old ones.
 
 ## When sign-in doesn't work
 

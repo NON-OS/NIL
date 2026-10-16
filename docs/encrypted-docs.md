@@ -6,9 +6,11 @@ Docs are for members. Guests don't get them.
 
 ## Unlock docs
 
-Open **Docs** and click **Unlock with your wallet**. Your wallet signs one fixed message, which starts with "NONOS encryption key". Nothing is sent on-chain and it costs nothing. Your browser turns the signature into your personal key.
+Open **Docs** and click **Unlock with your wallet**. Your wallet shows a message that names your workspace's address and starts with "Unlock my Nil encryption keys". Nothing is sent on-chain and it costs nothing.
 
-The first time, you sign twice, so Nil can check that your wallet gives the same signature each time. The key stays in that browser tab's memory and is never uploaded, so you unlock again after closing or reloading the tab. The same key opens [private tasks](private-tasks.md).
+The first time, your browser makes your personal keys and your wallet signs three times: the unlock message twice, then a message that publishes your public keys so teammates can check them. After that, one signature unlocks your keys. They stay in that browser tab's memory, so you unlock again after closing or reloading the tab. The same keys open [private tasks](private-tasks.md).
+
+Your keys aren't tied to one wallet. Every wallet you add to them unlocks the same keys. [Signing in](signing-in.md#the-signatures-for-encryption-keys) explains how to add a wallet and how to keep a recovery kit.
 
 ## Write a doc
 
@@ -29,12 +31,26 @@ The other buttons along the top:
 
 The **Search docs** box above the list looks through titles and text that your browser has decrypted. The server never sees what you search for.
 
+## Check your teammates' keys
+
+To share a doc with someone, your browser seals the doc's key to their public key, which it gets from the server. So that a server can't slip in a key of its own, you compare each teammate's key with them once, and Nil shares nothing with a key you haven't confirmed.
+
+When someone sets up keys for the first time, or someone's key changes, **Docs** shows a notice such as "New key for Ana" with a **Check keys** button. Sharing a doc with someone whose key you haven't confirmed opens the same window, **Check their keys**.
+
+1. Ask the person to open **Settings → Sign-in & security**, unlock their keys if Nil asks, and read out **Your key fingerprint**. It's five groups of four characters, such as `5c1e-90ab-3f27-d4e8-a061`.
+2. Compare it with the fingerprint under their name, face to face or on a call. A message sent through the same workspace doesn't count, because the server could change it.
+3. If the two match, click **Confirm**.
+
+**Not now** closes the window and shares nothing. **Confirm all** appears only when every key in the list is new. A key marked **Key changed** shows its old fingerprint too. That's normal after someone starts over with new keys or restores them on a new wallet, but it's also what a tampered server would show, so confirm it only after you've checked with them.
+
+Your browser remembers the keys you confirmed. A new browser or device starts with none and asks again. You can check every teammate's key at any time under **Teammates' keys** in **Settings → Sign-in & security**. [Encryption and trust](encryption.md#the-key-directory-and-what-teammates-check) explains what the check protects against.
+
 ## Choose who can read a doc
 
 Click the people button and choose **Whole team** or **Specific people**, then **Save**.
 
-- With **Whole team**, everyone in the workspace can read and edit it. Teammates who haven't unlocked docs yet get the key the next time a teammate opens Docs.
-- With **Specific people**, tick the people who may read and edit it. People who haven't unlocked docs yet can't be ticked until they do.
+- With **Whole team**, everyone in the workspace can read and edit it. Someone who sets up keys later gets the doc once a teammate has confirmed their key and opens Docs.
+- With **Specific people**, tick the people who may read and edit it. People who haven't unlocked docs yet can't be ticked until they do. Nil asks you to check the keys of anyone you add.
 
 Only the doc's creator or an admin can switch a doc between the two choices, remove people, or add people to a doc shared with specific people. Removing someone gives the doc a new key, so they can't read anything saved after that. They may still have copies of what they read before.
 
@@ -46,9 +62,15 @@ If someone saves a newer version while you're typing, Nil doesn't overwrite it. 
 
 The clock button lists earlier versions, decrypted in your browser. Nil keeps the last 25. **Restore** brings an old version back as the newest one; the version it replaces stays in the history.
 
+## Signed versions
+
+Each version of a doc is signed by whoever saved it, with a signing key only their browser holds. If a version's signature doesn't check out against the keys you know, the doc says "Nil can't confirm a teammate wrote this version" and opens read-only. The server may have changed it, so don't rely on it. If someone's key changed recently, check it first. To keep the text, the doc's creator or an admin opens the people button and clicks **Save**, which gives the doc a new key and signs the text as theirs.
+
+Your browser also remembers the newest version it has opened of each doc. If the server later serves an older one, the doc says "This is an older version than one you've already opened here."
+
 ## Waiting for a key
 
-A doc listed as "Encrypted doc" with "Waiting for a key from" and a name was shared with the team before you unlocked. A teammate's browser hands you the key the next time they open Docs.
+A doc listed as "Encrypted doc" with "Waiting for a key from" and a name was shared with the team before you set up your keys. A teammate's browser hands you the key once that teammate has confirmed your key and opens Docs. If it's taking a while, ask them to check your fingerprint.
 
 ## Draft with AI
 
@@ -58,16 +80,23 @@ This is the one time a doc's text leaves your browser. Your instruction goes to 
 
 ## If unlocking fails
 
-"This wallet unlocks a different key than the one your docs are sealed to" means you're using a different wallet from the one you first unlocked with. Switch back to that wallet.
+| What you see | What to do |
+|---|---|
+| This wallet doesn't unlock your keys yet | Your keys were set up with another wallet. Unlock once with that one and add this wallet to your keys (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)). If you no longer have it, restore from your recovery kit |
+| Your keys were set up with a wallet that's no longer linked to your account | Restore from your recovery kit, or start over with new keys |
+| Your wallet's signature doesn't open your keys here | The workspace moved to a new web address since your keys were set up. Restore from your recovery kit. If it didn't move, tell your admin |
+| The server lists different keys for you than the ones your wallet unlocks | If you didn't start over with new keys on another device, tell your admin before you do anything else |
+| Your wallet signs the same message differently each time | That wallet can't hold your keys. Use another linked wallet, such as MetaMask, Rabby, Ledger or Trezor |
+| Your wallet returned a signature Nil can't read | Smart wallets, including passkey wallets, can't hold encryption keys yet. Use a regular wallet |
 
-If that wallet is gone for good, click **Use this wallet with a new key instead** and confirm. You start over with a new key and lose access to every doc sealed to the old one. Teammates' browsers hand you team docs again the next time they open Docs. Docs shared with specific people have to be shared with you again, and [private tasks](private-tasks.md#if-a-private-task-wont-open) sealed to your old key stay locked.
+When this wallet can't open your keys, **Restore from your recovery kit** appears under the message. Pick the kit file, type its passphrase and click **Restore**. Your keys come back, and the wallet in your browser unlocks them from then on. If the kit holds different keys from the ones on record for you, Nil says so and offers **Use the kit's keys instead**. Teammates are then asked to confirm the change.
 
-"Your wallet signs the same message differently each time" means that wallet can't hold an encryption key. Use another one, such as MetaMask, Rabby, Ledger or Trezor.
+With no recovery kit and no wallet that holds your keys, click **Start over with new keys** and confirm. You get new keys and lose access to everything sealed to the old ones. Teammates see your key as changed, and nothing is shared with you until they confirm it. Team docs then come back on their own. Docs shared with specific people have to be shared with you again, and [private tasks](private-tasks.md#if-a-private-task-wont-open) come back once the other person on each task has confirmed your new key.
 
 ## How it works
 
-Your key pair is the same X25519 pair used for private tasks, derived in the browser with HKDF-SHA256 from a deterministic wallet signature. The signed message names the workspace by its signing key, not by its name, so renaming the workspace or moving it to another server with a capsule doesn't change anyone's key.
+Your keys come from a random seed your browser makes the first time you unlock. The server keeps that seed only locked to each wallet you've added to your keys, under a key made from that wallet's signature of its unlock message. The signature never leaves your browser, so the server can't open it. The messages name the workspace by its signing key, not its name, so renaming the workspace changes nothing.
 
-Each doc has its own random AES-256-GCM key. The title and the body are encrypted separately, each bound to the doc and the field through associated data. The doc key is sealed to every reader on its own: a throwaway X25519 key pair agrees on a secret with the reader's public key, HKDF-SHA256 turns it into a wrapping key, and AES-256-GCM wraps the doc key.
+Each doc has its own random AES-256-GCM key. The title and the body are signed with the writer's Ed25519 key, then encrypted separately, each bound to the doc, the field and the version number through associated data. The doc key is sealed to every reader on its own: a throwaway X25519 key pair agrees on a secret with the reader's public key, HKDF-SHA256 turns it into a wrapping key, and AES-256-GCM wraps the doc key. [Encryption and trust](encryption.md) covers the whole design, including what a server operator can still do.
 
 The server stores the ciphertext, the sealed keys, who can read each doc, who changed it and when, and up to 25 encrypted earlier versions. A save that starts from an outdated version is refused rather than overwriting someone else's work.

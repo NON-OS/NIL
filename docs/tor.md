@@ -43,6 +43,7 @@ An Ethereum wallet is the only way to sign in to Nil. There are no passwords, pa
 - Tor Browser ships without wallet extensions. You can add one, but the Tor Project recommends against add-ons: they can bypass Tor or compromise your privacy, for example by making your browser stand out from other Tor users. Decide how your team will sign in before you rely on the onion address alone.
 - Your wallet makes its own network requests, for example to its Ethereum node, and they don't necessarily go through Tor. Nil can't control them.
 - The sign-in message names a domain. Wallets show it and may warn when it doesn't match the address bar. For onion-only use, set `APP_URL` to `http://<your-address>.onion`. Next to an HTTPS address, keep `APP_URL` on the HTTPS address and add the onion address to `ALLOWED_ORIGINS`: onion visitors then see the onion address in the message. Nil never takes the domain from the request itself.
+- The messages that unlock and publish [encryption keys](encryption.md#messages-your-wallet-signs) always name the address in `APP_URL`, whichever address you came in on, so your keys are the same over Tor and over HTTPS. Next to an HTTPS address, that means onion visitors see the HTTPS address in those messages, and a wallet may warn that they name a different site. Check that it's your workspace's HTTPS address before you sign.
 
 ## Notes
 

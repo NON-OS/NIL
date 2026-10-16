@@ -244,7 +244,7 @@ sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f dock
 
 `docker-compose.tor.yml` removes Nil's published port. If your override publishes `127.0.0.1:3000` for a Caddy on the host, list the override after the Tor file so the port comes back.
 
-Keep `APP_URL` set to your HTTPS address and add the onion address to `ALLOWED_ORIGINS` (`ALLOWED_ORIGINS=http://<your-address>.onion`). Onion visitors then see the onion address in the wallet sign-in message. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
+Keep `APP_URL` set to your HTTPS address and add the onion address to `ALLOWED_ORIGINS` (`ALLOWED_ORIGINS=http://<your-address>.onion`). Onion visitors then see the onion address in the wallet sign-in message. The messages that unlock and publish encryption keys always name the `APP_URL` address, so people's keys are the same on both addresses, but on the onion address a wallet may warn that such a message names another site. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
 
 ### Onion only
 
@@ -259,7 +259,7 @@ Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the c
 | Path in `/data` | What it is |
 |---|---|
 | `nonos.db`, `nonos.db-wal`, `nonos.db-shm` | The SQLite database. Don't copy these files while the server runs: use a snapshot (below) |
-| `keys/receipts-ed25519.pem` | The workspace signing key. It signs receipts and is part of every person's key derivation. Without it, nobody can derive their encryption, private payout or voting keys again |
+| `keys/receipts-ed25519.pem` | The workspace signing key. It signs receipts, and every message that unlocks or publishes someone's encryption keys names the workspace by it. Without it, no wallet opens anyone's encryption keys and recovery kits won't restore, so everyone starts over with new keys |
 | `uploads/` | File attachments |
 | `pre-migration-*.db` | Copies of the database the server takes before each schema upgrade. The newest three are kept |
 | `setup-token` | The one-time setup token, only until the workspace exists |
@@ -356,6 +356,8 @@ Sessions in the backup stay valid, so people who were signed in when it was take
 
 Start Nil on a server with an empty volume. Open the site, choose **Moving servers? Restore from an encrypted capsule**, enter the setup token from the log (section 8), pick the file and enter the passphrase. Everyone signs in again afterwards. Capsules larger than `MAX_CAPSULE_MB` (4096 by default) are refused.
 
+Keep the same `APP_URL` if you can. The messages that unlock people's encryption keys name it, so at a new address each person restores their keys from their recovery kit once, or starts over (see [Backups and moving](backups-and-moving.md#move-to-a-new-server)).
+
 ### Test your restores
 
 Restore a backup onto a spare machine at least once before launch, and again after major upgrades. Sign in, open an encrypted doc and download a proof file to check the key came across.
@@ -382,6 +384,10 @@ sudo docker image prune -f
 - The app updates itself in open browsers on the next page load.
 - After changing only `.env`, apply it with `sudo docker compose up -d --force-recreate nonos`.
 
+### Upgrading from 3.0.0
+
+This release changes how encryption keys are made and checked (see [Encryption and trust](encryption.md)). Keys from 3.0.0 can't be checked, so the upgrade removes them, together with everyone's private payout and voting keys, and each person sets up new keys on their next unlock. Nothing in this release opens what was sealed to the old keys: docs and private tasks encrypted on 3.0.0 stay locked, and private payouts received on 3.0.0 can't be moved from Nil. Before upgrading, have people download the docs they want to keep with the download arrow, copy out what they need from their private tasks, and move their private payouts out (or copy each one's key with **Key**).
+
 ### Upgrading from v2
 
 Version 3 removes email, password and passkey sign-in. The upgrade deletes every non-wallet sign-in method and the email column. Before upgrading, make sure every person, owners and admins first, has linked an Ethereum wallet to their account while still on v2. Anyone without a linked wallet can't sign in after the upgrade and has to be invited again as a new account.
@@ -402,6 +408,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for Nil Pro. If set: the address, prices and trial are right, the NOX price bounds and fallback are set, and each server sharing the treasury has its own `PLAN_INVOICE_SLOT` and the shared `PLAN_INVOICE_KEY`.
 - [ ] `REWARD_TOKENS` matches your chain.
 - [ ] You created the workspace, the name is final, and you linked a second wallet.
+- [ ] `APP_URL` is the address you'll keep. Changing it later means everyone restores their encryption keys from a recovery kit or starts over.
 - [ ] There is a second admin, ideally a second owner.
 - [ ] Sharing, token-holder door, voting power and zero-state settings are what you want.
 - [ ] Nightly backups run, an encrypted copy leaves the server, and one restore was tested.
@@ -503,13 +510,21 @@ Nil matches a transfer to the treasury by its exact amount, so the amount must b
 
 `ANTHROPIC_API_KEY` is not set, or the container wasn't recreated after setting it.
 
-### "This wallet unlocks a different key than the one your docs are sealed to"
+### "This wallet doesn't unlock your keys yet"
 
-The person is using a different wallet than the one they first unlocked docs with, or `DATA_DIR/keys` was replaced (restore it from backup).
+The person set up their encryption keys with another wallet. They unlock once with that wallet and add this one under **Encryption keys** in **Settings → Sign-in & security**, or restore from their recovery kit. See [Signing in](signing-in.md#add-a-wallet-to-your-keys).
+
+### "Your wallet's signature doesn't open your keys here"
+
+The unlock messages changed since the person's keys were set up. Either `APP_URL` changed (set it back, or have each person restore from their recovery kit) or `DATA_DIR/keys` was replaced (restore it from backup; recovery kits don't help without it).
+
+### "The server lists different keys for you than the ones your wallet unlocks"
+
+The keys published for that person aren't the ones their wallet opens. That's expected if they started over with new keys on another device. If they didn't, look at what changed on the server before anyone confirms the new key.
 
 ### "Your wallet signs the same message differently each time"
 
-That wallet can't hold encryption keys. Use another wallet, such as MetaMask, Rabby, Ledger or Trezor.
+That wallet can't hold encryption keys, because its signature is what opens them. It can still sign in. Use another linked wallet for the keys, such as MetaMask, Rabby, Ledger or Trezor.
 
 ### "That file is too large"
 

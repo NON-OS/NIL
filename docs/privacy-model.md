@@ -7,7 +7,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - Private tasks are shown only to their creator and their assignee. Admins don't see them.
 - Your timesheet, your reminders and your My Day list are yours alone.
 - Docs are shown only to the people they're shared with.
-- Wallet addresses, last-seen times, private payout addresses and voting-key commitments are shown only to admins and to the person themselves. Teammates see the name each person picked.
+- Wallet addresses, last-seen times, private payout addresses and voting-key commitments are shown only to admins and to the person themselves. Teammates see the name each person picked. The one exception is the wallet that signed your encryption keys: members see its address next to your key fingerprint, so they can check the key. To show a different one, add another wallet to your keys, remove the wallet that signed, and unlock again: Nil then asks the wallet you're using to sign your keys.
 - Bounty payments are shown only to admins and to the person paid, because a transaction reveals the receiving wallet.
 - Guests see only the projects shared with them and the tasks assigned to them.
 - In an anonymous vote, nobody, admins included, can see who chose what.
@@ -32,6 +32,8 @@ Everything else is stored in plain form in the server's database, where anyone w
 - signed votes, with each voter's wallet and choice.
 
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when.
+
+The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
 
 ## What leaves your server
 
@@ -72,11 +74,15 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice.
 - Files on team tasks aren't encrypted, and an encrypted file still shows its size. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
-- Encryption keys come from wallet signatures. A wallet that signs the same message differently each time can't use encrypted docs, private tasks, private payouts or anonymous votes. Nil checks this the first time.
+- Encryption only helps if the app your browser runs is Nil's own code. Whoever runs the server could serve changed code that reads everything you unlock. Running a build you trust on a server you control is the defence.
+- The server decides which wallets belong to whom, and your browser can't check that. The first key your browser sees for a teammate could come from the server, so compare fingerprints before you rely on it. A new browser or device starts over.
+- A wallet opens your keys with its signature, so it has to give the same signature for the same message every time. A wallet that doesn't can still sign you in but can't hold your keys; Nil checks each wallet when it's added to your keys. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet.
+- If you lose every wallet that holds your keys and have no recovery kit, your keys are gone. You start over with new keys, and docs and private tasks sealed to the old ones have to be shared with you again. Private payouts sent to the old keys stay out of reach.
+- Private tasks aren't versioned yet, so a server could serve an older saved version of one without a warning. It would still be its writer's real text.
 - Keys live in the browser tab while it's open. Anything that can read that tab's memory, such as a malicious browser extension, could read them.
-- Never lose `DATA_DIR/keys`. The signing key there signs every receipt and is part of every person's key derivation. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, and nobody can derive their encryption, private payout or voting keys again. Back it up with the database.
+- Never lose `DATA_DIR/keys`. The signing key there signs every receipt, and every message that unlocks or publishes encryption keys names the workspace by it. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, no wallet opens anyone's encryption keys, and Nil won't restore recovery kits made for the old key. Everyone starts over with new keys. Back it up with the database.
 - If you lose every wallet linked to your account, only an admin's sign-in reset gets you back in. Link a second one.
-- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin when there is one, and every reset is in the sign-in history.
+- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin when there is one, and every reset is in the sign-in history. The link doesn't open the member's encryption keys. Whoever uses it needs the member's recovery kit and its passphrase, or has to set up new keys, which teammates see as a changed key.
 - Receipts prove what the workspace said, not that the workspace is honest. See [Proof of work](proof-of-work.md).
 - Memory-only mode still writes to disk if the host swaps memory. Turn swap off or encrypt it.
 - The server runs as one process with SQLite. Live updates and rate limits are kept in memory, so run a single instance.

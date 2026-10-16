@@ -56,6 +56,8 @@ Owners are protected:
 
 Any admin can **Cancel** an open reset, including the person being reset if they can still sign in. **Sign-in history** lists every request, approval, link, cancel and use, and every wallet linked or removed, by name only.
 
+A reset doesn't bring back the person's encryption keys. They restore them from their [recovery kit](signing-in.md#keep-a-recovery-kit), or set up new keys. New keys show up for everyone as a changed key, and each teammate's browser shares nothing with them until that teammate has checked the new key with them.
+
 ## Your profile
 
 In **Settings → Profile** you can change your name, the line that describes your role on the team (for example "Head of Growth") and the colour of your avatar. Notifications have their own tab, **Settings → Notifications**, described in [Time and reminders](time-and-reminders.md#push-notifications).
