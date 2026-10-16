@@ -64,6 +64,9 @@ router.post(
     } catch (err) {
       throw HttpError.badRequest(err.message);
     }
+    // a body that says up front it's too large is refused before any of it is read; one that
+    // only turns out too large on the way is cut off below
+    if (Number(req.headers['content-length']) > config.maxCapsuleBytes) throw new HttpError(413, 'That capsule is larger than this server accepts (MAX_CAPSULE_MB).');
     restoring = true;
     const work = fs.mkdtempSync(path.join(config.dataDir, 'restore-'));
     try {
