@@ -106,9 +106,9 @@ export default function AiSettings() {
         <h2>Set it up</h2>
         <div className="settings-card">
           <Snippet label="Claude Code" text={`claude mcp add --transport http nonos ${endpoint} \\\n  --header "Authorization: Bearer ${shown}"`} />
-          <Snippet label="Any MCP client (JSON config)" text={JSON.stringify({ mcpServers: { nonos: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${shown}` } } } }, null, 2)} />
+          <Snippet label="Claude Code project file (.mcp.json) or Cursor (.cursor/mcp.json)" text={JSON.stringify({ mcpServers: { nonos: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${shown}` } } } }, null, 2)} />
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Then ask things like “What’s overdue in Nil?”, “Create a task for Ana to draft the launch post, due Friday” or “Summarise NON-12”. The same tools are a REST API too, described at /api/agent/v1/openapi.json. To give an AI its own place on the team instead of acting as you, add it in Settings → Agents.
+            VS Code, the Claude app and claude.ai take the same address and key in their own formats; the help page on AI agents shows each. ChatGPT can’t use a key, so it can’t connect. Then ask things like “What’s overdue in Nil?”, “Create a task for Ana to draft the launch post, due Friday” or “Summarise NON-12”. The same tools are a REST API too, described at /api/agent/v1/openapi.json. To give an AI its own place on the team instead of acting as you, add it in Settings → Agents.
           </p>
         </div>
       </section>
