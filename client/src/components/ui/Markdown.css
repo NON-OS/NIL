@@ -73,3 +73,27 @@
   color: var(--accent-text);
   font-weight: 600;
 }
+
+.md-table {
+  overflow-x: auto;
+}
+
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.94em;
+}
+
+.md th,
+.md td {
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.md th {
+  color: var(--ink-2);
+  font-weight: 600;
+  white-space: nowrap;
+}

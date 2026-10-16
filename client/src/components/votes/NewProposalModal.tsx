@@ -6,6 +6,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import votes from '../../actions/votes';
 import TrusteePicker from './TrusteePicker';
+import HelpLink from '../help/HelpLink';
 
 const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d === 1 ? '1 day' : `${d} days` }));
 
@@ -82,6 +83,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous })} aria-label="Anonymous ballots" />
             Anonymous ballots
           </label>
+          <HelpLink topic="votes" label="Which kind of vote to pick" newTab />
         </div>
         {form.anonymous && form.weighting === 'equal' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>

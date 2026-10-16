@@ -1,12 +1,12 @@
-# Proof of Contribution format
+# Proof file format
 
-Nil gives every finished task a **work receipt**, and every confirmed bounty payment a **payment receipt**, both signed by the workspace. People collect their receipts into a **proof file** and share it with whoever needs to check their work: a DAO, a grant program, a client, an employer. The format is open and small, so anyone can write a verifier.
+Nil gives every finished task a work receipt, and every confirmed bounty payment a payment receipt, both signed by the workspace. People collect their receipts into a proof file and share it with whoever needs to check their work. The format is open and small, so anyone can write a verifier. For how people use proofs in the app, see [Proof of work](proof-of-work.md).
 
-A receipt is trustworthy because it carries an Ed25519 signature from the workspace that issued it. Checking that signature needs no blockchain. A payment receipt also names an Ethereum transaction, so anyone can look the payment up on-chain as a second, independent check.
+A receipt can be trusted because it carries an Ed25519 signature from the workspace that issued it. Checking that signature needs no blockchain. A payment receipt also names an Ethereum transaction, so anyone can look the payment up on-chain as a second, independent check.
 
 ## Workspace key
 
-Each Nil server generates an Ed25519 key pair on first use. It's stored in `DATA_DIR/keys/receipts-ed25519.pem`, outside the database, so a leaked database dump can't be used to forge receipts. Capsules carry the key, so a moved workspace keeps its identity.
+Each Nil server generates an Ed25519 key pair on first use. It's stored in `DATA_DIR/keys/receipts-ed25519.pem`, outside the database, so a leaked database dump can't be used to forge receipts. Capsules carry the key, so a workspace that moves keeps its identity.
 
 The public key is published at:
 
@@ -19,7 +19,7 @@ The fingerprint is the first 8 bytes of `SHA-256(raw public key)`, written as he
 
 ## Receipts
 
-A receipt body is a JSON object serialized **canonically**: keys sorted, no whitespace, `undefined` fields left out. Those exact UTF-8 bytes are signed. The signature is Ed25519 over the canonical body bytes, encoded as base64url.
+A receipt body is a JSON object serialized canonically: keys sorted, no whitespace, `undefined` fields left out. Those exact UTF-8 bytes are signed. The signature is Ed25519 over the canonical body bytes, encoded as base64url.
 
 Every receipt, of either type, has these fields:
 
@@ -31,15 +31,17 @@ Every receipt, of either type, has these fields:
 | `seq` | Position in the workspace's receipt chain, starting at 1 |
 | `prev` | Hex SHA-256 of the previous receipt body, or `null` for the first |
 | `task.ref` | Human task key, like `NON-42` |
-| `task.commit` | Hex `SHA-256(salt + ":" + title)`. The title itself is never in the body |
+| `task.commit` | Hex `SHA-256(salt + ":" + title)`, or `null` when the server doesn't know the title. The title itself is never in the body |
 | `contributor.id` | Opaque, stable id of the person in that workspace |
 | `issuedAt` | When the receipt was signed (ISO 8601) |
 
 Work and payment receipts share one chain. The `prev` links make the workspace's history of receipts tamper-evident: anyone holding a run of consecutive receipts can check that none were edited or reordered.
 
+`task.commit` is `null` for an encrypted private task, whose title the server never sees, and for a payment confirmed after its task was erased.
+
 ### Work receipt
 
-Signed when a task is marked done, for its assignee (or for whoever finished it, if nobody was assigned).
+Signed when a task is marked done, for its assignee, or for whoever finished it if nobody was assigned.
 
 ```json
 {
@@ -58,7 +60,7 @@ Signed when a task is marked done, for its assignee (or for whoever finished it,
 | Field | Meaning |
 |---|---|
 | `completedAt` | When the task was finished (ISO 8601) |
-| `contributor.wallet` | The person's first linked wallet, lowercase. **Only present if they opted in** under **Settings → Sign-in & security → Wallet in proofs of work** before the receipt was signed. Otherwise the field is left out |
+| `contributor.wallet` | The person's first linked wallet, lowercase. Present only if they turned on **Settings → Sign-in & security → Wallet in proofs of work** before the receipt was signed. Otherwise the field is left out |
 
 ### Payment receipt
 
@@ -88,16 +90,15 @@ Signed when the server has confirmed a bounty payment on-chain: the right token 
 
 | Field | Meaning |
 |---|---|
-| `contributor.wallet` | **Always present**: the address that received the payment, lowercase. For a normal payout it's the contributor's first linked wallet. For a private payout it's the one-time stealth address the payment went to. The transaction already shows this address publicly, so the receipt adds nothing the chain doesn't show, but it does link the address to `contributor.id` for anyone who sees the receipt |
+| `contributor.wallet` | Always present: the address that received the payment, lowercase. For a normal payout it's the contributor's first linked wallet. For a private payout it's the one-time address the payment went to. The transaction already shows this address publicly, but the receipt links it to `contributor.id` for anyone who sees the receipt |
 | `payment.chainId` | EIP-155 chain id of the network the payment was made on |
 | `payment.token` | The token contract, lowercase |
 | `payment.symbol`, `payment.decimals` | The token's symbol and decimals as configured on the server when the receipt was signed |
 | `payment.amount` | The bounty amount in the token's smallest unit, as a decimal string |
 | `payment.tx` | The transaction hash, lowercase |
 | `paidAt` | When the server confirmed the payment (ISO 8601). This is not the block time |
-| `task.commit` | As above, or `null` if the task had already been erased when the payment was confirmed |
 
-A payment receipt has no `completedAt`. The payer's address is not in the receipt, though it is public in the transaction.
+A payment receipt has no `completedAt`. The payer's address isn't in the receipt, though it is public in the transaction.
 
 ## Proof file
 
@@ -116,7 +117,7 @@ A payment receipt has no `completedAt`. The payer's address is not in the receip
 ```
 
 - The contributor picks which of their receipts go into the file. Only their own receipts are offered.
-- `contributor.name` is **self-declared and unsigned**. It's left out unless the contributor chooses to add it. Verifiers should label it that way.
+- `contributor.name` is self-declared and unsigned. It's left out unless the contributor chooses to add it. Verifiers should label it that way.
 - `reveal` is optional for each receipt. Without it, the verifier learns that a task with that reference was finished or paid, but not what it was.
 
 ## Verifying
@@ -132,13 +133,16 @@ For each receipt:
 Then check across the file:
 
 - Every receipt should carry the same `contributor.id`.
-- To trust the issuer, compare `file.workspace.key` (or its fingerprint) with what the workspace publishes at `/.well-known/nonos-proof-key` on its own domain.
+- To trust the issuer, compare `file.workspace.key`, or its fingerprint, with what the workspace publishes at `/.well-known/nonos-proof-key` on its own domain.
 
 The built-in verifier at `/verify` does steps 1 to 5 and checks that every receipt belongs to the same person, in the browser, without uploading the file anywhere. It shows the key's fingerprint, says when the key is the server's own, and adds up the paid amounts per token. It doesn't query the chain itself. For payments on the chain the server is configured for, it links each transaction to the server's block explorer (`NOX_EXPLORER`), which opens only when clicked.
 
-## What it does and doesn't prove
+## What it proves
 
-- **It proves:** the workspace holding that key said this person finished those tasks at those times, and was paid those amounts in those transactions. A revealed title is the real title.
-- **It doesn't prove** that the workspace itself is honest. You're trusting the issuer, much like trusting a reference letter. Check whose domain publishes the key. For payments, the chain is an independent witness: look the transaction up.
-- **Revocation:** if a task is reopened, the server stops offering its work receipt for export. Payment receipts stay, because a payment that moved on-chain can't be undone. Copies exported earlier still verify mathematically.
-- **Privacy:** titles are salted commitments, so they can't be guessed by hashing likely titles. Contributor ids are opaque. A work receipt carries a wallet address only when the person opted in. **A payment receipt always carries the receiving address.** Sharing the payment receipt of a private payout links that one-time address to you for everyone who sees the file, so leave it out of a proof if the payout should stay unlinked.
+A valid proof shows that the workspace holding that key said this person finished those tasks at those times, and was paid those amounts in those transactions. A revealed title is the real title.
+
+It doesn't show that the workspace itself is honest. You're trusting the issuer, much like trusting a reference letter, so check whose domain publishes the key. For payments, the chain is an independent witness: look the transaction up.
+
+If a task is reopened, the server stops offering its work receipt for export. Payment receipts stay, because a payment that moved on-chain can't be undone. Copies exported earlier still verify mathematically.
+
+Titles are salted commitments, so they can't be guessed by hashing likely titles. Contributor ids are opaque. A work receipt carries a wallet address only when the person opted in, but a payment receipt always carries the receiving address. Sharing the payment receipt of a private payout links that one-time address to you for everyone who sees the file, so leave it out of a proof if the payout should stay unlinked.

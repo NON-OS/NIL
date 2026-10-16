@@ -1,6 +1,6 @@
 import './CommandPalette.css';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, Plus, Presentation, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, CircleHelp, Coins, FileText, Home, Inbox, Kanban, List, Plus, Presentation, Search, Settings, Sparkles, Target, Timer, UserPlus, Vote } from 'lucide-react';
 import Modal from '../ui/Modal';
 import StatusIcon from '../ui/StatusIcon';
 import useStore from '../../state/useStore';
@@ -68,6 +68,9 @@ export default function CommandPalette() {
     add({ id: 'deck', group: 'Actions', title: 'Create a status deck (.pptx)', icon: <Presentation />, run: then(() => decks.open()) }, 'deck powerpoint pptx slides presentation status report');
     if (isAdmin) add({ id: 'invite', group: 'Actions', title: 'Invite a teammate', icon: <UserPlus />, run: then(() => router.navigate('/settings?tab=team')) }, 'invite teammate member people');
     for (const v of VIEWS) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
+    add({ id: 'help', group: 'Go to', title: 'Help', icon: <CircleHelp />, run: then(() => router.navigate('/help')) }, 'help guide how to docs faq questions');
+    // whatever was typed can also be looked up in the help pages
+    if (q) out.push({ id: 'help-search', group: 'Go to', title: `Search help for “${q}”`, icon: <CircleHelp />, score: 1, run: then(() => router.navigate(`/help?q=${encodeURIComponent(q)}`)) });
     for (const p of Object.values(projects).filter((p) => !p.archived)) {
       add({ id: `p${p.id}`, group: 'Projects', title: p.name, icon: <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, margin: 3 }} />, hint: p.key, run: then(() => router.navigate(`/projects/${p.id}`)) }, `${p.name} ${p.key}`);
     }

@@ -9,11 +9,15 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - **Files on private tasks are encrypted too.** Each file gets its own random key and is encrypted in the browser with AES-256-GCM, its name and type included, and that key is wrapped under the task's key. The server stores ciphertext under a generic name, serves it only as a download, refuses plain uploads to a private task and keeps file names out of its history. Reassigning a private task re-wraps the file keys only, never the files. Making a task with files private encrypts each one in the browser and swaps it in with the task, all or nothing, and opening a task up does the reverse. Migration 018 adds the column that holds each file's sealed details.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders.
+- A help center inside the app, at `/help`. It shows the pages in `docs/`, bundled at build time, with a topic list and a search over titles and text. It opens from the question mark next to your name in the sidebar, from the account menu, from search (including "Search help for" with whatever you typed) and from the keyboard shortcuts dialog. Signed out, it's a public page linked from the sign-in screen. Small question-mark links next to private tasks, the Nil Pro notice, votes, docs, bounties, private payouts, AI settings, proof of work and data settings open the matching page.
+- Markdown in task descriptions, comments and docs can now contain tables.
 
 ### Changed
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
+- The documentation is split into short pages in `docs/`, one topic each, with `docs/README.md` as the index. The README is now a short front page. `docs/DEPLOY.md`, `docs/TOR.md`, `docs/PROOFS.md` and `docs/ZERO-STATE.md` became `docs/deploy.md`, `docs/tor.md`, `docs/proof-format.md` and `docs/zero-state.md`.
+- The Docker build copies `docs/`, which the in-app help is built from.
 
 ### Fixed
 
@@ -25,7 +29,7 @@ Version 3 makes the Ethereum wallet the only way in and adds NOX token utility: 
 
 ### Breaking changes
 
-- **Wallet-only sign-in.** Email, passwords and passkeys are gone. Sign-In with Ethereum is the only way in. Migration 004 rebuilds the users table without email or password columns and deletes every non-wallet sign-in method. Before upgrading from v2, every person must link an Ethereum wallet. See [docs/DEPLOY.md](docs/DEPLOY.md#11-upgrades).
+- **Wallet-only sign-in.** Email, passwords and passkeys are gone. Sign-In with Ethereum is the only way in. Migration 004 rebuilds the users table without email or password columns and deletes every non-wallet sign-in method. Before upgrading from v2, every person must link an Ethereum wallet. See [docs/deploy.md](docs/deploy.md#11-upgrades).
 - **Light interface only.** Dark mode is removed.
 
 ### Added
@@ -90,7 +94,7 @@ Version 3 makes the Ethereum wallet the only way in and adds NOX token utility: 
 
 - No part of NØNOS's own code has had an independent security audit.
 - Encrypted weighted votes are beta, for the reasons above.
-- See [Honest limits](README.md#honest-limits) in the README.
+- See [Honest limits](docs/privacy-model.md#honest-limits) in the privacy model.
 
 ## Earlier versions
 

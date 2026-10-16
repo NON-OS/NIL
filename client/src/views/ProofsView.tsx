@@ -14,6 +14,7 @@ import router from '../lib/router';
 import dates from '../lib/dates';
 import type Receipt from '../types/Receipt';
 import formatUnits from '../lib/formatUnits';
+import HelpLink from '../components/help/HelpLink';
 
 // A payment receipt carries its own token details, so the label never depends on settings.
 function paidLabel(body: string) {
@@ -64,9 +65,12 @@ export default function ProofsView() {
         title="Proof of work"
         icon={<BadgeCheck size={17} />}
         actions={
-          <button type="button" className="btn btn-primary" onClick={download} disabled={!chosen.length}>
-            <Download /> Download proof
-          </button>
+          <>
+            <HelpLink topic="proof-of-work" label="How proofs of work work" />
+            <button type="button" className="btn btn-primary" onClick={download} disabled={!chosen.length}>
+              <Download /> Download proof
+            </button>
+          </>
         }
       />
       <div className="page page-narrow">

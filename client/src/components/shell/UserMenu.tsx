@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { Code2, Keyboard, LogOut, Settings } from 'lucide-react';
+import { CircleHelp, Code2, Keyboard, LogOut, Settings } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Popover from '../ui/Popover';
 import useStore from '../../state/useStore';
@@ -43,6 +43,9 @@ export default function UserMenu() {
           </button>
           <button type="button" className="menu-item" onClick={go(() => ui.shortcuts())}>
             <Keyboard size={14} /> Keyboard shortcuts
+          </button>
+          <button type="button" className="menu-item" onClick={go(() => router.navigate('/help'))}>
+            <CircleHelp size={14} /> Help
           </button>
           {sourceUrl && (
             <a className="menu-item" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>

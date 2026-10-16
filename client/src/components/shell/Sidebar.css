@@ -233,6 +233,11 @@
   border-top: 1px solid var(--line);
 }
 
+.sidebar-foot .icon-btn[aria-current='page'] {
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
 .me-btn {
   display: flex;
   flex: 1;

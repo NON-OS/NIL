@@ -1,5 +1,6 @@
 import Modal from '../ui/Modal';
 import ui from '../../actions/ui';
+import router from '../../lib/router';
 
 const GROUPS = [
   {
@@ -49,7 +50,23 @@ const GROUPS = [
 
 export default function ShortcutsHelp() {
   return (
-    <Modal title="Keyboard shortcuts" onClose={() => ui.shortcuts(false)} width={620}>
+    <Modal
+      title="Keyboard shortcuts"
+      onClose={() => ui.shortcuts(false)}
+      width={620}
+      footer={
+        <a
+          className="btn btn-ghost btn-sm"
+          href="/help/keyboard-shortcuts"
+          onClick={(e) => {
+            ui.shortcuts(false);
+            router.link('/help/keyboard-shortcuts')(e);
+          }}
+        >
+          More in Help
+        </a>
+      }
+    >
       <div className="modal-body" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 20 }}>
         {GROUPS.map((g) => (
           <section key={g.title}>
