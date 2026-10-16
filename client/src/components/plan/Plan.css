@@ -32,6 +32,10 @@
   color: var(--danger);
 }
 
+.plan-badge.idle {
+  color: var(--muted);
+}
+
 .plan-head {
   display: flex;
   flex-wrap: wrap;
@@ -52,19 +56,25 @@
   color: var(--ink);
 }
 
-.plan-total {
-  justify-content: space-between;
-}
-
-.plan-total .mono {
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: -0.01em;
-}
-
 .plan-fine {
   margin: 0;
+  color: var(--muted);
   font-size: var(--text-sm);
+}
+
+.plan-callout {
+  margin: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+.plan-callout.warn {
+  border-color: var(--warning);
+  background: var(--warning-soft);
 }
 
 .plan-notice {
@@ -82,8 +92,201 @@
   font-size: var(--text-sm);
 }
 
+/* price, line by line */
+.price-rows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+}
+
+.price-rows > div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: var(--text-sm);
+}
+
+.price-rows dt {
+  color: var(--ink-2);
+}
+
+.price-rows dd {
+  margin: 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.price-rows .price-total {
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.price-rows .price-total dt {
+  color: var(--ink);
+}
+
+.token-quotes,
+.perk-list,
+.invoice-payments {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.token-quotes li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-size: var(--text-sm);
+}
+
+.perk-list li {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.perk-list svg {
+  width: 16px;
+  height: 16px;
+  margin-top: 2px;
+  color: var(--accent-text);
+}
+
+.token-choice {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.token-choice .btn {
+  display: grid;
+  justify-items: start;
+  gap: 2px;
+  height: auto;
+  padding: 8px 12px;
+  text-align: left;
+}
+
+.token-choice .btn span {
+  font-size: var(--text-xs);
+}
+
+/* the amount to send and the code to scan, side by side */
+.invoice-pay {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 18px;
+}
+
+.invoice-pay-text {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+}
+
+.copy-value {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 10px;
+}
+
+.copy-value .copy-label {
+  grid-column: 1 / -1;
+  font-size: var(--text-xs);
+}
+
+.copy-value .copy-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: var(--text-sm);
+}
+
+.copy-value .copy-text.big {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.invoice-qr {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: var(--text-xs);
+}
+
+.qr {
+  display: block;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.qr-paper {
+  fill: var(--bg);
+}
+
+.qr-ink {
+  fill: var(--brand-ink);
+}
+
+.invoice-payments li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  font-size: var(--text-sm);
+}
+
+.invoice-problem {
+  flex-basis: 100%;
+  color: var(--danger);
+  font-size: var(--text-xs);
+}
+
+.invoice-row {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.invoice-row:last-child {
+  border-bottom: 0;
+}
+
+.invoice-row-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  font-size: var(--text-sm);
+}
+
+.invoice-row-head > span:first-child {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+
+.invoice-row .invoice-payments {
+  padding-left: 12px;
+}
+
 @media (max-width: 760px) {
   .plan-facts {
+    grid-template-columns: 1fr;
+  }
+
+  .invoice-pay {
     grid-template-columns: 1fr;
   }
 }

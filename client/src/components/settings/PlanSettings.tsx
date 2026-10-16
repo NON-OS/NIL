@@ -4,31 +4,49 @@ import { useCallback, useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import StatTile from '../charts/StatTile';
 import PlanBadge from '../plan/PlanBadge';
-import PlanPay from '../plan/PlanPay';
-import PlanPayments from '../plan/PlanPayments';
+import PlanPerks from '../plan/PlanPerks';
+import InvoiceForm from '../plan/InvoiceForm';
+import InvoiceCard from '../plan/InvoiceCard';
+import InvoiceHistory from '../plan/InvoiceHistory';
+import RevenueCard from '../plan/RevenueCard';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import plan from '../../actions/plan';
 import planSummary from '../../lib/planSummary';
-import tokenAmount from '../../lib/tokenAmount';
-import shortAddress from '../../lib/shortAddress';
+import usd from '../../lib/usd';
 import isAdminUser from '../../lib/isAdmin';
-import type PlanPayment from '../../types/PlanPayment';
-import HelpLink from '../help/HelpLink';
+import type Invoice from '../../types/Invoice';
 
 export default function PlanSettings() {
   const status = useStore((s) => s.plan);
   const nox = useStore((s) => s.nox);
   const rewards = useStore((s) => s.rewards);
   const isAdmin = useStore((s) => isAdminUser(s.me));
-  const [payments, setPayments] = useState<PlanPayment[]>([]);
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [credit, setCredit] = useState(0);
+  const [making, setMaking] = useState(false);
   const canPay = Boolean(isAdmin && status.enforced && nox);
 
   const refresh = useCallback(() => {
-    if (canPay) plan.payments().then(setPayments).catch(toast.error);
+    if (!canPay) return;
+    plan
+      .invoices()
+      .then((r) => {
+        setInvoices(r.invoices);
+        setCredit(r.credit);
+      })
+      .catch(toast.error);
   }, [canPay]);
-  useEffect(refresh, [refresh]);
+  // a payment that settles changes the plan everywhere; the invoices follow
+  useEffect(refresh, [refresh, status.activeUntil, status.source]);
 
+  const update = useCallback((invoice: Invoice) => {
+    setInvoices((list) => [invoice, ...list.filter((i) => i.id !== invoice.id)].sort((a, b) => b.number - a.number));
+    setMaking(false);
+    if (invoice.status !== 'open') refresh();
+  }, [refresh]);
+
+  const open = invoices.find((i) => i.status === 'open') ?? null;
   const free = status.freeSeats ?? 0;
   const used = status.seatsUsed ?? 0;
   const paidTools = [
@@ -41,20 +59,17 @@ export default function PlanSettings() {
   return (
     <>
       <section className="settings-section">
-        <h2>
-          Plan <HelpLink topic="nox-and-nil-pro" label="How Nil Pro works" />
-        </h2>
-        <p>Tasks, projects, goals, encrypted docs, time tracking, reminders, share links and exports are free forever. The plan unlocks the tools below for the whole workspace.</p>
+        <h2>Plan</h2>
+        <p>Tasks, projects, goals, encrypted docs, time tracking, reminders, share links and exports are free forever. Nil Pro unlocks the tools below for the whole workspace.</p>
         <div className="settings-card">
           <div className="plan-head">
             <PlanBadge />
-            {status.treasury && <span className="muted mono" title={status.treasury}>Treasury {shortAddress(status.treasury)}</span>}
           </div>
           <p style={{ margin: 0 }}>{planSummary(status).detail}</p>
           {status.enforced && (
             <div className="plan-facts">
-              <StatTile label="Price" value={status.price ? tokenAmount(status.price, nox?.symbol, 2) : '—'} sub={`per ${status.periodDays} days`} />
-              <StatTile label="People" value={`${used} / ${free}`} sub={used > free ? 'Over the free size' : 'Included without a plan'} />
+              <StatTile label="Price" value={usd(status.priceUsd ?? 0)} sub={`per ${status.periodDays} days, plus ${usd(status.seatUsd ?? 0)} a seat above ${free}`} />
+              <StatTile label="People" value={status.seatLimit === null ? `${used}` : `${used} / ${status.seatLimit}`} sub={status.seatLimit === null ? 'No seat limit right now' : 'Covered right now'} />
               <StatTile label="Grace" value={`${status.graceDays} days`} sub="Before tools pause" />
             </div>
           )}
@@ -68,17 +83,44 @@ export default function PlanSettings() {
         </div>
       </section>
 
-      {canPay && (
+      {status.enforced && (
         <section className="settings-section">
-          <h2>Pay for the plan</h2>
-          <PlanPay onPaid={refresh} />
+          <h2>What {nox?.symbol ?? 'NOX'} holders get</h2>
+          <PlanPerks />
         </section>
       )}
 
-      {canPay && payments.length > 0 && (
+      {canPay && open && (
         <section className="settings-section">
-          <h2>Payments</h2>
-          <PlanPayments payments={payments} onChange={refresh} />
+          <h2>Pay invoice {open.number}</h2>
+          <InvoiceCard key={open.id} invoice={open} onChange={update} />
+        </section>
+      )}
+
+      {canPay && (!open || making) && (
+        <section className="settings-section">
+          <h2>{status.active ? 'Add time or seats' : 'Get Nil Pro'}</h2>
+          <p>Pay in USDC, or in {nox?.symbol ?? 'NOX'} for less, from any wallet or exchange. No card, no email, nothing renews by itself.{credit > 0 && ` You have ${usd(credit)} of credit, which comes off the next invoice.`}</p>
+          <InvoiceForm onCreated={update} />
+        </section>
+      )}
+      {canPay && open && !making && (
+        <button type="button" className="btn btn-sm btn-ghost" style={{ justifySelf: 'start', marginBottom: 28 }} onClick={() => setMaking(true)}>
+          Make a different invoice
+        </button>
+      )}
+
+      {canPay && invoices.length > 0 && (
+        <section className="settings-section">
+          <h2>Invoices</h2>
+          <InvoiceHistory invoices={invoices} onChange={update} />
+        </section>
+      )}
+
+      {canPay && (
+        <section className="settings-section">
+          <h2>Where the money goes</h2>
+          <RevenueCard refreshKey={invoices.filter((i) => i.status === 'paid').length} />
         </section>
       )}
     </>
