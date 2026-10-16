@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import uploadDir from '../lib/uploadDir.js';
 import stagedFile from '../lib/stagedFile.js';
 
@@ -20,5 +21,6 @@ export default function eraseTasks(ids) {
     fs.rm(path.join(uploadDir, id), { force: true }, () => {});
     stagedFile.discard(id);
   }
+  checkpoint();
   return ids.length;
 }

@@ -10,6 +10,7 @@ import hub from '../realtime/hub.js';
 import publishTask from '../services/publishTask.js';
 import toProject from '../mappers/toProject.js';
 import guestScope from '../services/guestScope.js';
+import lostAccess from '../services/lostAccess.js';
 
 const router = express.Router();
 
@@ -84,6 +85,7 @@ router.delete(
     sql.run('DELETE FROM projects WHERE id = ?', req.params.id);
     hub.broadcast({ type: 'project.delete', id: req.params.id });
     guestScope.forget();
+    lostAccess.guests();
     for (const { id } of affected) publishTask(id);
     return { ok: true };
   }),

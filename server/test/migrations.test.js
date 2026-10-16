@@ -14,6 +14,7 @@ let migrations;
 before(async () => {
   // the default database opens on import, so keep it out of the working tree
   process.env.DATA_DIR = path.join(work, 'default');
+  process.env.APP_URL ??= 'http://localhost:3000';
   ({ default: migrate } = await import('../db/migrate.js'));
   ({ default: migrations } = await import('../db/migrations.js'));
 });

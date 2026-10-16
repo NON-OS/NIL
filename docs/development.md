@@ -8,7 +8,7 @@ You need Node.js 22.13 or newer.
 
 ```bash
 npm install
-npm run dev         # API on :3000 with auto-restart, web app on :5173 with hot reload
+APP_URL=http://localhost:5173 npm run dev   # API on :3000 with auto-restart, web app on :5173 with hot reload
 npm test            # API integration tests
 npm run typecheck   # strict TypeScript for the web app
 npm run build       # production bundle into dist/

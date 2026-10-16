@@ -1,28 +1,83 @@
+import net from 'node:net';
 import path from 'node:path';
 import envNumber from './lib/envNumber.js';
 import configWarning from './lib/configWarning.js';
 import validAddress from './lib/validAddress.js';
 import log from './lib/log.js';
+import refuseToStart from './lib/refuseToStart.js';
 
-// Every setting is optional. An empty value counts as unset. A value that is set but can't be
-// used gets the default, or turns its feature off, and says so in a warning at startup.
+// Every setting is optional except APP_URL, and NOX_RPC_URL on a server reached over the network.
+// An empty value counts as unset. A value that is set but can't be used gets the default, or
+// turns its feature off, and says so in a warning at startup.
 const env = process.env;
 const production = env.NODE_ENV === 'production';
 const SECOND = 1000;
 const HOUR = 3_600_000;
 const MB = 1024 * 1024;
 
+// Where people reach this server. Wallet sign-in messages name this domain and only this origin
+// may make changes, so it can never be read from request headers, where a phishing site would put
+// its own. Plain http is accepted only on this machine and for .onion addresses, which Tor
+// already authenticates. These two settings are required, so a bad value stops the server.
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]']);
+const DEFAULT_RPC = 'https://ethereum-rpc.publicnode.com';
+
+function site(value) {
+  const help = 'Set it to the address people type: https://nil.example.com, http://<your-address>.onion for Tor, or http://localhost:3000 on this machine (http://localhost:5173 with npm run dev).';
+  if (!value) refuseToStart(`APP_URL is required. ${help}`);
+  let url;
+  try {
+    url = new URL(value);
+  } catch {
+    refuseToStart(`APP_URL isn’t a web address. ${help}`);
+  }
+  const local = LOCAL_HOSTS.has(url.hostname);
+  const plainAllowed = local || url.hostname.endsWith('.onion');
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && plainAllowed)) refuseToStart(`APP_URL must start with https://, except for localhost and .onion addresses. ${help}`);
+  if (url.username || url.password || url.pathname !== '/' || url.search || url.hash) refuseToStart(`APP_URL must be the address alone, with no path. ${help}`);
+  return { origin: url.origin, local };
+}
+
+// The node sees every wallet and payout address this server looks up, and from which IP, so a
+// public node could link them to your team. Only a local trial may fall back to one.
+function rpcUrl(value, local) {
+  if (value) return value;
+  if (!local) {
+    refuseToStart(
+      'NOX_RPC_URL is required on a server people reach over the network. The Ethereum node sees every wallet and payout address Nil looks up, and this server’s IP address, so a public node could link them to your team. ' +
+        'Run your own node (an execution client such as Geth, Nethermind or Reth, with a consensus client) and set NOX_RPC_URL to it, use a provider you trust, or set NOX_RPC_URL=off to turn on-chain features off.',
+    );
+  }
+  configWarning(`NOX_RPC_URL isn’t set, so this local server uses the public node at ${DEFAULT_RPC}, which sees every address it looks up. Set your own node, or off, before others use this server.`);
+  return DEFAULT_RPC;
+}
+
+const app = site((env.APP_URL ?? '').trim());
+
 const origins = (env.ALLOWED_ORIGINS || '')
   .split(',')
   .map((s) => s.trim().replace(/\/$/, ''))
   .filter(Boolean);
-if (env.APP_URL) origins.push(env.APP_URL.replace(/\/$/, ''));
+origins.push(app.origin);
+
+// Forwarded headers are believed only from the proxy in front: a number of hops, or the proxy's
+// address or subnet. "true" would believe anyone who reaches the port, so a visitor connecting
+// directly could claim any IP and slip past every rate limit.
+const NAMED_PROXIES = new Set(['loopback', 'linklocal', 'uniquelocal']);
+function proxyAddress(entry) {
+  if (NAMED_PROXIES.has(entry) || net.isIP(entry)) return true;
+  const [ip, bits, ...rest] = entry.split('/');
+  const version = net.isIP(ip);
+  return Boolean(version) && !rest.length && /^\d{1,3}$/.test(bits ?? '') && Number(bits) <= (version === 4 ? 32 : 128);
+}
 
 function trustProxy(value) {
   if (!value) return false;
-  if (value === 'true') return true;
-  const hops = Number(value);
-  return Number.isInteger(hops) ? hops : value;
+  if (/^\d+$/.test(value)) return Number(value);
+  const entries = value.split(',').map((s) => s.trim()).filter(Boolean);
+  if (entries.length && entries.every(proxyAddress)) return entries;
+  configWarning(`TRUST_PROXY=${value} isn’t a number of proxy hops or a list of proxy addresses (such as loopback, uniquelocal or 172.18.0.0/16). Forwarded headers are ignored until it’s fixed.`);
+  return false;
 }
 
 // Explorer links open from the app, so only an http(s) address will do. The value isn't
@@ -50,9 +105,7 @@ function setupToken(value) {
   return null;
 }
 
-// NOX lives on Ethereum. The RPC node sees which addresses we look up, so privacy-minded
-// teams should point NOX_RPC_URL at their own node. "off" disables every on-chain feature.
-const DEFAULT_RPC = 'https://ethereum-rpc.publicnode.com';
+// NOX lives on Ethereum. "off" disables every on-chain feature.
 const rpcOff = env.NOX_RPC_URL === 'off';
 const chainId = envNumber('NOX_CHAIN_ID', 1, { min: 1 });
 const ADDRESS_RULE = '0x and 40 hex characters, with a correct EIP-55 checksum if it mixes upper and lower case';
@@ -77,7 +130,7 @@ const noxToken = contract('NOX_TOKEN', NOX_MAINNET, { withoutIt: 'On-chain featu
 
 const nox = Object.freeze({
   enabled: !rpcOff && noxToken !== null,
-  rpcUrl: env.NOX_RPC_URL || DEFAULT_RPC,
+  rpcUrl: rpcUrl(env.NOX_RPC_URL, app.local),
   rpcTimeoutMs: envNumber('NOX_RPC_TIMEOUT_SECONDS', 10, { min: 1, max: 300 }) * SECOND,
   // the mainnet address stays in place when NOX is off for want of one, so nothing downstream sees null
   token: noxToken ?? NOX_MAINNET,
@@ -178,6 +231,8 @@ const stealth = Object.freeze({
   gasTopUpWei: /^\d+$/.test(env.STEALTH_GAS_TOPUP_WEI ?? '') ? env.STEALTH_GAS_TOPUP_WEI : '300000000000000',
   // how long a confirmed payout keeps being checked for a late announcement
   announceCheckDays: envNumber('STEALTH_ANNOUNCE_CHECK_DAYS', 7),
+  // payout balances are looked up one address at a time, at random moments within this window
+  balanceSpreadMs: envNumber('STEALTH_BALANCE_SPREAD_SECONDS', 1800, { min: 1 }) * SECOND,
 });
 
 // Voting power: NOX in linked wallets, plus NOX staked in the official staking contract, plus a
@@ -221,7 +276,7 @@ const config = Object.freeze({
   // after a checkpoint SQLite cuts the write-ahead log back to this size instead of keeping its peak
   dbJournalLimitBytes: envNumber('DB_JOURNAL_LIMIT_MB', 64, { min: 1 }) * MB,
   trustProxy: trustProxy(env.TRUST_PROXY),
-  appUrl: env.APP_URL ? env.APP_URL.replace(/\/$/, '') : null,
+  appUrl: app.origin,
   sourceUrl: env.SOURCE_URL || null,
   allowedOrigins: Object.freeze(origins),
   setupToken: setupToken((env.SETUP_TOKEN ?? '').trim()),
@@ -253,9 +308,8 @@ const config = Object.freeze({
 // Settings that work but are wrong for a public server. Only production gets these, so a
 // laptop running `npm run dev` stays quiet.
 if (production) {
-  if (!config.appUrl) configWarning('APP_URL is empty. Set it to the address people use (https://… or your onion address), so wallet sign-in messages name the right domain.');
-  else if (config.appUrl.startsWith('https://') && !config.trustProxy) configWarning('APP_URL is https, but TRUST_PROXY is empty. Behind a TLS proxy, cookies lose the Secure flag, HSTS isn’t sent and rate limits see the proxy’s address. Set TRUST_PROXY=1.');
-  if (nox.enabled && nox.rpcUrl === DEFAULT_RPC) configWarning(`NOX_RPC_URL is the default public node (${DEFAULT_RPC}), which sees every address and transaction this server looks up, and this server’s IP. Point it at your own node or a provider you trust, or set it to "off".`);
+  if (config.appUrl.startsWith('https://') && !config.trustProxy) configWarning('APP_URL is https, but TRUST_PROXY is empty. Behind a TLS proxy, cookies lose the Secure flag, HSTS isn’t sent and rate limits see the proxy’s address. Set TRUST_PROXY=1.');
+  if (nox.enabled && env.NOX_RPC_URL === DEFAULT_RPC) configWarning(`NOX_RPC_URL is the default public node (${DEFAULT_RPC}), which sees every address and transaction this server looks up, and this server’s IP. Point it at your own node or a provider you trust, or set it to "off".`);
 }
 
 const STRICT = ['1', 'true'].includes((env.STRICT_CONFIG ?? '').trim());

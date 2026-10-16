@@ -8,7 +8,7 @@ const SERVER = new URL('../../index.js', import.meta.url).pathname;
 export default async function bootProcess({ dataDir, env = {} }) {
   const { SETUP_TOKEN, ...inherited } = process.env;
   const child = spawn(process.execPath, ['--disable-warning=ExperimentalWarning', SERVER], {
-    env: { ...inherited, NOX_RPC_URL: 'off', DATA_DIR: dataDir, PORT: '0', ...env },
+    env: { ...inherited, APP_URL: 'http://localhost:3000', NOX_RPC_URL: 'off', DATA_DIR: dataDir, PORT: '0', ...env },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
   let stdout = '';

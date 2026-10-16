@@ -1,6 +1,7 @@
 import sql from '../db/sql.js';
 import groupRoot from './groupRoot.js';
 import config from '../config.js';
+import heldBallots from './heldBallots.js';
 
 const OPEN = 'SELECT id FROM proposals WHERE anonymous = 1 AND closed_at IS NULL AND closes_at > ?';
 
@@ -25,7 +26,8 @@ function saveRoot(proposalId, { revokeOlder = false } = {}) {
   if (!root) return;
   // removing someone must also retire every older root, or a proof against one would still count
   if (revokeOlder) sql.run('UPDATE proposal_roots SET revoked = 1 WHERE proposal_id = ?', proposalId);
-  sql.run('INSERT INTO proposal_roots (proposal_id, root, created_at) VALUES (?, ?, ?) ON CONFLICT (proposal_id, root) DO UPDATE SET revoked = 0', proposalId, root, Date.now());
+  // a root appears when someone joins; stamped with the hour only, like the ballots proven against it
+  sql.run('INSERT INTO proposal_roots (proposal_id, root, created_at) VALUES (?, ?, ?) ON CONFLICT (proposal_id, root) DO UPDATE SET revoked = 0', proposalId, root, heldBallots.hourOf(Date.now()));
 }
 
 function append(proposalId, commitment, userId) {
@@ -46,7 +48,8 @@ const voterGroups = {
 
   start(proposalId) {
     sql.tx(() => {
-      for (const u of sql.all("SELECT id, semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND semaphore_commitment IS NOT NULL ORDER BY created_at")) append(proposalId, u.c, u.id);
+      // in key order, not join order, so a seat's position doesn't name the person in it
+      for (const u of sql.all("SELECT id, semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND semaphore_commitment IS NOT NULL ORDER BY semaphore_commitment")) append(proposalId, u.c, u.id);
       saveRoot(proposalId);
     });
   },

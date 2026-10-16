@@ -3,6 +3,7 @@ import loadTask from './loadTask.js';
 import publishTask from './publishTask.js';
 import logActivity from './logActivity.js';
 import notify from './notify.js';
+import canSeeTask from './canSeeTask.js';
 import issuePaymentReceipt from '../proofs/issuePaymentReceipt.js';
 
 // Marks a payment confirmed exactly once, even if the background check and a manual
@@ -27,5 +28,8 @@ export default function settlePayment(payment, { from, blockNumber }) {
     logActivity(payment.task_id, payment.payer_id, 'bounty_paid', { amount: payment.amount, token: payment.token });
     publishTask(payment.task_id);
   }
-  notify([payment.payee_id], 'bounty_paid', payment.task_id, payment.payer_id, { amount: payment.amount, token: payment.token, ref: payment.task_ref });
+  // a payee who can no longer open the task still hears about the money, just without the link
+  const task = payment.task_id ? loadTask(payment.task_id) : null;
+  const linked = task && canSeeTask(task, { id: payment.payee_id }) ? task.id : null;
+  notify([payment.payee_id], 'bounty_paid', linked, payment.payer_id, { amount: payment.amount, token: payment.token, ref: payment.task_ref });
 }

@@ -1,4 +1,5 @@
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import config from '../config.js';
 import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
@@ -44,4 +45,6 @@ export default function purge() {
     sql.run('DELETE FROM sessions WHERE expires_at < ?', now);
     sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - config.usedInviteDays * DAY);
   });
+  // what the policies above erased mustn't survive in the write-ahead log
+  checkpoint();
 }

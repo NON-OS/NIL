@@ -1,5 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
+import path from 'node:path';
+import { DatabaseSync } from 'node:sqlite';
 import { Identity } from '@semaphore-protocol/identity';
 import { Group } from '@semaphore-protocol/group';
 import { generateProof, verifyProof } from '@semaphore-protocol/proof';
@@ -55,6 +57,9 @@ test('voting keys are checked, unique, and member-only', async () => {
   assert.equal((await people.dee('PUT', '/api/me/semaphore', { commitment: keys.ana.commitment.toString() })).status, 409);
   const me = (await people.ana('GET', '/api/bootstrap')).data.me;
   assert.equal(me.semaphoreCommitment, keys.ana.commitment.toString());
+  // an admin can't match a voting key to a name
+  const asAdmin = (await owner('GET', '/api/bootstrap')).data.users.find((u) => u.id === ids.ana);
+  assert.equal(asAdmin.semaphoreCommitment, null);
 });
 
 test('anonymous votes are one person, one vote, and start with every member who has a key', async () => {
@@ -64,28 +69,48 @@ test('anonymous votes are one person, one vote, and start with every member who 
   const vote = res.data.proposal;
   ids.vote = vote.id;
   assert.equal(vote.anonymous.depth, DEPTH);
-  assert.deepEqual(vote.anonymous.members.map((m) => m.commitment), ['owner', 'ana', 'ben', 'cy'].map((n) => keys[n].commitment.toString()));
+  // seats go in key order, not join order, so a seat's position doesn't name the person in it
+  assert.deepEqual(vote.anonymous.members.map((m) => m.commitment), ['owner', 'ana', 'ben', 'cy'].map((n) => keys[n].commitment.toString()).sort());
   assert.equal((await people.ana('POST', `/api/proposals/${vote.id}/ballot`, { choice: 0 })).status, 400);
 });
 
-test('a ballot proves membership without saying who, counts once, and can be changed', async () => {
+test('a ballot proves membership without saying who, is held until its hour ends, and can be changed', async () => {
   let vote = await getVote(ids.vote);
   const first = await prove('ana', vote, 0);
   const res = await ballot(vote.id, first);
   assert.equal(res.status, 200);
+  // it joins the count with the rest of this hour's ballots, so its arrival time can't point to Ana
+  const hour = 3_600_000;
+  assert.equal(res.data.countsAt % hour, 0);
+  assert.ok(res.data.countsAt > Date.now() && res.data.countsAt <= Date.now() + hour);
   vote = await getVote(ids.vote);
-  assert.deepEqual([vote.voters, vote.totals, vote.myVote], [1, ['1', '0', '0'], null]);
-  assert.ok(vote.anonymous.nullifiers.includes(first.nullifier));
+  assert.deepEqual([vote.voters, vote.totals, vote.myVote, vote.anonymous.nullifiers], [0, ['0', '0', '0'], null, []]);
 
   // the same member again: same nullifier, so it replaces the first ballot instead of adding one
   const changed = await prove('ana', vote, 1);
   assert.equal(changed.nullifier, first.nullifier);
   assert.equal((await ballot(vote.id, changed)).status, 200);
-  vote = await getVote(ids.vote);
-  assert.deepEqual([vote.voters, vote.totals], [1, ['0', '1', '0']]);
-
   assert.equal((await ballot(vote.id, await prove('ben', vote, 1))).status, 200);
-  assert.deepEqual((await getVote(ids.vote)).totals, ['0', '2', '0']);
+  assert.deepEqual((await getVote(ids.vote)).totals, ['0', '0', '0']);
+
+  // nothing in the database knows when they arrived, or in what order
+  const db = new DatabaseSync(path.join(srv.dataDir, 'nonos.db'));
+  const held = db.prepare('SELECT * FROM held_ballots WHERE proposal_id = ?').all(vote.id);
+  db.close();
+  assert.equal(held.length, 2);
+  for (const row of held) assert.equal(row.hour % hour, 0);
+  assert.ok(!Object.keys(held[0]).includes('created_at'));
+
+  // once the hour is over, the next look at the votes counts them together
+  const realNow = Date.now;
+  Date.now = () => realNow() + hour;
+  try {
+    vote = await getVote(ids.vote);
+  } finally {
+    Date.now = realNow;
+  }
+  assert.deepEqual([vote.voters, vote.totals], [2, ['0', '2', '0']]);
+  assert.ok(vote.anonymous.nullifiers.includes(first.nullifier));
 });
 
 test('forged, foreign and out-of-range ballots are refused', async () => {
@@ -135,6 +160,12 @@ test('closing freezes the result, and the audit lets anyone recount every proof'
   const audit = (await owner('GET', `/api/proposals/${ids.vote}/audit`)).data;
   assert.equal(audit.type, 'nonos.anonymous-vote-audit');
   assert.ok(!JSON.stringify(audit).includes(ids.ana));
+  // every held ballot counted at the close: Ana (last choice 0), Dee 0, Ben 1, Cy 2
+  assert.deepEqual(closed.totals, ['2', '1', '1']);
+  // times are whole hours and ballots list by nullifier, so neither order nor time points to a voter
+  for (const time of [...audit.ballots.map((b) => b.castAt), ...audit.roots.map((r) => r.at)]) assert.match(time, /T\d\d:00:00\.000Z$/);
+  const listed = audit.ballots.map((b) => b.proof.nullifier);
+  assert.deepEqual(listed, [...listed].sort());
   const nullifiers = new Set();
   const totals = audit.proposal.options.map(() => 0);
   const roots = new Set(audit.roots.map((r) => r.root));

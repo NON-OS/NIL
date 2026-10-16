@@ -26,6 +26,9 @@ const sessions = {
     sql.run('DELETE FROM sessions WHERE user_id = ?', userId);
   },
 
+  // for live connections, which keep only the hash of the token they opened with
+  isLive: (hash) => Boolean(hash && sql.get('SELECT 1 FROM sessions WHERE token_hash = ? AND expires_at > ?', hash, Date.now())),
+
   userRow(token) {
     if (!token) return null;
     const session = sql.get('SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > ?', tokenHash(token), Date.now());

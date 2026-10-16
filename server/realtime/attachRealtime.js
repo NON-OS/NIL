@@ -1,6 +1,9 @@
 import { WebSocketServer } from 'ws';
 import hub from './hub.js';
 import currentUser from '../auth/currentUser.js';
+import sessions from '../auth/sessions.js';
+import sessionCookie from '../auth/sessionCookie.js';
+import tokenHash from '../auth/tokenHash.js';
 import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
@@ -27,9 +30,11 @@ function handleMessage(ws, raw) {
     return;
   }
   if (msg?.type === 'presence') {
-    // Presence goes to everyone, so looking at a private task shows up as looking at nothing.
+    // Looking at a private task shows up as looking at nothing, and nobody can claim to be on
+    // a task they can't open. Each viewer is then sent only what they may see.
     const id = typeof msg.viewing === 'string' ? msg.viewing.slice(0, 32) : null;
-    const viewing = id && !loadTask(id)?.private ? id : null;
+    const task = id ? loadTask(id) : null;
+    const viewing = task && !task.private && canSeeTask(task, { id: client.userId }) ? id : null;
     if (viewing !== client.viewing) {
       client.viewing = viewing;
       hub.presenceChanged();
@@ -59,8 +64,8 @@ function guarded(key, fn, onError) {
   };
 }
 
-function connected(ws, user) {
-  hub.add(ws, { userId: user.id, isAdmin: user.isAdmin });
+function connected(ws, user, session) {
+  hub.add(ws, { userId: user.id, isAdmin: user.isAdmin, session });
   ws.on('pong', () => {
     const c = hub.get(ws);
     if (c) c.alive = true;
@@ -69,7 +74,7 @@ function connected(ws, user) {
   ws.on('close', () => hub.remove(ws));
   ws.on('error', () => hub.remove(ws));
   // the build lets a tab that reconnects after a deploy see it's running an old version
-  ws.send(JSON.stringify({ type: 'hello', presence: hub.presence(), build: buildId() }));
+  ws.send(JSON.stringify({ type: 'hello', presence: hub.presenceFor({ id: user.id, isAdmin: user.isAdmin }), build: buildId() }));
 }
 
 export default function attachRealtime(server) {
@@ -82,7 +87,8 @@ export default function attachRealtime(server) {
     if (!originAllowed(req)) return refuse(socket, '403 Forbidden');
     const user = currentUser(req);
     if (!user) return refuse(socket, '401 Unauthorized');
-    wss.handleUpgrade(req, socket, head, guarded('connection', (ws) => connected(ws, user), (ws) => ws.terminate()));
+    const session = tokenHash(sessionCookie.read(req));
+    wss.handleUpgrade(req, socket, head, guarded('connection', (ws) => connected(ws, user, session), (ws) => ws.terminate()));
   }
 
   server.on(
@@ -93,10 +99,16 @@ export default function attachRealtime(server) {
     }),
   );
 
-  // Drop sockets that stopped answering pings (sleeping laptops, dead proxies).
+  // Drop sockets that stopped answering pings (sleeping laptops, dead proxies), and sockets
+  // whose session ended some other way: it expired, or it was revoked from another device.
   const heartbeat = setInterval(
     guarded('heartbeat', () => {
       for (const [ws, c] of hub.entries()) {
+        if (!sessions.isLive(c.session)) {
+          ws.close(4001, 'signed out');
+          hub.remove(ws);
+          continue;
+        }
         if (!c.alive) {
           ws.terminate();
           hub.remove(ws);

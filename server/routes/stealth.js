@@ -12,6 +12,8 @@ import nodeReady from '../chain/nodeReady.js';
 import rpc from '../chain/rpc.js';
 import publishUser from '../services/publishUser.js';
 import stealthPayouts from '../services/stealthPayouts.js';
+import stealthBalances from '../services/stealthBalances.js';
+import rewardToken from '../lib/rewardToken.js';
 import checkAnnouncement from '../services/checkAnnouncement.js';
 import toUser from '../mappers/toUser.js';
 import toPayment from '../mappers/toPayment.js';
@@ -53,9 +55,24 @@ router.delete(
 
 router.get(
   '/stealth/payouts',
+  route((req) => {
+    needChain();
+    return { payouts: stealthPayouts.list(req.user.id) };
+  }),
+);
+
+// One payout's balance read now, for a payee about to move it. One address per request, so a
+// payee checking several still never sends them to the node together.
+router.get(
+  '/stealth/payouts/:id/balance',
+  relayLimit,
   route(async (req) => {
     needChain();
-    return { payouts: await stealthPayouts.list(req.user.id) };
+    const row = sql.get("SELECT to_address, token FROM payments WHERE id = ? AND payee_id = ? AND stealth_ephemeral IS NOT NULL AND status != 'failed'", req.params.id, req.user.id);
+    if (!row) throw HttpError.notFound('That private payout');
+    const held = await stealthBalances.now(row.to_address, rewardToken(row.token).address);
+    if (!held) throw new HttpError(502, 'Nil couldn’t read that balance from its Ethereum node. Try again in a minute.');
+    return { balance: { eth: held.eth, token: held.token }, checkedAt: held.checkedAt };
   }),
 );
 

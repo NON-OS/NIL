@@ -73,21 +73,23 @@ Set at least these:
 
 ```bash
 APP_URL=https://nonos.example.com
-TRUST_PROXY=1
+TRUST_PROXY=uniquelocal
+NOX_RPC_URL=https://<your-own-node>
 SOURCE_URL=https://github.com/<you>/nonos
 STRICT_CONFIG=1
 ```
 
-- `APP_URL` must be exactly the address people type. Wallets show this domain in the sign-in message.
-- `TRUST_PROXY=1` tells Nil that Caddy sits in front. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's.
+- `APP_URL` is required and must be exactly the address people type. Wallets show this domain in the sign-in message, and only this origin may make changes. Nil never reads it from the request, so a phishing site can't get a sign-in message that names its own domain. Without it, the server refuses to start.
+- `TRUST_PROXY=uniquelocal` tells Nil to believe forwarded headers only from a private address, which is where Caddy reaches it on the Docker network. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's. A hop count (`1`) also works, but only while port 3000 is closed to everything except Caddy: anyone who reaches the port directly could otherwise claim any IP address. `true` is refused.
+- `NOX_RPC_URL` is required on a server people reach over the network (see the table below), or `off`.
 - `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
-- `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an empty `APP_URL`, an https `APP_URL` without `TRUST_PROXY`, and the default public Ethereum node.
+- `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an https `APP_URL` without `TRUST_PROXY`, and about a `NOX_RPC_URL` that names the public node.
 
 Then decide on these:
 
 | Variable | Recommendation |
 |---|---|
-| `NOX_RPC_URL` | Your own Ethereum node, or a provider you trust. The default public node sees every address and transaction your server looks up, and the server warns about it at startup. Use `off` if you don't want any on-chain features |
+| `NOX_RPC_URL` | Required. Your own Ethereum node (an execution client such as Geth, Nethermind or Reth, with a consensus client), or a provider you trust. The node sees every wallet and payout address your server looks up, and from which IP. Nil reads private-payout balances one address at a time at random moments, with other payees' addresses mixed in, and reads vote snapshots in a shuffled order a few wallets at a time, so a node can't group one person's addresses by timing. It can still tell that a snapshot's wallets were read together. Only your own node keeps every lookup to yourself. Use `off` if you don't want any on-chain features |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run NØNOS for others and charge them in NOX |
 | `ANTHROPIC_API_KEY` | Only if you want built-in AI. Text goes to Anthropic only when someone clicks an AI button |
@@ -151,7 +153,7 @@ To keep `git status` clean, list both files in `.git/info/exclude`:
 printf 'Caddyfile\ndocker-compose.override.yml\n' | sudo tee -a .git/info/exclude
 ```
 
-If you prefer Caddy from your distribution's packages, skip the override file. `docker-compose.yml` already publishes Nil on the loopback interface only, so point Caddy at it:
+If you prefer Caddy from your distribution's packages, skip the override file. `docker-compose.yml` already publishes Nil on the loopback interface only, and Docker hands those connections to Nil from its own private network, so `TRUST_PROXY=uniquelocal` still fits. Point Caddy at it:
 
 ```
 nonos.example.com {
@@ -176,7 +178,7 @@ curl -sI https://nonos.example.com/healthz
 curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security'
 ```
 
-The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set.
+The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set, or doesn't match the address Caddy connects from.
 
 `/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, and whether the Ethereum node answered the last time it was asked. It holds nothing about the workspace or its people, so it is safe to leave public.
 
@@ -229,25 +231,13 @@ sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f dock
 sudo docker compose -f docker-compose.yml -f docker-compose.override.yml -f docker-compose.tor.yml exec tor cat /var/lib/tor/nonos/hostname
 ```
 
-Keep `APP_URL` set to your HTTPS address. Onion visitors then see that domain in the wallet sign-in message, and their wallet may warn that it doesn't match the site. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
+`docker-compose.tor.yml` removes Nil's published port. If your override publishes `127.0.0.1:3000` for a Caddy on the host, list the override after the Tor file so the port comes back.
+
+Keep `APP_URL` set to your HTTPS address and add the onion address to `ALLOWED_ORIGINS` (`ALLOWED_ORIGINS=http://<your-address>.onion`). Onion visitors then see the onion address in the wallet sign-in message. All onion visitors reach Nil from the Tor container's address, so they share one set of rate limits.
 
 ### Onion only
 
-Skip Caddy. Create a local `docker-compose.onion.yml` with:
-
-```yaml
-services:
-  nonos:
-    ports: !reset []
-```
-
-and start with:
-
-```bash
-sudo docker compose -f docker-compose.yml -f docker-compose.tor.yml -f docker-compose.onion.yml up -d --build
-```
-
-Leave `TRUST_PROXY` empty and `APP_URL` empty (or set it to `http://<your-address>.onion`). Back up the `tor-keys` volume to keep the onion address.
+Skip Caddy and follow [Tor onion service](tor.md): start once to create the address, then set `APP_URL=http://<your-address>.onion` and recreate the container. The Tor file already removes the published port, so the server answers only through Tor. Leave `TRUST_PROXY` empty. Back up the `tor-keys` volume to keep the onion address.
 
 ## 10. Backups
 
@@ -394,10 +384,10 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] `dig +short nonos.example.com` returns the server's address.
 - [ ] `https://nonos.example.com` loads with a valid certificate, and `http://` redirects to it.
 - [ ] Port 3000 is closed from the outside: `curl -m 5 http://<server-ip>:3000/healthz` from another machine fails.
-- [ ] `.env` has `APP_URL`, `TRUST_PROXY=1`, `SOURCE_URL` and `STRICT_CONFIG=1`, no `DATA_DIR`, and permissions `600`.
+- [ ] `.env` has `APP_URL`, `TRUST_PROXY` set to Caddy's address range (`uniquelocal`), `NOX_RPC_URL`, `SOURCE_URL` and `STRICT_CONFIG=1`, no `DATA_DIR`, and permissions `600`.
 - [ ] The startup log has no `[config]` lines, and `/healthz` shows the version you meant to deploy.
 - [ ] Responses carry `Strict-Transport-Security` and `Content-Security-Policy`.
-- [ ] `NOX_RPC_URL` points at a node you trust (or is `off`), and the app shows no Ethereum node errors.
+- [ ] `NOX_RPC_URL` points at your own node or one you trust (or is `off`), and the app shows no Ethereum node errors.
 - [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for the plan. If set, the address, price and trial are right.
 - [ ] `REWARD_TOKENS` matches your chain.
 - [ ] You created the workspace, the name is final, and you linked a second wallet.
@@ -426,6 +416,10 @@ sudo docker compose exec nonos wget -qO- http://127.0.0.1:3000/healthz
 
 DNS doesn't point at the server yet, or ports 80 and 443 are blocked (check the provider's firewall too). Fix it and restart Caddy with `sudo docker compose restart caddy`. Many failed attempts in a row can hit Let's Encrypt rate limits, so wait before retrying.
 
+### The container keeps restarting and the log says `APP_URL is required` or `NOX_RPC_URL is required`
+
+Those two settings have no safe default. Set `APP_URL` to the address people type, and `NOX_RPC_URL` to your node (or `off`), then recreate the container.
+
 ### Lines with `[config]` in the log at startup
 
 A setting in `.env` couldn't be used, or is risky in production. Each line names the setting and says what the server does instead: the default, community mode for an unusable `PLAN_TREASURY`, or a feature left off. Fix the value and recreate the container. With `STRICT_CONFIG=1` the server doesn't start until every one is fixed.
@@ -448,7 +442,7 @@ A setting in `.env` couldn't be used. Each line names the setting and says what 
 
 ### "Request blocked. Reload the page and try again"
 
-The browser's origin didn't match the server. People must use the address in `APP_URL`. Behind a proxy, `TRUST_PROXY=1` must be set. Extra addresses go in `ALLOWED_ORIGINS`.
+The browser's origin didn't match the server. People must use the address in `APP_URL`. Extra addresses, such as an onion address, go in `ALLOWED_ORIGINS`. The `Host` header the browser sends doesn't count.
 
 ### Live updates don't connect
 

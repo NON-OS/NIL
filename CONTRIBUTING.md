@@ -6,7 +6,7 @@ Thanks for helping. A few things keep the codebase pleasant to work in.
 
 ```bash
 npm install
-npm run dev        # API on :3000, web app on :5173
+APP_URL=http://localhost:5173 npm run dev   # API on :3000, web app on :5173
 npm test           # API integration tests
 npm run typecheck  # strict TypeScript
 ```

@@ -27,7 +27,7 @@ const ownerWallet = wallet();
 const ids = {};
 
 before(async () => {
-  srv = await startServer({ chain });
+  srv = await startServer({ chain, env: { STEALTH_BALANCE_SPREAD_SECONDS: '1' } });
   await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
   for (const [who, name] of [[mia, 'Mia'], [sam, 'Sam']]) {
     const inv = await owner('POST', '/api/invites', { role: 'member' });
@@ -71,13 +71,24 @@ test('a private payout settles when NOX reaches the payee’s stealth address, a
   assert.equal(res.status, 200);
   assert.deepEqual([res.data.payment.status, res.data.payment.stealth, res.data.payment.announced, res.data.payment.to], ['confirmed', true, true, mine.stealthAddress]);
 
-  // the receipt names the one-time address, and the payee can list the payout with its balance
+  // the receipt names the one-time address, and the payee can list the payout; listing never
+  // asks the node, so the balance is unknown until a lookup made on its own has read it
   chain.setBalance(mine.stealthAddress, BOUNTY);
   chain.setEthBalance(mine.stealthAddress, '300000000000000');
-  const payouts = (await mia('GET', '/api/stealth/payouts')).data.payouts;
+  const asked = chain.calls.length;
+  let payouts = (await mia('GET', '/api/stealth/payouts')).data.payouts;
+  assert.equal(chain.calls.length, asked);
   assert.equal(payouts.length, 1);
-  assert.deepEqual([payouts[0].address, payouts[0].ephemeralPublicKey, payouts[0].balance.token, payouts[0].announced], [mine.stealthAddress, mine.ephemeralPublicKey, BOUNTY, true]);
+  assert.deepEqual([payouts[0].address, payouts[0].ephemeralPublicKey, payouts[0].balance, payouts[0].announced], [mine.stealthAddress, mine.ephemeralPublicKey, null, true]);
   assert.equal((await sam('GET', '/api/stealth/payouts')).data.payouts.length, 0);
+
+  // about to move it, the payee reads that one address now
+  const now = await mia('GET', `/api/stealth/payouts/${payouts[0].id}/balance`);
+  assert.deepEqual([now.status, now.data.balance.token, now.data.balance.eth], [200, BOUNTY, '300000000000000']);
+  assert.equal((await sam('GET', `/api/stealth/payouts/${payouts[0].id}/balance`)).status, 404);
+  payouts = (await mia('GET', '/api/stealth/payouts')).data.payouts;
+  assert.equal(payouts[0].balance.token, BOUNTY);
+  assert.ok(payouts[0].balanceCheckedAt <= Date.now());
 });
 
 test('a transfer to the payee’s public wallet doesn’t count as a private payout', async () => {
@@ -132,4 +143,27 @@ test('the relay prepares and sends only transactions signed by the payee’s own
   assert.equal((await mia('POST', '/api/stealth/broadcast', { raw: signTx(mine.stealthKey, { chainId: 5, to: ownerWallet.address }) })).status, 400);
   assert.equal((await mia('POST', '/api/stealth/broadcast', { raw: '0x02c0' })).status, 400);
   assert.equal((await mia('POST', '/api/stealth/broadcast', { raw: `${raw}00` })).status, 400);
+});
+
+test('payout balances are read one address at a time, later, with another payee’s address mixed in', async () => {
+  // Sam gets a private payout too, so there is someone else's address to mix in
+  const samVector = VECTORS[2];
+  assert.equal((await sam('PUT', '/api/me/stealth', { metaAddress: samVector.meta })).status, 200);
+  const t = (await owner('POST', '/api/tasks', { title: 'For Sam, privately', assigneeId: ids.Sam, bounty: BOUNTY, status: 'done' })).data.task;
+  const hash = tx();
+  chain.addTransfer({ hash, token: NOX, from: ownerWallet.address, to: samVector.stealthAddress, value: BOUNTY });
+  assert.equal((await owner('POST', `/api/tasks/${t.id}/payments`, { txHash: hash, stealth: { ephemeralKey: samVector.ephemeralKey, announceTx: tx() } })).data.payment.status, 'confirmed');
+  // long enough for every earlier lookup, which can land up to a window late, to go stale
+  await new Promise((r) => setTimeout(r, 2100));
+
+  const asked = chain.calls.length;
+  const listed = (await mia('GET', '/api/stealth/payouts')).data.payouts;
+  assert.ok(listed.length >= 2);
+  assert.equal(chain.calls.length, asked, 'nothing is looked up while the list is served');
+  await new Promise((r) => setTimeout(r, 1500));
+  const looked = chain.calls.slice(asked).filter((c) => c.method === 'eth_getBalance').map((c) => c.params[0].toLowerCase());
+  for (const p of listed) assert.ok(looked.includes(p.address), 'each of Mia’s addresses is read');
+  assert.ok(looked.includes(samVector.stealthAddress.toLowerCase()), 'with Sam’s address mixed in');
+  // each read asks for a single address: never a list of one person's addresses
+  assert.ok(chain.calls.slice(asked).every((c) => !Array.isArray(c.params[0])));
 });

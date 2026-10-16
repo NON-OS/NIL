@@ -11,7 +11,7 @@ You need Docker with Compose v2.24 or newer.
 ```bash
 git clone <your-nonos-repo-url> nonos
 cd nonos
-cp .env.example .env        # optional: edit settings
+cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
 ```
 
@@ -36,10 +36,10 @@ node --env-file=.env --disable-warning=ExperimentalWarning server/index.js
 
 ```bash
 npm install
-npm run dev
+APP_URL=http://localhost:5173 npm run dev
 ```
 
-Open `http://localhost:5173`. The API runs on port 3000 and restarts when the code changes; the web app reloads by itself. See [Development](development.md) for the other commands.
+Open `http://localhost:5173`. `APP_URL` is required everywhere, because wallet sign-in messages name that domain. The API runs on port 3000 and restarts when the code changes; the web app reloads by itself. See [Development](development.md) for the other commands.
 
 ## Settings
 

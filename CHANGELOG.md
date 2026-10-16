@@ -4,6 +4,26 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 ## Unreleased
 
+### Breaking changes
+
+- **`APP_URL` is required.** The server refuses to start without it. Wallet sign-in messages and the origin check use it, plus `ALLOWED_ORIGINS`, and never the Host, Origin or X-Forwarded-Host headers. Plain http is accepted only for localhost and .onion addresses. With `npm run dev`, set `APP_URL=http://localhost:5173`. Onion-only servers set it to their .onion address: [docs/TOR.md](docs/TOR.md) shows the two-step first start.
+- **`NOX_RPC_URL` is required on a server people reach over the network.** There is no public default any more, because a public node sees every address the server looks up. Set your own node, a provider you trust, or `off`. A server whose `APP_URL` is a localhost address still falls back to a public node, with a startup warning.
+- **`TRUST_PROXY` no longer accepts `true`.** Give the proxy's address or subnet (`uniquelocal` for Caddy in the same Compose project, `loopback` for a proxy on the same machine) or a hop count. A value it can't use is ignored with a warning.
+- `docker-compose.tor.yml` removes Nil's published port, so an onion-only server no longer answers on its normal IP address.
+
+### Security and privacy
+
+- A phishing site could ask for a sign-in message naming its own domain when `APP_URL` was empty, pass the wallet's domain check and relay the signature to sign in as someone else. Requiring `APP_URL` closes this.
+- Guests no longer hear about tasks they can't open. Notifications, mentions, watchers, vote notices, presence and the timesheet export all check who can open the task. Whoever loses access to a task (made private, reassigned, moved out of a guest's projects, a project unshared or deleted) also loses their watch, its notifications and its My Day entry.
+- Anonymous ballots are held until the hour they arrived in has ended, then counted together in random order and stored with the hour only, so neither the live count nor the database shows when a ballot came in. Voting keys are registered when a member first unlocks their keys or clicks **Join anonymous votes**, never together with a ballot, and only their owner sees them. The audit file lists ballots by nullifier with hour stamps, and existing ballot and voter-tree times are rounded to the hour (migration 024).
+- Signing out closes the live connection that session opened, and live connections close once their session expires or is revoked. Over HTTPS only the `__Host-` session cookie is read, so a cookie planted by a sibling subdomain signs nobody in.
+- Pending sign-in challenges are capped per client as well as overall, so one client can't push out everyone else's sign-in. Rate limits and challenges count an IPv6 /64 as one client.
+- Private payout balances are read from the Ethereum node one address at a time, at random moments within `STEALTH_BALANCE_SPREAD_SECONDS`, with another payee's address mixed in, and listing payouts no longer calls the node. Vote snapshots read wallets in a shuffled order, a few at a time.
+- Wiping the workspace, purging, erasing a person or task, deleting a comment and sealing a task now also clear SQLite's write-ahead log, so deleted text doesn't linger in `nonos.db-wal`.
+- Bounty totals leave out private tasks the viewer can't open, admins included.
+- The AI draft and deck dialogs say that the text passes through the Nil server on its way to Anthropic. The README lists what the server still knows about a private task.
+- `image-size`, which pptxgenjs declares but never loads, is pinned to 2.0.4, past its denial-of-service fixes.
+
 ### Added
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.

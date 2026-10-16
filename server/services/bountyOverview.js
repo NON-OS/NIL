@@ -1,10 +1,13 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
 import treasury from './treasury.js';
+import visibleSql from './visibleSql.js';
 import toPayment from '../mappers/toPayment.js';
 
 // Promised, owed and paid per person and token. Admins see everyone. Members see only their
-// own rows and payments, because a transaction hash reveals the receiving wallet.
+// own rows and payments, because a transaction hash reveals the receiving wallet. Promised and
+// owed count only tasks the viewer can open: a private task's bounty stays between its creator
+// and assignee, admins included. Paid counts every confirmed payment, which is on-chain anyway.
 export default function bountyOverview(viewer) {
   const totals = new Map();
   const of = (userId, token) => {
@@ -13,7 +16,12 @@ export default function bountyOverview(viewer) {
     return totals.get(key);
   };
 
-  const open = sql.all("SELECT assignee_id, status, bounty, bounty_token FROM tasks WHERE bounty IS NOT NULL AND assignee_id IS NOT NULL AND deleted_at IS NULL AND status != 'canceled' AND (bounty_state IS NULL OR bounty_state != 'paid')");
+  const visible = visibleSql(viewer.id, 't');
+  const open = sql.all(
+    `SELECT t.assignee_id, t.status, t.bounty, t.bounty_token FROM tasks t WHERE t.bounty IS NOT NULL AND t.assignee_id IS NOT NULL AND t.deleted_at IS NULL
+     AND t.status != 'canceled' AND (t.bounty_state IS NULL OR t.bounty_state != 'paid') AND ${visible.where}`,
+    ...visible.params,
+  );
   for (const t of open) of(t.assignee_id, t.bounty_token || config.nox.symbol)[t.status === 'done' ? 'owed' : 'promised'] += BigInt(t.bounty);
   for (const p of sql.all("SELECT payee_id, amount, token FROM payments WHERE status = 'confirmed' AND payee_id IS NOT NULL")) of(p.payee_id, p.token).paid += BigInt(p.amount);
 

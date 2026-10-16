@@ -8,13 +8,25 @@ const NOX = (whole) => (BigInt(whole * 10) * 10n ** 17n).toString();
 
 // Log lines look like "<time> WARN  [config] <message>"; only the message matters here.
 const warningsIn = (stderr) => stderr.split('\n').filter((line) => line.includes(' [config] ')).map((line) => line.slice(line.indexOf('[config]')));
+// the two settings a server can't start without; cases that aren't about them use these
+const REQUIRED = { APP_URL: 'http://localhost:3000', NOX_RPC_URL: 'http://127.0.0.1:8545' };
 
 // Settings are read once, when the server starts, so each case starts its own process.
-function load(env) {
+function start(env) {
   const script = `const { default: config } = await import(${JSON.stringify(CONFIG)}); console.log(JSON.stringify(config));`;
-  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+  return spawnSync(process.execPath, ['--input-type=module', '-e', script], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+}
+
+function load(env, { required = REQUIRED } = {}) {
+  const run = start({ ...required, ...env });
   assert.equal(run.status, 0, run.stderr);
   return { config: JSON.parse(run.stdout), warnings: warningsIn(run.stderr) };
+}
+
+function refused(env) {
+  const run = start(env);
+  assert.equal(run.status, 1, `expected the server to refuse ${JSON.stringify(env)}`);
+  return run.stderr;
 }
 
 test('a clean configuration starts without warnings', () => {
@@ -128,10 +140,9 @@ test('a payment needs at least one confirmation', () => {
 });
 
 test('production warns about settings that leak or misdirect', () => {
-  const bare = load({ NODE_ENV: 'production' });
-  assert.equal(bare.warnings.length, 2);
-  assert.ok(bare.warnings.some((w) => w.includes('APP_URL is empty')));
-  assert.ok(bare.warnings.some((w) => w.includes('NOX_RPC_URL is the default public node')));
+  const named = load({ NODE_ENV: 'production', APP_URL: 'https://nil.example.com', TRUST_PROXY: '1', NOX_RPC_URL: 'https://ethereum-rpc.publicnode.com' });
+  assert.equal(named.warnings.length, 1);
+  assert.match(named.warnings[0], /NOX_RPC_URL is the default public node/);
 
   const noProxy = load({ NODE_ENV: 'production', APP_URL: 'https://nil.example.com', NOX_RPC_URL: 'http://10.0.0.5:8545' });
   assert.equal(noProxy.warnings.length, 1);
@@ -151,7 +162,7 @@ test('a setup token has to be long enough to resist guessing', () => {
 });
 
 test('STRICT_CONFIG refuses to start on any warning', () => {
-  const run = (env) => spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(CONFIG)});`], { env: { PATH: process.env.PATH, ...env }, encoding: 'utf8' });
+  const run = (env) => spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(CONFIG)});`], { env: { PATH: process.env.PATH, ...REQUIRED, ...env }, encoding: 'utf8' });
   const strict = run({ STRICT_CONFIG: '1', SESSION_DAYS: 'thirty', NOX_CONFIRMATIONS: '0' });
   assert.equal(strict.status, 1);
   assert.match(strict.stderr, /STRICT_CONFIG is on, so the server won’t start until the 2 warnings above are fixed/);
@@ -160,10 +171,43 @@ test('STRICT_CONFIG refuses to start on any warning', () => {
 });
 
 test('LOG_FORMAT=json writes one JSON object per line', () => {
-  const run = spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(CONFIG)});`], { env: { PATH: process.env.PATH, LOG_FORMAT: 'json', SESSION_DAYS: 'thirty' }, encoding: 'utf8' });
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', `await import(${JSON.stringify(CONFIG)});`], { env: { PATH: process.env.PATH, ...REQUIRED, LOG_FORMAT: 'json', SESSION_DAYS: 'thirty' }, encoding: 'utf8' });
   const lines = run.stderr.trim().split('\n').map((line) => JSON.parse(line));
   assert.equal(lines.length, 1);
   assert.deepEqual([lines[0].level, lines[0].scope], ['warn', 'config']);
   assert.match(lines[0].message, /SESSION_DAYS=thirty/);
   assert.ok(!Number.isNaN(Date.parse(lines[0].time)));
+});
+
+test('APP_URL is required, and plain http is only for this machine and onion addresses', () => {
+  assert.match(refused({ NOX_RPC_URL: 'off' }), /APP_URL is required/);
+  assert.match(refused({ APP_URL: 'http://nil.example.com', NOX_RPC_URL: 'off' }), /must start with https/);
+  assert.match(refused({ APP_URL: 'https://nil.example.com/app', NOX_RPC_URL: 'off' }), /no path/);
+  assert.match(refused({ APP_URL: 'not a url', NOX_RPC_URL: 'off' }), /isn’t a web address/);
+  for (const url of ['https://nil.example.com', 'http://localhost:5173', 'http://127.0.0.1:3000', 'http://abcdefghijklmnop.onion']) {
+    const { config } = load({ APP_URL: `${url}/`, NOX_RPC_URL: 'off' });
+    assert.equal(config.appUrl, url);
+    assert.ok(config.allowedOrigins.includes(url));
+  }
+});
+
+test('a server reached over the network must name its own Ethereum node', () => {
+  const stderr = refused({ APP_URL: 'https://nil.example.com' });
+  assert.match(stderr, /NOX_RPC_URL is required/);
+  assert.match(stderr, /own node/);
+  assert.equal(load({ NOX_RPC_URL: 'off' }, { required: { APP_URL: 'http://abcdefghijklmnop.onion' } }).config.nox.enabled, false);
+  // a local trial may use the public node, and is told so
+  const local = load({}, { required: { APP_URL: 'http://localhost:3000' } });
+  assert.equal(local.config.nox.rpcUrl, 'https://ethereum-rpc.publicnode.com');
+  assert.match(local.warnings.join('\n'), /public node/);
+});
+
+test('TRUST_PROXY takes hops or proxy addresses, never everyone', () => {
+  assert.equal(load({ TRUST_PROXY: '1' }).config.trustProxy, 1);
+  assert.deepEqual(load({ TRUST_PROXY: 'loopback, 172.18.0.0/16,10.0.0.2' }).config.trustProxy, ['loopback', '172.18.0.0/16', '10.0.0.2']);
+  for (const value of ['true', '*', 'everyone', '10.0.0.0/99']) {
+    const { config, warnings } = load({ TRUST_PROXY: value });
+    assert.equal(config.trustProxy, false, value);
+    assert.match(warnings.join('\n'), /TRUST_PROXY/);
+  }
 });

@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { ArrowUpRight } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
@@ -17,15 +17,21 @@ export default function MovePayoutModal({ payout, onClose, onMoved }: { payout: 
   const [to, setTo] = useState('');
   const [busy, setBusy] = useState(false);
   const [sent, setSent] = useState<string[]>([]);
+  const [balance, setBalance] = useState(payout.balance);
   const token = rewards.find((t) => t.symbol === payout.token);
   const linksYou = ADDRESS.test(to) && to.toLowerCase() === me.address?.toLowerCase();
+
+  // the listed balance may be a while old; moving needs what the address holds now
+  useEffect(() => {
+    stealth.balance(payout).then(setBalance).catch(toast.error);
+  }, [payout]);
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!token) return;
     setBusy(true);
     try {
-      const hashes = await stealth.move(payout, to.trim(), token.address);
+      const hashes = await stealth.move({ ...payout, balance: await stealth.balance(payout) }, to.trim(), token.address);
       setSent(hashes);
       toast.show(hashes.length ? 'Sent. The funds arrive once the network includes it.' : 'Nothing to move from this address.', { tone: 'success' });
       onMoved();
@@ -40,7 +46,7 @@ export default function MovePayoutModal({ payout, onClose, onMoved }: { payout: 
     <Modal title={`Move ${payout.taskRef} payout`} onClose={onClose} width={520}>
       <form className="modal-body" style={{ display: 'grid', gap: 14 }} onSubmit={submit}>
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          Sends {payout.balance ? tokenAmount(payout.balance.token, payout.token) : 'the tokens'} and any ETH left after gas from this one-time address. Your browser signs it with a key derived from your wallet; Nil only relays the signed transaction.
+          Sends {balance ? tokenAmount(balance.token, payout.token) : 'the tokens'} and any ETH left after gas from this one-time address. Your browser signs it with a key derived from your wallet; Nil only relays the signed transaction.
         </p>
         <input className="input mono" value={to} onChange={(e) => setTo(e.target.value)} placeholder="0x… destination address" aria-label="Destination address" spellCheck={false} autoComplete="off" />
         {linksYou && <div className="plan-notice">That’s your sign-in wallet. Moving the payout there links it to you on-chain.</div>}

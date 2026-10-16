@@ -9,6 +9,7 @@ import watchers from './watchers.js';
 import logActivity from './logActivity.js';
 import findMentions from './findMentions.js';
 import notify from './notify.js';
+import canSeeTask from './canSeeTask.js';
 import cipherText from '../lib/cipherText.js';
 import HttpError from '../lib/HttpError.js';
 
@@ -29,7 +30,8 @@ export default function addComment(actor, taskId, text, { sealed = false } = {})
   watchers.add(task.id, actor.id);
   logActivity(task.id, actor.id, 'comment', { commentId: id });
 
-  const mentioned = sealed ? [] : findMentions(body);
+  // a mention of someone who can't open the task neither tells them about it nor lets them in
+  const mentioned = sealed ? [] : findMentions(body).filter((userId) => canSeeTask(task, { id: userId }));
   const preview = sealed ? {} : { title: task.title, excerpt: body.slice(0, 140) };
   notify(mentioned, 'mention', task.id, actor.id, preview);
   notify([...watchers.of(task.id), task.assigneeId].filter((u) => !mentioned.includes(u)), 'comment', task.id, actor.id, preview);

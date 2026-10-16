@@ -1,5 +1,6 @@
 import express from 'express';
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
 import HttpError from '../lib/HttpError.js';
@@ -46,6 +47,7 @@ router.delete(
   route((req) => {
     const row = ownComment(req, { allowAdmin: true });
     sql.run('DELETE FROM comments WHERE id = ?', row.id);
+    checkpoint();
     toTaskViewers(row.task_id, { type: 'comment.delete', id: row.id, taskId: row.task_id });
     syncCount(row.task_id);
     return { ok: true };

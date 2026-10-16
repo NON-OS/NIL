@@ -59,7 +59,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
           </label>
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          This doc is end-to-end encrypted. Drafting sends your instruction{useDoc ? ' and the doc’s current text' : ''} to Anthropic for this one request. The result is added to the doc and encrypted in your browser before it’s saved.
+          This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ' and the doc’s current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to Anthropic without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
         </p>
       </div>
     </Modal>

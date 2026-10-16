@@ -7,6 +7,7 @@ import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import rateLimit from '../auth/rateLimit.js';
 import challenges from '../auth/challenges.js';
+import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
 import currentUser from '../auth/currentUser.js';
@@ -74,7 +75,7 @@ router.post(
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });
-    return { challengeId: challenges.issue('wallet', pending), message: pending.message };
+    return { challengeId: challenges.issue('wallet', pending, clientKey(req.ip)), message: pending.message };
   }),
 );
 

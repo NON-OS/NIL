@@ -7,6 +7,7 @@ import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import rateLimit from '../auth/rateLimit.js';
 import challenges from '../auth/challenges.js';
+import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
 import config from '../config.js';
@@ -50,7 +51,7 @@ router.post(
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });
-    return { challengeId: challenges.issue('apply', { taskId: item.id, address: address.toLowerCase(), name, pitch, message }), message };
+    return { challengeId: challenges.issue('apply', { taskId: item.id, address: address.toLowerCase(), name, pitch, message }, clientKey(req.ip)), message };
   }),
 );
 

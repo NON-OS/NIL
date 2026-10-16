@@ -1,5 +1,7 @@
+import clientKey from './clientKey.js';
+
 // Fixed-window limiter kept in memory. Fine for a single instance; use a shared store if you scale out.
-export default function rateLimit({ windowMs, max, key = (req) => req.ip, message = 'Too many attempts. Wait a few minutes and try again.' }) {
+export default function rateLimit({ windowMs, max, key = (req) => clientKey(req.ip), message = 'Too many attempts. Wait a few minutes and try again.' }) {
   const buckets = new Map();
 
   setInterval(() => {

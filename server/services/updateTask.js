@@ -1,4 +1,5 @@
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import HttpError from '../lib/HttpError.js';
 import loadTask from './loadTask.js';
 import visibleTask from './visibleTask.js';
@@ -6,6 +7,7 @@ import guestScope from './guestScope.js';
 import publishTask from './publishTask.js';
 import parseTaskPatch from './parseTaskPatch.js';
 import watchers from './watchers.js';
+import lostAccess from './lostAccess.js';
 import logTaskChanges from './logTaskChanges.js';
 import notifyTaskChanges from './notifyTaskChanges.js';
 import scheduleNext from './scheduleNext.js';
@@ -137,17 +139,15 @@ export default function updateTask(actor, id, body, { today } = {}) {
     }
     if (sealing.first) scrubPlaintext(id);
     if (patch.assigneeId) watchers.add(id, patch.assigneeId);
-    // Once private, nobody else keeps following it or holds notifications that quote its title.
-    const now = loadTask(id);
-    if (now.private) {
-      sql.run('DELETE FROM watchers WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
-      sql.run('DELETE FROM notifications WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
-      sql.run('DELETE FROM focus WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
-    }
+    // Made private, reassigned or moved out of a guest's projects: whoever can't open it any
+    // more stops following it and loses the notifications that quote its title.
+    lostAccess.task(id);
   });
   // the rows now describe the staged copies, so those take the files' place
   for (const file of staged) stagedFile.commit(file.id, file.sealed);
 
+  // the plain text a task had before it was sealed mustn't linger in the write-ahead log
+  if (sealing.first) checkpoint();
   const task = loadTask(id);
   if (statusChange?.after === 'done') issueReceipt(task, actor.id);
   else if (statusChange?.before === 'done') revokeReceipts(id);

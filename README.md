@@ -13,7 +13,7 @@ With Docker (Compose v2.24 or newer):
 ```bash
 git clone <your-nonos-repo-url> nonos
 cd nonos
-cp .env.example .env        # optional: edit settings
+cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
 ```
 
@@ -28,7 +28,7 @@ cp .env.example .env
 node --env-file=.env --disable-warning=ExperimentalWarning server/index.js
 ```
 
-For development, run `npm install` and `npm run dev`, then open `http://localhost:5173`.
+For development, run `npm install` and `APP_URL=http://localhost:5173 npm run dev`, then open `http://localhost:5173`.
 
 For a public server with HTTPS, follow [Production deployment](docs/deploy.md). Every setting is explained in [.env.example](.env.example).
 

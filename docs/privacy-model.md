@@ -57,7 +57,7 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy`, and HSTS over HTTPS.
 - Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run.
-- SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file. Trash is erased after 30 days by default and read notifications after 90 days.
+- SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is erased after 30 days by default and read notifications after 90 days.
 - Receipts are signed with a key kept outside the database, in `DATA_DIR/keys`.
 - CSV exports neutralise spreadsheet formulas.
 
