@@ -6,7 +6,7 @@ import blockAt from '../chain/blockAt.js';
 import treasury from './treasury.js';
 import rewardToken from '../lib/rewardToken.js';
 import formatUnits from '../lib/formatUnits.js';
-import suffixOf from '../billing/suffixOf.js';
+import sameSuffix from '../billing/sameSuffix.js';
 import settlePayment from './settlePayment.js';
 import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
@@ -59,8 +59,7 @@ export default async function verifyPayment(id) {
   let paying;
   if (payment.expected) {
     const expected = BigInt(payment.expected);
-    const suffix = suffixOf(expected, token.decimals);
-    paying = funded.filter((t) => t.value === expected || suffixOf(t.value, token.decimals) === suffix);
+    paying = funded.filter((t) => t.value === expected || sameSuffix(t.value, expected, payment.grid));
     if (!paying.length) {
       const sent = funded.map((t) => formatUnits(t.value, token.decimals, token.decimals)).join(' and ');
       return refuse(payment, `Nil asked for exactly ${formatUnits(expected, token.decimals, token.decimals)} ${token.symbol}, and this sent ${sent}. Without those last digits it can’t be told apart from a payment for something else, so it doesn’t count here.`);

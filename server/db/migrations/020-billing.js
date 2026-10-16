@@ -48,6 +48,8 @@ const billing = `
     symbol TEXT NOT NULL,
     decimals INTEGER NOT NULL,
     amount TEXT NOT NULL,
+    -- the step the price part of the amount moves in; everything below it is the suffix
+    grid TEXT NOT NULL,
     -- USD per whole token, scaled by 10^18, locked when the invoice was made
     rate TEXT NOT NULL,
     rate_source TEXT NOT NULL,
@@ -104,6 +106,7 @@ const billing = `
     token TEXT NOT NULL,
     amount TEXT NOT NULL,
     suffix INTEGER NOT NULL,
+    grid TEXT NOT NULL,
     start_block INTEGER NOT NULL,
     stealth_ephemeral TEXT,
     stealth_view_tag INTEGER,
@@ -114,6 +117,7 @@ const billing = `
 
   ALTER TABLE payments ADD COLUMN intent_id TEXT REFERENCES payment_intents(id) ON DELETE SET NULL;
   ALTER TABLE payments ADD COLUMN expected TEXT;
+  ALTER TABLE payments ADD COLUMN grid TEXT;
   ALTER TABLE payments ADD COLUMN start_block INTEGER;
   ALTER TABLE payments ADD COLUMN block_hash TEXT;
   ALTER TABLE payments ADD COLUMN cancelled_at INTEGER;

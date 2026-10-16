@@ -23,7 +23,8 @@ export default function coverage(invoice) {
     covered,
     amounts: amounts.map((a) => {
       const remaining = (BigInt(a.amount) * left) / SCALE;
-      return { ...a, received: arriving.get(a.token) ?? 0n, remaining, ask: partial ? askAmount(remaining, a.decimals, invoice.suffix) : BigInt(a.amount) };
+      const grid = BigInt(a.grid);
+      return { ...a, received: arriving.get(a.token) ?? 0n, remaining, ask: partial ? askAmount(remaining, grid, BigInt(a.amount) % grid) : BigInt(a.amount) };
     }),
   };
 }

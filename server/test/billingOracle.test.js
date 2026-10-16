@@ -91,7 +91,8 @@ test('prices, discounts and rounding are exact integer arithmetic', async () => 
   const { default: priceBreakdown } = await import('../billing/priceBreakdown.js');
   const { default: usdToUnits } = await import('../billing/usdToUnits.js');
   const { default: askAmount } = await import('../billing/askAmount.js');
-  const { default: suffixOf } = await import('../billing/suffixOf.js');
+  const { default: sameSuffix } = await import('../billing/sameSuffix.js');
+  const { default: amountGrid } = await import('../billing/amountGrid.js');
   const base = { periods: 3, freeSeats: 5, priceUsd: 12_000_000, seatUsd: 3_000_000, periodMs: 30 };
   assert.deepEqual(
     (({ seats, baseUsd, seatsUsd, stakerUsd, totalUsd, creditUsd, dueUsd }) => ({ seats, baseUsd, seatsUsd, stakerUsd, totalUsd, creditUsd, dueUsd }))(priceBreakdown({ ...base, people: 8, stakerPercent: 10, credit: 1_000_000 })),
@@ -108,8 +109,13 @@ test('prices, discounts and rounding are exact integer arithmetic', async () => 
   assert.equal(usdToUnits(1, 18, 3n * E18), 333_333_333_334n);
   assert.equal(usdToUnits(12_340_000, 6, E18), 12_340_000n);
   // rounded up to the price grid, then the suffix in the places below it
-  assert.equal(askAmount(12_345_678n, 6, 42), 12_350_042n);
-  assert.equal(askAmount(150n * E18 + 1n, 18, 7), 150n * E18 + 10n ** 14n + 7n * 10n ** 10n);
-  assert.equal(suffixOf(12_350_042n, 6), 42);
-  assert.equal(suffixOf(150n * E18 + 7n * 10n ** 10n + 1n, 18), null, 'digits below the places in use mean it isn’t ours');
+  const usdc = amountGrid(6);
+  const nox = amountGrid(18);
+  assert.deepEqual([usdc.low, usdc.grid, nox.low, nox.grid], [1n, 10_000n, 10n ** 10n, 10n ** 14n]);
+  assert.equal(askAmount(12_345_678n, usdc.grid, 42n * usdc.low), 12_350_042n);
+  assert.equal(askAmount(150n * E18 + 1n, nox.grid, 7n * nox.low), 150n * E18 + 10n ** 14n + 7n * 10n ** 10n);
+  // the same suffix under any price, but not with stray digits below the places in use
+  assert.equal(sameSuffix(99_990_042n, 12_350_042n, usdc.grid), true);
+  assert.equal(sameSuffix(12_350_043n, 12_350_042n, usdc.grid), false);
+  assert.equal(sameSuffix(150n * E18 + 7n * 10n ** 10n + 1n, 150n * E18 + 7n * 10n ** 10n, nox.grid), false);
 });

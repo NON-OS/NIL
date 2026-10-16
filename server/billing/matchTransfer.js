@@ -1,6 +1,6 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
-import suffixOf from './suffixOf.js';
+import sameSuffix from './sameSuffix.js';
 import coverage from './coverage.js';
 
 const DAY = 86_400_000;
@@ -13,12 +13,12 @@ const DAY = 86_400_000;
 // set, or when an admin here named the transaction themselves.
 export default function matchTransfer(transfer, { named = false, now = Date.now() } = {}) {
   const rows = sql.all(
-    `SELECT i.*, a.amount, a.decimals FROM billing_invoices i JOIN billing_amounts a ON a.invoice_id = i.id
+    `SELECT i.*, a.amount, a.grid FROM billing_invoices i JOIN billing_amounts a ON a.invoice_id = i.id
      WHERE a.token = ? AND i.expires_at > ?`,
     transfer.token, now - config.billing.lateDays * DAY,
   );
   for (const inv of rows) {
-    if (transfer.blockNumber < inv.start_block || suffixOf(transfer.value, inv.decimals) !== inv.suffix) continue;
+    if (transfer.blockNumber < inv.start_block || !sameSuffix(transfer.value, inv.amount, inv.grid)) continue;
     if (config.billing.slot || named || transfer.value === BigInt(inv.amount)) return inv.id;
     const topUp = inv.status === 'open' ? coverage(inv).amounts.find((a) => a.token === transfer.token)?.ask : null;
     if (transfer.value === topUp) return inv.id;

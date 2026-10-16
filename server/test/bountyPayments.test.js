@@ -24,7 +24,7 @@ const memberWallet = wallet();
 const ids = {};
 
 before(async () => {
-  srv = await startServer({ chain, env: { NOX_MISSING_TX_HOURS: '1' } });
+  srv = await startServer({ chain, env: { NOX_MISSING_TX_HOURS: '1', REWARD_TOKENS: 'USDC:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:6,GUSD:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd:2' } });
   ({ default: sql } = await import('../db/sql.js'));
   ({ default: checkPayments } = await import('../jobs/checkPayments.js'));
   await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
@@ -56,6 +56,13 @@ test('a payment starts in Nil with the exact amount still owed, ending in its ow
   // a task without an assignee wallet, or without a bounty, can't be paid
   const plain = (await owner('POST', '/api/tasks', { title: 'No bounty', assigneeId: ids.member })).data.task;
   assert.equal((await owner('POST', `/api/tasks/${plain.id}/payments/intent`, {})).status, 400);
+});
+
+test('a token with too few decimal places to carry a suffix is refused up front', async () => {
+  const t = (await owner('POST', '/api/tasks', { title: 'Two decimals', assigneeId: ids.member, bounty: '1000', bountyToken: 'GUSD' })).data.task;
+  const res = await owner('POST', `/api/tasks/${t.id}/payments/intent`, {});
+  assert.equal(res.status, 400);
+  assert.match(res.data.error, /GUSD has too few decimal places/);
 });
 
 test('sending the same transaction twice records one payment, and it pays only its own task', async () => {

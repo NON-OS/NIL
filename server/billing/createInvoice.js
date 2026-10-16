@@ -8,6 +8,7 @@ import creditBalance from './creditBalance.js';
 import liveSuffixes from './liveSuffixes.js';
 import pickSuffix from './pickSuffix.js';
 import askAmount from './askAmount.js';
+import amountGrid from './amountGrid.js';
 import usdToUnits from './usdToUnits.js';
 import settleInvoice from './settleInvoice.js';
 
@@ -43,8 +44,9 @@ export default async function createInvoice(actor, { kind, periods, people, retr
     if (dueUsd === 0) return;
     for (const t of q.tokens) {
       const usd = t.kind === 'usdc' ? dueUsd : noxDueUsd;
-      const amount = askAmount(usdToUnits(usd, t.decimals, t.rate), t.decimals, suffix);
-      sql.run('INSERT INTO billing_amounts (invoice_id, token, symbol, decimals, amount, rate, rate_source) VALUES (?, ?, ?, ?, ?, ?, ?)', id, t.address, t.symbol, t.decimals, String(amount), String(t.rate), t.rateSource);
+      const { low, grid } = amountGrid(t.decimals);
+      const amount = askAmount(usdToUnits(usd, t.decimals, t.rate), grid, BigInt(suffix) * low);
+      sql.run('INSERT INTO billing_amounts (invoice_id, token, symbol, decimals, amount, grid, rate, rate_source) VALUES (?, ?, ?, ?, ?, ?, ?, ?)', id, t.address, t.symbol, t.decimals, String(amount), String(grid), String(t.rate), t.rateSource);
     }
   });
   // fully covered by credit: nothing to send, so it's paid the moment it exists
