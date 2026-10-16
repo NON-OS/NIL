@@ -122,12 +122,12 @@ export default function InviteLinks({ isAdmin, projectOptions }: { isAdmin: bool
           </div>
         )}
         {past.length > 0 && (
-          <div>
-            <div className="eyebrow" style={{ marginBottom: 6 }}>Ended links</div>
+          <details className="invite-past">
+            <summary className="eyebrow">Ended links and who joined ({past.length})</summary>
             {past.map((inv) => (
               <InviteRow key={inv.id} invite={inv} />
             ))}
-          </div>
+          </details>
         )}
       </div>
     </section>

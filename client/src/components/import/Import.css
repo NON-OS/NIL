@@ -1,3 +1,10 @@
+/* a wide preview table scrolls inside the card instead of stretching it */
+.import-card,
+.import-step {
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
+}
+
 .import-step {
   display: grid;
   gap: 14px;

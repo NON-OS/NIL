@@ -9,8 +9,10 @@ const save = (next: FirstRun) => store.set({ firstRun: next });
 const firstRun = {
   load: () => http.get<FirstRun>('/first-run').then(save).catch(() => {}),
 
-  // Only tells the server once, and only while the card is up.
+  // Only tells the server once, and only while the card is up. Quick add works on every page,
+  // so the card's state may not be loaded yet; it's asked for once per page load.
   async quickAdded() {
+    if (!store.get().firstRun) await firstRun.load();
     const current = store.get().firstRun;
     if (!current?.active || current.quickAdd) return;
     save({ ...current, quickAdd: true });
