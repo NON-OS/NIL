@@ -493,7 +493,9 @@ It counts once its block is finalized, which on Ethereum usually takes under 15 
 
 ### A Nil Pro payment isn't found
 
-Nil matches a transfer to the treasury by its exact amount, so the amount must be sent as shown, last digits included. Some exchanges round withdrawals; such a payment can't be matched to an invoice. Paste the transaction hash under the invoice to see what Nil makes of it. If your node limits `eth_getLogs`, lower `PLAN_LOG_BLOCKS`.
+Nil matches a transfer to the treasury by its exact amount, so the amount must be sent as shown, last digits included. Some exchanges round withdrawals; such a payment can't be matched to an invoice. Paste the transaction hash under the invoice to see what Nil makes of it. If your node limits the range of one `eth_getLogs` request, lower `PLAN_LOG_BLOCKS`.
+
+Nodes also stop answering for logs older than some depth: the public node at 10,000 blocks, about 33 hours. If the server or its node was down longer than that while an invoice was open, Nil skips the blocks it can no longer read, and the invoice lists them with a note to paste the hash of any payment sent in that time. A full node of your own usually serves all of history; set `NOX_LOG_HISTORY_BLOCKS` to match it and nothing is skipped.
 
 ### Errors saying Nil Pro is needed (HTTP 402)
 

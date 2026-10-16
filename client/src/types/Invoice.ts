@@ -19,6 +19,8 @@ export default interface Invoice {
   overpaidUsd: number;
   grantedDays: number;
   payments: InvoicePayment[];
+  // blocks the server's Ethereum node could no longer show it while this invoice was open
+  missedBlocks: { symbol: string; from: number; to: number }[];
   retryOf: string | null;
   startBlock: number;
   createdAt: number;

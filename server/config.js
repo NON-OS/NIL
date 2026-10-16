@@ -140,6 +140,8 @@ const nox = Object.freeze({
   decimals: envNumber('NOX_DECIMALS', 18, { max: 77 }),
   // how long a recorded payment may wait for its transaction to appear before it fails
   missingTxMs: envNumber('NOX_MISSING_TX_HOURS', 24, { min: 1 }) * HOUR,
+  // how far under the head the node still answers eth_getLogs; the public node stops at 10,000
+  logHistoryBlocks: envNumber('NOX_LOG_HISTORY_BLOCKS', 10_000, { min: 500 }),
   explorer: explorer(env.NOX_EXPLORER),
 });
 
