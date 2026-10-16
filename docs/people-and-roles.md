@@ -24,7 +24,7 @@ An invite link works once and expires after 7 days. Pending links are listed und
 
 Admins can invite admins, members and guests. When an admin turns on **Members can invite people** under **Sharing**, members can invite members and guests too. They see and revoke only the links they made.
 
-On a server that charges for [Nil Pro](nox-and-nil-pro.md), a workspace whose plan has lapsed can't grow past its free seats (5 by default). Guests never take a seat.
+On a server that charges for [Nil Pro](nox-and-nil-pro.md), a workspace without Pro can't grow past its free seats (5 by default), and with paid Pro it can have as many people as the plan covers. Letting someone back in or making a guest a member takes a seat too. Guests never take a seat.
 
 ## Let NOX holders join without an invite
 
@@ -33,9 +33,9 @@ Admins can open the workspace to anyone who holds enough NOX:
 1. In **Settings → Team → Token holders**, type the **Minimum** amount.
 2. Click **Open the door**.
 
-The sign-in page then offers **Hold NOX? Join without an invite**. Newcomers join as members once the server has checked their wallet's balance.
+The sign-in page then offers **Hold NOX? Join without an invite**. Newcomers join as members once the server has checked their wallet. NOX in the wallet, NOX staked in the official staking contract and Zero-State Passes all count.
 
-People who joined this way are checked again every time they sign in. If all their linked wallets together hold less than the minimum, they can't sign in. To stop checking someone, click **Keep without NOX** next to their name under **Members**. Turn the **Let NOX holders join without an invite** switch off to make the workspace invite-only again.
+People who joined this way are checked again at every sign-in, every few hours, and whenever someone new joins through the door, so the same NOX can't let several wallets in one after another. If all their linked wallets together fall below the minimum, they get a notice and a few days (3 by default) with full access to hold enough again. After that they are signed out and can't sign in until they do. To stop checking someone, click **Keep without NOX** next to their name under **Members**. Turn the **Let NOX holders join without an invite** switch off to make the workspace invite-only again.
 
 The token-holder door needs on-chain features turned on, and an active plan on servers that charge for Nil Pro.
 

@@ -9,18 +9,19 @@
 | Capsule | One encrypted file with the whole workspace, used for backups and moving servers. See [Backups and moving](backups-and-moving.md) |
 | Commitment | A value that stands in for something without revealing it, such as a hashed task title in a receipt or the public part of a voting key |
 | Community mode | How a server runs when it doesn't charge for Nil Pro: every tool is unlocked |
-| Confirmations | The number of blocks added after the one holding a transaction. Nil waits for 3 by default before counting a payment |
 | Encrypted weighted vote | An anonymous vote where each ballot carries the voter's power, encrypted, and only the totals are ever decrypted. In beta |
 | ERC-20 | The common standard for tokens on Ethereum. NOX and USDC are ERC-20 tokens |
 | ERC-5564 | The standard for stealth addresses, which private payouts use |
+| Finality | The point after which a block can no longer be undone by a chain reorganisation. Nil counts a payment only once its block is final |
 | Fingerprint | A short code that identifies the workspace's signing key, such as `dac6-f4fb-e063-2afb` |
 | Grace period | Days after a Nil Pro plan runs out during which the paid tools keep working. 7 by default |
 | Guest | Someone who sees only the projects shared with them and the tasks assigned to them. See [Sharing and guests](sharing-and-guests.md) |
+| Invoice | What a workspace pays for Nil Pro: a price in US dollars and an exact amount in USDC or NOX, whose last digits identify the payment. See [NOX, voting power and Nil Pro](nox-and-nil-pro.md#pay-for-nil-pro) |
 | MCP | Model Context Protocol, the standard Nil uses to let AI assistants read and change tasks. See [AI assistants](ai-assistants.md) |
 | Meta-address | The public part of your private payout keys. Payers use it to work out a new one-time address for each payout |
 | My Day | Your private short list of tasks for today, on My work |
 | Nil | The private task app for you and your team |
-| Nil Pro | The paid plan on servers that charge for it, paid in NOX. See [NOX, voting power and Nil Pro](nox-and-nil-pro.md) |
+| Nil Pro | The paid plan on servers that charge for it, priced in US dollars and paid in USDC or NOX. See [NOX, voting power and Nil Pro](nox-and-nil-pro.md) |
 | NØNOS | The foundation that makes Nil |
 | NOX | The ERC-20 token Nil uses for bounties, voting power, the token-holder door and Nil Pro |
 | Nullifier | A number in an anonymous ballot that is unique to one member and one vote. It stops double voting without revealing who voted |
@@ -36,7 +37,7 @@
 | SIWE | Sign-In with Ethereum (EIP-4361), the standard Nil uses for wallet sign-in |
 | Snapshot | Everyone's voting power, read at one block when a weighted vote opens |
 | Token-holder door | A setting that lets anyone holding enough NOX join without an invite |
-| Treasury address | An extra address, such as a team's Safe, allowed to pay bounties and Nil Pro |
+| Treasury address | An extra address, such as a team's Safe, allowed to pay bounties |
 | Trustee | One of the three members who together hold the key of an encrypted weighted vote. Any two can decrypt the totals |
 | Unlock | Signing the encryption key message so your browser can open docs and private tasks in that tab |
 | Voting power | NOX held, plus NOX staked, plus Zero-State Passes held times the power per pass |

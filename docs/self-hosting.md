@@ -53,10 +53,10 @@ Every setting is an environment variable, and every one is optional. An empty va
 | `SOURCE_URL` | none | A link to your source code, shown in the app. The AGPL asks you to offer it if you run a modified version for others |
 | `NOX_RPC_URL` | a public node | The Ethereum node to use, or `off` to turn on-chain features off |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |
-| `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro in NOX. Unset means community mode |
+| `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro, in USDC or NOX. Unset means community mode |
 | `ANTHROPIC_API_KEY` | none | Turns on built-in AI |
 
-Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `MAX_CAPSULE_MB`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_CONFIRMATIONS`, `NOX_EXPLORER`), the paid plan (`PLAN_PRICE`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_FREE_SEATS`, `PLAN_TRIAL_DAYS`), private payouts, voting power and anonymous votes.
+Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `MAX_CAPSULE_MB`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_FINALITY_DEPTH`, `NOX_EXPLORER`), bounty payments (`PAYMENT_INTENT_DAYS`, `PAYMENT_WATCH_DAYS`), Nil Pro (`PLAN_PRICE_USD`, `PLAN_SEAT_USD`, `PLAN_FREE_SEATS`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_TRIAL_DAYS`, the NOX price and the perks), the token-holder door (`HOLDER_ZSP_NOX`, `HOLDER_RECHECK_HOURS`, `HOLDER_GRACE_DAYS`), private payouts, voting power and anonymous votes.
 
 A setting that is set but can't be used, such as a malformed number or treasury address, is named in a line starting with `[config]` in the startup log. The line says what the server does instead: use the default, or stay in community mode.
 
@@ -68,7 +68,7 @@ The server checks payments, balances, stakes and passes through `NOX_RPC_URL`. T
 
 ### Charging or not
 
-Leave `PLAN_TREASURY` unset to run in community mode, with every tool unlocked. Set it only if you run Nil for others and want them to pay you in NOX. See [NOX, voting power and Nil Pro](nox-and-nil-pro.md).
+Leave `PLAN_TREASURY` unset to run in community mode, with every tool unlocked. Set it only if you run Nil for others and want them to pay you for Nil Pro, in USDC or NOX. See [NOX, voting power and Nil Pro](nox-and-nil-pro.md) and [Charging for Nil Pro](deploy.md#charging-for-nil-pro).
 
 ### Built-in AI
 

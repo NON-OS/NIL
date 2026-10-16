@@ -89,11 +89,22 @@ Then decide on these:
 |---|---|
 | `NOX_RPC_URL` | Your own Ethereum node, or a provider you trust. The default public node sees every address and transaction your server looks up, and the server warns about it at startup. Use `off` if you don't want any on-chain features |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
-| `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run NØNOS for others and charge them in NOX |
+| `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run Nil for others and charge them for Nil Pro; see [Charging for Nil Pro](#charging-for-nil-pro) |
 | `ANTHROPIC_API_KEY` | Only if you want built-in AI. Text goes to Anthropic only when someone clicks an AI button |
 | `MAX_UPLOAD_MB` | Raise it if your team attaches large files (default 25) |
 
 Don't set `DATA_DIR` in Docker. The image already uses `/data`, which is the `nonos-data` volume. Every variable is explained in [.env.example](../.env.example).
+
+### Charging for Nil Pro
+
+Skip this unless you set `PLAN_TREASURY`. Billing runs inside each server and has to be right on its own, so set it up with care:
+
+- **Prices.** `PLAN_PRICE_USD` is the flat fee per period and `PLAN_SEAT_USD` the price per person above `PLAN_FREE_SEATS`. Invoices are paid in USDC at face value (`PLAN_USDC`) or in NOX with `PLAN_NOX_DISCOUNT` off.
+- **The NOX price.** Point `PLAN_NOX_POOL` at the Uniswap V3 NOX/WETH pool with the most liquidity. The server reads its 30-minute average price and multiplies it by Chainlink's ETH/USD feed. Set `PLAN_NOX_USD_MIN` and `PLAN_NOX_USD_MAX` close to the market, so a pushed pool or a broken feed falls back to `PLAN_NOX_USD` instead of mispricing invoices, and set `PLAN_NOX_USD` as that fallback. Without any of these, invoices are USDC only.
+- **Several workspaces on one treasury.** Give each server its own `PLAN_INVOICE_SLOT` (`index/count`, for example `17/500`) and all of them the same `PLAN_INVOICE_KEY`, a long random secret kept out of the workspaces' reach. Each server then asks for amounts no other server can ask for, so one transfer can never pay two workspaces, and under- and overpayments from any wallet are matched to the right invoice. Size `PLAN_SUFFIX_DIGITS` so each slot has room: a slot has about 10^digits / count suffixes, and each invoice holds one for its window plus `PLAN_LATE_DAYS`. With 4 digits (the default) and 50 servers, that's about 200 per server. A server that is alone on its treasury sets `PLAN_INVOICE_SLOT=0/1`.
+- **Finality.** Payments count once their block is finalized. If your node doesn't support the `finalized` tag, `NOX_FINALITY_DEPTH` (64) blocks under the head is used instead.
+- **Perks and the burn.** `PRO_FOR_ZSP`, `PLAN_STAKER_TIERS`, `BURN_SHARE` and `BURN_REPORT_URL` set the NOX perks and the published burn share; see [NOX, voting power and Nil Pro](nox-and-nil-pro.md#where-the-money-goes).
+- **What stays with the server.** The paid-until date, the trial's start, invoices and payments live in their own tables. Erasing the workspace keeps them (without who paid), and restoring a capsule brings none of them, so neither can reset a trial or replay a payment. A capsule moved to a new server starts that server's own trial, so a host that charges should give each customer one server and not hand out new ones for restores.
 
 ## 6. Add Caddy
 
@@ -396,7 +407,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] The startup log has no `[config]` lines, and `/healthz` shows the version you meant to deploy.
 - [ ] Responses carry `Strict-Transport-Security` and `Content-Security-Policy`.
 - [ ] `NOX_RPC_URL` points at a node you trust (or is `off`), and the app shows no Ethereum node errors.
-- [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for the plan. If set, the address, price and trial are right.
+- [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for Nil Pro. If set: the address, prices and trial are right, the NOX price bounds and fallback are set, and each server sharing the treasury has its own `PLAN_INVOICE_SLOT` and the shared `PLAN_INVOICE_KEY`.
 - [ ] `REWARD_TOKENS` matches your chain.
 - [ ] You created the workspace, the name is final, and you linked a second wallet.
 - [ ] There is a second admin, ideally a second owner.
@@ -478,11 +489,15 @@ That wallet isn't linked to any account. Sign in with a linked wallet, or ask an
 
 ### A payment stays pending
 
-It counts after `NOX_CONFIRMATIONS` blocks (3 by default) and is re-checked every minute. If the transaction never appears on-chain, it fails after 24 hours (for bounty payments, `NOX_MISSING_TX_HOURS`). A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address). Fix the cause, remove the failed payment and record the transaction again.
+It counts once its block is finalized, which on Ethereum usually takes under 15 minutes, and it's re-checked every minute. On a node without the `finalized` tag, `NOX_FINALITY_DEPTH` blocks are used instead. If the transaction never appears on-chain, it fails after `NOX_MISSING_TX_HOURS` (24 by default). A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address, or an amount without the digits Nil asked for). Fix the cause, remove the failed payment and pay again. A bounty payment that never gets mined can be cancelled and paid again.
+
+### A Nil Pro payment isn't found
+
+Nil matches a transfer to the treasury by its exact amount, so the amount must be sent as shown, last digits included. Some exchanges round withdrawals; such a payment can't be matched to an invoice. Paste the transaction hash under the invoice to see what Nil makes of it. If your node limits `eth_getLogs`, lower `PLAN_LOG_BLOCKS`.
 
 ### Errors saying Nil Pro is needed (HTTP 402)
 
-`PLAN_TREASURY` is set and the plan has lapsed. Pay in **Settings → Plan**, or unset `PLAN_TREASURY` for community mode on your own server.
+`PLAN_TREASURY` is set and Nil Pro has run out, or the team has more people than the plan covers. Pay in **Settings → Plan**, or unset `PLAN_TREASURY` for community mode on your own server.
 
 ### "AI assist is off"
 

@@ -18,9 +18,9 @@ The **Bounties** page lists **Open bounties**. One without an assignee is up for
 
 When the work is done, an admin opens the task, or finds it under **Ready to pay** on the Bounties page, and clicks **Pay** followed by the amount and the contributor's name.
 
-1. Nil first checks that the wallet you have open is linked to your account or is a treasury address, so you never send money it would refuse to count. Your wallet switches to the right network if needed, then shows a token transfer to the contributor's wallet. Check it and approve it.
+1. Nil first checks that the wallet you have open is linked to your account or is a treasury address, so you never send money it would refuse to count. Then it works out exactly what to send: what's still owed, ending in a few extra digits that identify this payment (for example 250.00004817 NOX). Your wallet switches to the right network if needed, then shows a token transfer of that amount to the contributor's wallet. Check it and approve it.
 2. Nil records the transaction and checks it on the blockchain. The bounty shows as confirming.
-3. Once the transaction has enough confirmations (3 blocks by default), the bounty shows as paid. This usually takes a minute or two.
+3. Once the block holding the transaction is final, the bounty shows as paid. On Ethereum this usually takes under 15 minutes.
 
 The contributor gets a notification and a signed payment receipt in their [proof of work](proof-of-work.md).
 
@@ -32,19 +32,24 @@ To pay, the task needs an assignee with a linked wallet. If nobody is assigned y
 
 Teams often pay from a shared wallet such as a Safe multisig. To allow that, add its address under **Treasury addresses** at the bottom of the Bounties page. You can add up to 10. Payments from those addresses count, as well as payments from any admin's own wallets.
 
-After paying from such a wallet, open the task, click **Paid another way?**, paste the transaction hash and click **Record payment**.
+To pay from such a wallet, open the task, click **Paid another way?** and then **Get the exact amount to send**. Send exactly that amount, last digits included, to the address shown, then paste the transaction hash and click **Record payment**. The amount stays good for 14 days (`PAYMENT_INTENT_DAYS`), long enough for a multisig to collect its signatures.
 
 ## When a payment isn't accepted
 
-Each payment appears in the **Payments** list on the Bounties page as **Confirming**, **Confirmed** or **Not accepted**. A payment isn't accepted when:
+Each payment appears in the **Payments** list on the Bounties page as **Waiting to be mined**, **Confirming**, **Confirmed**, **Confirmed, short**, **Confirmed, overpaid**, **Not accepted** or **Cancelled**. A payment isn't accepted when:
 
 - the transaction failed on the blockchain,
 - it doesn't move that token to the contributor's address,
 - the tokens came from a wallet that isn't the paying admin's or a treasury address,
-- it sent less than the bounty,
-- it never showed up on the blockchain within 24 hours.
+- the amount doesn't end in the digits Nil asked for, so it can't be told apart from a payment made for something else,
+- it was mined before the payment was started in Nil,
+- it never showed up on the blockchain within 24 hours (`NOX_MISSING_TX_HOURS`).
 
-The list shows the reason. Fix the cause, click **Remove** on the failed payment and record the right transaction. For a payment that is still confirming, **Check now** checks it straight away instead of waiting for the next check, which happens every minute.
+The list shows the reason. Fix the cause, click **Remove** on the failed payment and pay again. For a payment that is still waiting, **Check now** checks it straight away instead of waiting for the next check, which happens every minute.
+
+If less arrived than was asked for, the payment is confirmed as part of the bounty and the bounty shows as partly paid. Click **Pay the rest** to send what's still owed. If more arrived, the bounty is paid and the payment shows as overpaid.
+
+A transaction that is stuck and never gets mined can be cancelled: click **Cancel** on it, then pay again. Before that, it's best to speed the transaction up or cancel it in your wallet, so it can't land later. If it does land anyway, Nil still counts it for 7 days (`PAYMENT_WATCH_DAYS`), so the record always shows money that moved. A transaction that is already in a block can't be cancelled.
 
 ## The Bounties page
 
@@ -65,6 +70,8 @@ Below that come these sections:
 
 ## How the check works
 
-A payment counts only when all of these hold: the right token contract moved at least the full amount, the tokens came from the wallet of the admin who recorded it or from a treasury address, they went to the contributor's address, and the block has enough confirmations on top of it (`NOX_CONFIRMATIONS`, 3 by default). The server reads the chain through its Ethereum node. Pending payments are checked again every minute, and a transaction that never appears fails after 24 hours. A transaction hash can be recorded for only one payment.
+A payment counts only when all of these hold: the right token contract moved the tokens, they came from the wallet of the admin who recorded it or from a treasury address, they went to the contributor's address (or the one-time address of a private payout), the transaction was mined after the payment was started in Nil, the amount ends in the digits Nil asked for, and the block is final. The server reads the chain through its Ethereum node and asks it for the finalized block; on a node or chain without one, a block counts as final 64 blocks under the newest one (`NOX_FINALITY_DEPTH`). Until then it keeps the block's hash and checks it again, so a transaction that a chain reorganisation moves or drops is followed rather than counted too early.
+
+A transaction can pay only one thing: one bounty, or one [Nil Pro](nox-and-nil-pro.md) invoice. The starting block and the identifying digits also mean a payment made in one workspace can't be passed off as one made in another. Recording the same transaction twice for the same payment changes nothing. Pending payments are checked again every minute.
 
 Bounties can be paid in NOX or in any token on the server's reward list, set with `REWARD_TOKENS`. NOX always comes first, and USDC on Ethereum mainnet is on the list by default. Each task carries its own reward token, payments are checked against that token's contract, and totals, receipts, decks and notifications keep each token separate.
