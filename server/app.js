@@ -5,6 +5,7 @@ import { fileURLToPath } from 'node:url';
 import config from './config.js';
 import api from './routes/api.js';
 import mcp from './routes/mcp.js';
+import agentApi from './agents/api/agentApi.js';
 import listedBounties from './services/listedBounties.js';
 import csrfGuard from './security/csrfGuard.js';
 import securityHeaders from './security/securityHeaders.js';
@@ -41,6 +42,10 @@ export default function createApp() {
 
   // AI assistants connect here with a personal access key (Model Context Protocol).
   app.use('/mcp', noStore, mcp);
+
+  // Agents and agent frameworks call the same tools over plain HTTP, with an agent key or a
+  // personal access key; mounted before /api so the app's cookie and CSRF rules don't apply.
+  app.use('/api/agent/v1', noStore, agentApi);
 
   // Uploads stream as raw bytes; everything else in the API is JSON.
   const json = express.json({ limit: '1mb' });
