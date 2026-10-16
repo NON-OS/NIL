@@ -207,3 +207,20 @@
   overflow-wrap: anywhere;
   font-size: 12px;
 }
+
+.feed-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 1px solid var(--warning);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+}
+
+.feed-warning svg {
+  flex: none;
+  margin-top: 2px;
+  color: var(--warning);
+}

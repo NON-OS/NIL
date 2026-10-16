@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import PushSettings from './PushSettings';
+import CalendarFeedCard from './CalendarFeedCard';
 import toast from '../../state/toast';
 import storage from '../../lib/storage';
 import push from '../../actions/push';
 
-// Every way Nil reaches you outside the open screen: push on your devices, and a system
-// notification from a background tab.
+// Every way Nil reaches you outside the open screen: push on your devices, a system notification
+// from a background tab, and a calendar feed.
 export default function NotificationSettings() {
   const [desktop, setDesktop] = useState(() => storage.get('desktop-notifications', false) && typeof Notification !== 'undefined' && Notification.permission === 'granted');
 
@@ -43,6 +44,8 @@ export default function NotificationSettings() {
           </label>
         </div>
       </section>
+
+      <CalendarFeedCard />
     </>
   );
 }
