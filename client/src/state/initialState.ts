@@ -22,6 +22,7 @@ const initialState: State = {
   sharing: { invitePolicy: 'admins', shareLinks: false },
   plan: { unlocked: true },
   stealth: null,
+  firstRun: null,
   proposalsRev: 0,
   timer: null,
   docsUnlocked: false,
