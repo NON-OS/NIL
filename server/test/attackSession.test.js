@@ -139,3 +139,12 @@ test('personal keys and agent keys are limited, on MCP and REST alike', async ()
   assert.equal(await mcp(agent.data.key), 429);
   assert.equal(await rest(), 429);
 });
+
+test('signing in again on the same browser ends the session it held before', async () => {
+  const headers = { ...HTTPS, 'X-Forwarded-For': '198.51.100.9' };
+  const first = (await signIn(ownerWallet, headers)).headers.get('set-cookie').split(';')[0];
+  const second = (await signIn(ownerWallet, { ...headers, Cookie: first })).headers.get('set-cookie').split(';')[0];
+  assert.notEqual(first, second);
+  assert.equal((await get('/api/bootstrap', { ...HTTPS, Cookie: second })).status, 200);
+  assert.equal((await get('/api/bootstrap', { ...HTTPS, Cookie: first })).status, 401, 'the replaced token still works');
+});
