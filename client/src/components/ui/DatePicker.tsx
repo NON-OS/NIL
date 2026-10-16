@@ -34,14 +34,25 @@ export default function DatePicker({ value, onChange, children, title, className
   const [open, setOpen] = useState(false);
   const [month, setMonth] = useState(value ?? today);
   const [clock, setClock] = useState(time ?? '');
+  const sent = useRef<string | null>(time);
   const anchor = useRef<HTMLButtonElement>(null);
 
-  // time inputs change on every keystroke; the time is saved when you leave the field or press Enter
+  // A time input changes with every keystroke, so the time is saved once: when you leave the
+  // field, press Enter or close the picker, whichever comes first.
   const commitTime = () => {
-    if (onTimeChange && clock !== (time ?? '')) onTimeChange(clock || null);
+    const next = clock || null;
+    if (!onTimeChange || next === sent.current) return;
+    sent.current = next;
+    onTimeChange(next);
+  };
+
+  const close = () => {
+    commitTime();
+    setOpen(false);
   };
 
   const pick = (v: string | null) => {
+    commitTime();
     onChange(v);
     setOpen(false);
   };
@@ -59,12 +70,13 @@ export default function DatePicker({ value, onChange, children, title, className
           e.stopPropagation();
           setMonth(value ?? today);
           setClock(time ?? '');
+          sent.current = time;
           setOpen((o) => !o);
         }}
       >
         {children}
       </button>
-      <Popover anchor={anchor} open={open} onClose={() => setOpen(false)} width={272}>
+      <Popover anchor={anchor} open={open} onClose={close} width={272}>
         <div className="datepicker">
           <div className="datepicker-quick">
             {quickPicks(today).map((q) => (
@@ -117,8 +129,7 @@ export default function DatePicker({ value, onChange, children, title, className
                 onKeyDown={(e) => {
                   if (e.key === 'Enter') {
                     e.preventDefault();
-                    commitTime();
-                    setOpen(false);
+                    close();
                   }
                 }}
               />
@@ -128,6 +139,7 @@ export default function DatePicker({ value, onChange, children, title, className
                   className="btn btn-ghost btn-sm"
                   onClick={() => {
                     setClock('');
+                    sent.current = null;
                     onTimeChange(null);
                   }}
                 >
