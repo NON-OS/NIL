@@ -129,7 +129,8 @@ export default async function executeRun(row, signal) {
             continue;
           }
           const out = runTool(principal, call.name, call.input, { via: 'runner', runId: run.id, actingFor: run.acting_for });
-          if (out.ok && byName.get(call.name)?.write) changes += 1;
+          // a write that turned out to change nothing (changed: false) isn't counted
+          if (out.ok && byName.get(call.name)?.write && out.data?.changed !== false) changes += 1;
           if (out.pending) pending.push(out.pending);
           log.add(out.pending ? 'approval' : out.ok ? 'tool' : 'refused', { tool: call.name, input: call.input, output: resultText(out), ok: out.ok || Boolean(out.pending) });
           results.push({ id: call.id, content: resultText(out), isError: !out.ok && !out.pending });
@@ -179,7 +180,7 @@ export default async function executeRun(row, signal) {
   if (stop === 'done' && !pending.length && triggers.includes('assigned') && agent.doneStatus !== 'none' && now && now.assigneeId === agent.id && !['done', 'canceled', agent.doneStatus].includes(now.status)) {
     const out = runTool(principal, 'update_task', { key: `${task.number}`, status: agent.doneStatus }, { via: 'runner', runId: run.id, actingFor: run.acting_for });
     log.add(out.ok ? 'tool' : 'refused', { tool: 'update_task', input: { status: agent.doneStatus }, output: resultText(out), ok: out.ok });
-    if (out.ok) changes += 1;
+    if (out.ok && out.data.changed) changes += 1;
   }
 
   const secrets = knownSecrets(agent);

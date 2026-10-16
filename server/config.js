@@ -154,7 +154,7 @@ const agents = Object.freeze({
   maxRunTokens: envNumber('AGENT_MAX_TOKENS_PER_RUN', 300_000, { min: 1000 }),
   maxDayTokens: envNumber('AGENT_MAX_TOKENS_PER_DAY', 3_000_000, { min: 1000 }),
   maxOutputTokens: envNumber('AGENT_MAX_OUTPUT_TOKENS', 32_000, { min: 256, max: 128_000 }),
-  runTimeoutMs: envNumber('AGENT_RUN_TIMEOUT_SECONDS', 600, { min: 5 }) * 1000,
+  runTimeoutMs: envNumber('AGENT_RUN_TIMEOUT_SECONDS', 600, { min: 1 }) * 1000,
   concurrency: envNumber('AGENT_CONCURRENCY', 2, { min: 1, max: 32 }),
   retries: envNumber('AGENT_RETRIES', 3, { max: 10 }),
   pollMs: envNumber('AGENT_POLL_SECONDS', 5, { min: 1, max: 300 }) * 1000,

@@ -42,14 +42,14 @@ export default function runTool(principal, name, args, { via, runId = null, acti
       record('denied', { reason: blocked.code });
       return failure(blocked.status, blocked.code, blocked.message);
     }
-    if (!agent.tools.includes(name)) {
-      record('denied', { reason: 'not on allowlist' });
-      return failure(403, 'tool_not_allowed', `This agent isn’t allowed to use ${name}. An admin can add it in Settings → Agents.`);
-    }
   }
   if (tool.write && scope !== 'write') {
     record('denied', { reason: 'read-only' });
     return failure(403, 'read_only', agent ? 'This agent is read-only. An admin can give it write access in Settings → Agents.' : 'This key is read-only. Create a key with write access in Nil settings to change things.');
+  }
+  if (agent && !agent.tools.includes(name)) {
+    record('denied', { reason: 'not on allowlist' });
+    return failure(403, 'tool_not_allowed', `This agent isn’t allowed to use ${name}. An admin can add it in Settings → Agents.`);
   }
 
   let input;

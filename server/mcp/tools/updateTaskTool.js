@@ -63,6 +63,6 @@ export default {
 
     const { task: updated, spawned } = updateTask(user, task.id, patch, { today: calendar.today() });
     guard.done(task.id);
-    return { updated: taskOut(updated, { full: true }), nextRecurrence: spawned ? taskOut(spawned) : null };
+    return { updated: taskOut(updated, { full: true }), changed: updated.updatedAt !== task.updatedAt, nextRecurrence: spawned ? taskOut(spawned) : null };
   },
 };
