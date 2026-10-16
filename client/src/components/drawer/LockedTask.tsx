@@ -29,9 +29,9 @@ export default function LockedTask({ task }: { task: Task }) {
       <Lock size={18} />
       <div>
         <h3>Encrypted</h3>
-        {!unlocked && <p>Its title, notes, checklist and comments are locked with keys from your wallet. Unlock to read them in this tab.</p>}
-        {unlocked && !hasKey && <p>This task was sealed before you had a key. It opens for you the next time its creator uses Nil.</p>}
-        {unlocked && hasKey && <p>Your key couldn’t open this task. If you signed in with a different wallet before, switch back to it.</p>}
+        {!unlocked && <p>Its title, notes, checklist and comments are encrypted with keys your wallet unlocks. Unlock to read them in this tab.</p>}
+        {unlocked && !hasKey && <p>This task hasn’t been shared with your key yet. It opens for you once its creator or assignee confirms your key in Nil.</p>}
+        {unlocked && hasKey && <p>This task couldn’t be opened and checked here: either it was sealed to a key you no longer hold, or Nil can’t confirm a teammate wrote it. If someone’s key changed recently, confirm it in Settings, under Security.</p>}
       </div>
       {!unlocked && (
         <button type="button" className="btn btn-primary btn-sm" onClick={unlock} disabled={busy}>

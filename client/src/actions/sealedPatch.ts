@@ -14,9 +14,11 @@ async function moveComments(task: Task, to: TaskKey | null) {
   const { comments } = await http.get<{ comments: Comment[] }>(`/tasks/${task.id}/detail`);
   return Promise.all(
     comments.map(async (c) => {
-      const open = await commentText.open(task, c);
-      if (open.locked) throw new Error('A comment on this task can’t be opened here, so the task can’t change who can read it.');
-      return { id: c.id, body: to ? await commentText.seal(to, c.authorId, open.body) : open.body };
+      try {
+        return { id: c.id, body: await commentText.move(task, c, to) };
+      } catch {
+        throw new Error('A comment on this task can’t be opened and checked here, so the task can’t change who can read it.');
+      }
     }),
   );
 }
@@ -41,7 +43,7 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   if (opening) return { ...rest, private: false, ...words, comments: await moveComments(task, null) };
   if (sealing || rehoming) {
     const fresh = taskKeys.fresh();
-    const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId]);
+    const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId], { ask: true });
     return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys), comments: await moveComments(task, fresh) };
   }
   return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys) };

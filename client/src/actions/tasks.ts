@@ -19,7 +19,7 @@ async function sealedNew(input: Partial<Task>) {
   await vault.unlock();
   const { title = '', description = '', checklist = [], ...rest } = input;
   const fresh = taskKeys.fresh();
-  const keys = await taskKeys.wrap(fresh.key, [store.get().me!.id, input.assigneeId ?? null]);
+  const keys = await taskKeys.wrap(fresh.key, [store.get().me!.id, input.assigneeId ?? null], { ask: true });
   return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys) };
 }
 

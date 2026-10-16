@@ -38,6 +38,8 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
   const latest = useRef(doc);
   latest.current = doc;
   const canManage = doc.createdBy === me.id || isAdminUser(me);
+  // text nobody on the team can be shown to have written stays read-only until it's re-keyed
+  const readOnly = doc.warning === 'unverified';
 
   useEffect(() => {
     if (status === 'dirty' || status === 'saving') return;
@@ -64,6 +66,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
   );
 
   const edit = (nextTitle: string, nextBody: string) => {
+    if (readOnly) return;
     setTitle(nextTitle);
     setBody(nextBody);
     setStatus('dirty');
@@ -83,7 +86,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
     }
   };
 
-  const label = { saved: 'Encrypted · saved', dirty: 'Unsaved', saving: 'Encrypting…', conflict: 'Conflict' }[status];
+  const label = readOnly ? 'Not verified' : { saved: 'Encrypted · saved', dirty: 'Unsaved', saving: 'Encrypting…', conflict: 'Conflict' }[status];
 
   return (
     <section className="doc-editor" aria-label="Doc">
@@ -131,10 +134,20 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
           </button>
         </div>
       )}
+      {doc.warning === 'unverified' && (
+        <div className="doc-conflict" role="alert">
+          <span>Nil can’t confirm a teammate wrote this version: no signature on it checks out against the keys you know. The server may have changed it, so don’t rely on it. {canManage ? 'To keep it, open Who can read this and save: the doc gets a new key and your signature.' : 'Its creator or an admin can re-key it.'} If someone’s key changed recently, check it first.</span>
+        </div>
+      )}
+      {doc.warning === 'rollback' && (
+        <div className="doc-conflict" role="alert">
+          <span>This is an older version than one you’ve already opened here. The server may be holding back newer changes.</span>
+        </div>
+      )}
       <div className="doc-body">
         <div>
-          <input className="doc-title" value={title} onChange={(e) => edit(e.target.value, body)} placeholder="Untitled" aria-label="Title" maxLength={200} />
-          {preview ? <Markdown text={body || '_Nothing written yet._'} /> : <textarea className="doc-text" value={body} onChange={(e) => edit(title, e.target.value)} placeholder="Start writing. Markdown works: # headings, **bold**, - lists, [links](https://…)" aria-label="Doc text" />}
+          <input className="doc-title" value={title} onChange={(e) => edit(e.target.value, body)} placeholder="Untitled" aria-label="Title" maxLength={200} readOnly={readOnly} />
+          {preview ? <Markdown text={body || '_Nothing written yet._'} /> : <textarea className="doc-text" value={body} onChange={(e) => edit(title, e.target.value)} placeholder="Start writing. Markdown works: # headings, **bold**, - lists, [links](https://…)" aria-label="Doc text" readOnly={readOnly} />}
         </div>
       </div>
       {sharing && <ShareDocModal doc={doc} canManage={canManage} onClose={() => setSharing(false)} onDone={onReload} />}
