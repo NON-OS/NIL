@@ -8,15 +8,32 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 - **Private tasks are end-to-end encrypted.** A private task's title, notes, checklist and comments are sealed in the browser with a key only its creator and assignee hold (X25519 key wrapping and AES-256-GCM, the same scheme as docs). The server stores ciphertext and refuses plain text for a private task. Reassigning one seals it under a fresh key and re-encrypts its comments. Private tasks from before this change are sealed the next time their creator or assignee unlocks, and the plain copies the server kept (old titles in the history, notification previews, receipt titles) are wiped. The new-task box has a Private switch, so a private task is encrypted from its first save.
 - AI assistants can't create private tasks and see encrypted ones only as placeholders. Files can't be attached to private tasks until files are encrypted too.
+- **The calendar has an agenda on phones.** Below 600px a compact month picks the day, that day's tasks sit underneath with an Add button, and the rest of the month follows. Every task has a Move button that opens the date picker, so rescheduling works without dragging.
+- **The board has column tabs on phones**, and cards on touch screens have a Move button that changes their column without a drag.
+- The task panel has a Mark complete button, which reads Reopen on a finished or canceled task.
+- Search is one tap from the top bar whenever the sidebar is folded away.
 
 ### Changed
 
 - **The app is now called Nil.** NØNOS stays as the name of the foundation behind it. The app shows the Nil lockup (the official Ø mark with letters drawn from the same Geist cut as the NØNOS wordmark, see `scripts/brand/nil-wordmark.py`), and its title, install name, sign-in page and messages say Nil. The paid plan is called Nil Pro. Messages your wallet signs to derive keys are unchanged, so every existing key still works.
 - New workspaces start with an empty name instead of NØNOS.
+- On touch screens every control is at least 44 by 44 pixels: list checkboxes, status icons, Mark as done, My Day, header and panel buttons, filter chips and tabs. Small icons keep their size and get a larger invisible hit area, so desktop looks the same.
+- Text fields are 16px on touch screens, so iOS no longer zooms in when one takes focus.
+- Faint text is darker (4.97:1 on white instead of 3.16:1), and the backlog, canceled and in-progress status icons clear 3:1. Body text is at least 13px; only metadata such as dates, keys and counts uses the 12px size.
+- Icon buttons in the task panel and the docs toolbar show their names as tooltips with a mouse. On touch and narrow screens the task panel prints the names under its tools, and the docs toolbar moves history, download and print into a menu with Delete set apart at the bottom.
+- Unassigned tasks show an outlined assign icon instead of a dashed question mark.
+- Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
+- The comment box only mentions Ctrl+Enter where there is likely a keyboard.
 
 ### Fixed
 
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
+- Settings scrolled sideways on phones (up to 929px wide on Team), and long switch descriptions were cut off on desktop. My work's side column could also push the page wider than the screen.
+- The task panel now keeps keyboard focus inside while it is open and returns it to where it was on close. Dialogs share the same code, and no longer move focus each time they re-render.
+- The task title, checklist steps, the My work add field and text inputs show a clear focus ring.
+- A My work row and a board card were buttons with other buttons inside, and Space did nothing on a row. Their controls are now separate buttons. Pressing Enter or Space on a button inside a card no longer starts a keyboard drag.
+- The closed sidebar on narrow screens could still be reached with Tab.
+- The docs delete button and the command palette's results list had no accessible name.
 
 ## 3.0.0 (2026-10-15)
 
