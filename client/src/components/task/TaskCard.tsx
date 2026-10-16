@@ -35,7 +35,7 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
   const presence = useStore((s) => s.presence);
   const meId = useStore((s) => s.me?.id);
   const viewers = useMemo(() => presence.filter((p) => p.userId !== meId && p.viewing.includes(task.id)).map((p) => users[p.userId]).filter(Boolean), [presence, users, meId, task.id]);
-  const done = task.checklist.filter((i) => i.done).length;
+  const steps = task.steps;
 
   return (
     <div
@@ -80,12 +80,12 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
         <DueBadge task={task} />
         <BountyChip task={task} />
         <LabelChips ids={task.labels} max={2} />
-        {task.checklist.length > 0 && (
-          <span className="progress-mini num" title={`${done} of ${task.checklist.length} steps done`}>
+        {steps && steps.total > 0 && (
+          <span className="progress-mini num" title={`${steps.done} of ${steps.total} steps done`}>
             <b>
-              <i style={{ width: `${(done / task.checklist.length) * 100}%` }} />
+              <i style={{ width: `${(steps.done / steps.total) * 100}%` }} />
             </b>
-            {done}/{task.checklist.length}
+            {steps.done}/{steps.total}
           </span>
         )}
         {task.commentCount > 0 && (

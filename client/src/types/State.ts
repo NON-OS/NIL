@@ -18,6 +18,7 @@ import type RewardToken from './RewardToken';
 import type SharingPolicy from './SharingPolicy';
 import type Plan from './Plan';
 import type StealthInfo from './StealthInfo';
+import type TaskArchive from './TaskArchive';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -30,6 +31,7 @@ export default interface State {
   labels: Record<string, Label>;
   goals: Record<string, Goal>;
   tasks: Record<string, Task>;
+  archive: TaskArchive;
   focus: FocusItem[];
   unread: number;
   inbox: InboxItem[] | null;
@@ -52,6 +54,8 @@ export default interface State {
   // taskId -> userId -> when their "typing" hint expires
   typing: Record<string, Record<string, number>>;
   connected: boolean;
+  // a newer version of the web app has been deployed since this tab loaded
+  updateReady: boolean;
   detail: TaskDetail | null;
   quickAdd: { open: boolean; defaults?: Partial<Task> };
   palette: boolean;

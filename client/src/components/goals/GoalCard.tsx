@@ -12,7 +12,8 @@ const fmt = (n: number) => new Intl.NumberFormat(undefined, { notation: Math.abs
 
 export default function GoalCard({ goal, tasks, onOpen }: { goal: Goal; tasks: Task[]; onOpen: () => void }) {
   const owner = useStore((s) => (goal.ownerId ? s.users[goal.ownerId] : undefined));
-  const p = goalProgress(goal, tasks);
+  const archive = useStore((s) => s.archive);
+  const p = goalProgress(goal, tasks, archive);
   const daysLeft = goal.targetDate ? dates.diff(goal.targetDate, dates.today()) : null;
 
   return (
@@ -37,7 +38,7 @@ export default function GoalCard({ goal, tasks, onOpen }: { goal: Goal; tasks: T
       </div>
       <div className="goal-meta">
         <span>
-          <ListChecks size={14} /> <span className="num">{p.done}/{p.linked.length}</span> tasks
+          <ListChecks size={14} /> <span className="num">{p.done}/{p.total}</span> tasks
         </span>
         {p.metricPct !== null && (
           <span>

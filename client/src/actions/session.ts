@@ -1,6 +1,9 @@
 import http from '../api/http';
 import revealTask from '../state/revealTask';
+import keepWords from '../state/keepWords';
 import openSealed from './openSealed';
+import archive from './archive';
+import checkBuild from './checkBuild';
 import store from '../state/store';
 import records from '../state/records';
 import toast from '../state/toast';
@@ -19,6 +22,7 @@ import type RewardToken from '../types/RewardToken';
 import type SharingPolicy from '../types/SharingPolicy';
 import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
+import type TaskArchive from '../types/TaskArchive';
 import privateKeys from '../state/privateKeys';
 import keyring from '../state/keyring';
 
@@ -30,6 +34,7 @@ interface Bootstrap {
   labels: Label[];
   goals: Goal[];
   tasks: Task[];
+  archive: TaskArchive;
   focus: FocusItem[];
   unread: number;
   ai: boolean;
@@ -41,10 +46,18 @@ interface Bootstrap {
   stealth: StealthInfo | null;
   timer: TimeEntry | null;
   sourceUrl: string | null;
+  build: string | null;
 }
 
+// Re-bootstrapping after a reconnect is spread over this long, so a server that just restarted
+// isn't asked by every open tab in the same second.
+const RESYNC_SPREAD_MS = 8000;
+let resync: number | undefined;
+
 async function load() {
-  const b = await http.get<Bootstrap>('/bootstrap');
+  const b = await http.get<Bootstrap>('/bootstrap?tasks=cards');
+  const held = store.get().tasks;
+  archive.reset();
   store.set({
     phase: 'ready',
     me: b.me,
@@ -53,7 +66,8 @@ async function load() {
     projects: records.fromList(b.projects),
     labels: records.fromList(b.labels),
     goals: records.fromList(b.goals),
-    tasks: records.fromList(b.tasks.map(revealTask)),
+    tasks: records.fromList(b.tasks.map((task) => keepWords(held[task.id], revealTask(task)))),
+    archive: b.archive,
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
@@ -66,11 +80,17 @@ async function load() {
     timer: b.timer,
     sourceUrl: b.sourceUrl,
   });
+  checkBuild(b.build);
   void openSealed();
-  socket.connect(() => load().catch(() => {}));
+  socket.connect(() => {
+    // anything that happened while we were offline is picked up by a fresh bootstrap
+    clearTimeout(resync);
+    resync = window.setTimeout(() => load().catch(() => {}), Math.random() * RESYNC_SPREAD_MS);
+  });
 }
 
 function signedOut(message?: string) {
+  clearTimeout(resync);
   socket.disconnect();
   keyring.lock();
   privateKeys.lock();

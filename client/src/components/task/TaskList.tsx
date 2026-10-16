@@ -1,5 +1,5 @@
 import './TaskList.css';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
 import { ChevronDown, Plus } from 'lucide-react';
 import TaskRow from './TaskRow';
 import StatusIcon from '../ui/StatusIcon';
@@ -20,6 +20,8 @@ interface Props {
   groupBy: GroupKey;
   sortBy: SortKey;
   defaults?: Partial<Task>;
+  // shown after the last row, inside the scrolling list
+  footer?: ReactNode;
 }
 
 // What a new task created from a group header should inherit.
@@ -33,7 +35,7 @@ function groupDefaults(groupBy: GroupKey, group: TaskGroup): Partial<Task> {
   return {};
 }
 
-export default function TaskList({ tasks, groupBy, sortBy, defaults }: Props) {
+export default function TaskList({ tasks, groupBy, sortBy, defaults, footer }: Props) {
   const users = useStore((s) => s.users);
   const projects = useStore((s) => s.projects);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -105,6 +107,7 @@ export default function TaskList({ tasks, groupBy, sortBy, defaults }: Props) {
             {!collapsed.has(g.key) && g.tasks.map((t) => <TaskRow key={t.id} task={t} selected={selected.has(t.id)} onSelect={onSelect} />)}
           </div>
         ))}
+        {footer}
       </div>
       <BulkBar ids={[...selected]} onClear={() => setSelected(new Set())} />
     </>

@@ -1,8 +1,8 @@
-// NONOS service worker. It makes the app installable and open instantly, and it never
-// stores anything from /api: task data lives on your server, not in the browser's cache.
-const SHELL = 'nonos-shell-v3';
+// Nil service worker. It makes the app installable and open instantly, and it never stores
+// anything from /api: task data lives on your server, not in the browser's cache.
+const SHELL = 'nonos-shell-v4';
 const ASSETS = 'nonos-assets';
-const MAX_ASSETS = 80;
+const MAX_ASSETS = 120;
 
 self.addEventListener('install', (event) => {
   event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(['/', '/favicon.svg', '/manifest.webmanifest'])));
@@ -18,12 +18,38 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+const typeOf = (response) => (response.headers.get('Content-Type') || '').toLowerCase();
+
+// Only a real build file is kept. A server that answers a missing file with the app's page
+// (an older Nil, or a misconfigured proxy) must never have that page stored as a script or a
+// stylesheet, where it would break every later load of that file.
+function isBuildFile(response) {
+  return response.ok && response.type === 'basic' && !typeOf(response).startsWith('text/html');
+}
+
 // Hashed build files never change, so the oldest can go once the cache grows past a cap.
 async function keepAsset(request, response) {
   const cache = await caches.open(ASSETS);
   await cache.put(request, response);
   const keys = await cache.keys();
   for (const old of keys.slice(0, Math.max(0, keys.length - MAX_ASSETS))) await cache.delete(old);
+}
+
+// The newest app from the network, stored for offline use. While the server is unreachable or
+// restarting for a deploy, the stored one opens instead of an error page.
+async function page(event) {
+  try {
+    const response = await fetch(event.request);
+    if (response.ok && typeOf(response).startsWith('text/html')) {
+      const copy = response.clone();
+      event.waitUntil(caches.open(SHELL).then((cache) => cache.put('/', copy)));
+      return response;
+    }
+    if (response.status >= 500) return (await caches.match('/')) || response;
+    return response;
+  } catch {
+    return (await caches.match('/')) || Response.error();
+  }
 }
 
 self.addEventListener('fetch', (event) => {
@@ -38,7 +64,7 @@ self.addEventListener('fetch', (event) => {
         (hit) =>
           hit ||
           fetch(request).then((response) => {
-            if (response.ok) event.waitUntil(keepAsset(request, response.clone()));
+            if (isBuildFile(response)) event.waitUntil(keepAsset(request, response.clone()));
             return response;
           }),
       ),
@@ -46,15 +72,5 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Pages: always try the network for the newest app, fall back to the cached shell offline.
-  if (request.mode === 'navigate') {
-    event.respondWith(
-      fetch(request)
-        .then((response) => {
-          if (response.ok) event.waitUntil(caches.open(SHELL).then((cache) => cache.put('/', response.clone())));
-          return response;
-        })
-        .catch(() => caches.match('/')),
-    );
-  }
+  if (request.mode === 'navigate') event.respondWith(page(event));
 });

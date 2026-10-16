@@ -1,5 +1,5 @@
 import './CalendarView.css';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { DndContext, DragOverlay, PointerSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent } from '@dnd-kit/core';
 import { CalendarDays, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
@@ -10,6 +10,8 @@ import useTasks from '../hooks/useTasks';
 import useFilter from '../hooks/useFilter';
 import taskActions from '../actions/tasks';
 import detail from '../actions/detail';
+import archive from '../actions/archive';
+import toast from '../state/toast';
 import ui from '../actions/ui';
 import filterTasks from '../lib/filterTasks';
 import dates from '../lib/dates';
@@ -95,6 +97,13 @@ export default function CalendarView() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }), useSensor(TouchSensor, { activationConstraint: { delay: 200, tolerance: 6 } }));
 
   const tasks = useMemo(() => filterTasks(all, filter, { meId, prefix }), [all, filter, meId, prefix]);
+  const grid = useMemo(() => dates.monthGrid(month), [month]);
+
+  // finished tasks due in a month long past are in the archive; they're fetched once shown
+  useEffect(() => {
+    if (filter.showClosed) archive.due(grid[0][0], grid.at(-1)!.at(-1)!).catch(toast.error);
+  }, [filter.showClosed, grid]);
+
   const byDay = useMemo(() => {
     const map: Record<string, Task[]> = {};
     for (const t of tasks) if (t.dueDate) (map[t.dueDate] ??= []).push(t);
@@ -145,7 +154,7 @@ export default function CalendarView() {
               ))}
             </div>
             <div className="cal-grid">
-              {dates.monthGrid(month).flat().map((day) => (
+              {grid.flat().map((day) => (
                 <Day key={day} day={day} month={month} tasks={byDay[day] ?? []} />
               ))}
             </div>

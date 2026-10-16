@@ -31,17 +31,26 @@ const hub = {
   entries: () => clients.entries(),
 
   // Pass a function to tailor the payload per recipient (e.g. hide wallet addresses from non-admins, or private tasks from everyone but their owner).
+  // Return the same object to everyone who should get the same payload: it's encoded once for
+  // all of them instead of once per open tab.
   broadcast(event, { except } = {}) {
     if (typeof event !== 'function') {
       const data = JSON.stringify(event);
       for (const ws of clients.keys()) if (ws !== except) send(ws, data);
       return;
     }
+    const encoded = new Map();
     // returning nothing for someone means they don't get this event at all
     for (const [ws, c] of clients) {
       if (ws === except) continue;
       const tailored = event({ id: c.userId, isAdmin: c.isAdmin });
-      if (tailored) send(ws, JSON.stringify(tailored));
+      if (!tailored) continue;
+      let data = encoded.get(tailored);
+      if (data === undefined) {
+        data = JSON.stringify(tailored);
+        encoded.set(tailored, data);
+      }
+      send(ws, data);
     }
   },
 

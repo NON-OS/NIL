@@ -7,9 +7,11 @@ import canSeeTask from './canSeeTask.js';
 export default function publishTask(id, before = null) {
   const task = loadTask(id);
   if (!task) return null;
+  const shown = { type: 'task', task };
+  const gone = { type: 'task.gone', id };
   hub.broadcast((viewer) => {
-    if (canSeeTask(task, viewer)) return { type: 'task', task };
-    return before && canSeeTask(before, viewer) ? { type: 'task.gone', id } : null;
+    if (canSeeTask(task, viewer)) return shown;
+    return before && canSeeTask(before, viewer) ? gone : null;
   });
   return task;
 }

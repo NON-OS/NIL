@@ -5,6 +5,7 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import reminders from '../../actions/reminders';
 import detail from '../../actions/detail';
+import archive from '../../actions/archive';
 import dates from '../../lib/dates';
 import reminderPresets from '../../lib/reminderPresets';
 import type Reminder from '../../types/Reminder';
@@ -20,6 +21,11 @@ export default function RemindersPanel() {
   useEffect(() => {
     refresh();
   }, [unread]);
+
+  // a reminder can be on a task that's since been finished and archived
+  useEffect(() => {
+    archive.find(list.map((r) => r.taskId)).catch(() => {});
+  }, [list]);
 
   const add = async (e: FormEvent) => {
     e.preventDefault();

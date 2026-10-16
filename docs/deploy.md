@@ -103,11 +103,12 @@ Create two files next to `docker-compose.yml`. They belong to this server, not t
 
 ```
 nonos.example.com {
+	encode zstd gzip
 	reverse_proxy nonos:3000
 }
 ```
 
-Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers Nil reads. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
+Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers Nil reads. `encode` compresses what it sends, which makes the app's files and the task data it starts with several times smaller on the wire. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
 
 ```
 {
@@ -154,6 +155,7 @@ If you prefer Caddy from your distribution's packages, skip the override file. `
 
 ```
 nonos.example.com {
+	encode zstd gzip
 	reverse_proxy 127.0.0.1:3000
 }
 ```

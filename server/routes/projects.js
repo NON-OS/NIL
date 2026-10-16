@@ -24,7 +24,8 @@ const cleanKey = (value) => String(value ?? '').toUpperCase().replace(/[^A-Z0-9]
 
 function publish(id) {
   const project = toProject(sql.get('SELECT * FROM projects WHERE id = ?', id));
-  hub.broadcast((viewer) => (guestScope.of(viewer.id)?.has(project.id) === false ? null : { type: 'project', project }));
+  const event = { type: 'project', project };
+  hub.broadcast((viewer) => (guestScope.of(viewer.id)?.has(project.id) === false ? null : event));
   return { project };
 }
 

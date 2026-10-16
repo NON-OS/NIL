@@ -5,12 +5,12 @@ import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import ai from '../../actions/ai';
 import toast from '../../state/toast';
-import type Task from '../../types/Task';
+import type LoadedTask from '../../types/LoadedTask';
 import type ChecklistItem from '../../types/ChecklistItem';
 
 const tempId = () => Math.random().toString(36).slice(2, 10);
 
-export default function Checklist({ task }: { task: Task }) {
+export default function Checklist({ task }: { task: LoadedTask }) {
   const aiOn = useStore((s) => s.ai);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);

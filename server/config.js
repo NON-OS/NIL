@@ -211,6 +211,14 @@ const jobs = Object.freeze({
   optimizeMs: envNumber('JOB_OPTIMIZE_SECONDS', 3600, { min: 1 }) * SECOND,
 });
 
+// The app starts with open work and recent history only. Finished tasks (done or canceled)
+// touched within these days come along, but never more than the newest `recentClosedMax` of
+// them; older ones load when a view asks for them.
+const tasks = Object.freeze({
+  recentClosedDays: envNumber('RECENT_CLOSED_DAYS', 30),
+  recentClosedMax: envNumber('RECENT_CLOSED_MAX', 1000, { min: 1 }),
+});
+
 const config = Object.freeze({
   production,
   port: envNumber('PORT', 3000, { max: 65535 }),
@@ -238,6 +246,7 @@ const config = Object.freeze({
   plan,
   stealth,
   semaphore,
+  tasks,
   power,
   signIn,
   ai: Object.freeze({
