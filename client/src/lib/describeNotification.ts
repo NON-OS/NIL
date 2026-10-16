@@ -24,6 +24,10 @@ export default function describeNotification(n: InboxItem) {
       return 'started a vote:';
     case 'bounty_paid':
       return `paid you ${tokenAmount(String(n.data.amount), n.data.token)} for`;
+    case 'agent_approval':
+      return `asks for approval: ${n.data.summary ?? 'a change'}${n.data.title ? ' on' : ''}`;
+    case 'agent_webhook_off':
+      return 'stopped receiving events: its webhook kept failing and was switched off.';
     default:
       return 'updated';
   }

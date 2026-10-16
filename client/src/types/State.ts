@@ -18,6 +18,7 @@ import type RewardToken from './RewardToken';
 import type SharingPolicy from './SharingPolicy';
 import type Plan from './Plan';
 import type StealthInfo from './StealthInfo';
+import type AgentActivity from './AgentActivity';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -53,6 +54,8 @@ export default interface State {
   typing: Record<string, Record<string, number>>;
   connected: boolean;
   detail: TaskDetail | null;
+  // agent runs and approval cards on the task open in the panel
+  agentActivity: AgentActivity | null;
   quickAdd: { open: boolean; defaults?: Partial<Task> };
   palette: boolean;
   shortcuts: boolean;

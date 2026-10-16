@@ -99,7 +99,7 @@ export default function QuickAdd() {
           <PriorityPicker value={draft.priority!} onChange={(priority) => set({ priority })}>
             <PriorityIcon priority={draft.priority!} /> <span>{draft.priority ? meta.priority[draft.priority] : 'Priority'}</span>
           </PriorityPicker>
-          <AssigneePicker value={draft.assigneeId ?? null} onChange={(assigneeId) => set({ assigneeId })}>
+          <AssigneePicker value={draft.assigneeId ?? null} onChange={(assigneeId) => set({ assigneeId })} excludeAgents={Boolean(draft.private)}>
             {assignee ? <Avatar user={assignee} size={16} /> : <UserRound size={14} />} <span>{assignee?.name ?? 'Assignee'}</span>
           </AssigneePicker>
           <ProjectPicker value={draft.projectId ?? null} onChange={(projectId) => set({ projectId })}>

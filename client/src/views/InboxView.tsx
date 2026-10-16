@@ -52,6 +52,7 @@ export default function InboxView() {
     const task = n.taskId ? tasks[n.taskId] : undefined;
     if (task) detail.open(task);
     else if (n.type === 'proposal') router.navigate('/votes');
+    else if (n.type.startsWith('agent_')) router.navigate('/settings?tab=agents');
   };
 
   return (
@@ -103,7 +104,7 @@ export default function InboxView() {
                           </span>
                           <span className="task">
                             {task && <span className="key mono">{prefix}-{task.number}</span>}
-                            {task?.title ?? n.data.title ?? 'a deleted task'}
+                            {task?.title ?? n.data.title ?? (n.type.startsWith('agent_') ? n.data.reason ?? 'Settings → Agents' : 'a deleted task')}
                           </span>
                           {n.data.excerpt && <span className="inbox-excerpt">{n.data.excerpt}</span>}
                         </span>

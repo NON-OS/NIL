@@ -4,6 +4,7 @@ import putTask from '../state/putTask';
 import type TaskDetail from '../types/TaskDetail';
 import type Comment from '../types/Comment';
 import commentText from '../actions/commentText';
+import agentActivity from '../actions/agentActivity';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
@@ -104,6 +105,13 @@ export default function applyEvent(event: any): void {
       break;
     case 'watchers':
       patchDetail(event.taskId, () => ({ watchers: event.watchers }));
+      break;
+    // an agent's run moved on, or one of its approval cards changed, on the task that's open
+    case 'agent.run':
+      agentActivity.putRun(event.run);
+      break;
+    case 'agent.approval':
+      agentActivity.putApproval(event.approval);
       break;
     case 'wiped':
       // the workspace was erased; reload into the fresh-install screen

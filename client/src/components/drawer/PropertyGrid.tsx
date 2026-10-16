@@ -61,7 +61,7 @@ export default function PropertyGrid({ task }: { task: Task }) {
         </PriorityPicker>
       </Row>
       <Row icon={<UserRound size={14} />} label="Assignee">
-        <AssigneePicker value={task.assigneeId} onChange={(assigneeId) => update({ assigneeId })}>
+        <AssigneePicker value={task.assigneeId} onChange={(assigneeId) => update({ assigneeId })} excludeAgents={task.private}>
           <Avatar user={assignee} size={18} />
           {assignee ? <span>{assignee.name}</span> : empty('Unassigned')}
         </AssigneePicker>

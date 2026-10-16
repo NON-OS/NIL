@@ -32,6 +32,7 @@ const initialState: State = {
   typing: {},
   connected: false,
   detail: null,
+  agentActivity: null,
   quickAdd: { open: false },
   palette: false,
   shortcuts: false,

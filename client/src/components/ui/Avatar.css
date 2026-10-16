@@ -10,6 +10,11 @@
   user-select: none;
 }
 
+/* agents are drawn square-ish, so they never pass for a person at a glance */
+.avatar-agent {
+  border-radius: 28%;
+}
+
 .avatar-empty {
   border: 1.5px dashed var(--line-strong);
   color: var(--faint);

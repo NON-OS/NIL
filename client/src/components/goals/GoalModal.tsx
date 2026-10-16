@@ -76,7 +76,7 @@ export default function GoalModal({ goal, onClose }: { goal?: Goal; onClose: () 
           <textarea className="textarea" rows={2} value={form.description} maxLength={5000} onChange={(e) => set({ description: e.target.value })} />
         </label>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-          <AssigneePicker value={form.ownerId} onChange={(ownerId) => set({ ownerId })} className="btn">
+          <AssigneePicker value={form.ownerId} onChange={(ownerId) => set({ ownerId })} className="btn" excludeAgents>
             <Avatar user={form.ownerId ? users[form.ownerId] : null} size={18} /> {form.ownerId ? users[form.ownerId]?.name : 'No owner'}
           </AssigneePicker>
           <Picker title="Status" options={STATUS_OPTIONS} value={form.status} onChange={(v) => set({ status: v as GoalStatus })} className="btn" width={180}>

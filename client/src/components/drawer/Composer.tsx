@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ArrowUp } from 'lucide-react';
 import Avatar from '../ui/Avatar';
+import AgentBadge from '../agents/AgentBadge';
 import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
 import socket from '../../realtime/socket';
@@ -22,10 +23,11 @@ export default function Composer({ taskId }: { taskId: string }) {
   const matches = useMemo(() => {
     if (!mention) return [];
     const q = mention.query.toLowerCase();
+    // agents can't read a private task, so they aren't offered there
     return Object.values(users)
-      .filter((u) => !u.deactivated && u.id !== me?.id && (u.name.toLowerCase().includes(q) || handle(u.name).toLowerCase().startsWith(q)))
+      .filter((u) => !u.deactivated && u.id !== me?.id && !(sealed && u.kind === 'agent') && (u.name.toLowerCase().includes(q) || handle(u.name).toLowerCase().startsWith(q)))
       .slice(0, 6);
-  }, [mention, users, me?.id]);
+  }, [mention, users, me?.id, sealed]);
 
   const onChange = (value: string, caret: number) => {
     setBody(value);
@@ -102,6 +104,7 @@ export default function Composer({ taskId }: { taskId: string }) {
                 <button type="button" data-active={i === active} onMouseDown={(e) => e.preventDefault()} onClick={() => insert(u.name)}>
                   <Avatar user={u} size={18} />
                   {u.name}
+                  {u.kind === 'agent' && <AgentBadge />}
                 </button>
               </li>
             ))}
