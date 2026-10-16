@@ -9,6 +9,7 @@ import toolGuard from './toolGuard.js';
 import NeedsApproval from './NeedsApproval.js';
 import createApproval from './createApproval.js';
 import audit from './audit.js';
+import log from '../lib/log.js';
 
 const byName = new Map(tools.map((t) => [t.name, t]));
 
@@ -81,7 +82,7 @@ export default function runTool(principal, name, args, { via, runId = null, acti
       record('error', { error: err.message });
       return failure(err.status, CODES[err.status] ?? 'error', err.message);
     }
-    console.error('[agents] tool failed', name, err);
+    log.error('agents', `tool ${name} failed`, err);
     record('error', { error: 'server error' });
     return failure(500, 'server_error', 'Something went wrong on the Nil server.');
   }

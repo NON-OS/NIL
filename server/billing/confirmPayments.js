@@ -4,6 +4,7 @@ import readReceipt from '../chain/readReceipt.js';
 import finalizedBlock from '../chain/finalizedBlock.js';
 import attachReceipt from './attachReceipt.js';
 import finalizePayment from './finalizePayment.js';
+import log from '../lib/log.js';
 
 async function follow(row, receipt, final, now) {
   if (row.status === 'seen') {
@@ -49,7 +50,7 @@ export default async function confirmPayments(now = Date.now()) {
       await follow(row, receipt, final, now);
     } catch (err) {
       // one odd row mustn't hold up the rest; it's tried again next minute
-      console.error('[billing] payment check', row.id, err.message);
+      log.error('billing', `payment check for ${row.id} failed`, err.message);
     }
   }
 }

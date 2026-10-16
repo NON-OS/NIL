@@ -2,6 +2,7 @@ import sql from '../db/sql.js';
 import agentSettings from '../agents/agentSettings.js';
 import sendDelivery from '../agents/webhooks/sendDelivery.js';
 import signals from '../agents/signals.js';
+import log from '../lib/log.js';
 
 const BATCH = 25;
 let current = null;
@@ -21,7 +22,7 @@ async function sendDue() {
      ORDER BY d.next_attempt_at LIMIT ?`,
     Date.now(), BATCH,
   );
-  await Promise.all(due.map(({ id }) => sendDelivery(id).catch((err) => console.error('[webhooks] delivery failed', id, err.message))));
+  await Promise.all(due.map(({ id }) => sendDelivery(id).catch((err) => log.error('webhooks', `delivery ${id} failed`, err.message))));
   if (due.length === BATCH) again = true;
 }
 

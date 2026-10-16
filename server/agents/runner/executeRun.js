@@ -20,6 +20,7 @@ import publishRun from './publishRun.js';
 import tokensToday from './tokensToday.js';
 import runComment from './runComment.js';
 import ProviderError from './ProviderError.js';
+import log from '../../lib/log.js';
 
 const RESULT_CAP = 20_000;
 const RETRY_BASE_MS = 30_000;
@@ -159,7 +160,7 @@ export default async function executeRun(row, signal) {
         return publishRun(run.id);
       }
       const message = err instanceof ProviderError ? err.message : 'The agent stopped on an unexpected error.';
-      if (!(err instanceof ProviderError)) console.error('[agents] run failed', run.id, err);
+      if (!(err instanceof ProviderError)) log.error('agents', `run ${run.id} failed`, err);
       log.add('error', { output: message, ok: false });
       comment(runComment({ text: `I couldn’t finish this: ${message}`, stop: null, changes, pending, agent, secrets: knownSecrets(agent) }));
       return finish('failed', { error: message });

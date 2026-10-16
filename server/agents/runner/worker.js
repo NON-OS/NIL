@@ -5,6 +5,7 @@ import signals from '../signals.js';
 import executeRun from './executeRun.js';
 import publishRun from './publishRun.js';
 import stepLog from './stepLog.js';
+import log from '../../lib/log.js';
 
 const running = new Map();
 let started = false;
@@ -45,7 +46,7 @@ const worker = {
       publishRun(row.id);
       executeRun(row, controller.signal)
         .catch((err) => {
-          console.error('[agents] run crashed', row.id, err);
+          log.error('agents', `run ${row.id} crashed`, err);
           sql.run("UPDATE agent_runs SET status = 'failed', finished_at = ?, error = 'The run crashed.' WHERE id = ? AND status = 'running'", Date.now(), row.id);
         })
         .finally(() => {
