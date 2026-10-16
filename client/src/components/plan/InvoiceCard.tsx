@@ -27,7 +27,7 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
   const status = useStore((s) => s.plan);
   const [token, setToken] = useState(invoice.amounts[0]?.token ?? '');
   const [hash, setHash] = useState('');
-  const [busy, setBusy] = useState<'wallet' | 'hash' | 'cancel' | null>(null);
+  const [busy, setBusy] = useState<'wallet' | 'hash' | 'cancel' | 'check' | null>(null);
   const amount = invoice.amounts.find((a) => a.token === token) ?? invoice.amounts[0];
   const live = LIVE.includes(invoice.state);
   const decimals = Object.fromEntries(invoice.amounts.map((a) => [a.symbol, a.decimals]));
@@ -41,7 +41,7 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
     return () => clearInterval(timer);
   }, [invoice.id, live, onChange]);
 
-  const run = async (kind: 'wallet' | 'hash' | 'cancel', fn: () => Promise<Invoice>) => {
+  const run = async (kind: 'wallet' | 'hash' | 'cancel' | 'check', fn: () => Promise<Invoice>) => {
     setBusy(kind);
     try {
       onChange(await fn());
@@ -118,6 +118,9 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
 
       {invoice.status === 'open' && (
         <div className="settings-row">
+          <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => run('check', () => plan.check(invoice.id))} title="Looks at the chain now instead of at the next check, which runs every minute">
+            {busy === 'check' && <Spinner size={14} />} Check now
+          </button>
           <button type="button" className="btn btn-sm btn-ghost" disabled={busy !== null || inFlight} onClick={() => run('cancel', () => plan.cancel(invoice.id))} title={inFlight ? 'A payment is on its way; wait until it settles.' : undefined}>
             {busy === 'cancel' ? <Spinner size={14} /> : <X />} Cancel invoice
           </button>
