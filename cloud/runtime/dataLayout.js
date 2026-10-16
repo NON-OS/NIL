@@ -4,8 +4,10 @@ const DB = 'nonos.db';
 const SNAPSHOT = '.nil-snapshot';
 const CHECKPOINT = '.nil-checkpoint';
 const MANIFEST = '.nil-cloud.json';
-// scratch folders the app makes while writing or reading a capsule
-const SCRATCH = /^(capsule|restore)-[^/]*(\/|$)/;
+// Scratch folders the app makes while writing or reading a capsule, and the app's own
+// pre-migration copies of the database. Those copies are for rolling back on this server; in a
+// backup they would only multiply its size and keep rows that retention has since erased.
+const SCRATCH = /^((capsule|restore)-[^/]*(\/|$)|pre-migration-[^/]*\.db$)/;
 
 const inside = (name, dir) => name === dir || name.startsWith(`${dir}/`);
 

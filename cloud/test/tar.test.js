@@ -27,6 +27,7 @@ test('a live export swaps the database files for the VACUUM INTO snapshot and dr
     { name: 'data/.nil-snapshot/nonos.db', data: Buffer.from('snapshot') },
     { name: 'data/.nil-checkpoint/nonos.db', data: Buffer.from('old') },
     { name: 'data/capsule-x1/nonos.db', data: Buffer.from('scratch') },
+    { name: 'data/pre-migration-1792140000000-schema-18.db', data: Buffer.from('app copy') },
     { name: 'data/keys', type: 'dir' },
     { name: 'data/keys/receipts-ed25519.pem', data: Buffer.from('key') },
     { name: 'data/uploads/f1', data: Buffer.from('file') },

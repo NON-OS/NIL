@@ -12,6 +12,7 @@ export default async function info(ctx, { args, print }) {
     ['Id', w.id],
     ['State', `${w.state}${w.suspendReason ? ` (${w.suspendReason})` : ''}`],
     ['Container', status ? `${status.exists ? (status.running ? 'running' : 'stopped') : 'missing'}, health ${status.health}` : 'unknown'],
+    ['App reports', status?.report?.version ? `version ${status.report.version}, schema ${status.report.schema ?? '?'}` : 'nothing yet'],
     ['Owner', w.owner ?? ''],
     ['Claimed', w.claimedAt ? when(w.claimedAt) : 'not yet'],
     ['Image', w.image],

@@ -62,7 +62,7 @@ async function fakeEngine(t) {
       if (m[1] === 'nil-caddy') return json(res, 200, { NetworkSettings: { Networks: Object.fromEntries([...state.connected].map((n) => [n, {}])) } });
       const c = state.containers.get(m[1]);
       if (!c) return json(res, 404, { message: `No such container: ${m[1]}` });
-      return json(res, 200, { Config: { Image: c.body.Image }, State: { Running: c.running, ExitCode: 0, Health: { Status: c.running ? 'healthy' : 'unhealthy', Log: [{ Output: '{"ok":true,"members":7,"secret":"x"}' }] } } });
+      return json(res, 200, { Config: { Image: c.body.Image }, State: { Running: c.running, ExitCode: 0, Health: { Status: c.running ? 'healthy' : 'unhealthy', Log: [{ Output: '{"ok":true,"version":"3.1.0","schema":19,"members":7,"secret":"x","jobs":{"purge":1}}' }] } } });
     }
     if ((m = /^POST \/containers\/([^/]+)\/start$/.exec(route))) {
       const c = state.containers.get(m[1]);
@@ -162,7 +162,7 @@ test('status, probes and usage read only small, typed values from the workspace'
   await driver.start(ID);
   await driver.start(ID);
   const status = await driver.status(ID);
-  assert.deepEqual(status.report, { ok: true, members: 7 }, 'unknown fields from inside the workspace are dropped');
+  assert.deepEqual(status.report, { ok: true, version: '3.1.0', schema: 19, members: 7 }, 'unknown fields from inside the workspace are dropped');
   assert.equal(status.health, 'healthy');
   assert.deepEqual(await driver.probe(ID, '/api/auth/state'), { needsSetup: false });
   assert.deepEqual(state.execs.get('e1').Cmd, ['wget', '-qO-', '-T', '5', 'http://127.0.0.1:3000/api/auth/state']);
