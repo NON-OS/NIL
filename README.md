@@ -44,7 +44,7 @@ Free software under the [GNU AGPL v3 or later](LICENSE).
 - **Projects.** Each project has its own board and list, a lead, a colour and a short key.
 - **Tasks.** Status, priority, assignee, due and start dates, labels, estimates, checklists, Markdown descriptions, file attachments, comments with @mentions and a full history.
 - **Recurring tasks.** Daily, weekdays, weekly, every two weeks or monthly. Finishing one creates the next. If you finished late, the next due date skips forward past today.
-- **Private tasks, end-to-end encrypted.** Only the creator and the assignee can see a private task. Admins can't. Its title, notes, checklist and comments are encrypted in the browser under a key that only those two people hold, so the server stores scrambled text and nothing else. Giving the task to someone new seals it under a fresh key. For everyone else, private tasks are left out of lists, live updates, presence, activity, exports and the AI brief. Files can't be attached to a private task yet, because files aren't encrypted.
+- **Private tasks, end-to-end encrypted.** Only the creator and the assignee can see a private task. Admins can't. Its title, notes, checklist, comments and files are encrypted in the browser under a key that only those two people hold, so the server stores scrambled text and nothing else. Each file has a key of its own, and its name and type are encrypted with it. Giving the task to someone new seals it under a fresh key; files keep theirs, and only the small wrapped file keys are re-encrypted. For everyone else, private tasks are left out of lists, live updates, presence, activity, exports and the AI brief.
 - **Time tracking.** A timer on any task and a timesheet you can export as CSV. Your time log is visible only to you.
 - **Reminders.** Set a reminder on a task or with a note. It arrives as a notification, and as a desktop notification if you turned those on.
 - **Inbox.** Notifications for assignments, @mentions, comments on tasks you follow, status changes, new votes and bounty applications.
@@ -125,7 +125,8 @@ What Nil protects, and what it doesn't.
 
 **What the server operator can see**
 
-- Docs, private tasks (title, notes, checklist, comments) and the contents of encrypted ballots are encrypted in the browser. Everything else is stored in plain form in the database: team tasks and their comments, files, goals, time entries, reminders and the list of who is in the workspace. Anyone with access to the server or its backups can read those. What the server still knows about a private task is that it exists, who created it, who it's assigned to, its status, dates, project and labels.
+- Docs, private tasks (title, notes, checklist, comments, files with their names and types) and the contents of encrypted ballots are encrypted in the browser. Everything else is stored in plain form: team tasks with their comments and files, goals, time entries, reminders and the list of who is in the workspace. Anyone with access to the server or its backups can read those. What the server still knows about a private task is that it exists, who created it, who it's assigned to, its status, dates, project and labels, and how many files it has, who uploaded each, and their sizes to within a few bytes.
+- Making a private task visible to the team again sends its plain text and files back to the server. The files go up just before the switch, and if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
 
 **What leaves your server**
 
@@ -253,7 +254,7 @@ All settings are environment variables. Every one is optional. [.env.example](.e
 - **Wallets.** Sign-in needs an injected EIP-1193 wallet (a browser extension or a wallet's in-app browser). WalletConnect is not supported. Tor Browser ships without wallet extensions. If you lose every wallet linked to your account, you lose the account, so link a second one.
 - **Deterministic signatures.** Encrypted docs, private payouts and anonymous voting derive keys from a wallet signature. Wallets that sign the same message differently each time can't use them. Nil checks this on first use.
 - **Never lose `DATA_DIR/keys`.** The signing key there signs every receipt and is part of every person's key derivation. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, and nobody can re-derive their docs, private payout or voting keys. Back it up with the database. Renaming the workspace is safe: the messages people sign to derive those keys name the workspace by this key, not by its name.
-- **Files aren't encrypted.** Docs and private tasks are; attachments are stored as uploaded, which is why private tasks can't hold them yet. Reminder notes and timer notes are stored in plain form too, and only their owner sees them. See [Privacy model](#privacy-model).
+- **Files on team tasks aren't encrypted.** Files on private tasks are; on team tasks they're stored as uploaded. An encrypted file still shows its size. Reminder notes and timer notes are stored in plain form too, and only their owner sees them. See [Privacy model](#privacy-model).
 - **On-chain data is public**, and private payouts don't hide the payer, token, amount or timing.
 - **The default Ethereum node is public** and sees what your server looks up. Use your own node for privacy.
 - **Receipts prove what the workspace said,** not that the workspace is honest. See [docs/PROOFS.md](docs/PROOFS.md).

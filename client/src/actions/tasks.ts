@@ -11,7 +11,7 @@ import type TaskPatch from '../types/TaskPatch';
 import vault from './vault';
 import taskKeys from './taskKeys';
 import taskSeal from './taskSeal';
-import sealedPatch from './sealedPatch';
+import patchTask from './patchTask';
 
 // A new private task is sealed here before it leaves the browser: its words go out encrypted
 // under a fresh key that only the creator and the assignee hold.
@@ -43,7 +43,7 @@ const tasks = {
     if (patch.status && patch.status !== before.status) optimistic.completedAt = patch.status === 'done' ? Date.now() : null;
     putTask(optimistic);
     try {
-      const res = await http.patch<{ task: Task; spawned: Task | null }>(`/tasks/${id}`, { ...(await sealedPatch(before, patch)), today: dates.today() });
+      const res = await patchTask(before, patch, { today: dates.today() });
       putTask(res.task);
       if (res.spawned) {
         putTask(res.spawned);

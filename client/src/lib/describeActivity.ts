@@ -46,8 +46,9 @@ export default function describeActivity(a: Activity, s: Lookup): string {
       return to ? `set it to repeat ${meta.recurrence[to as keyof typeof meta.recurrence]?.toLowerCase() ?? to}` : 'stopped it repeating';
     case 'checklist':
       return `checked off “${a.data.text}”`;
+    // files on an encrypted task are logged without a name
     case 'attachment':
-      return `attached ${a.data.filename}`;
+      return a.data.filename ? `attached ${a.data.filename}` : 'attached a file';
     case 'recurred':
       return `completed this, so ${s.workspace.taskPrefix}-${a.data.nextNumber} was scheduled for ${day(a.data.dueDate)}`;
     case 'deleted':

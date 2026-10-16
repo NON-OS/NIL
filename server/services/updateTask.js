@@ -14,7 +14,10 @@ import revokeReceipts from '../proofs/revokeReceipts.js';
 import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
 import resealComments from './resealComments.js';
+import resealFiles from './resealFiles.js';
+import publishAttachments from './publishAttachments.js';
 import scrubPlaintext from './scrubPlaintext.js';
+import stagedFile from '../lib/stagedFile.js';
 
 const COLUMNS = {
   title: 'title',
@@ -45,7 +48,7 @@ const same = (a, b) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 // The rules for encrypted private tasks. Plain text never lands on a sealed task, a task only
 // turns private already sealed, opening one up again brings its plain text back with it, and
 // a new assignee means a new key. Fills in the columns the browser doesn't send and says
-// whether the comments need re-encrypting and old plain text wiping.
+// whether the comments and files need re-encrypting and old plain text wiping.
 function sealRules(existing, patch) {
   const next = { ...existing, ...patch };
   const touchesPlain = PLAIN.some((key) => key in patch);
@@ -67,7 +70,6 @@ function sealRules(existing, patch) {
     return {};
   }
   if (touchesPlain) throw HttpError.badRequest('Send a private task encrypted only, without its plain text.');
-  if (!existing.sealed && existing.attachmentCount) throw HttpError.badRequest('Files aren’t encrypted yet, so remove the ones on this task before making it private.');
   checkSealKeys(patch.sealed, next);
   Object.assign(patch, { title: '', description: '', checklist: [] });
   return { rekeyed: !existing.sealed || existing.sealed.id !== patch.sealed.id, commentsSealed: true, first: !existing.sealed };
@@ -126,9 +128,13 @@ export default function updateTask(actor, id, body, { today } = {}) {
   sets.push('updated_at = ?');
   params.push(now);
 
+  let staged = [];
   sql.tx(() => {
     sql.run(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
-    if (sealing.rekeyed) resealComments(id, body.comments, { sealed: sealing.commentsSealed });
+    if (sealing.rekeyed) {
+      resealComments(id, body.comments, { sealed: sealing.commentsSealed });
+      staged = resealFiles(id, body.files, { sealId: patch.sealed?.id ?? null });
+    }
     if (sealing.first) scrubPlaintext(id);
     if (patch.assigneeId) watchers.add(id, patch.assigneeId);
     // Once private, nobody else keeps following it or holds notifications that quote its title.
@@ -139,6 +145,8 @@ export default function updateTask(actor, id, body, { today } = {}) {
       sql.run('DELETE FROM focus WHERE task_id = ? AND user_id NOT IN (?, ?)', id, now.creatorId ?? '', now.assigneeId ?? '');
     }
   });
+  // the rows now describe the staged copies, so those take the files' place
+  for (const file of staged) stagedFile.commit(file.id, file.sealed);
 
   const task = loadTask(id);
   if (statusChange?.after === 'done') issueReceipt(task, actor.id);
@@ -147,6 +155,7 @@ export default function updateTask(actor, id, body, { today } = {}) {
   logTaskChanges(id, actor.id, task.sealed ? changes.filter((c) => !PLAIN.includes(c.key)) : changes);
   notifyTaskChanges(task, actor.id, changes);
   publishTask(id, existing);
+  if (sealing.rekeyed) publishAttachments(id);
 
   const spawned = recurs ? scheduleNext(actor, task, recurrence, today) : null;
   return { task, spawned };

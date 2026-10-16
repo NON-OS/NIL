@@ -29,7 +29,7 @@ export default function LockedTask({ task }: { task: Task }) {
       <Lock size={18} />
       <div>
         <h3>Encrypted</h3>
-        {!unlocked && <p>Its title, notes, checklist and comments are locked with keys from your wallet. Unlock to read them in this tab.</p>}
+        {!unlocked && <p>Its title, notes, checklist, comments and files are locked with keys from your wallet. Unlock to read them in this tab.</p>}
         {unlocked && !hasKey && <p>This task was sealed before you had a key. It opens for you the next time its creator uses Nil.</p>}
         {unlocked && hasKey && <p>Your key couldn’t open this task. If you signed in with a different wallet before, switch back to it.</p>}
       </div>

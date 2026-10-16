@@ -8,8 +8,10 @@ import b64u from '../lib/crypto/b64u';
 import records from '../state/records';
 import sealedCache from '../state/sealedCache';
 import revealTask from '../state/revealTask';
+import lockedDetail from '../state/lockedDetail';
 import openSealed from './openSealed';
 import taskHandover from './taskHandover';
+import detail from './detail';
 
 async function sign() {
   const { me } = store.get();
@@ -44,16 +46,20 @@ const vault = {
     keyring.unlock(identity);
     store.set({ docsUnlocked: true });
     await openSealed();
+    // an open task panel loaded while locked holds comments and files it couldn't open yet
+    const open = store.get().detail?.taskId;
+    if (open) void detail.load(open);
     void taskHandover();
   },
 
-  // Forgets every key and every opened private task; they show as locked again.
+  // Forgets every key and every opened private task, comment and file; they show as locked again.
   lock() {
     keyring.lock();
     sealedCache.clear();
     store.set((s) => ({
       docsUnlocked: false,
       tasks: records.fromList(Object.values(s.tasks).map((t) => (t.sealed ? revealTask({ ...t, locked: undefined }) : t))),
+      detail: s.detail && lockedDetail(s.detail),
     }));
   },
 };

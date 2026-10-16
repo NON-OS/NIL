@@ -2,7 +2,7 @@ import http from '../api/http';
 import store from '../state/store';
 import putTask from '../state/putTask';
 import taskKeys from './taskKeys';
-import sealedPatch from './sealedPatch';
+import patchTask from './patchTask';
 import type Task from '../types/Task';
 
 const save = (task: Task, body: Record<string, unknown>) =>
@@ -21,8 +21,8 @@ export default async function taskHandover() {
         if (!missing.length) continue;
         const { key } = await taskKeys.open(task.sealed);
         await save(task, { sealed: { ...task.sealed, keys: { ...task.sealed.keys, ...(await taskKeys.wrap(key, missing)) } } });
-      } else if (task.private && !task.sealed && !task.attachmentCount && (task.creatorId === me || task.assigneeId === me)) {
-        await save(task, await sealedPatch(task, { private: true }));
+      } else if (task.private && !task.sealed && (task.creatorId === me || task.assigneeId === me)) {
+        putTask((await patchTask(task, { private: true })).task);
       }
     } catch {
       // tried again on the next unlock

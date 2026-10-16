@@ -48,6 +48,7 @@ export default function TaskDrawer({ number }: { number: number }) {
                 <>
                   <LockedTask task={task} />
                   <PropertyGrid task={task} />
+                  <Attachments task={task} />
                 </>
               ) : (
                 <>
@@ -56,7 +57,7 @@ export default function TaskDrawer({ number }: { number: number }) {
                   <BountyPanel task={task} />
                   <DescriptionEditor task={task} />
                   <Checklist task={task} />
-                  <Attachments taskId={task.id} isPrivate={task.private} />
+                  <Attachments task={task} />
                   <Timeline taskId={task.id} />
                 </>
               )}

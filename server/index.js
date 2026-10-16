@@ -4,11 +4,14 @@ import migrate from './db/migrate.js';
 import createApp from './app.js';
 import attachRealtime from './realtime/attachRealtime.js';
 import purge from './jobs/purge.js';
+import settleStaged from './services/settleStaged.js';
 import checkPayments from './jobs/checkPayments.js';
 import closeProposals from './jobs/closeProposals.js';
 import sendReminders from './jobs/sendReminders.js';
 
 migrate();
+// nothing is mid-upload before the server listens, so every staged copy can be settled now
+settleStaged();
 purge();
 setInterval(purge, 60 * 60_000).unref();
 setInterval(checkPayments, 60_000).unref();

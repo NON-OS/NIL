@@ -44,7 +44,9 @@ export default function createApp() {
 
   // Uploads stream as raw bytes; everything else in the API is JSON.
   const json = express.json({ limit: '1mb' });
-  const isUpload = (req) => req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore');
+  const isUpload = (req) =>
+    (req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore')) ||
+    (req.method === 'PUT' && /^\/attachments\/[^/]+\/content$/.test(req.path));
   app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : json(req, res, next)), csrfGuard, api);
 
   if (fs.existsSync(DIST)) {
