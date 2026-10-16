@@ -1,6 +1,7 @@
 import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
+import pageSize from '../lib/pageSize.js';
 import hub from '../realtime/hub.js';
 import toNotification from '../mappers/toNotification.js';
 
@@ -11,7 +12,7 @@ const unreadCount = (userId) => sql.get('SELECT COUNT(*) AS n FROM notifications
 router.get(
   '/notifications',
   route((req) => {
-    const limit = Math.min(Number(req.query.limit) || 60, 200);
+    const limit = pageSize(req.query.limit, 60, 200);
     const before = Number(req.query.before) || Number.MAX_SAFE_INTEGER;
     return sql
       .all('SELECT * FROM notifications WHERE user_id = ? AND id < ? ORDER BY id DESC LIMIT ?', req.user.id, before, limit)

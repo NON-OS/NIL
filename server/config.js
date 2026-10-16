@@ -48,6 +48,8 @@ const config = Object.freeze({
   dbFile: env.DB_FILE || null,
   // after a checkpoint SQLite cuts the write-ahead log back to this size instead of keeping its peak
   dbJournalLimitBytes: envNumber('DB_JOURNAL_LIMIT_MB', 64, { min: 1 }) * MB,
+  // prepared statements kept for reuse; queries built from a request's fields come in many shapes
+  dbStatementCache: envNumber('DB_STATEMENT_CACHE', 1000, { min: 10 }),
   trustProxy,
   appUrl: appSite.origin,
   sourceUrl: env.SOURCE_URL || null,
