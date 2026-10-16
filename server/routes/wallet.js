@@ -18,8 +18,11 @@ import addCredential from '../services/addCredential.js';
 import publishUser from '../services/publishUser.js';
 import holderGate from '../services/holderGate.js';
 import holdings from '../services/holdings.js';
-import balanceOf from '../chain/balanceOf.js';
+import holderPower from '../services/holderPower.js';
+import holderStanding from '../services/holderStanding.js';
+import recheckHolders from '../services/recheckHolders.js';
 import nox from '../lib/nox.js';
+import dateText from '../lib/dateText.js';
 import planGate from '../services/planGate.js';
 import seatGate from '../services/seatGate.js';
 
@@ -92,11 +95,15 @@ router.post(
         throw HttpError.forbidden('Your bounty application is still waiting for the team. Sign in here again once they accept it.');
       }
       if (!row || row.deactivated) throw new HttpError(404, 'No account here uses this wallet. Ask an admin for an invite, then join with your wallet.');
-      // People who came in through the open door have to keep holding to keep coming in.
+      // People who came in through the open door have to keep holding to keep coming in. Falling
+      // below starts a grace period with a notice; only after it are they turned away.
       const gate = holderGate.get();
       if (row.joined_via === 'holder' && gate.enabled) {
-        const held = await holdings(row.user_id);
-        if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`Your linked wallets hold ${nox(held)}. This workspace asks members who joined as holders to keep at least ${nox(gate.minimum)}.`);
+        const held = (await holdings(row.user_id)).total;
+        const standing = holderStanding(row.user_id, held, gate.minimum);
+        if (standing.state === 'locked') {
+          throw HttpError.forbidden(`Your linked wallets hold ${nox(held)} counting NOX held, staked and Zero-State Passes. This workspace asks members who joined as holders to keep at least ${nox(gate.minimum)}, and the grace period ended on ${dateText(standing.until)}.`);
+        }
       }
       sql.run('UPDATE credentials SET last_used_at = ? WHERE id = ?', Date.now(), row.id);
       return signIn(req, res, row.user_id);
@@ -112,12 +119,17 @@ router.post(
       if (!gate.enabled) throw HttpError.forbidden('This workspace is invite-only.');
       planGate('Joining as a holder');
       seatGate('member');
-      const held = await balanceOf(pending.address);
-      if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)}. Joining without an invite needs at least ${nox(gate.minimum)}.`);
+      const held = (await holderPower([pending.address])).total;
+      if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)} counting NOX held, staked and Zero-State Passes. Joining without an invite needs at least ${nox(gate.minimum)}.`);
     }
     const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, inviteHash: pending.inviteHash, address: pending.address });
     if (pending.mode === 'setup') setupToken.discard();
     else publishUser(id);
+    if (pending.mode === 'holder') {
+      sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', Date.now(), id);
+      // the NOX that just let this wallet in may have come from another member's wallet
+      recheckHolders({ force: true }).catch(() => {});
+    }
     return signIn(req, res, id);
   }),
 );
