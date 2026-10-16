@@ -1,7 +1,8 @@
 import SETUP_TOKEN from './setupToken.js';
 
-// A minimal browser stand-in: keeps its own cookie and sends the CSRF header.
-export default function client(base) {
+// A minimal browser stand-in: keeps its own cookie and sends the CSRF header, plus any
+// `headers` given here on every request (a forwarded address, say).
+export default function client(base, { headers: always = {} } = {}) {
   let cookie = '';
   const call = async (method, url, body, headers = {}) => {
     const binary = body instanceof Uint8Array;
@@ -11,6 +12,7 @@ export default function client(base) {
         'X-NONOS': '1',
         ...(body !== undefined && !binary ? { 'Content-Type': 'application/json' } : {}),
         ...(cookie ? { Cookie: cookie } : {}),
+        ...always,
         ...headers,
       },
       body: binary ? body : body !== undefined ? JSON.stringify(body) : undefined,
