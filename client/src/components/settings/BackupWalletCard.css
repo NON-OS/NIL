@@ -1,0 +1,22 @@
+.backup-card {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+}
+
+.backup-card > svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 1px;
+  color: var(--accent-line);
+}
+
+.backup-card p {
+  margin-top: 2px;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}

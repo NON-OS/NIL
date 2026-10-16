@@ -1,6 +1,7 @@
 import http from '../api/http';
 import session from './session';
 import ethereum from '../lib/ethereum';
+import backupNudge from '../state/backupNudge';
 import type JoinDetails from '../types/JoinDetails';
 import type SecurityOverview from '../types/SecurityOverview';
 
@@ -22,6 +23,15 @@ const identity = {
     await walletCeremony({ ...details });
     if (details.mode !== 'setup') history.replaceState(null, '', '/');
     await session.enter();
+    backupNudge.show();
+  },
+
+  // From a reset link an admin made: links a new wallet to the same account and signs in, then
+  // opens the wallet list so the lost ones can be removed. A full load, because the link may
+  // have been opened in a tab signed in as someone else, whose keys and live updates must go.
+  async resetSignIn(resetToken: string) {
+    await walletCeremony({ mode: 'reset', resetToken });
+    location.replace('/settings?tab=security&reset=1');
   },
 
   linkWallet: () => walletCeremony({ mode: 'add' }),

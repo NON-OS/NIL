@@ -32,6 +32,7 @@ import SharePage from './views/SharePage';
 import OpenBountiesPage from './views/OpenBountiesPage';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
+import BackupWalletNudge from './components/shell/BackupWalletNudge';
 
 function Screen({ segments }: { segments: string[] }) {
   const [first, second] = segments;
@@ -95,7 +96,8 @@ export default function App() {
     );
   }
 
-  if (phase === 'auth') {
+  // a sign-in reset link signs in as the person it was made for, even over another session
+  if (phase === 'auth' || (segments[0] === 'reset' && segments[1])) {
     return (
       <>
         {segments[0] === 'verify' ? <VerifyView standalone /> : <AuthView />}
@@ -116,6 +118,7 @@ export default function App() {
       {extract && <ExtractModal />}
       {deckOpen && <DeckModal />}
       {newProject && <ProjectModal onClose={() => setNewProject(false)} />}
+      <BackupWalletNudge />
       <Toasts />
     </div>
   );

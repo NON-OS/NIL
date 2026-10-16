@@ -5,6 +5,7 @@ import NilLogo from '../components/brand/NilLogo';
 import LoginPanel from '../components/auth/LoginPanel';
 import JoinPanel from '../components/auth/JoinPanel';
 import RestorePanel from '../components/auth/RestorePanel';
+import ResetPanel from '../components/auth/ResetPanel';
 import useStore from '../state/useStore';
 import useRoute from '../hooks/useRoute';
 import http from '../api/http';
@@ -22,6 +23,7 @@ export default function AuthView() {
   const [holderJoin, setHolderJoin] = useState(false);
   const { segments } = useRoute();
   const inviteToken = segments[0] === 'invite' ? segments[1] : undefined;
+  const resetToken = segments[0] === 'reset' ? segments[1] : undefined;
   const [invite, setInvite] = useState<InviteInfo | null>(null);
   const [restoring, setRestoring] = useState(false);
 
@@ -34,7 +36,9 @@ export default function AuthView() {
   }, [inviteToken]);
 
   let panel;
-  if (inviteToken) {
+  if (resetToken) {
+    panel = <ResetPanel token={resetToken} />;
+  } else if (inviteToken) {
     panel = !invite ? null : invite.valid ? (
       <JoinPanel mode="invite" inviteToken={inviteToken} workspaceName={invite.workspace?.name} />
     ) : (

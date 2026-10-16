@@ -1,5 +1,4 @@
-import './Wallets.css';
-import WalletIcon from './WalletIcon';
+import WalletChoices from './WalletChoices';
 import type WalletOption from '../../types/WalletOption';
 
 interface Props {
@@ -14,16 +13,7 @@ export default function WalletPicker({ wallets, chosenId, onPick, onBack }: Prop
     <div className="auth-card">
       <h1>Which wallet?</h1>
       <p className="lead">This browser has more than one wallet. Pick the one you use for Nil, and this device will remember it.</p>
-      <ul className="wallet-list">
-        {wallets.map((w) => (
-          <li key={w.id}>
-            <button type="button" className="wallet-option" aria-current={w.id === chosenId || undefined} onClick={() => onPick(w.id)}>
-              <WalletIcon wallet={w} size={24} />
-              <span>{w.name}</span>
-            </button>
-          </li>
-        ))}
-      </ul>
+      <WalletChoices wallets={wallets} chosenId={chosenId} onPick={onPick} />
       <div className="auth-links">
         <button type="button" className="btn btn-ghost btn-sm" onClick={onBack}>
           Back

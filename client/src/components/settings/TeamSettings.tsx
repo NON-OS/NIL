@@ -16,6 +16,8 @@ import '../bounty/Bounty.css';
 import isAdminUser from '../../lib/isAdmin';
 import GuestProjects from './GuestProjects';
 import VotePowerCard from './VotePowerCard';
+import ResetSignInButton from './ResetSignInButton';
+import SignInResetsCard from './SignInResetsCard';
 
 const HINT: Record<Role, string> = { guest: 'Sees only chosen projects', member: 'Works on tasks', admin: 'Manages people', owner: 'Full control' };
 const ROLE_OPTIONS = (['guest', 'member', 'admin', 'owner'] as Role[]).map((r) => ({ value: r, label: meta.role[r], hint: HINT[r] }));
@@ -195,12 +197,21 @@ export default function TeamSettings() {
                       Remove access
                     </ConfirmButton>
                   )}
+                  {!u.deactivated && <ResetSignInButton user={u} />}
+                </div>
+              )}
+              {/* admins can't otherwise manage an owner, but can ask to reset their sign-in */}
+              {isAdmin && me.role !== 'owner' && u.role === 'owner' && !u.deactivated && (
+                <div className="member-actions">
+                  <ResetSignInButton user={u} />
                 </div>
               )}
             </div>
           ))}
         </div>
       </section>
+
+      {isAdmin && <SignInResetsCard />}
     </>
   );
 }
