@@ -1,0 +1,78 @@
+.menu {
+  display: flex;
+  flex-direction: column;
+  max-height: min(360px, 60vh);
+}
+
+.menu-search {
+  padding: 8px 10px;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: transparent;
+  outline: none;
+  font-size: var(--text-md);
+}
+
+.menu-list {
+  margin: 0;
+  padding: 4px;
+  list-style: none;
+  overflow-y: auto;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  min-height: 32px;
+  padding: 5px 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+.menu-item[data-active='true'] {
+  background: var(--surface-3);
+}
+
+.menu-item .menu-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* a hint gives way long before its label does, then trails off */
+.menu-item .menu-hint {
+  flex: 0 100 auto;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.menu-check {
+  width: 14px;
+  height: 14px;
+  color: var(--accent-line);
+  flex: none;
+}
+
+.menu-empty {
+  padding: 12px 10px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.menu-divider {
+  height: 1px;
+  margin: 4px 6px;
+  background: var(--line);
+}

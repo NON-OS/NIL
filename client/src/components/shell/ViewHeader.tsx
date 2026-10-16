@@ -1,0 +1,36 @@
+import './ViewHeader.css';
+import type { ReactNode } from 'react';
+import { Menu } from 'lucide-react';
+import Resolve from '../brand/Resolve';
+import useRoute from '../../hooks/useRoute';
+import ui from '../../actions/ui';
+import navItems from '../../lib/navItems';
+
+interface Props {
+  title: ReactNode;
+  icon?: ReactNode;
+  subtitle?: ReactNode;
+  actions?: ReactNode;
+}
+
+export default function ViewHeader({ title, icon, subtitle, actions }: Props) {
+  const { path } = useRoute();
+  // main sections carry their number, like the brand's numbered pages: 01 My work, 02 Inbox…
+  const index = navItems.findIndex((n) => n.to === path || (n.to !== '/' && path.startsWith(`${n.to}/`)));
+
+  return (
+    <header className="view-head">
+      <button type="button" className="icon-btn menu-toggle" onClick={() => ui.sidebar(true)} aria-label="Open menu">
+        <Menu />
+      </button>
+      {index >= 0 && <span className="view-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>}
+      <h1>
+        {icon}
+        {typeof title === 'string' ? <Resolve text={title} /> : <span>{title}</span>}
+      </h1>
+      {subtitle && <span className="subtitle">{subtitle}</span>}
+      <div className="view-head-actions">{actions}</div>
+      <i className="view-rule" key={path} aria-hidden="true" />
+    </header>
+  );
+}

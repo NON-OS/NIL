@@ -1,0 +1,38 @@
+.bulkbar {
+  position: fixed;
+  left: 50%;
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 35;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 6px;
+  border: 1px solid var(--line-strong);
+  border-radius: 12px;
+  background: var(--surface);
+  box-shadow: var(--shadow-3);
+  transform: translateX(-50%);
+  animation: rise-in 0.16s ease-out;
+}
+
+.bulkbar .count {
+  padding: 0 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.bulkbar .prop-btn {
+  height: 30px;
+  border: 1px solid var(--line);
+}
+
+@media (min-width: 901px) {
+  .bulkbar {
+    left: calc(50% + var(--sidebar-w) / 2);
+    max-width: calc(100vw - var(--sidebar-w) - 32px);
+  }
+}

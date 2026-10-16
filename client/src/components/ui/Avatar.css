@@ -1,0 +1,43 @@
+.avatar {
+  position: relative;
+  display: inline-grid;
+  place-items: center;
+  flex: none;
+  border-radius: 50%;
+  color: #fff;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+  user-select: none;
+}
+
+.avatar-empty {
+  border: 1.5px dashed var(--line-strong);
+  color: var(--faint);
+  background: transparent;
+}
+
+.avatar-online::after {
+  content: '';
+  position: absolute;
+  right: -1px;
+  bottom: -1px;
+  width: 31%;
+  height: 31%;
+  min-width: 7px;
+  min-height: 7px;
+  border: 2px solid var(--surface);
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.avatar-stack {
+  display: inline-flex;
+}
+
+.avatar-stack .avatar {
+  box-shadow: 0 0 0 2px var(--surface);
+}
+
+.avatar-stack .avatar + .avatar {
+  margin-left: -6px;
+}

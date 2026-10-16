@@ -1,0 +1,80 @@
+/* NØNOS brand (nonos.software/brand), light only: white and Paper grounds, Ink text, NØNOS
+   Cyan as the one accent fill, Deep Teal for depth. No gradients, glows or shadows: surfaces
+   are separated by thin rules. Cyan on white is a fill, never text; anything that must read
+   as a line, number or glyph uses the brand's type cyan (--accent-line) instead. */
+:root {
+  --brand-cyan: #66ffff;
+  --brand-ink: #0a0b0d;
+  --brand-paper: #f2f3f7;
+  --brand-teal: #2e5c5c;
+  --brand-blue: #2438ff;
+  --brand-cyan-type: #007c85;
+
+  --bg: #ffffff;
+  --surface: #ffffff;
+  --surface-2: #f7f8fa;
+  --surface-3: #eff1f5;
+  --sidebar: #f7f8fa;
+  --ink: #0a0b0d;
+  --ink-2: #3a3e47;
+  --muted: #676c77;
+  --faint: #8c919b;
+  --line: #e2e4ea;
+  --line-strong: #cdd0d8;
+  --accent: #66ffff;
+  --accent-hover: #4df0f0;
+  --accent-ink: #0a0b0d;
+  --accent-soft: #dcfafa;
+  --accent-text: #007c85;
+  --accent-line: #007c85;
+  --tech: #2438ff;
+  --focus: #007c85;
+
+  --danger: #c4302b;
+  --danger-soft: #fbe8e7;
+  --warning: #9a6400;
+  --warning-soft: #fcf0d6;
+  --success: #007c85;
+  --success-soft: #dcfafa;
+
+  --st-backlog: #a3a8b2;
+  --st-todo: #767b86;
+  --st-progress: #c98a00;
+  --st-review: #2438ff;
+  --st-done: #007c85;
+  --st-canceled: #a3a8b2;
+  --p-urgent: #d0342e;
+
+  /* sequential, one hue light to dark: cyan family down to Deep Teal */
+  --chart-1: #9fe8ea;
+  --chart-2: #3fbfc5;
+  --chart-3: #007c85;
+  --chart-4: #2e5c5c;
+  --chart-grid: #e8eaef;
+  --chart-axis: #cdd0d8;
+
+  --shadow-1: none;
+  --shadow-2: 0 0 0 1px var(--line);
+  --shadow-3: 0 0 0 1px var(--line-strong);
+  --scrim: rgba(10, 11, 13, 0.42);
+
+  --font-display: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-body: 'Geist Variable', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+
+  --text-xs: 11.5px;
+  --text-sm: 12.5px;
+  --text-md: 13.5px;
+  --text-lg: 15px;
+  --text-xl: 19px;
+  --text-2xl: 28px;
+
+  --r-sm: 6px;
+  --r-md: 8px;
+  --r-lg: 14px;
+  --sidebar-w: 252px;
+  --topbar-h: 52px;
+  --drawer-w: min(640px, 100vw);
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+  color-scheme: light;
+}

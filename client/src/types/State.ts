@@ -1,0 +1,66 @@
+import type User from './User';
+import type Workspace from './Workspace';
+import type Project from './Project';
+import type Label from './Label';
+import type Goal from './Goal';
+import type Task from './Task';
+import type FocusItem from './FocusItem';
+import type InboxItem from './InboxItem';
+import type Activity from './Activity';
+import type PresenceEntry from './PresenceEntry';
+import type TaskDetail from './TaskDetail';
+import type ToastMessage from './ToastMessage';
+import type NoxInfo from './NoxInfo';
+import type HolderGate from './HolderGate';
+import type TimeEntry from './TimeEntry';
+import type DeckScope from './DeckScope';
+import type RewardToken from './RewardToken';
+import type SharingPolicy from './SharingPolicy';
+import type Plan from './Plan';
+import type StealthInfo from './StealthInfo';
+import type TaskArchive from './TaskArchive';
+
+export default interface State {
+  phase: 'loading' | 'auth' | 'ready';
+  needsSetup: boolean;
+  holderGate: HolderGate | null;
+  me: User | null;
+  workspace: Workspace;
+  users: Record<string, User>;
+  projects: Record<string, Project>;
+  labels: Record<string, Label>;
+  goals: Record<string, Goal>;
+  tasks: Record<string, Task>;
+  archive: TaskArchive;
+  focus: FocusItem[];
+  unread: number;
+  inbox: InboxItem[] | null;
+  feed: Activity[] | null;
+  ai: boolean;
+  nox: NoxInfo | null;
+  rewards: RewardToken[];
+  // true when you're a guest who can see only the projects shared with you
+  guest: boolean;
+  sharing: SharingPolicy;
+  plan: Plan;
+  stealth: StealthInfo | null;
+  proposalsRev: number;
+  timer: TimeEntry | null;
+  docsUnlocked: boolean;
+  docsRev: number;
+  deck: { open: boolean; preset?: Partial<DeckScope> };
+  sourceUrl: string | null;
+  presence: PresenceEntry[];
+  // taskId -> userId -> when their "typing" hint expires
+  typing: Record<string, Record<string, number>>;
+  connected: boolean;
+  // a newer version of the web app has been deployed since this tab loaded
+  updateReady: boolean;
+  detail: TaskDetail | null;
+  quickAdd: { open: boolean; defaults?: Partial<Task> };
+  palette: boolean;
+  shortcuts: boolean;
+  extract: boolean;
+  sidebarOpen: boolean;
+  toasts: ToastMessage[];
+}

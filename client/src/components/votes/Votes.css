@@ -1,0 +1,102 @@
+.proposals {
+  display: grid;
+  gap: 14px;
+}
+
+.proposal {
+  display: grid;
+  gap: 12px;
+  padding: 16px 18px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.proposal-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+
+.proposal-head h3 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: var(--text-lg);
+}
+
+.proposal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.proposal-meta span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.proposal-meta svg {
+  width: 12px;
+  height: 12px;
+}
+
+.proposal-body {
+  margin: 0;
+  color: var(--ink-2);
+  white-space: pre-wrap;
+}
+
+.proposal-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.proposal-options .btn[aria-pressed='true'] {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+}
+
+.proposal-results {
+  display: grid;
+  gap: 8px;
+}
+
+.proposal-foot {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.proposal-foot .grow {
+  flex: 1;
+}
+
+.proposal.closed {
+  background: var(--surface-2);
+}
+
+.proposal-anon {
+  margin: 0;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+}
+
+.proposal-anon svg {
+  margin-right: 4px;
+  vertical-align: -2px;
+  color: var(--accent-line);
+}
+
+.proposal-anon .btn {
+  margin-left: 8px;
+  vertical-align: middle;
+}

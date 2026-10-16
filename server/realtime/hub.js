@@ -1,0 +1,100 @@
+import presenceFor from './presenceFor.js';
+
+// Every open socket, plus who it belongs to, the session it opened with, and which task it's looking at.
+const clients = new Map();
+let presenceTimer = null;
+
+function send(ws, data) {
+  if (ws.readyState === ws.OPEN) ws.send(data);
+}
+
+function presenceSnapshot() {
+  const byUser = new Map();
+  for (const c of clients.values()) {
+    const entry = byUser.get(c.userId) ?? { userId: c.userId, viewing: [] };
+    if (c.viewing && !entry.viewing.includes(c.viewing)) entry.viewing.push(c.viewing);
+    byUser.set(c.userId, entry);
+  }
+  return [...byUser.values()];
+}
+
+function closeWhere(match) {
+  for (const [ws, c] of clients) {
+    if (!match(c)) continue;
+    ws.close(4001, 'signed out');
+    clients.delete(ws);
+  }
+  hub.presenceChanged();
+}
+
+const hub = {
+  add(ws, client) {
+    clients.set(ws, { viewing: null, alive: true, lastTyping: 0, ...client });
+    hub.presenceChanged();
+  },
+
+  remove(ws) {
+    if (clients.delete(ws)) hub.presenceChanged();
+  },
+
+  get: (ws) => clients.get(ws),
+
+  entries: () => clients.entries(),
+
+  // Pass a function to tailor the payload per recipient (e.g. hide wallet addresses from non-admins, or private tasks from everyone but their owner).
+  // Return the same object to everyone who should get the same payload: it's encoded once for
+  // all of them instead of once per open tab.
+  broadcast(event, { except } = {}) {
+    if (typeof event !== 'function') {
+      const data = JSON.stringify(event);
+      for (const ws of clients.keys()) if (ws !== except) send(ws, data);
+      return;
+    }
+    const encoded = new Map();
+    // returning nothing for someone means they don't get this event at all
+    for (const [ws, c] of clients) {
+      if (ws === except) continue;
+      const tailored = event({ id: c.userId, isAdmin: c.isAdmin });
+      if (!tailored) continue;
+      let data = encoded.get(tailored);
+      if (data === undefined) {
+        data = JSON.stringify(tailored);
+        encoded.set(tailored, data);
+      }
+      send(ws, data);
+    }
+  },
+
+  toUser(userId, event) {
+    const data = JSON.stringify(event);
+    for (const [ws, c] of clients) if (c.userId === userId) send(ws, data);
+  },
+
+  setAdmin(userId, isAdmin) {
+    for (const c of clients.values()) if (c.userId === userId) c.isAdmin = isAdmin;
+  },
+
+  // Closes every socket of a person (removed, deactivated) or of one session (signed out).
+  disconnect(userId) {
+    closeWhere((c) => c.userId === userId);
+  },
+
+  endSession(sessionHash) {
+    closeWhere((c) => c.session === sessionHash);
+  },
+
+  // what one viewer may see of who's online and where
+  presenceFor: (viewer) => presenceFor(presenceSnapshot(), viewer),
+
+  // Joins and leaves often come in bursts (tab reloads), so batch them.
+  presenceChanged() {
+    if (presenceTimer) return;
+    presenceTimer = setTimeout(() => {
+      presenceTimer = null;
+      const snapshot = presenceSnapshot();
+      hub.broadcast((viewer) => ({ type: 'presence', presence: presenceFor(snapshot, viewer) }));
+    }, 150);
+  },
+};
+
+export default hub;

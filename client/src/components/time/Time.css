@@ -1,0 +1,214 @@
+.running-timer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 10px 8px;
+  padding: 6px 8px 6px 10px;
+  border-radius: var(--r-md);
+  background: var(--accent-soft);
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+}
+
+.running-timer .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--danger);
+  animation: timer-pulse 1.6s ease-in-out infinite;
+}
+
+.running-timer button.label {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.running-timer .num {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+@keyframes timer-pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .running-timer .dot {
+    animation: none;
+  }
+}
+
+.icon-btn.timing {
+  width: auto;
+  padding: 0 8px;
+  gap: 6px;
+  color: var(--accent-text);
+  background: var(--accent-soft);
+  font-variant-numeric: tabular-nums;
+  font-size: var(--text-sm);
+  font-weight: 600;
+}
+
+.reminder-pop {
+  display: grid;
+  gap: 10px;
+  padding: 10px;
+}
+
+.reminder-pop .presets {
+  display: grid;
+  gap: 4px;
+}
+
+.reminder-pop input[type='datetime-local'] {
+  width: 100%;
+}
+
+.reminder-list {
+  display: grid;
+  gap: 4px;
+}
+
+.reminder-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 8px;
+  border-radius: var(--r-sm);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.reminder-item span {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.timesheet-week {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.timesheet-day {
+  display: grid;
+  gap: 6px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  text-align: center;
+}
+
+.timesheet-day.today {
+  border-color: var(--accent-line);
+}
+
+.timesheet-day .bar {
+  height: 54px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+}
+
+.timesheet-day .bar i {
+  width: 14px;
+  border-radius: 4px 4px 0 0;
+  background: var(--accent-line);
+}
+
+.timesheet-day small {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.timesheet-day strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.time-entry {
+  display: grid;
+  grid-template-columns: 110px minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: 12px;
+  min-height: 44px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.time-entry:last-child {
+  border-bottom: 0;
+}
+
+.time-entry .what {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-card.time-log {
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  align-items: end;
+  gap: 10px;
+}
+
+.settings-card.time-log > :nth-child(-n + 3) {
+  grid-column: span 2;
+}
+
+.settings-card.time-log > :nth-child(4) {
+  grid-column: span 3;
+}
+
+.settings-card.time-log > :nth-child(5) {
+  grid-column: span 2;
+}
+
+.time-log .input {
+  height: 36px;
+}
+
+.time-log .field {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .timesheet-week {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .settings-card.time-log > :nth-child(n) {
+    grid-column: span 3;
+  }
+
+  .settings-card.time-log > :nth-child(1),
+  .settings-card.time-log > :nth-child(4),
+  .settings-card.time-log > :nth-child(5),
+  .settings-card.time-log > :last-child {
+    grid-column: 1 / -1;
+  }
+
+  .time-entry {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+  }
+
+  .time-entry > :first-child {
+    grid-column: 1 / -1;
+    color: var(--muted);
+  }
+}

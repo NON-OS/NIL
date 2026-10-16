@@ -1,0 +1,89 @@
+.plan-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 3px 9px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+/* a filled dot reads as "state", so the badge never relies on color alone: the words carry it */
+.plan-badge::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.plan-badge.on {
+  color: var(--success);
+}
+
+.plan-badge.warn {
+  color: var(--warning);
+}
+
+.plan-badge.off {
+  color: var(--danger);
+}
+
+.plan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plan-facts {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.plan-choice.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.plan-total {
+  justify-content: space-between;
+}
+
+.plan-total .mono {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.plan-fine {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.plan-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--warning);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 760px) {
+  .plan-facts {
+    grid-template-columns: 1fr;
+  }
+}

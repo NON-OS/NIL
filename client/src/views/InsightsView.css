@@ -1,0 +1,31 @@
+.insights-kpis {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.insights-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.insights-grid .wide {
+  grid-column: 1 / -1;
+}
+
+.insights-grid .panel-body {
+  display: grid;
+  gap: 12px;
+}
+
+@media (max-width: 960px) {
+  .insights-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .insights-kpis {
+    grid-template-columns: 1fr 1fr;
+  }
+}

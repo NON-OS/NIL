@@ -1,0 +1,94 @@
+.line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 42px;
+  padding: 6px 10px;
+  border-radius: var(--r-md);
+  cursor: pointer;
+}
+
+.line:hover {
+  background: var(--surface-2);
+}
+
+.line-check {
+  display: grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  flex: none;
+}
+
+.line-check:hover svg circle:first-child {
+  stroke: var(--st-done);
+}
+
+.line-title {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 500;
+}
+
+.line.closed .line-title {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.line-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.line-project {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.line-project i {
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  flex: none;
+}
+
+.line .sun {
+  opacity: 0;
+  color: var(--muted);
+}
+
+.line:hover .sun,
+.line .sun.on,
+.line .sun:focus-visible {
+  opacity: 1;
+}
+
+.line .sun.on {
+  color: var(--warning);
+}
+
+@media (max-width: 640px) {
+  .line-project {
+    display: none;
+  }
+
+  .line .sun {
+    opacity: 1;
+  }
+}

@@ -1,0 +1,48 @@
+.update-prompt {
+  position: fixed;
+  top: max(12px, env(safe-area-inset-top));
+  left: 50%;
+  z-index: 85;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px 8px 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  font-size: var(--text-md);
+  transform: translateX(-50%);
+  animation: rise-in 0.18s ease-out;
+}
+
+.update-icon {
+  width: 16px;
+  height: 16px;
+  flex: none;
+  color: var(--accent-text);
+}
+
+.update-message {
+  min-width: 0;
+}
+
+.update-later {
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.update-later svg {
+  width: 16px;
+  height: 16px;
+}

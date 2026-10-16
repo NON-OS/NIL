@@ -1,0 +1,79 @@
+.datepicker {
+  padding: 10px;
+}
+
+.datepicker-quick {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  padding-bottom: 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--line);
+}
+
+.datepicker-quick button {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.datepicker-quick button:hover {
+  background: var(--surface-3);
+}
+
+.datepicker-quick span {
+  color: var(--muted);
+}
+
+.datepicker-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-weight: 600;
+}
+
+.datepicker-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 2px;
+  text-align: center;
+}
+
+.datepicker-grid .dow {
+  padding: 4px 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.datepicker-grid button {
+  height: 30px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+}
+
+.datepicker-grid button:hover {
+  background: var(--surface-3);
+}
+
+.datepicker-grid button.out {
+  color: var(--faint);
+}
+
+.datepicker-grid button.today {
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+.datepicker-grid button.selected {
+  background: var(--accent);
+  color: var(--accent-ink);
+}

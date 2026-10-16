@@ -1,0 +1,5 @@
+User debian-tor
+DataDirectory /var/lib/tor
+HiddenServiceDir /var/lib/tor/nonos
+HiddenServicePort 80 nonos:3000
+SocksPort 0
