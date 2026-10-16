@@ -77,3 +77,15 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
+
+@media (pointer: coarse) {
+  .palette-item {
+    min-height: var(--tap-min);
+  }
+
+  /* arrow keys, Enter, Esc and shortcuts aren't how a phone gets around */
+  .palette-foot,
+  .palette-item .shortcut {
+    display: none;
+  }
+}

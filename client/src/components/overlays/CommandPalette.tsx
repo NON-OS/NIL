@@ -19,6 +19,8 @@ interface Item {
   title: string;
   icon: ReactNode;
   hint?: string;
+  // the hint is a keyboard shortcut rather than a key like NON-12
+  shortcut?: boolean;
   score: number;
   run: () => void;
 }
@@ -63,11 +65,11 @@ export default function CommandPalette() {
       if (score > 0) out.push({ ...item, score });
     };
 
-    add({ id: 'new', group: 'Actions', title: 'Create a task', icon: <Plus />, hint: 'C', run: then(() => ui.quickAdd()) }, 'create new task add');
+    add({ id: 'new', group: 'Actions', title: 'Create a task', icon: <Plus />, hint: 'C', shortcut: true, run: then(() => ui.quickAdd()) }, 'create new task add');
     if (aiOn) add({ id: 'extract', group: 'Actions', title: 'Turn notes into tasks', icon: <Sparkles />, run: then(() => ui.extract()) }, 'notes meeting extract ai tasks');
     add({ id: 'deck', group: 'Actions', title: 'Create a status deck (.pptx)', icon: <Presentation />, run: then(() => decks.open()) }, 'deck powerpoint pptx slides presentation status report');
     if (isAdmin) add({ id: 'invite', group: 'Actions', title: 'Invite a teammate', icon: <UserPlus />, run: then(() => router.navigate('/settings?tab=team')) }, 'invite teammate member people');
-    for (const v of VIEWS) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, run: then(() => router.navigate(v.to)) }, v.title);
+    for (const v of VIEWS) add({ id: v.to, group: 'Go to', title: v.title, icon: v.icon, hint: v.keys, shortcut: true, run: then(() => router.navigate(v.to)) }, v.title);
     for (const p of Object.values(projects).filter((p) => !p.archived)) {
       add({ id: `p${p.id}`, group: 'Projects', title: p.name, icon: <span style={{ width: 10, height: 10, borderRadius: 3, background: p.color, margin: 3 }} />, hint: p.key, run: then(() => router.navigate(`/projects/${p.id}`)) }, `${p.name} ${p.key}`);
     }
@@ -117,14 +119,14 @@ export default function CommandPalette() {
           }}
         />
       </div>
-      <ul className="palette-results" ref={listRef} role="listbox">
+      <ul className="palette-results" ref={listRef} role="listbox" aria-label="Results">
         {items.map((item, i) => (
           <li key={item.id}>
             {(i === 0 || items[i - 1].group !== item.group) && <div className="palette-group eyebrow">{item.group}</div>}
             <button type="button" className="palette-item" data-index={i} data-active={i === active} onMouseMove={() => setActive(i)} onClick={item.run} role="option" aria-selected={i === active}>
               {item.icon}
               <span className="title">{item.title}</span>
-              {item.hint && <span className="key mono">{item.hint}</span>}
+              {item.hint && <span className={item.shortcut ? 'key mono shortcut' : 'key mono'}>{item.hint}</span>}
             </button>
           </li>
         ))}
