@@ -1,4 +1,5 @@
 import './Avatar.css';
+import { UserRoundPlus } from 'lucide-react';
 import cx from '../../lib/cx';
 import type User from '../../types/User';
 
@@ -15,10 +16,11 @@ interface Props {
 }
 
 export default function Avatar({ user, size = 22, online = false, title }: Props) {
+  // nobody yet: an open seat to fill, drawn as an invitation rather than a question mark
   if (!user) {
     return (
-      <span className="avatar avatar-empty" style={{ width: size, height: size, fontSize: size * 0.42 }} title={title ?? 'Unassigned'}>
-        ?
+      <span className="avatar avatar-empty" style={{ width: size, height: size }} title={title ?? 'Unassigned'}>
+        <UserRoundPlus size={Math.round(size * 0.62)} strokeWidth={1.75} aria-hidden="true" />
       </span>
     );
   }

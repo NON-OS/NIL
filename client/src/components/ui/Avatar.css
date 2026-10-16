@@ -11,9 +11,9 @@
 }
 
 .avatar-empty {
-  border: 1.5px dashed var(--line-strong);
-  color: var(--faint);
-  background: transparent;
+  border: 1px solid var(--line-strong);
+  color: var(--muted);
+  background: var(--surface);
 }
 
 .avatar-online::after {
