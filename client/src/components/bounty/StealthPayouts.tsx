@@ -43,7 +43,7 @@ export default function StealthPayouts({ revision }: { revision: unknown }) {
                 <span>{tokenAmount(p.amount, p.token)}</span>
               </div>
               <div className="bounty-item-sub">
-                <span className="mono">{shortAddress(p.address)}</span> · {dates.ago(p.createdAt)} · holds {p.balance ? tokenAmount(p.balance.token, p.token, 2) : '—'}
+                <span className="mono">{shortAddress(p.address)}</span> · {dates.ago(p.createdAt)} · {p.balance && p.balanceCheckedAt ? `held ${tokenAmount(p.balance.token, p.token, 2)} ${dates.ago(p.balanceCheckedAt)}` : 'balance not read yet'}
                 {!p.announced && ' · not announced yet'}
               </div>
               {shown?.id === p.id && (

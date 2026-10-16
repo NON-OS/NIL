@@ -16,6 +16,8 @@ export default function mockChain() {
   const nonces = new Map();
   const receipts = new Map();
   const sent = [];
+  // every call the server made, in order, so tests can check what the node got to see and when
+  const calls = [];
   let block = 1000;
   let chainId = 1;
 
@@ -24,6 +26,7 @@ export default function mockChain() {
     req.on('data', (c) => (raw += c));
     req.on('end', () => {
       const { id, method, params } = JSON.parse(raw);
+      calls.push({ method, params, at: Date.now() });
       let result = null;
       if (method === 'eth_chainId') result = `0x${chainId.toString(16)}`;
       else if (method === 'eth_blockNumber') result = `0x${block.toString(16)}`;
@@ -61,6 +64,7 @@ export default function mockChain() {
     setTokenBalance: (token, address, amount) => tokenBalances.set(`${token.toLowerCase()}:${address.toLowerCase()}`, BigInt(amount)),
     setStake: (address, wei) => stakes.set(address.toLowerCase(), BigInt(wei)),
     sent,
+    calls,
     setChainId: (id) => (chainId = id),
     mine: (blocks) => (block += blocks),
     // Records a mined ERC-20 Transfer, `depth` blocks below the current head.

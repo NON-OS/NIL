@@ -10,6 +10,8 @@ export default interface StealthPayout {
   status: 'pending' | 'confirmed';
   announced: boolean;
   createdAt: number;
-  // what the one-time address still holds right now, or null if the node didn't answer
+  // what the one-time address held when last looked up, or null if it hasn't been yet; the
+  // server reads these one address at a time, spread out, so they can lag a little
   balance: { eth: string; token: string } | null;
+  balanceCheckedAt: number | null;
 }

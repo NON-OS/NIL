@@ -161,6 +161,8 @@ const stealth = Object.freeze({
   gasTopUpWei: /^\d+$/.test(env.STEALTH_GAS_TOPUP_WEI ?? '') ? env.STEALTH_GAS_TOPUP_WEI : '300000000000000',
   // how long a confirmed payout keeps being checked for a late announcement
   announceCheckDays: envNumber('STEALTH_ANNOUNCE_CHECK_DAYS', 7),
+  // payout balances are looked up one address at a time, at random moments within this window
+  balanceSpreadMs: envNumber('STEALTH_BALANCE_SPREAD_SECONDS', 1800, { min: 1 }) * 1000,
 });
 
 // Voting power: NOX in linked wallets, plus NOX staked in the official staking contract, plus a

@@ -43,6 +43,10 @@ const stealth = {
 
   payouts: () => http.get<{ payouts: StealthPayout[] }>('/stealth/payouts').then((r) => r.payouts),
 
+  // One payout's balance read now. Only for the payout you're about to move: the move names
+  // the address to the node anyway, and checking one at a time never groups your addresses.
+  balance: (payout: StealthPayout) => http.get<{ balance: { eth: string; token: string } }>(`/stealth/payouts/${payout.id}/balance`).then((r) => r.balance),
+
   // Moves everything a one-time address holds to wherever you choose: first the tokens, then
   // whatever ETH is left after gas. Signed here; the server only relays the signed bytes.
   async move(payout: StealthPayout, to: string, tokenAddress: string) {
