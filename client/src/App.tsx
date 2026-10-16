@@ -20,6 +20,7 @@ import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 import useCryptoTools from './hooks/useCryptoTools';
 import cryptoOnly from './lib/cryptoOnly';
+import BackupWalletNudge from './components/shell/BackupWalletNudge';
 
 // The everyday screens above load with the app. The rest arrive when first opened, so the
 // first paint of My work and the board doesn't wait on settings, charts, crypto or exports.
@@ -131,7 +132,8 @@ export default function App() {
 
   if (phase === 'loading') return <LoadingScreen />;
 
-  if (phase === 'auth') {
+  // a sign-in reset link signs in as the person it was made for, even over another session
+  if (phase === 'auth' || (segments[0] === 'reset' && segments[1])) {
     return (
       <>
         <Suspense fallback={<LoadingScreen />}>
@@ -160,6 +162,7 @@ export default function App() {
       </Suspense>
       <UpdatePrompt />
       {keyCheck && <KeyCheckModal />}
+      <BackupWalletNudge />
       <Toasts />
     </div>
   );

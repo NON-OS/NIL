@@ -50,6 +50,8 @@ import calendarFeed from './calendarFeed.js';
 import calendarFeedSettings from './calendarFeedSettings.js';
 import search from './search.js';
 import firstRun from './firstRun.js';
+import resetLinks from './resetLinks.js';
+import signInResets from './signInResets.js';
 
 const api = express.Router();
 
@@ -59,6 +61,7 @@ api.use(cryptoGate);
 api.use(publicPages);
 api.use(publicBounties);
 api.use(wallet);
+api.use(resetLinks);
 api.use(proofKey);
 api.use(capsules);
 api.use(anonymousBallots);
@@ -77,7 +80,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, identityWraps, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push, calendarFeedSettings, search, firstRun]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, identityWraps, tokens, shareLinks, applications, planRoutes, stealth, votingKey, trustees, push, calendarFeedSettings, search, firstRun, signInResets]) {
   api.use(router);
 }
 

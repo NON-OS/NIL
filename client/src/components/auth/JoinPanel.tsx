@@ -3,6 +3,10 @@ import { Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import TeamKindChoice from './TeamKindChoice';
 import identity from '../../actions/identity';
+import useWalletFlow from '../../hooks/useWalletFlow';
+import WalletPicker from './WalletPicker';
+import WalletStatus from './WalletStatus';
+import NoWalletPanel from './NoWalletPanel';
 import type JoinDetails from '../../types/JoinDetails';
 
 interface Props {
@@ -18,7 +22,7 @@ interface Props {
 const LEAD = {
   setup: 'You’re the first one here, so you’ll be the owner. Your wallet becomes the key to this workspace.',
   invite: 'Pick the name your team will see, then sign with your wallet.',
-  holder: 'This workspace is open to NOX holders. Your balance is checked when you sign.',
+  holder: 'Anyone whose wallet holds enough NOX tokens can join this workspace. Nil checks the balance when you sign. Nothing is spent.',
 };
 
 export default function JoinPanel({ mode, inviteToken, workspaceName, requirement, onRestore, onBack }: Props) {
@@ -28,8 +32,9 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
   const [cryptoTools, setCryptoTools] = useState(false);
   const [error, setError] = useState('');
 
-  const submit = async (e: FormEvent) => {
-    e.preventDefault();
+  const flow = useWalletFlow();
+
+  const join = async () => {
     setError('');
     setBusy(true);
     try {
@@ -41,9 +46,17 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
     }
   };
 
+  const submit = (e: FormEvent) => {
+    e.preventDefault();
+    flow.start(join);
+  };
+
+  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} />;
+  if (flow.stage === 'pick') return <WalletPicker wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} onBack={flow.back} />;
+
   return (
     <form className="auth-card" onSubmit={submit} noValidate>
-      <h1>{mode === 'setup' ? 'Set up your workspace' : `Join ${workspaceName ?? 'your team'}`}</h1>
+      <h1>{mode === 'setup' ? 'Set up your workspace' : `Join ${workspaceName?.trim() || 'your team'}`}</h1>
       <p className="lead">{LEAD[mode]}</p>
       {error && <div className="auth-error" role="alert">{error}</div>}
       {mode === 'setup' && (
@@ -69,7 +82,8 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
       <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim() || (mode === 'setup' && !form.setupToken.trim())}>
         {busy ? <Spinner size={14} /> : <Wallet />} {mode === 'setup' ? 'Create workspace with your wallet' : 'Join with your wallet'}
       </button>
-      <p className="method-hint">Signing proves you own the wallet. It is not a transaction and costs nothing.</p>
+      <WalletStatus flow={flow} />
+      <p className="method-hint">Signing proves the wallet is yours. It costs nothing and sends nothing.</p>
       {(onRestore || onBack) && (
         <div className="auth-links">
           {onRestore && (

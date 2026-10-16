@@ -9,6 +9,11 @@ import session from '../../actions/session';
 import dates from '../../lib/dates';
 import type SecurityOverview from '../../types/SecurityOverview';
 import PrivatePayouts from './PrivatePayouts';
+import BackupWalletCard from './BackupWalletCard';
+import WalletChoices from '../auth/WalletChoices';
+import WalletStatus from '../auth/WalletStatus';
+import useWalletFlow from '../../hooks/useWalletFlow';
+import useRoute from '../../hooks/useRoute';
 import HelpLink from '../help/HelpLink';
 import WalletAddress from './WalletAddress';
 import useCryptoTools from '../../hooks/useCryptoTools';
@@ -21,6 +26,8 @@ export default function SecuritySettings() {
   const [data, setData] = useState<SecurityOverview | null>(null);
   const [linking, setLinking] = useState(false);
   const cryptoTools = useCryptoTools();
+  const flow = useWalletFlow();
+  const afterReset = useRoute().query.get('reset') === '1';
 
   const refresh = useCallback(() => identity.overview().then(setData).catch(toast.error), []);
   useEffect(() => {
@@ -51,6 +58,7 @@ export default function SecuritySettings() {
           Your wallets <HelpLink topic="signing-in" label="How signing in works" />
         </h2>
         <p>Any of these can sign you in. Link a second one, like a hardware wallet, so losing a device never locks you out.</p>
+        <BackupWalletCard count={data.credentials.length} afterReset={afterReset} />
         <div className="settings-card" style={{ paddingBlock: 6 }}>
           {data.credentials.map((c, i) => (
             <div key={c.id} className="member" style={{ gridTemplateColumns: '20px minmax(0, 1fr) auto' }}>
@@ -74,13 +82,16 @@ export default function SecuritySettings() {
           ))}
         </div>
         <div className="settings-row">
-          <button type="button" className="btn" disabled={linking} onClick={link}>
+          <button type="button" className={data.credentials.length === 1 ? 'btn btn-primary' : 'btn'} disabled={linking} onClick={() => flow.start(link)}>
             {linking ? <Spinner size={14} /> : <Wallet />} Link another wallet
           </button>
           <ConfirmButton className="btn" onConfirm={session.signOutEverywhere} confirmLabel="Click again to sign out everywhere">
             Sign out on all devices
           </ConfirmButton>
         </div>
+        {flow.stage === 'pick' && <WalletChoices wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} />}
+        {flow.stage === 'guide' && <p className="muted">There’s no wallet in this browser. Add one, reload this page, then link it here.</p>}
+        <WalletStatus flow={flow} />
       </section>
 
       {!guest && (

@@ -1,0 +1,47 @@
+.reset-link,
+.reset-warning {
+  display: grid;
+  gap: 14px;
+}
+
+.reset-link p,
+.reset-warning p {
+  margin: 0;
+  color: var(--ink-2);
+}
+
+.reset-link .qr-code {
+  justify-self: center;
+}
+
+.reset-empty {
+  padding: 10px 0;
+}
+
+.reset-log summary {
+  width: fit-content;
+  color: var(--accent-text);
+  font-size: var(--text-sm);
+  cursor: pointer;
+}
+
+.reset-log ol {
+  display: grid;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.reset-log li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: var(--text-sm);
+}
+
+.reset-log time {
+  flex: none;
+  color: var(--muted);
+}

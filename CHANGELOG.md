@@ -66,6 +66,11 @@ These changes follow a security review of the encryption. Keys published before 
 - **The board has column tabs on phones**, and cards on touch screens have a Move button that changes their column without a drag.
 - The task panel has a Mark complete button, which reads Reopen on a finished or canceled task.
 - Search is one tap from the top bar whenever the sidebar is folded away.
+- **Every wallet in the browser is found.** Nil now finds installed wallet extensions through EIP-6963. With more than one, it asks which to use, showing each wallet's own name and icon, and remembers the choice on that device. Wallets that only set `window.ethereum` still work.
+- **Help for people without a wallet.** Signing in on a device with no wallet now explains what a wallet is, why Nil uses one, and that signing in costs nothing and sends nothing. Computers get links to a few wallets' official sites and a QR code that opens the same page on a phone. Phones, including iPhone Safari and the installed app, get "Open Nil in your wallet app" links for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Nil loads nothing from these wallets, and the QR code is drawn in the browser.
+- **Smart-contract wallets can sign in**, including passkey wallets such as Coinbase Smart Wallet. Plain wallets are still checked first, without asking the Ethereum node. Other signatures are checked on the configured chain with EIP-1271, or EIP-6492 for a wallet that isn't deployed yet, within `SIGNIN_CHAIN_TIMEOUT_SECONDS` (8). Bounty applications accept them too. Signed ballots in votes still need a plain wallet.
+- **Reset sign-in.** In Settings → Team, an admin can reset the sign-in of someone who lost every wallet. The link works once, expires after `SIGNIN_RESET_HOURS` (24), lets that person link a new wallet to the same account with the same history, tasks and role, and signs them out on every other device. Their old wallets can then be removed. Resetting an owner needs a second admin to approve when there are two or more other admins. With only one, that admin has to confirm a clear warning first. Every step, and every wallet linked or removed, goes into a sign-in history that keeps account ids only, never links or addresses. Migration 025 adds its two tables.
+- Right after sign-up, and in Settings → Sign-in & security while you have only one wallet, Nil suggests linking a backup.
 
 ### Changed
 
@@ -99,6 +104,7 @@ These changes follow a security review of the encryption. Keys published before 
 - Initials on light member colours (ochre, teal, moss, sky, persimmon) are ink instead of white, which was as low as 3.25:1.
 - Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
 - The comment box only mentions Ctrl+Enter where there is likely a keyboard.
+- The sign-in screen uses plain words. It no longer mentions gas or on-chain checks, and "Hold NOX? Join without an invite" now reads "Have NOX tokens? Join without an invite".
 
 ### Fixed
 
@@ -115,6 +121,7 @@ These changes follow a security review of the encryption. Keys published before 
 - A My work row and a board card were buttons with other buttons inside, and Space did nothing on a row. Their controls are now separate buttons. Pressing Enter or Space on a button inside a card no longer starts a keyboard drag.
 - The closed sidebar on narrow screens could still be reached with Tab.
 - The docs delete button and the command palette's results list had no accessible name.
+- A workspace without a name showed "Sign in to" with nothing after it, and asked wallets to sign "Sign in to ." Both now say Nil.
 
 ## 3.0.0 (2026-10-15)
 

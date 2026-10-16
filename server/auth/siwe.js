@@ -1,7 +1,8 @@
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { keccak_256 } from '@noble/hashes/sha3';
-import { bytesToHex, hexToBytes, utf8ToBytes, concatBytes } from '@noble/hashes/utils';
+import { bytesToHex, hexToBytes } from '@noble/hashes/utils';
 import checksumAddress from '../lib/checksumAddress.js';
+import personalHash from './personalHash.js';
 
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
 const SIGNATURE = /^0x[0-9a-fA-F]{130}$/;
@@ -31,8 +32,7 @@ const siwe = {
   recover(message, signature) {
     if (typeof signature !== 'string' || !SIGNATURE.test(signature)) return null;
     try {
-      const body = utf8ToBytes(message);
-      const digest = keccak_256(concatBytes(utf8ToBytes(`\x19Ethereum Signed Message:\n${body.length}`), body));
+      const digest = personalHash(message);
       const raw = hexToBytes(signature.slice(2));
       const v = raw[64] >= 27 ? raw[64] - 27 : raw[64];
       const point = secp256k1.Signature.fromCompact(raw.slice(0, 64)).addRecoveryBit(v).recoverPublicKey(digest);

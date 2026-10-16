@@ -1,0 +1,14 @@
+.qr-code {
+  display: block;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+}
+
+.qr-code rect {
+  fill: var(--bg);
+}
+
+.qr-code path {
+  fill: var(--brand-ink);
+}

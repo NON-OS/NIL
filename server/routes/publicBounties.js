@@ -10,6 +10,7 @@ import challenges from '../auth/challenges.js';
 import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
+import walletSignature from '../auth/walletSignature.js';
 import config from '../config.js';
 import notify from '../services/notify.js';
 import listedBounties from '../services/listedBounties.js';
@@ -58,10 +59,10 @@ router.post(
 // Step 2: check the signature, then file the application for the team to decide on.
 router.post(
   '/public/bounties/:id/apply',
-  route((req) => {
+  route(async (req) => {
     const pending = challenges.take(req.body?.challengeId, 'apply');
     if (!pending || pending.taskId !== req.params.id) throw HttpError.badRequest('That request expired. Apply again.');
-    if (siwe.recover(pending.message, req.body?.signature) !== pending.address) throw new HttpError(401, 'That signature doesn’t match the wallet.');
+    await walletSignature(pending.address, pending.message, req.body?.signature);
     const item = listed(pending.taskId);
     if (sql.get('SELECT 1 FROM applications WHERE task_id = ? AND address = ?', item.id, pending.address)) throw new HttpError(409, 'This wallet already applied for this bounty.');
     if (sql.get('SELECT COUNT(*) AS n FROM applications WHERE task_id = ?', item.id).n >= 100) throw HttpError.badRequest('This bounty has all the applications it can take.');

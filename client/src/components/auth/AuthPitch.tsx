@@ -6,9 +6,9 @@ import Arc from '../brand/Arc';
 // What Nil does in plain words, each line something a careful reader could go and check.
 const FACTS = [
   ['Encrypted in your browser', 'Private tasks and docs are locked with keys from your wallet. The server only ever stores scrambled text.'],
-  ['Sign in with your wallet', 'No email, no password, no phone number.'],
-  ['Pay anyone for a task', 'NOX or USDC goes wallet to wallet and is checked on-chain. Nil never holds the money.'],
-  ['Decide together', 'Anonymous votes weighted by NOX and Zero-State Passes. Only the totals come out.'],
+  ['Sign in with your wallet', 'No email, no password, no phone number. Signing in is free.'],
+  ['Pay anyone for a task', 'Send a reward in NOX or USDC straight from your wallet to theirs. Nil checks it arrived and never holds the money.'],
+  ['Decide together', 'Vote without anyone seeing how you voted. Only the totals come out.'],
 ];
 
 export default function AuthPitch() {

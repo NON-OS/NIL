@@ -8,7 +8,7 @@ const unreachable = (detail) => new HttpError(502, `Nil couldn’t reach its Eth
 
 // One JSON-RPC call to the node in NOX_RPC_URL. No cookies, no redirects, and a hard
 // timeout so a slow node can't hold requests open.
-export default async function rpc(method, params = []) {
+export default async function rpc(method, params = [], { timeoutMs = config.nox.rpcTimeoutMs } = {}) {
   let res;
   try {
     res = await fetch(config.nox.rpcUrl, {
@@ -16,7 +16,7 @@ export default async function rpc(method, params = []) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params }),
       redirect: 'error',
-      signal: AbortSignal.timeout(config.nox.rpcTimeoutMs),
+      signal: AbortSignal.timeout(timeoutMs),
     });
   } catch {
     rpcHealth.failed();
@@ -32,7 +32,8 @@ export default async function rpc(method, params = []) {
     throw unreachable('unreadable reply');
   }
   rpcHealth.answered();
-  // the node answered but said no (a reverted call, a transaction short of gas): pass its reason on
-  if (reply.error) throw new HttpError(502, `The Ethereum node refused: ${String(reply.error.message ?? 'no reason given').slice(0, 160)}`);
+  // the node answered but said no (a reverted call, a transaction short of gas): pass its reason
+  // on, marked so callers can tell a refusal from a node they couldn't reach
+  if (reply.error) throw Object.assign(new HttpError(502, `The Ethereum node refused: ${String(reply.error.message ?? 'no reason given').slice(0, 160)}`), { refused: true });
   return reply.result;
 }

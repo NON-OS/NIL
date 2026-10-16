@@ -10,7 +10,7 @@ Your wallet proves who you are, so Nil never needs to store an email address, a 
 
 ## What happens if I lose my wallet?
 
-If you lose every wallet linked to your account, you lose the account, and nobody can give it back. Link a second wallet now in **Settings → Sign-in & security**. If you only lose one, sign in with another linked wallet and remove the lost one.
+If you only lose one, sign in with another linked wallet and remove the lost one. If you lose every wallet linked to your account, ask an admin to reset your sign-in: they send you a one-time link that lets you link a new wallet to the same account. Save yourself that step by linking a second wallet now in **Settings → Sign-in & security**. See [Signing in](signing-in.md#if-you-lose-every-wallet).
 
 ## Can I use Nil on my phone?
 

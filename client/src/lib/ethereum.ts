@@ -1,8 +1,7 @@
-interface Provider {
-  request(args: { method: string; params?: unknown[] }): Promise<any>;
-}
+import wallets from './wallets';
+import type Eip1193Provider from '../types/Eip1193Provider';
 
-const provider = (): Provider | null => (window as unknown as { ethereum?: Provider }).ethereum ?? null;
+const provider = (): Eip1193Provider | null => wallets.active()?.provider ?? null;
 
 function friendly(err: any): Error {
   if (err?.code === 4001) return new Error('You declined the request in your wallet.');
@@ -10,15 +9,15 @@ function friendly(err: any): Error {
   return new Error(err?.message || 'Your wallet returned an error.');
 }
 
-// Talks to an injected EIP-1193 wallet (MetaMask, Rabby, Coinbase Wallet, Brave…).
-// Signing in only asks for an address and a text signature. Paying a bounty sends a
-// transaction, which the wallet always shows to its owner for approval first.
+// Talks to the browser wallet picked on this device (see wallets.ts): MetaMask, Rabby, Coinbase
+// Wallet, Brave, a wallet app's own browser. Signing in only asks for an address and a text
+// signature. Paying a bounty sends a transaction, which the wallet always shows its owner first.
 const ethereum = {
   available: () => provider() !== null,
 
   async account(): Promise<{ address: string; chainId: number }> {
     const p = provider();
-    if (!p) throw new Error('No wallet found. Install a wallet extension like MetaMask or Rabby, or open Nil in your wallet’s browser.');
+    if (!p) throw new Error('No wallet found on this device. Add one to your browser, or open Nil in your wallet app.');
     try {
       const [address] = await p.request({ method: 'eth_requestAccounts' });
       const chainId = parseInt(await p.request({ method: 'eth_chainId' }), 16) || 1;

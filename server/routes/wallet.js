@@ -10,12 +10,16 @@ import challenges from '../auth/challenges.js';
 import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
+import walletSignature from '../auth/walletSignature.js';
 import currentUser from '../auth/currentUser.js';
 import signIn from '../auth/signIn.js';
 import setupToken from '../auth/setupToken.js';
 import liveInvite from '../services/liveInvite.js';
 import createAccount from '../services/createAccount.js';
 import addCredential from '../services/addCredential.js';
+import liveReset from '../services/liveReset.js';
+import useSignInReset from '../services/useSignInReset.js';
+import signInAudit from '../services/signInAudit.js';
 import publishUser from '../services/publishUser.js';
 import holderGate from '../services/holderGate.js';
 import holdings from '../services/holdings.js';
@@ -33,6 +37,7 @@ const STATEMENT = {
   invite: (ws) => `Join ${ws} with this wallet.`,
   holder: (ws) => `Join ${ws} as a NOX holder with this wallet.`,
   add: (ws) => `Link this wallet to your ${ws} account.`,
+  reset: (ws) => `Link this wallet to your ${ws} account and sign in.`,
 };
 
 // Step 1: the server writes the exact message the wallet will sign.
@@ -64,6 +69,10 @@ router.post(
     } else if (mode === 'holder') {
       if (!holderGate.get().enabled) throw HttpError.forbidden('This workspace is invite-only.');
       pending.name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
+    } else if (mode === 'reset') {
+      const reset = liveReset(req.body.resetToken);
+      if (!reset) throw HttpError.badRequest('This sign-in reset link has expired or was already used. Ask your admin for a new one.');
+      pending.resetId = reset.id;
     }
 
     const now = new Date();
@@ -71,7 +80,8 @@ router.post(
       host: rp.host,
       origin: rp.origin,
       address,
-      statement: STATEMENT[mode](pending.workspaceName ?? rp.name),
+      // a workspace can have an empty name, and "Sign in to ." helps nobody
+      statement: STATEMENT[mode]((pending.workspaceName ?? rp.name ?? '').trim() || 'Nil'),
       nonce: crypto.randomBytes(12).toString('hex'),
       chainId: Number.isInteger(req.body.chainId) && req.body.chainId > 0 ? req.body.chainId : 1,
       issuedAt: now.toISOString(),
@@ -87,7 +97,7 @@ router.post(
   route(async (req, res) => {
     const pending = challenges.take(req.body.challengeId, 'wallet');
     if (!pending) throw HttpError.badRequest('That wallet request expired. Try again.');
-    if (siwe.recover(pending.message, req.body.signature) !== pending.address) throw new HttpError(401, 'That signature doesn’t match the wallet.');
+    await walletSignature(pending.address, pending.message, req.body.signature);
 
     if (pending.mode === 'login') {
       const row = sql.get("SELECT c.id, c.user_id, u.deactivated, u.joined_via FROM credentials c JOIN users u ON u.id = c.user_id WHERE c.kind = 'wallet' AND c.external_id = ?", pending.address);
@@ -108,8 +118,10 @@ router.post(
       const user = currentUser(req);
       if (!user || user.id !== pending.userId) throw new HttpError(401, 'Sign in again to link a wallet.');
       addCredential(user.id, pending.address);
+      signInAudit('wallet.linked', { actorId: user.id, subjectId: user.id });
       return { ok: true };
     }
+    if (pending.mode === 'reset') return signIn(req, res, useSignInReset(pending.resetId, pending.address));
     if (pending.mode === 'holder') {
       const gate = holderGate.get();
       if (!gate.enabled) throw HttpError.forbidden('This workspace is invite-only.');

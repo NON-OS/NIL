@@ -15,6 +15,8 @@ import VotePowerCard from './VotePowerCard';
 import WalletAddress from './WalletAddress';
 import InviteLinks from './InviteLinks';
 import useCryptoTools from '../../hooks/useCryptoTools';
+import ResetSignInButton from './ResetSignInButton';
+import SignInResetsCard from './SignInResetsCard';
 
 export default function TeamSettings() {
   const me = useStore((s) => s.me)!;
@@ -119,12 +121,21 @@ export default function TeamSettings() {
                       Remove access
                     </ConfirmButton>
                   )}
+                  {!u.deactivated && <ResetSignInButton user={u} />}
+                </div>
+              )}
+              {/* admins can't otherwise manage an owner, but can ask to reset their sign-in */}
+              {isAdmin && me.role !== 'owner' && u.role === 'owner' && !u.deactivated && (
+                <div className="member-actions">
+                  <ResetSignInButton user={u} />
                 </div>
               )}
             </div>
           ))}
         </div>
       </section>
+
+      {isAdmin && <SignInResetsCard />}
     </>
   );
 }

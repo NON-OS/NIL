@@ -250,6 +250,13 @@ const semaphore = Object.freeze({
   depth: envNumber('SEMAPHORE_DEPTH', 16, { min: 1, max: 32 }),
 });
 
+// Wallet sign-in. Smart-contract wallets are checked on the chain above, and the timeout keeps
+// a slow node from holding a sign-in open. A sign-in reset link works once, within its hours.
+const signIn = Object.freeze({
+  chainTimeoutMs: envNumber('SIGNIN_CHAIN_TIMEOUT_SECONDS', 8, { min: 1, max: 60 }) * SECOND,
+  resetHours: envNumber('SIGNIN_RESET_HOURS', 24, { min: 1, max: 168 }),
+});
+
 // How often each background job runs.
 const jobs = Object.freeze({
   purgeMs: envNumber('JOB_PURGE_SECONDS', 3600, { min: 1 }) * SECOND,
@@ -346,6 +353,7 @@ const config = Object.freeze({
   push,
   due,
   calendarFeeds,
+  signIn,
   ai: Object.freeze({
     enabled: Boolean(env.ANTHROPIC_API_KEY || env.ANTHROPIC_AUTH_TOKEN),
     model: env.ANTHROPIC_MODEL || 'claude-opus-5-5',
