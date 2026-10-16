@@ -33,7 +33,7 @@ Admins add agents in **Settings → Agents → Add agent**:
 - Limits. A built-in agent has steps and tokens per run, tokens per day, and the status finished work moves to (In review by default); an external agent has requests per minute. Empty fields use the workspace defaults from the server's configuration.
 - Prices, if you want a cost estimate, in dollars per million tokens. Without prices, Settings shows token counts only.
 
-An external agent gets its key when you create it. The key is shown once; Nil keeps only a hash. **Key** on the agent's card makes a new one and revokes the old one at once.
+An external agent gets its key when you create it. The key is shown once; Nil keeps only a hash. **New key**, under **Key and connecting** on the agent's card, makes a new one and revokes the old one at once. A built-in agent needs no key, but can be given one there to be reached from outside too.
 
 ## What needs a person's approval
 
