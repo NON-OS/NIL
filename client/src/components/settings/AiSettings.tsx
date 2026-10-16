@@ -108,7 +108,7 @@ export default function AiSettings() {
           <Snippet label="Claude Code" text={`claude mcp add --transport http nonos ${endpoint} \\\n  --header "Authorization: Bearer ${shown}"`} />
           <Snippet label="Any MCP client (JSON config)" text={JSON.stringify({ mcpServers: { nonos: { type: 'http', url: endpoint, headers: { Authorization: `Bearer ${shown}` } } } }, null, 2)} />
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-            Then ask things like “What’s overdue in Nil?”, “Create a task for Ana to draft the launch post, due Friday” or “Summarise NON-12”. Tools: whoami, workspace_summary, list_tasks, get_task, list_projects, create_task, update_task, add_comment.
+            Then ask things like “What’s overdue in Nil?”, “Create a task for Ana to draft the launch post, due Friday” or “Summarise NON-12”. The same tools are a REST API too, described at /api/agent/v1/openapi.json. To give an AI its own place on the team instead of acting as you, add it in Settings → Agents.
           </p>
         </div>
       </section>

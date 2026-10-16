@@ -24,6 +24,9 @@ before(async () => {
 after(() => srv.close());
 
 test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh server', async () => {
+  // agents' webhook secrets and model keys are sealed under this key, so it travels with the data
+  const { default: secretBox } = await import('../agents/secretBox.js');
+  const sealedHere = secretBox.seal('whsec_travels_with_the_capsule');
   assert.equal((await owner('POST', '/api/export/capsule', { passphrase: 'short' })).status, 400);
   const res = await fetch(`${base()}/api/export/capsule`, {
     method: 'POST',
@@ -59,6 +62,9 @@ test('encrypted capsule: export, refuse wrong passphrase, restore on a fresh ser
     const keyThere = await fetch(`${other}/.well-known/nonos-proof-key`).then((r) => r.json());
     const keyHere = await fetch(`${base()}/.well-known/nonos-proof-key`).then((r) => r.json());
     assert.equal(keyThere.key, keyHere.key);
+    const sealingKey = (dir) => fs.readFileSync(path.join(dir, 'keys', 'agents-secrets.key'), 'utf8');
+    assert.equal(sealingKey(freshDir), sealingKey(srv.dataDir));
+    assert.ok(sealedHere.startsWith('v1.'));
   } finally {
     child.kill();
     fs.rmSync(freshDir, { recursive: true, force: true });

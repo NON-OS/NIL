@@ -66,7 +66,11 @@ test('handshake: version negotiation, notifications and the tool list', async ()
   const note = await fetch(`${base()}/mcp`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${keys.read}` }, body: JSON.stringify({ jsonrpc: '2.0', method: 'notifications/initialized' }) });
   assert.equal(note.status, 202);
   const list = (await rpc(keys.read, 'tools/list')).body.result.tools;
-  assert.deepEqual(list.map((t) => t.name).sort(), ['add_comment', 'create_task', 'get_task', 'list_projects', 'list_tasks', 'update_task', 'whoami', 'workspace_summary']);
+  assert.deepEqual(list.map((t) => t.name).sort(), [
+    'add_comment', 'claim_task', 'create_task', 'delete_task', 'get_approval', 'get_task', 'list_goals', 'list_labels', 'list_people', 'list_projects',
+    'list_tasks', 'mark_inbox_read', 'my_assignments', 'my_inbox', 'search_tasks', 'start_time_entry', 'stop_time_entry', 'update_task', 'watch_task', 'whoami', 'workspace_summary',
+  ]);
+  assert.equal(list.find((t) => t.name === 'delete_task').annotations.destructiveHint, true);
   assert.equal(list.find((t) => t.name === 'create_task').annotations.readOnlyHint, false);
   assert.equal(list.find((t) => t.name === 'list_tasks').annotations.readOnlyHint, true);
   assert.equal((await rpc(keys.read, 'tools/call', { name: 'nope' })).body.error.code, -32602);

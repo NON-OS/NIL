@@ -14,7 +14,7 @@ export default function TrusteePicker({ value, onChange }: { value: string[]; on
     keyDirectory.load().then((keys) => setWithKeys(new Set([...keys.values()].filter((k) => k.active).map((k) => k.userId)))).catch(toast.error);
   }, []);
 
-  const people = Object.values(users).filter((u) => !u.deactivated && u.role !== 'guest');
+  const people = Object.values(users).filter((u) => !u.deactivated && u.role !== 'guest' && u.kind !== 'agent');
   const toggle = (id: string) => onChange(value.includes(id) ? value.filter((v) => v !== id) : value.length < 3 ? [...value, id] : value);
 
   return (

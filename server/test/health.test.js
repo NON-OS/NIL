@@ -29,7 +29,7 @@ test('/healthz checks the database and reports versions, jobs and the node, noth
   const body = await res.json();
   assert.deepEqual(Object.keys(body), ['ok', 'version', 'schema', 'jobs', 'chain']);
   assert.deepEqual([body.ok, body.version, body.schema], [true, VERSION, migrations.length]);
-  assert.deepEqual(Object.keys(body.jobs).sort(), ['dueAlerts', 'optimize', 'payments', 'purge', 'reminders', 'votes']);
+  assert.deepEqual(Object.keys(body.jobs).sort(), ['agentDueSoon', 'agentPrune', 'agentQueue', 'dueAlerts', 'optimize', 'payments', 'purge', 'reminders', 'votes', 'webhooks']);
   // purge and optimize run at startup; the rest haven't been due yet
   assert.ok(Date.parse(body.jobs.purge.lastSuccess) > Date.now() - 60_000);
   assert.ok(body.jobs.optimize.lastSuccess);

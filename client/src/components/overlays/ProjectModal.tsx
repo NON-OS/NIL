@@ -86,7 +86,7 @@ export default function ProjectModal({ project, onClose }: Props) {
         <div className="field">
           <span>Lead</span>
           <div>
-            <AssigneePicker value={leadId} onChange={setLeadId} className="btn">
+            <AssigneePicker value={leadId} onChange={setLeadId} className="btn" excludeAgents>
               <Avatar user={leadId ? users[leadId] : null} size={18} />
               {leadId ? users[leadId]?.name : 'No lead'}
             </AssigneePicker>

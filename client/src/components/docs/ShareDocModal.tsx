@@ -19,7 +19,8 @@ interface Props {
 export default function ShareDocModal({ doc, canManage, onClose, onDone }: Props) {
   const me = useStore((s) => s.me)!;
   const userMap = useStore((s) => s.users);
-  const people = useMemo(() => Object.values(userMap).filter((u) => !u.deactivated && u.id !== me.id).sort((a, b) => a.name.localeCompare(b.name)), [userMap, me.id]);
+  // docs are encrypted for people; an agent holds no key and could never open one
+  const people = useMemo(() => Object.values(userMap).filter((u) => !u.deactivated && u.id !== me.id && u.kind !== 'agent').sort((a, b) => a.name.localeCompare(b.name)), [userMap, me.id]);
   const [audience, setAudience] = useState(doc.audience);
   const [picked, setPicked] = useState(new Set(doc.readers.filter((id) => id !== me.id)));
   const [withKeys, setWithKeys] = useState<Set<string>>(new Set());

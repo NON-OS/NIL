@@ -6,6 +6,7 @@ import db from '../db/connection.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
+import secretBox from '../agents/secretBox.js';
 import deriveKey from './deriveKey.js';
 import format from './format.js';
 
@@ -48,6 +49,8 @@ export default async function writeCapsule(passphrase, out, { signal } = {}) {
     const entries = [
       { name: 'nonos.db', file: snapshot },
       { name: 'keys/receipts-ed25519.pem', file: signingKey.file },
+      // agents' webhook secrets and model API keys are sealed under this one; skipped if never made
+      { name: 'keys/agents-secrets.key', file: secretBox.file },
       ...fs.readdirSync(uploadDir).map((id) => ({ name: `uploads/${id}`, file: path.join(uploadDir, id) })),
     ];
 

@@ -13,6 +13,7 @@ import planGate from './planGate.js';
 import checkSealKeys from './checkSealKeys.js';
 import resolveDue from './resolveDue.js';
 import cryptoTools from './cryptoTools.js';
+import keepAgentsOffPrivate from '../agents/keepAgentsOffPrivate.js';
 
 // `legacy` lets the server copy a recurring private task from before encryption existed;
 // everything that comes from a browser or an assistant has to be sealed to be private.
@@ -22,6 +23,7 @@ export default function createTask(actor, input, { legacy = false } = {}) {
   // A private task is encrypted in the browser before it gets here, and only then.
   if (p.private && !p.sealed && !legacy) throw HttpError.badRequest('A private task is encrypted in your browser before it’s saved. Create it in Nil.');
   if (p.sealed && !p.private) throw HttpError.badRequest('Only private tasks are encrypted.');
+  keepAgentsOffPrivate(p);
   if (p.sealed) {
     if (p.title || p.description || p.checklist?.length) throw HttpError.badRequest('Send a private task encrypted only, without its plain text.');
     checkSealKeys(p.sealed, { creatorId: actor.id, assigneeId: p.assigneeId });

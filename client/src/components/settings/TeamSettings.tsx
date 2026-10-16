@@ -28,7 +28,8 @@ export default function TeamSettings() {
   const projectMap = useStore((s) => s.projects);
   const projectOptions = useMemo(() => Object.values(projectMap).filter((p) => !p.archived).map((p) => ({ value: p.id, label: p.name })), [projectMap]);
   const canInvite = isAdmin || (!isGuest && sharing.invitePolicy === 'members');
-  const users = useMemo(() => Object.values(userMap).sort((a, b) => Number(a.deactivated) - Number(b.deactivated) || a.name.localeCompare(b.name)), [userMap]);
+  // agents are managed in Settings → Agents, not as members
+  const users = useMemo(() => Object.values(userMap).filter((u) => u.kind !== 'agent').sort((a, b) => Number(a.deactivated) - Number(b.deactivated) || a.name.localeCompare(b.name)), [userMap]);
 
   return (
     <>

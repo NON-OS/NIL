@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import Avatar from '../ui/Avatar';
+import AgentBadge from '../agents/AgentBadge';
 import Markdown from '../ui/Markdown';
 import useStore from '../../state/useStore';
 import detail from '../../actions/detail';
@@ -21,6 +22,7 @@ export default function CommentItem({ comment }: { comment: Comment }) {
       <div className="comment-body">
         <div className="comment-head">
           <strong>{author?.name ?? 'Former member'}</strong>
+          {author?.kind === 'agent' && <AgentBadge />}
           <time className="muted" dateTime={new Date(comment.createdAt).toISOString()} title={dates.dateTime(comment.createdAt)}>
             {dates.ago(comment.createdAt)}
             {comment.editedAt && ' · edited'}

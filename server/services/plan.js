@@ -1,9 +1,9 @@
-import sql from '../db/sql.js';
 import config from '../config.js';
 import billingState from '../billing/billingState.js';
 import trialWindow from '../billing/trialWindow.js';
 import zspPerk from '../billing/zspPerk.js';
 import acceptedTokens from '../billing/acceptedTokens.js';
+import seatHolders from './seatHolders.js';
 
 const DAY = 86_400_000;
 
@@ -31,7 +31,8 @@ const plan = {
     // paid time wins when it overlaps, since it's the one an admin chose to buy
     const source = active ? sources.filter((s) => s.until > now).sort((a, b) => ['paid', 'zsp', 'trial'].indexOf(a.source) - ['paid', 'zsp', 'trial'].indexOf(b.source))[0].source : null;
 
-    const seatsUsed = sql.get("SELECT COUNT(*) AS n FROM users WHERE deactivated = 0 AND role != 'guest'").n;
+    // agents never take a seat
+    const seatsUsed = seatHolders();
     return {
       enforced,
       unlocked,

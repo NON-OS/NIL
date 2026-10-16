@@ -1,5 +1,5 @@
 import '../components/settings/Settings.css';
-import { BadgeCheck, BellRing, Bot, Building2, Database, FolderKanban, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
+import { BadgeCheck, BellRing, Bot, Building2, Cpu, Database, FolderKanban, ShieldCheck, Tag, UserRound, Users } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import ProfileSettings from '../components/settings/ProfileSettings';
 import NotificationSettings from '../components/settings/NotificationSettings';
@@ -11,6 +11,7 @@ import ProjectSettings from '../components/settings/ProjectSettings';
 import DataSettings from '../components/settings/DataSettings';
 import AiSettings from '../components/settings/AiSettings';
 import PlanSettings from '../components/settings/PlanSettings';
+import AgentsSettings from '../components/agents/AgentsSettings';
 import useRoute from '../hooks/useRoute';
 import router from '../lib/router';
 import useStore from '../state/useStore';
@@ -25,6 +26,7 @@ const TABS = [
   { id: 'projects', label: 'Projects', icon: FolderKanban, view: ProjectSettings },
   { id: 'labels', label: 'Labels', icon: Tag, view: LabelSettings },
   { id: 'ai', label: 'Connect AI', icon: Bot, view: AiSettings },
+  { id: 'agents', label: 'Agents', icon: Cpu, view: AgentsSettings },
   { id: 'data', label: 'Data & privacy', icon: Database, view: DataSettings },
 ];
 

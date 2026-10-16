@@ -9,6 +9,7 @@ import HttpError from '../lib/HttpError.js';
 import signingKey from '../proofs/signingKey.js';
 import billingTables from '../billing/billingTables.js';
 import billingState from '../billing/billingState.js';
+import secretBox from '../agents/secretBox.js';
 
 // Copies a decrypted capsule into this (empty) server: database rows, files and the
 // workspace signing key, so proofs issued before the move keep verifying. Billing is the one
@@ -63,5 +64,12 @@ export default function restoreCapsule(dir) {
     fs.copyFileSync(key, signingKey.file);
     fs.chmodSync(signingKey.file, 0o600);
     signingKey.forget();
+  }
+  const agentsKey = path.join(dir, 'keys', 'agents-secrets.key');
+  if (fs.existsSync(agentsKey)) {
+    fs.mkdirSync(path.dirname(secretBox.file), { recursive: true, mode: 0o700 });
+    fs.copyFileSync(agentsKey, secretBox.file);
+    fs.chmodSync(secretBox.file, 0o600);
+    secretBox.forget();
   }
 }

@@ -37,6 +37,7 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 
 - [Sharing and guests](sharing-and-guests.md): guest accounts and read-only share links.
 - [AI assistants](ai-assistants.md): connecting your own assistant over MCP, and the optional built-in AI.
+- [AI agents](ai-agents.md): agents as team members, the REST API, webhooks and the built-in runner.
 
 ## Your data and your server
 

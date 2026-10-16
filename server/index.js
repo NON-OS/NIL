@@ -11,6 +11,7 @@ import appVersion from './lib/appVersion.js';
 import log from './lib/log.js';
 import settleStaged from './services/settleStaged.js';
 import vapidKeys from './push/vapidKeys.js';
+import recoverAgentRuns from './jobs/recoverAgentRuns.js';
 
 try {
   const { from, to, snapshot } = migrate(db, { snapshotDir: config.dataDir });
@@ -26,6 +27,8 @@ settleStaged();
 if (config.push.enabled) vapidKeys.ensure();
 
 setupToken.prepare();
+// agent runs a restart cut off go back in the queue before the jobs start
+recoverAgentRuns();
 const jobs = startJobs();
 const server = http.createServer(createApp());
 const realtime = attachRealtime(server);

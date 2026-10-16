@@ -1,5 +1,6 @@
 import notify from './notify.js';
 import watchers from './watchers.js';
+import agentEvents from '../agents/agentEvents.js';
 
 export default function notifyTaskChanges(task, actorId, changes) {
   const change = (key) => changes.find((c) => c.key === key);
@@ -15,6 +16,8 @@ export default function notifyTaskChanges(task, actorId, changes) {
       to: status.after,
     });
   }
+
+  agentEvents.taskChanged(task, actorId, changes);
 
   const due = change('dueDate');
   if (due && task.assigneeId) {

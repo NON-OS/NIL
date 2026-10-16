@@ -20,6 +20,7 @@ import type Plan from './Plan';
 import type StealthInfo from './StealthInfo';
 import type TaskArchive from './TaskArchive';
 import type FirstRun from './FirstRun';
+import type AgentActivity from './AgentActivity';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -67,6 +68,8 @@ export default interface State {
   // a newer version of the web app has been deployed since this tab loaded
   updateReady: boolean;
   detail: TaskDetail | null;
+  // agent runs and approval cards on the task open in the panel
+  agentActivity: AgentActivity | null;
   quickAdd: { open: boolean; defaults?: Partial<Task> };
   palette: boolean;
   shortcuts: boolean;

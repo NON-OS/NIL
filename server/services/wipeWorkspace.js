@@ -7,6 +7,7 @@ import checkpoint from '../db/checkpoint.js';
 import dataTables from '../db/dataTables.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
+import secretBox from '../agents/secretBox.js';
 import hub from '../realtime/hub.js';
 import billingTables from '../billing/billingTables.js';
 import trialWindow from '../billing/trialWindow.js';
@@ -42,6 +43,8 @@ export default function wipeWorkspace() {
   signingKey.forget();
   snapshots.eraseAll(config.dataDir);
   setupToken.prepare();
+  fs.rmSync(secretBox.file, { force: true });
+  secretBox.forget();
   hub.broadcast({ type: 'wiped' });
   for (const [ws] of [...hub.entries()]) ws.close(4002, 'workspace erased');
 }

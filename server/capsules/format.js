@@ -8,7 +8,7 @@ const format = Object.freeze({
   headerLength: 8 + 1 + 16 + 12,
   tagLength: 16,
   // only these names may come out of a capsule, so a crafted file can't write elsewhere
-  allowed: (name) => name === 'nonos.db' || name === 'keys/receipts-ed25519.pem' || /^uploads\/[\w-]{1,32}$/.test(name),
+  allowed: (name) => name === 'nonos.db' || name === 'keys/receipts-ed25519.pem' || name === 'keys/agents-secrets.key' || /^uploads\/[\w-]{1,32}$/.test(name),
 });
 
 export default format;

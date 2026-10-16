@@ -39,6 +39,7 @@ const initialState: State = {
   connected: false,
   updateReady: false,
   detail: null,
+  agentActivity: null,
   quickAdd: { open: false },
   palette: false,
   shortcuts: false,

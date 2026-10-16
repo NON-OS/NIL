@@ -1,6 +1,6 @@
 export default interface InboxItem {
   id: number;
-  type: 'assigned' | 'mention' | 'comment' | 'status' | 'due' | 'bounty_paid' | 'proposal' | 'reminder' | 'application' | 'due_soon' | 'due_today' | 'plan_ending' | 'holder_low';
+  type: 'assigned' | 'mention' | 'comment' | 'status' | 'due' | 'bounty_paid' | 'proposal' | 'reminder' | 'application' | 'due_soon' | 'due_today' | 'plan_ending' | 'holder_low' | 'agent_approval' | 'agent_webhook_off';
   taskId: string | null;
   actorId: string | null;
   data: Record<string, any>;

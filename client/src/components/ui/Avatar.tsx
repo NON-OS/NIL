@@ -25,12 +25,13 @@ export default function Avatar({ user, size = 22, online = false, title }: Props
       </span>
     );
   }
+  const agent = user.kind === 'agent';
   return (
     <span
-      className={cx('avatar', online && 'avatar-online')}
+      className={cx('avatar', online && 'avatar-online', agent && 'avatar-agent')}
       style={{ width: size, height: size, fontSize: size * 0.4, background: user.color, color: textOn(user.color) }}
-      title={title ?? user.name}
-      aria-label={user.name}
+      title={title ?? (agent ? `${user.name} (agent)` : user.name)}
+      aria-label={agent ? `${user.name}, agent` : user.name}
     >
       {initials(user.name)}
     </span>
