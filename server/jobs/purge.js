@@ -5,8 +5,8 @@ import eraseTasks from '../services/eraseTasks.js';
 
 const DAY = 86_400_000;
 
-// Runs hourly. Trash and dead sessions always go; the workspace's zero-state policies
-// decide how long finished work, comments and history stay.
+// Runs hourly (JOB_PURGE_SECONDS). Trash and dead sessions always go; the workspace's zero-state
+// policies decide how long finished work, comments and history stay.
 export default function purge() {
   const now = Date.now();
   const policy = retention.get();
@@ -35,8 +35,8 @@ export default function purge() {
   if (policy.activityDays) sql.run('DELETE FROM activity WHERE created_at < ?', now - policy.activityDays * DAY);
 
   sql.tx(() => {
-    sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - 90 * DAY);
+    sql.run('DELETE FROM notifications WHERE read_at IS NOT NULL AND read_at < ?', now - config.readNotificationDays * DAY);
     sql.run('DELETE FROM sessions WHERE expires_at < ?', now);
-    sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - 30 * DAY);
+    sql.run('DELETE FROM invites WHERE expires_at < ? OR (used_at IS NOT NULL AND used_at < ?)', now, now - config.usedInviteDays * DAY);
   });
 }

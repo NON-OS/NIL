@@ -4,9 +4,12 @@ import currentUser from '../auth/currentUser.js';
 import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
+import logLimited from '../lib/logLimited.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
+// how long tabs get to answer a closing handshake on shutdown before their sockets are cut
+const CLOSE_GRACE_MS = 1000;
 
 function refuse(socket, status) {
   socket.write(`HTTP/1.1 ${status}\r\nConnection: close\r\n\r\n`);
@@ -40,38 +43,82 @@ function handleMessage(ws, raw) {
   }
 }
 
+// Socket events run outside Express, so nothing else would catch an error thrown here, and an
+// uncaught one stops the whole server. A broken message costs only that message; a broken
+// handshake costs only that connection. Logging is rate-limited because any client can send junk.
+function guarded(key, fn, onError) {
+  return (...args) => {
+    try {
+      fn(...args);
+    } catch (err) {
+      logLimited(`realtime:${key}`, 'error', 'realtime', `The live ${key} handler failed.`, err);
+      onError?.(...args);
+    }
+  };
+}
+
+function connected(ws, user) {
+  hub.add(ws, { userId: user.id, isAdmin: user.isAdmin });
+  ws.on('pong', () => {
+    const c = hub.get(ws);
+    if (c) c.alive = true;
+  });
+  ws.on('message', guarded('message', (raw) => handleMessage(ws, raw)));
+  ws.on('close', () => hub.remove(ws));
+  ws.on('error', () => hub.remove(ws));
+  ws.send(JSON.stringify({ type: 'hello', presence: hub.presence() }));
+}
+
 export default function attachRealtime(server) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  let closing = false;
 
-  server.on('upgrade', (req, socket, head) => {
+  function upgrade(req, socket, head) {
+    if (closing) return refuse(socket, '503 Service Unavailable');
     if (new URL(req.url, 'http://x').pathname !== '/ws') return refuse(socket, '404 Not Found');
     if (!originAllowed(req)) return refuse(socket, '403 Forbidden');
     const user = currentUser(req);
     if (!user) return refuse(socket, '401 Unauthorized');
+    wss.handleUpgrade(req, socket, head, guarded('connection', (ws) => connected(ws, user), (ws) => ws.terminate()));
+  }
 
-    wss.handleUpgrade(req, socket, head, (ws) => {
-      hub.add(ws, { userId: user.id, isAdmin: user.isAdmin });
-      ws.on('pong', () => {
-        const c = hub.get(ws);
-        if (c) c.alive = true;
-      });
-      ws.on('message', (raw) => handleMessage(ws, raw));
-      ws.on('close', () => hub.remove(ws));
-      ws.on('error', () => hub.remove(ws));
-      ws.send(JSON.stringify({ type: 'hello', presence: hub.presence() }));
-    });
-  });
+  server.on(
+    'upgrade',
+    guarded('upgrade', upgrade, (req, socket) => {
+      if (socket.writable) refuse(socket, '500 Internal Server Error');
+      else socket.destroy();
+    }),
+  );
 
   // Drop sockets that stopped answering pings (sleeping laptops, dead proxies).
-  setInterval(() => {
-    for (const [ws, c] of hub.entries()) {
-      if (!c.alive) {
-        ws.terminate();
-        hub.remove(ws);
-        continue;
+  const heartbeat = setInterval(
+    guarded('heartbeat', () => {
+      for (const [ws, c] of hub.entries()) {
+        if (!c.alive) {
+          ws.terminate();
+          hub.remove(ws);
+          continue;
+        }
+        c.alive = false;
+        ws.ping();
       }
-      c.alive = false;
-      ws.ping();
-    }
-  }, HEARTBEAT_MS).unref();
+    }),
+    HEARTBEAT_MS,
+  ).unref();
+
+  return {
+    // On shutdown: 1001 (going away) tells each tab to reconnect, which lands on the next server
+    // process. Sockets that don't finish the closing handshake in time are cut.
+    async close() {
+      closing = true;
+      clearInterval(heartbeat);
+      const sockets = [...hub.entries()].map(([ws]) => ws);
+      const closed = sockets.map((ws) => (ws.readyState === ws.CLOSED ? null : new Promise((resolve) => ws.once('close', resolve))));
+      for (const ws of sockets) ws.close(1001, 'Server restarting');
+      const cut = setTimeout(() => sockets.forEach((ws) => ws.terminate()), CLOSE_GRACE_MS);
+      await Promise.all(closed);
+      clearTimeout(cut);
+      wss.close();
+    },
+  };
 }

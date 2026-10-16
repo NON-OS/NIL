@@ -10,9 +10,11 @@ import HttpError from '../lib/HttpError.js';
 import requireAuth from '../auth/requireAuth.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import rateLimit from '../auth/rateLimit.js';
+import setupToken from '../auth/setupToken.js';
 import writeCapsule from '../capsules/writeCapsule.js';
 import readCapsule from '../capsules/readCapsule.js';
 import restoreCapsule from '../capsules/restoreCapsule.js';
+import log from '../lib/log.js';
 
 const router = express.Router();
 let restoring = false;
@@ -32,11 +34,19 @@ router.post('/export/capsule', requireAuth, requireAdmin, async (req, res) => {
   }
   res.setHeader('Content-Type', 'application/octet-stream');
   res.setHeader('Content-Disposition', `attachment; filename="nil-${calendar.today()}.capsule"`);
+  // a closed tab or a dropped connection stops the export instead of encrypting into nowhere
+  const gone = new AbortController();
+  res.on('close', () => {
+    if (!res.writableFinished && !res.errored) gone.abort();
+  });
   try {
-    await writeCapsule(passphrase, res);
+    await writeCapsule(passphrase, res, { signal: gone.signal });
   } catch (err) {
-    console.error('[capsule export]', err.message);
-    res.destroy(err);
+    if (gone.signal.aborted) return log.info('capsule', 'Export stopped: the download was cancelled.');
+    log.error('capsule', 'Export failed.', err);
+    if (res.headersSent) return res.destroy(err);
+    res.removeHeader('Content-Disposition');
+    res.status(500).json({ error: 'The capsule couldn’t be created. Try again.' });
   }
 });
 
@@ -46,6 +56,7 @@ router.post(
   rateLimit({ windowMs: 15 * 60_000, max: 10 }),
   route(async (req) => {
     if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This server already has a workspace. Restore only works on a fresh install.');
+    setupToken.check(req.headers['x-setup-token']);
     if (restoring) throw new HttpError(409, 'A restore is already running.');
     let passphrase;
     try {
@@ -72,6 +83,7 @@ router.post(
       await readCapsule(file, passphrase, out);
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'Someone set this server up while the restore was running.');
       restoreCapsule(out);
+      setupToken.discard();
       return { ok: true };
     } finally {
       restoring = false;

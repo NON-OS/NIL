@@ -21,7 +21,7 @@ const LEAD = {
 };
 
 export default function JoinPanel({ mode, inviteToken, workspaceName, requirement, onRestore, onBack }: Props) {
-  const [form, setForm] = useState({ workspaceName: '', name: '' });
+  const [form, setForm] = useState({ setupToken: '', workspaceName: '', name: '' });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
@@ -30,7 +30,7 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
     setError('');
     setBusy(true);
     try {
-      await identity.walletJoin({ mode, name: form.name.trim(), workspaceName: form.workspaceName, inviteToken });
+      await identity.walletJoin({ mode, name: form.name.trim(), workspaceName: form.workspaceName, inviteToken, setupToken: mode === 'setup' ? form.setupToken.trim() : undefined });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Something went wrong.');
     } finally {
@@ -45,17 +45,24 @@ export default function JoinPanel({ mode, inviteToken, workspaceName, requiremen
       {error && <div className="auth-error" role="alert">{error}</div>}
       {mode === 'setup' && (
         <label className="field">
+          <span>Setup token</span>
+          <input className="input" required autoComplete="off" spellCheck={false} autoFocus value={form.setupToken} onChange={(e) => setForm({ ...form, setupToken: e.target.value })} />
+          <small>Printed in the server log the first time it started, or the SETUP_TOKEN you set. It stops working once the workspace exists.</small>
+        </label>
+      )}
+      {mode === 'setup' && (
+        <label className="field">
           <span>Workspace name</span>
           <input className="input" required maxLength={60} autoComplete="organization" placeholder="Your team’s name" value={form.workspaceName} onChange={(e) => setForm({ ...form, workspaceName: e.target.value })} />
         </label>
       )}
       <label className="field">
         <span>Your name</span>
-        <input className="input" required maxLength={80} autoComplete="nickname" autoFocus value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+        <input className="input" required maxLength={80} autoComplete="nickname" autoFocus={mode !== 'setup'} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <small>A nickname is fine. Nil never asks for your email or real identity.</small>
       </label>
       {requirement && <p className="method-hint">{requirement}</p>}
-      <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim()}>
+      <button type="submit" className="btn btn-primary btn-lg" disabled={busy || !form.name.trim() || (mode === 'setup' && !form.setupToken.trim())}>
         {busy ? <Spinner size={14} /> : <Wallet />} {mode === 'setup' ? 'Create workspace with your wallet' : 'Join with your wallet'}
       </button>
       <p className="method-hint">Signing proves you own the wallet. It is not a transaction and costs nothing.</p>

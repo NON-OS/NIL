@@ -22,8 +22,8 @@ const capsules = {
     saveBlob(await res.blob(), name);
   },
 
-  async restore(file: File, passphrase: string) {
-    await http.send('/auth/restore', file, { 'X-Capsule-Passphrase': encode(passphrase) });
+  async restore(file: File, passphrase: string, setupToken: string) {
+    await http.send('/auth/restore', file, { 'X-Capsule-Passphrase': encode(passphrase), 'X-Setup-Token': setupToken });
     await session.boot();
   },
 };
