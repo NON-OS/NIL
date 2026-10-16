@@ -3,8 +3,13 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { Readable } from 'node:stream';
+import { pipeline } from 'node:stream/promises';
 import main from '../cli/main.js';
 import backupKeys from '../backups/backupKeys.js';
+import sealStream from '../backups/sealStream.js';
+import tarEntry from '../lib/tar/tarEntry.js';
+import tarBlocks from '../lib/tar/tarBlocks.js';
 import createWorkspace from '../provisioning/createWorkspace.js';
 import createContext from '../createContext.js';
 import loadConfig from '../config/loadConfig.js';
@@ -25,6 +30,31 @@ test('keygen writes the secret key to a private file and prints only the public 
   assert.match(out, /nilbk-pub-/);
   assert.doesNotMatch(out, /nilbk-sec-/, 'the secret never goes to the terminal');
   assert.equal((await run(['keygen', '--out', file], {})).code, 1, 'an existing key file is never overwritten');
+});
+
+test('a backup can be verified and decrypted on a laptop, with no server configuration', async () => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nil-laptop-'));
+  const keyFile = path.join(dir, 'backup.key');
+  const out = await run(['keygen', '--out', keyFile], {});
+  const publicKey = out.out.match(/nilbk-pub-\S+/)[0];
+  const tar = Buffer.concat([tarEntry({ name: '.nil-cloud.json', data: Buffer.from(JSON.stringify({ name: 'acme', id: 'abc', kind: 'scheduled', takenAt: 'now', image: 'nonos/nil:1' })) }), tarEntry({ name: 'nonos.db', data: Buffer.from('database') }), tarEntry({ name: 'uploads/f', data: Buffer.alloc(3000, 1) }), tarBlocks.end()]);
+  const backupFile = path.join(dir, 'acme.nilbackup');
+  await pipeline(Readable.from([tar]), sealStream([backupKeys.parsePublic(publicKey)]), fs.createWriteStream(backupFile));
+
+  const verified = await run(['verify-backup', backupFile, '--identity', keyFile], {});
+  assert.equal(verified.code, 0);
+  assert.match(verified.out, /Workspace acme \(abc\)/);
+  assert.match(verified.out, /Intact: 2 files, .*database included/);
+
+  const plain = path.join(dir, 'plain.tar');
+  assert.equal((await run(['decrypt', backupFile, '--identity', keyFile, '--out', plain], {})).code, 0);
+  assert.deepEqual(fs.readFileSync(plain), tar);
+  assert.equal(fs.statSync(plain).mode & 0o777, 0o600);
+  assert.equal((await run(['decrypt', backupFile, '--identity', keyFile, '--out', plain], {})).code, 1, 'never overwrites');
+
+  const other = path.join(dir, 'other.key');
+  await run(['keygen', '--out', other], {});
+  assert.equal((await run(['verify-backup', backupFile, '--identity', other], {})).code, 1, 'the wrong key is refused');
 });
 
 test('list shows workspaces without their setup tokens, in text and JSON', async () => {
