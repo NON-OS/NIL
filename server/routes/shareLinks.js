@@ -9,6 +9,7 @@ import tokenHash from '../auth/tokenHash.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import sharingPolicy from '../services/sharingPolicy.js';
 import shareTarget from '../services/shareTarget.js';
+import visibleTask from '../services/visibleTask.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
@@ -22,7 +23,10 @@ router.get(
   '/share-links',
   route((req) => {
     const kind = check.oneOf(req.query.kind, ['project', 'task'], 'Kind');
-    return sql.all('SELECT * FROM share_links WHERE kind = ? AND target_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC', kind, String(req.query.targetId ?? ''), Date.now()).map(toLink);
+    const targetId = String(req.query.targetId ?? '');
+    // a task someone can't open answers like a missing one, links and all
+    if (kind === 'task') visibleTask(targetId, req.user, { allowDeleted: true });
+    return sql.all('SELECT * FROM share_links WHERE kind = ? AND target_id = ? AND revoked_at IS NULL AND (expires_at IS NULL OR expires_at > ?) ORDER BY created_at DESC', kind, targetId, Date.now()).map(toLink);
   }),
 );
 

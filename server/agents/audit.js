@@ -3,10 +3,12 @@ import sql from '../db/sql.js';
 const MAX_DETAIL = 4000;
 
 // Long strings are trimmed so a pasted document can't bloat the trail; the shape stays readable.
+// Anything nested deeper than a few levels is cut off too, or a deep value would overflow the stack.
 function trim(value, depth = 0) {
   if (typeof value === 'string') return value.length > 500 ? `${value.slice(0, 500)}…` : value;
+  if (value && typeof value === 'object' && depth >= 4) return '…';
   if (Array.isArray(value)) return value.slice(0, 30).map((v) => trim(v, depth + 1));
-  if (value && typeof value === 'object' && depth < 4) return Object.fromEntries(Object.entries(value).slice(0, 30).map(([k, v]) => [k, trim(v, depth + 1)]));
+  if (value && typeof value === 'object') return Object.fromEntries(Object.entries(value).slice(0, 30).map(([k, v]) => [k, trim(v, depth + 1)]));
   return value;
 }
 

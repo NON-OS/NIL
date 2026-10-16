@@ -49,7 +49,8 @@ router.post(
   route((req) => {
     const { address, mode } = req.body;
     if (!siwe.isAddress(address)) throw HttpError.badRequest('That doesn’t look like an Ethereum address.');
-    if (!STATEMENT[mode]) throw HttpError.badRequest('Unknown wallet request.');
+    // own keys only: "constructor" or "toString" would otherwise pass as a mode
+    if (typeof mode !== 'string' || !Object.hasOwn(STATEMENT, mode)) throw HttpError.badRequest('Unknown wallet request.');
     const rp = relyingParty(req);
     const pending = { mode, address: address.toLowerCase() };
 
@@ -84,9 +85,10 @@ router.post(
       origin: rp.origin,
       address,
       // a workspace can have an empty name, and "Sign in to ." helps nobody
-      statement: STATEMENT[mode]((pending.workspaceName ?? rp.name ?? '').trim() || 'Nil'),
+      // a name with line breaks in it could add lines that look like the message's own fields
+      statement: STATEMENT[mode]((pending.workspaceName ?? rp.name ?? '').replace(/\s+/g, ' ').trim() || 'Nil'),
       nonce: crypto.randomBytes(12).toString('hex'),
-      chainId: Number.isInteger(req.body.chainId) && req.body.chainId > 0 ? req.body.chainId : 1,
+      chainId: Number.isSafeInteger(req.body.chainId) && req.body.chainId > 0 ? req.body.chainId : 1,
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });
@@ -137,6 +139,8 @@ router.post(
       const held = (await holderPower([pending.address])).total;
       if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)} counting NOX held, staked and Zero-State Passes. Joining without an invite needs at least ${nox(gate.minimum)}.`);
     }
+    // only these three make an account; anything else reaching here is a bug, never a sign-up
+    if (!['setup', 'invite', 'holder'].includes(pending.mode)) throw HttpError.badRequest('Unknown wallet request.');
     const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, cryptoTools: pending.cryptoTools, inviteHash: pending.inviteHash, address: pending.address });
     if (pending.mode === 'setup') setupToken.discard();
     else publishUser(id);

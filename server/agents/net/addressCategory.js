@@ -45,11 +45,13 @@ function groups(address) {
 
 const dottedFrom = (hi, lo) => `${hi >> 8}.${hi & 255}.${lo >> 8}.${lo & 255}`;
 
-// IPv6 forms that carry an IPv4 address inside: mapped (::ffff:a.b.c.d), compatible (::a.b.c.d),
-// NAT64 (64:ff9b::/96) and 6to4 (2002:AABB:CCDD::). They're judged by the address they carry.
+// IPv6 forms that carry an IPv4 address inside: mapped (::ffff:a.b.c.d), translated
+// (::ffff:0:a.b.c.d, used by SIIT gateways), compatible (::a.b.c.d), NAT64 (64:ff9b::/96) and
+// 6to4 (2002:AABB:CCDD::). They're judged by the address they carry.
 function embeddedV4(address) {
   const g = groups(address);
   if (g.slice(0, 5).every((x) => x === 0) && (g[5] === 0xffff || (g[5] === 0 && (g[6] !== 0 || g[7] > 1)))) return dottedFrom(g[6], g[7]);
+  if (g.slice(0, 4).every((x) => x === 0) && g[4] === 0xffff && g[5] === 0) return dottedFrom(g[6], g[7]);
   if (g[0] === 0x64 && g[1] === 0xff9b && g.slice(2, 6).every((x) => x === 0)) return dottedFrom(g[6], g[7]);
   if (g[0] === 0x2002) return dottedFrom(g[1], g[2]);
   return null;

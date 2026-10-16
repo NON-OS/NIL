@@ -15,6 +15,7 @@ import healthz from './routes/healthz.js';
 import serveWebApp from './lib/serveWebApp.js';
 import log from './lib/log.js';
 import cryptoTools from './services/cryptoTools.js';
+import jsonDepthLimit from './lib/jsonDepthLimit.js';
 
 const DIST = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../dist');
 
@@ -54,7 +55,7 @@ export default function createApp() {
   app.use('/api/agent/v1', noStore, agentApi);
 
   // Uploads stream as raw bytes; everything else in the API is JSON.
-  const json = express.json({ limit: config.maxJsonBytes });
+  const json = express.json({ limit: config.maxJsonBytes, verify: jsonDepthLimit(config.maxJsonDepth) });
   const isUpload = (req) =>
     (req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore')) ||
     (req.method === 'PUT' && /^\/attachments\/[^/]+\/content$/.test(req.path));
@@ -69,6 +70,7 @@ export default function createApp() {
   app.use((err, req, res, next) => {
     if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'That file is too large.' });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'The request body wasn’t valid JSON.' });
+    if (err?.type === 'entity.too.deep') return res.status(400).json({ error: 'The request body is nested too deeply.' });
     log.error('http', `${req.method} ${req.baseUrl}${req.route?.path ?? ''} failed.`, err);
     res.status(500).json({ error: 'Something went wrong on the server.' });
   });

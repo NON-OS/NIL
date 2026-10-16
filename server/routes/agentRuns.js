@@ -1,6 +1,7 @@
 import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
+import pageSize from '../lib/pageSize.js';
 import HttpError from '../lib/HttpError.js';
 import parseJSON from '../lib/parseJSON.js';
 import requireAdmin from '../auth/requireAdmin.js';
@@ -71,7 +72,7 @@ router.get(
   route((req) => {
     const agent = agentOr404(req.params.id);
     const before = Number(req.query.before) || Number.MAX_SAFE_INTEGER;
-    const limit = Math.min(Number(req.query.limit) || 100, 300);
+    const limit = pageSize(req.query.limit, 100, 300);
     return { entries: sql.all('SELECT * FROM agent_audit WHERE agent_id = ? AND id < ? ORDER BY id DESC LIMIT ?', agent.id, before, limit).map(toAudit) };
   }),
 );
