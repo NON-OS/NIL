@@ -74,7 +74,8 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Encryption keys come from wallet signatures. A wallet that signs the same message differently each time can't use encrypted docs, private tasks, private payouts or anonymous votes. Nil checks this the first time.
 - Keys live in the browser tab while it's open. Anything that can read that tab's memory, such as a malicious browser extension, could read them.
 - Never lose `DATA_DIR/keys`. The signing key there signs every receipt and is part of every person's key derivation. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, and nobody can derive their encryption, private payout or voting keys again. Back it up with the database.
-- If you lose every wallet linked to your account, you lose the account. Link a second one.
+- If you lose every wallet linked to your account, only an admin's sign-in reset gets you back in. Link a second one.
+- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin when there is one, and every reset is in the sign-in history.
 - Receipts prove what the workspace said, not that the workspace is honest. See [Proof of work](proof-of-work.md).
 - Memory-only mode still writes to disk if the host swaps memory. Turn swap off or encrypt it.
 - The server runs as one process with SQLite. Live updates and rate limits are kept in memory, so run a single instance.

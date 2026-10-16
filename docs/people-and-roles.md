@@ -33,7 +33,7 @@ Admins can open the workspace to anyone who holds enough NOX:
 1. In **Settings → Team → Token holders**, type the **Minimum** amount.
 2. Click **Open the door**.
 
-The sign-in page then offers **Hold NOX? Join without an invite**. Newcomers join as members once the server has checked their wallet's balance.
+The sign-in page then offers **Have NOX tokens? Join without an invite**. Newcomers join as members once the server has checked their wallet's balance.
 
 People who joined this way are checked again every time they sign in. If all their linked wallets together hold less than the minimum, they can't sign in. To stop checking someone, click **Keep without NOX** next to their name under **Members**. Turn the **Let NOX holders join without an invite** switch off to make the workspace invite-only again.
 
@@ -44,6 +44,17 @@ The token-holder door needs on-chain features turned on, and an active plan on s
 Admins manage people under **Settings → Team → Members**. Click the role next to someone's name to change it. For a guest, the projects button next to the role sets which projects they see.
 
 **Remove access** stops that person from signing in. Their tasks, comments and history stay in the workspace. A removed person can be brought back with **Restore access**, or deleted for good with **Delete account**. Deleting keeps their tasks and comments but unlinks them from the person, and their proof of work titles can no longer be revealed.
+
+## Reset someone's sign-in
+
+When someone loses every wallet linked to their account, click **Reset sign-in** next to their name and confirm. Nil shows a link once, as text and as a QR code. Send it to them privately, or let them scan it in person. It works once and expires after `SIGNIN_RESET_HOURS` (24). Whoever opens it can link a new wallet to that account and sign in as that person, so make sure it reaches the right one. Their account stays the same, and they are signed out everywhere else.
+
+Owners are protected:
+
+- With two or more admins besides the owner, one asks and another approves. The request waits under **Sign-in resets**, where any other admin can **Approve** it and gets the link. Nobody can approve their own request or a reset of their own sign-in.
+- With only one other admin, there is nobody to approve. Nil warns that the link hands over the whole workspace and asks that admin to confirm before making it.
+
+Any admin can **Cancel** an open reset, including the person being reset if they can still sign in. **Sign-in history** lists every request, approval, link, cancel and use, and every wallet linked or removed, by name only.
 
 ## Your profile
 

@@ -456,9 +456,13 @@ Hovering over the dot next to the logo shows "Reconnecting…". The proxy must p
 
 `APP_URL` differs from the address in the browser bar.
 
-### "No wallet found"
+### "First, a wallet" or "No wallet found"
 
-The browser has no wallet extension. Install one, or open the site in a wallet's in-app browser.
+The browser has no wallet. The sign-in screen explains how to get one. On a phone, open the site in a wallet's in-app browser.
+
+### "This looks like a smart wallet"
+
+Smart-contract wallets are checked on the chain in `NOX_CHAIN_ID` through `NOX_RPC_URL`. With `NOX_RPC_URL=off` they can't sign in. When the node is slow, raise `SIGNIN_CHAIN_TIMEOUT_SECONDS`.
 
 ### "No account here uses this wallet"
 

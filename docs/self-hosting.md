@@ -56,7 +56,7 @@ Every setting is an environment variable, and every one is optional. An empty va
 | `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro in NOX. Unset means community mode |
 | `ANTHROPIC_API_KEY` | none | Turns on built-in AI |
 
-Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `MAX_CAPSULE_MB`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_CONFIRMATIONS`, `NOX_EXPLORER`), the paid plan (`PLAN_PRICE`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_FREE_SEATS`, `PLAN_TRIAL_DAYS`), private payouts, voting power and anonymous votes.
+Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `MAX_CAPSULE_MB`), sign-in (`SIGNIN_CHAIN_TIMEOUT_SECONDS`, `SIGNIN_RESET_HOURS`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_CONFIRMATIONS`, `NOX_EXPLORER`), the paid plan (`PLAN_PRICE`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_FREE_SEATS`, `PLAN_TRIAL_DAYS`), private payouts, voting power and anonymous votes.
 
 A setting that is set but can't be used, such as a malformed number or treasury address, is named in a line starting with `[config]` in the startup log. The line says what the server does instead: use the default, or stay in community mode.
 
