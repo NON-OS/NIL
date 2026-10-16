@@ -6,6 +6,7 @@ import db from '../db/connection.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
+import secretBox from '../agents/secretBox.js';
 import deriveKey from './deriveKey.js';
 import format from './format.js';
 
@@ -32,6 +33,8 @@ export default async function writeCapsule(passphrase, out) {
     const entries = [{ name: 'nonos.db', file: snapshot }];
     signingKey.publicKey();
     entries.push({ name: 'keys/receipts-ed25519.pem', file: signingKey.file });
+    // agents' webhook secrets and model API keys are sealed under this one; skipped if never made
+    entries.push({ name: 'keys/agents-secrets.key', file: secretBox.file });
     for (const id of fs.readdirSync(uploadDir)) entries.push({ name: `uploads/${id}`, file: path.join(uploadDir, id) });
 
     const salt = crypto.randomBytes(16);

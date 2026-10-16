@@ -2,6 +2,7 @@ import fs from 'node:fs';
 import db from '../db/connection.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
+import secretBox from '../agents/secretBox.js';
 import hub from '../realtime/hub.js';
 
 // The owner's "erase everything": every row, every file, the signing key. The server goes
@@ -24,6 +25,8 @@ export default function wipeWorkspace() {
   for (const name of fs.readdirSync(uploadDir)) fs.rmSync(`${uploadDir}/${name}`, { force: true });
   fs.rmSync(signingKey.file, { force: true });
   signingKey.forget();
+  fs.rmSync(secretBox.file, { force: true });
+  secretBox.forget();
   hub.broadcast({ type: 'wiped' });
   for (const [ws] of [...hub.entries()]) ws.close(4002, 'workspace erased');
 }

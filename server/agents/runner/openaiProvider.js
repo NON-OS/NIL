@@ -15,6 +15,15 @@ function stopOf(choice, calls) {
   return calls.length ? 'tool_use' : 'end';
 }
 
+function openKey(sealed) {
+  if (!sealed) return null;
+  try {
+    return secretBox.open(sealed);
+  } catch {
+    throw new ProviderError('This server can’t read the saved API key. Enter it again in Settings → Agents.');
+  }
+}
+
 function errorFrom(res) {
   let detail = '';
   try {
@@ -28,7 +37,7 @@ function errorFrom(res) {
 // OpenRouter and the like, over plain HTTP with no SDK. Requests go through safeFetch, so a local
 // model works only where the admin allowed local endpoints, and metadata addresses never do.
 export default function openaiProvider(agent) {
-  const apiKey = agent.apiKeyCt ? secretBox.open(agent.apiKeyCt) : null;
+  const apiKey = openKey(agent.apiKeyCt);
   const url = completionsUrl(agent.endpoint ?? '');
   return {
     model: agent.model,

@@ -19,6 +19,13 @@ function key() {
 }
 
 const secretBox = {
+  file: KEY_FILE,
+
+  // after a restore or a wipe replaced the key file underneath
+  forget() {
+    cached = undefined;
+  },
+
   seal(text) {
     const iv = crypto.randomBytes(12);
     const cipher = crypto.createCipheriv('aes-256-gcm', key(), iv);
