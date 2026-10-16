@@ -400,6 +400,7 @@ const jobs = Object.freeze({
   remindersMs: envNumber('JOB_REMINDERS_SECONDS', 60, { min: 1 }) * SECOND,
   dueAlertsMs: envNumber('JOB_DUE_ALERTS_SECONDS', 60, { min: 1 }) * SECOND,
   optimizeMs: envNumber('JOB_OPTIMIZE_SECONDS', 3600, { min: 1 }) * SECOND,
+  poolPriceMs: envNumber('JOB_POOL_PRICE_SECONDS', 60, { min: 1 }) * SECOND,
 });
 
 // The app starts with open work and recent history only. Finished tasks (done or canceled)

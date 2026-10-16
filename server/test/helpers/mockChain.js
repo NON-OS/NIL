@@ -39,6 +39,9 @@ const OBSERVE = selector('observe(uint32[])');
 const TOKEN0 = selector('token0()');
 const TOKEN1 = selector('token1()');
 const LATEST_ROUND = selector('latestRoundData()');
+const GET_RESERVES = selector('getReserves()');
+const PRICE0 = selector('price0CumulativeLast()');
+const PRICE1 = selector('price1CumulativeLast()');
 const DECIMALS = selector('decimals()');
 const hex = (n) => `0x${n.toString(16)}`;
 
@@ -57,6 +60,7 @@ export default function mockChain() {
   const forks = new Map();
   const times = new Map();
   const pools = new Map();
+  const pairs = new Map();
   const feeds = new Map();
   const failing = new Set();
   // requests the node refuses outright, as [match(method, params), { status, error }]
@@ -96,6 +100,14 @@ export default function mockChain() {
         const now = 10n ** 9n;
         return `0x${word(64)}${word(64 + 32 * 3)}${word(2)}${word(BigInt(pool.tick) * (now - seconds))}${word(BigInt(pool.tick) * now)}${word(2)}${word(0)}${word(0)}`;
       }
+    }
+    const pair = pairs.get(contract);
+    if (pair) {
+      if (data === GET_RESERVES) return `0x${word(pair.reserve0)}${word(pair.reserve1)}${word(pair.last)}`;
+      if (data === PRICE0) return `0x${word(pair.price0)}`;
+      if (data === PRICE1) return `0x${word(pair.price1)}`;
+      if (data === TOKEN0) return `0x${pad(pair.token0)}`;
+      if (data === TOKEN1) return `0x${pad(pair.token1)}`;
     }
     const feed = feeds.get(contract);
     if (feed) {
@@ -226,6 +238,20 @@ export default function mockChain() {
     blockTime,
     // a Uniswap V3 pool whose time-weighted average tick is `tick`
     setPool: (address, { token0, token1, tick, fail = false }) => pools.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), tick, fail }),
+    // A Uniswap V2 pair holding these reserves since the current head, with its cumulative prices
+    // starting from zero.
+    setPair(address, { token0, token1, reserve0, reserve1 }) {
+      pairs.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), price0: 0n, price1: 0n, last: BigInt(blockTime(block)) });
+    },
+    // A trade in the head block that leaves the pair with new reserves. Like the real contract it
+    // first adds the old price for the time since the last trade to the cumulative prices.
+    tradePair(address, { reserve0, reserve1 }) {
+      const pair = pairs.get(address.toLowerCase());
+      const now = BigInt(blockTime(block));
+      pair.price0 += ((pair.reserve1 << 112n) / pair.reserve0) * (now - pair.last);
+      pair.price1 += ((pair.reserve0 << 112n) / pair.reserve1) * (now - pair.last);
+      Object.assign(pair, { reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), last: now });
+    },
     // a Chainlink feed answering `answer` with `decimals`, last updated at `updatedAt` (seconds)
     setFeed: (address, { answer, decimals = 8, updatedAt = Math.floor(Date.now() / 1000) }) => feeds.set(address.toLowerCase(), { answer: BigInt(answer), decimals, updatedAt }),
     // every call to this contract reverts
