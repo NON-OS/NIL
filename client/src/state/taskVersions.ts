@@ -1,13 +1,10 @@
 import storage from '../lib/storage';
-import store from './store';
+import keyScope from './keyScope';
 
 // The newest revision of each private task this browser has opened and checked, per workspace and
 // account. Task ids and numbers only. A server that later sends an older revision is holding back
 // newer words, and whoever opens the task is told.
-const slot = () => {
-  const s = store.get();
-  return `task-versions:${s.workspaceKey}:${s.me?.id ?? ''}`;
-};
+const slot = () => keyScope.slot('task-versions');
 
 const taskVersions = {
   seen: (taskId: string) => storage.get<Record<string, number>>(slot(), {})[taskId] ?? 0,

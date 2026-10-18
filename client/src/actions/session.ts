@@ -7,6 +7,9 @@ import checkBuild from './checkBuild';
 import store from '../state/store';
 import records from '../state/records';
 import toast from '../state/toast';
+import keyScope from '../state/keyScope';
+import keyPins from '../state/keyPins';
+import router from '../lib/router';
 import socket from '../realtime/socket';
 import type User from '../types/User';
 import type Workspace from '../types/Workspace';
@@ -54,9 +57,21 @@ interface Bootstrap {
 // isn't asked by every open tab in the same second.
 const RESYNC_SPREAD_MS = 8000;
 let resync: number | undefined;
+// whether this sign-in has looked for pins that started over yet
+let pinsChecked = false;
+
+const NOTICE_MS = 30_000;
+const SWITCHED = 'The server switched this tab to another workspace or account, so Nil locked your keys here. Reload the page to carry on. If nobody signed in as someone else in this browser, tell your workspace admin.';
+const STARTED_OVER = 'This browser has teammates’ keys saved for another workspace or account, but none for this one. If you’ve used this account here before, the server may have switched workspaces. Compare fingerprints before you trust anyone’s key.';
 
 async function load() {
   const b = await http.get<Bootstrap>('/bootstrap?tasks=cards');
+  // keys unlocked for one site, workspace and account never carry on into another
+  const switched = keyScope.switches({ origin: b.origin, workspaceKey: b.workspaceKey, userId: b.me?.id ?? '' });
+  if (switched) {
+    vault.lock();
+    store.set((s) => ({ keysRev: s.keysRev + 1 }));
+  }
   const held = store.get().tasks;
   archive.reset();
   store.set({
@@ -83,6 +98,9 @@ async function load() {
     origin: b.origin,
     workspaceKey: b.workspaceKey,
   });
+  if (switched) toast.show(SWITCHED, { tone: 'error', timeout: NOTICE_MS, action: { label: 'Reload', run: () => location.reload() } });
+  else if (!pinsChecked && keyPins.startedOver()) toast.show(STARTED_OVER, { tone: 'error', timeout: NOTICE_MS, action: { label: 'See keys', run: () => router.navigate('/settings?tab=security') } });
+  pinsChecked = true;
   checkBuild(b.build);
   void openSealed();
   socket.connect(() => {
@@ -97,7 +115,10 @@ function signedOut(message?: string) {
   socket.disconnect();
   // the keys, and every private task, comment and file opened with them
   vault.lock();
-  store.reset({ phase: 'auth' });
+  keyScope.reset();
+  pinsChecked = false;
+  // a count never used before, so the key directory isn't served from this account's pins
+  store.reset({ phase: 'auth', keysRev: store.get().keysRev + 1 });
   history.replaceState(null, '', '/');
   if (message) toast.show(message, { tone: 'error' });
 }
