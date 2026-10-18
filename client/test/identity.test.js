@@ -69,7 +69,7 @@ test('a recovery kit asking for too much memory or work is refused before scrypt
   const meta = { origin: 'https://nil.example', workspaceKey: 'ws-key', userId: 'u1', fingerprint: '0000-1111-2222-3333-4444' };
   const kit = await recoveryKit.make(seed(), meta, 'correct horse battery staple');
   // each of these would hold the tab for minutes or ask for more memory than it has
-  for (const cost of [{ p: 2 ** 20 }, { p: 9 }, { r: 2 ** 20 }, { r: 33 }, { r: 16, p: 5 }, { N: 2 ** 20 }, { r: 8.5 }, { r: '8' }, { p: null }]) {
+  for (const cost of [{ p: 2 ** 20 }, { p: 9 }, { r: 2 ** 20 }, { r: 33 }, { r: 16, p: 5 }, { N: 2 ** 20 }, { N: 2 ** 17 + 1 }, { r: 8.5 }, { r: '8' }, { p: null }]) {
     await assert.rejects(recoveryKit.open({ ...kit, kdf: { ...kit.kdf, ...cost } }, 'correct horse battery staple'), /isn’t a Nil recovery kit/, JSON.stringify(cost));
   }
 });

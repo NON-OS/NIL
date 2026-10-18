@@ -27,7 +27,7 @@ type KitHeader = Omit<RecoveryKit, 'sealed'>;
 
 // No cheaper than the cost this app writes, so guessing stays slow, and no dearer than the limits.
 function fairCost({ N, r, p }: KitHeader['kdf']) {
-  if (![N, r, p].every(Number.isSafeInteger)) return false;
+  if (![N, r, p].every(Number.isSafeInteger) || (N & (N - 1)) !== 0) return false;
   return N >= COST.N && r >= COST.r && p >= COST.p && N * r <= MAX_MEMORY && N * r * p <= MAX_WORK;
 }
 
