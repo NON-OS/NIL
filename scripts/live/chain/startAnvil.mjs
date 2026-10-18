@@ -3,6 +3,12 @@ import mainnet from './mainnet.mjs';
 import rpcClient from './rpcClient.mjs';
 import warmSystemContracts from './warmSystemContracts.mjs';
 
+// Past 500 blocks anvil starts moving old states to disk, and a forked state read back from disk
+// has lost the code of contracts the local blocks only called into, like NOX's implementation
+// behind its proxy: a read at the finalized block then fails with "missing bytecode for code
+// hash". Keeping the states in memory avoids that. A read further back is refused instead.
+const STATES_KEPT = 500;
+
 // Starts anvil as a fork of Ethereum mainnet at a recent finalized block, so the real NOX,
 // staking, Zero-State Pass, USDC, announcer, price feed and smart-wallet factory are all there
 // with their real state. The fork keeps chain ID 1 unless told otherwise, and names `safe` and
@@ -20,6 +26,7 @@ export default async function startAnvil({ port = 8545, chainId = null, forkBloc
     '--fork-retry-backoff', '500',
     '--timeout', '30000',
     '--no-rate-limit',
+    '--prune-history', String(STATES_KEPT),
     ...(chainId ? ['--chain-id', String(chainId)] : []),
     ...(state ? ['--state', state] : []),
   ];
