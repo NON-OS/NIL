@@ -19,6 +19,10 @@ import publicWorkspace from '../services/publicWorkspace.js';
 const router = express.Router();
 router.use('/public/bounties', rateLimit({ windowMs: 15 * 60_000, max: 120 }));
 
+// Text from the applicant or the team goes into the message the wallet signs on one line, so a
+// line break can't add lines that look like the message's own fields.
+const oneLine = (text) => String(text ?? '').replace(/\s+/g, ' ').trim();
+
 function listed(id) {
   const item = listedBounties().items.find((b) => b.id === id);
   if (!item) throw HttpError.notFound('That bounty');
@@ -35,7 +39,7 @@ router.post(
     const item = listed(req.params.id);
     const { address } = req.body ?? {};
     if (!siwe.isAddress(address)) throw HttpError.badRequest('That doesn’t look like an Ethereum address.');
-    const name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
+    const name = oneLine(check.text(req.body.name, 'Name', { min: 1, max: 80 }));
     const pitch = check.text(req.body.pitch, 'Pitch', { max: 1500 });
     if (sql.get("SELECT COUNT(*) AS n FROM applications WHERE address = ? AND status = 'pending'", address.toLowerCase()).n >= 5) {
       throw HttpError.badRequest('This wallet already has 5 applications waiting here.');
@@ -46,7 +50,7 @@ router.post(
       host: rp.host,
       origin: rp.origin,
       address,
-      statement: `Apply for ${item.ref} “${item.title.slice(0, 80)}” in ${publicWorkspace().name} as ${name}. This is not a transaction and costs nothing.`,
+      statement: `Apply for ${item.ref} “${oneLine(item.title).slice(0, 80)}” in ${oneLine(publicWorkspace().name) || 'Nil'} as ${name}. This is not a transaction and costs nothing.`,
       nonce: crypto.randomBytes(12).toString('hex'),
       chainId: config.nox.chainId,
       issuedAt: now.toISOString(),
