@@ -5,27 +5,39 @@ import finalizedBlock from '../chain/finalizedBlock.js';
 import attachReceipt from './attachReceipt.js';
 import finalizePayment from './finalizePayment.js';
 import feeTaken from './feeTaken.js';
-import log from '../lib/log.js';
+import logLimited from '../lib/logLimited.js';
 import feeAt from '../services/feeAt.js';
 
 const DAY = 86_400_000;
+const GIVEN_UP = {
+  seen: 'The transaction never showed up on-chain. If it is mined after all, Nil still finds it.',
+  confirming: 'The transaction left the chain and didn’t come back in time. If it does, Nil still finds it.',
+};
+
+// How long a payment Nil can't find is waited for, whether the node says it isn't there or
+// doesn't answer at all: a named transaction that was never mined NOX_MISSING_TX_HOURS, a
+// transfer that left its block PLAN_LATE_DAYS. Then it is dropped, which lets its invoice expire;
+// the reconciliation (reconcileTreasury) still picks it up if it turns up later.
+function giveUp(row, now) {
+  const limit = row.status === 'seen' ? config.nox.missingTxMs : config.billing.lateDays * DAY;
+  if (now - row.created_at <= limit) return false;
+  sql.run("UPDATE billing_payments SET status = 'dropped', problem = ?, block_number = NULL, block_hash = NULL, checked_at = ? WHERE id = ? AND status = ?", GIVEN_UP[row.status], now, row.id, row.status);
+  return true;
+}
 
 async function follow(row, receipt, final, now) {
   if (row.status === 'seen') {
     if (receipt.state === 'mined') attachReceipt(row, receipt, { feeBps: await feeAt(receipt.blockNumber) });
     else if (receipt.state === 'failed') sql.run("UPDATE billing_payments SET status = 'failed', problem = ?, checked_at = ? WHERE id = ?", `The transaction failed on-chain, so nothing reached ${config.billing.treasuryName}. Send the payment again.`, now, row.id);
-    else if (now - row.created_at > config.nox.missingTxMs) sql.run("UPDATE billing_payments SET status = 'dropped', problem = 'The transaction never showed up on-chain.', checked_at = ? WHERE id = ?", now, row.id);
-    else sql.run('UPDATE billing_payments SET checked_at = ? WHERE id = ?', now, row.id);
+    else if (!giveUp(row, now)) sql.run('UPDATE billing_payments SET checked_at = ? WHERE id = ?', now, row.id);
     return;
   }
 
   if (receipt.state === 'unknown') {
     // A reorg took it out, or a node behind a load balancer hasn't caught up with a block it
     // already called final. Either way it may well come back, so it stays confirming, without a
-    // block, and is looked for again on every run until PLAN_LATE_DAYS have passed.
-    if (now - row.created_at > config.billing.lateDays * DAY) {
-      sql.run("UPDATE billing_payments SET status = 'dropped', problem = ?, block_number = NULL, block_hash = NULL, checked_at = ? WHERE id = ?", 'The transaction left the chain and didn’t come back. Name it again if it does.', now, row.id);
-    } else {
+    // block, and is looked for again on every run until it is given up on.
+    if (!giveUp(row, now)) {
       sql.run('UPDATE billing_payments SET problem = ?, block_number = NULL, block_hash = NULL, checked_at = ? WHERE id = ?', 'The transaction isn’t in a block right now, after a chain reorganisation or a node that fell behind. Nil keeps looking for it.', now, row.id);
     }
     return;
@@ -56,19 +68,26 @@ async function follow(row, receipt, final, now) {
 // Follows every payment that isn't settled yet against the chain as it is now. A named
 // transaction that gets mined becomes payments (or says why it can't). A transfer whose block
 // changed in a reorg takes the new block and waits again; one that vanished is kept, without a
-// block, until it is mined again or PLAN_LATE_DAYS pass. A transfer whose block is final is
-// counted.
+// block, until it is mined again or given up on. A transfer whose block is final is counted.
+// While the node doesn't answer, only the clock moves payments on, so none waits forever.
 export default async function confirmPayments(now = Date.now()) {
   const rows = sql.all("SELECT * FROM billing_payments WHERE status IN ('seen', 'confirming') ORDER BY created_at");
   if (!rows.length) return;
-  const final = await finalizedBlock();
+  let final = null;
+  let unreachable = null;
+  try {
+    final = await finalizedBlock();
+  } catch (err) {
+    unreachable = err;
+  }
 
   for (const row of rows) {
     try {
+      if (unreachable) throw unreachable;
       await follow(row, await readReceipt(row.tx_hash), final, now);
     } catch (err) {
       // one odd row or one refused receipt mustn't hold up the rest; it's tried again next minute
-      log.error('billing', `payment check for ${row.id} failed`, err.message);
+      if (!giveUp(row, now)) logLimited('billing:confirm', 'warn', 'billing', 'A Nil Pro payment couldn’t be checked on the Ethereum node. It is tried again every minute.', err);
     }
   }
 }
