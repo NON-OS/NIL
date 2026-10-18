@@ -20,7 +20,8 @@ async function stateLeaves(found, fromAsp) {
   const leaves = fromAsp.slice(0, want);
   if (leaves.length < want) {
     const head = await headBlock();
-    const events = await poolLogs(found.pool, [poolAbi.leafInserted], Math.max(0, head - config.nox.logHistoryBlocks), head);
+    const span = Math.min(config.nox.logHistoryBlocks, config.pools.logRangeBlocks);
+    const events = await poolLogs(found.pool, [poolAbi.leafInserted], Math.max(0, head - span + 1), head);
     for (const e of events.sort((a, b) => Number(a.index) - Number(b.index))) if (Number(e.index) === leaves.length) leaves.push(e.leaf);
   }
   if (leaves.length !== want) throw busy();
