@@ -6,12 +6,13 @@ export default function describeSignInEvent(entry: SignInAuditEntry, nameOf: (id
   const subject = nameOf(entry.subjectId);
   switch (entry.action) {
     case 'reset.requested':
-      return `${actor} asked to reset ${subject}’s sign-in`;
+      return `${actor} asked to reset ${subject}’s sign-in${entry.data.waits ? ', with no second admin to approve, so it waits before the link can be made' : ''}`;
     case 'reset.approved':
       return `${actor} approved resetting ${subject}’s sign-in`;
     case 'reset.issued':
       return `${actor} made a sign-in reset link for ${subject}${entry.data.unapproved ? ', with no second admin to approve' : ''}`;
     case 'reset.cancelled':
+      if (entry.data.adminLeft) return `A sign-in reset for ${subject} closed when ${actor} changed the role or access of the admin behind it`;
       return entry.data.replaced ? `${actor} replaced an earlier reset link for ${subject}` : `${actor} cancelled a sign-in reset for ${subject}`;
     case 'reset.used':
       return `${subject} signed in with a new wallet from a reset link`;

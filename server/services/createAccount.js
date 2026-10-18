@@ -38,7 +38,9 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
       role = 'guest';
     }
     if (sql.get('SELECT 1 FROM credentials WHERE external_id = ?', address)) throw HttpError.badRequest('That wallet already has an account here. Sign in with it instead.');
-    sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, Date.now());
+    const now = Date.now();
+    const adminSince = role === 'owner' || role === 'admin' ? now : null;
+    sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at, admin_since) VALUES (?, ?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, now, adminSince);
     if (mode === 'invite') useInvite(inviteHash, id);
     for (const projectId of guestProjects) sql.run('INSERT OR IGNORE INTO project_guests (project_id, user_id) SELECT id, ? FROM projects WHERE id = ?', id, projectId);
     sql.run(

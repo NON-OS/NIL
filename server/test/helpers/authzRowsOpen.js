@@ -70,6 +70,8 @@ export default {
   'POST /api/users/:id/sign-in-reset': { allow: ADMINS, id: 'ids.member' },
   // a member's reset needs no second admin, so approving it is refused by the route itself
   'POST /api/sign-in-resets/:id/approve': { allow: ADMINS, id: 'fresh.reset', ok: [400], denied: [403] },
+  // and its link exists already, so making one after a wait is refused the same way
+  'POST /api/sign-in-resets/:id/link': { allow: ADMINS, id: 'fresh.reset', ok: [400], denied: [403] },
   'DELETE /api/sign-in-resets/:id': { allow: ADMINS, id: 'fresh.reset' },
   'GET /api/first-run': { allow: PEOPLE },
   'PATCH /api/first-run': { allow: PEOPLE, body: { dismissed: true } },
