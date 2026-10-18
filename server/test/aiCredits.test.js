@@ -128,7 +128,8 @@ test('a proof for another day, slot, workspace or vote is refused', async () => 
   assert.match(elsewhere.data.error, /different slot or workspace/);
   const ballot = await credit.send('draft', await credit.request(keys.cy, members, 'draft', draft, { sign: { scope: '12345' } }));
   assert.match(ballot.data.error, /different slot or workspace/);
-  for (const res of [old, otherSlot, elsewhere, ballot]) assert.equal(res.status, 400);
+  assert.equal(old.status, 409);
+  for (const res of [otherSlot, elsewhere, ballot]) assert.equal(res.status, 400);
 });
 
 test('a proof is bound to its exact request', async () => {

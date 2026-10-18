@@ -19,7 +19,8 @@ export default async function checkCredit(feature, { day, slot, payload, proof }
   if (merkleTreeDepth !== config.semaphore.depth) throw refuse('it was made for a different circuit');
   if (![merkleTreeRoot, nullifier, message, scope].every((v) => typeof v === 'string' && DIGITS.test(v))) throw refuse('malformed numbers');
   if (!Array.isArray(points) || points.length !== 8 || !points.every((p) => typeof p === 'string' && DIGITS.test(p))) throw refuse('malformed proof');
-  if (day !== utcDay()) throw refuse('it was made for a different day; check this device’s clock');
+  // 409 like a moved member list: across midnight the browser just tries again with the new day
+  if (day !== utcDay()) throw refuse('it was made for a different day; try again', 409);
   if (!Number.isInteger(slot) || slot < 0 || slot >= config.ai.perDay) throw refuse('that slot doesn’t exist');
   if (scope !== creditScope(day, slot)) throw refuse('it was made for a different slot or workspace');
   if (message !== creditMessage(feature, payload)) throw refuse('the proof was made for a different request');
