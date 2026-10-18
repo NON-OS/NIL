@@ -19,8 +19,9 @@ async function freePort() {
 // Starts Nil from this checkout, with a fresh data folder, against the given node. Background
 // jobs run every few seconds instead of every minute so a check doesn't wait on them. The
 // server's log goes to a file next to the data, kept after the run for reading.
-export default async function bootNil({ rpcUrl, env = {}, port = null } = {}) {
-  const dataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'nil-live-'));
+export default async function bootNil({ rpcUrl, env = {}, port = null, dataDir: keep = null } = {}) {
+  // a run that picks up where an earlier one stopped keeps its data folder
+  const dataDir = keep ?? fs.mkdtempSync(path.join(os.tmpdir(), 'nil-live-'));
   const listen = port ?? (await freePort());
   const base = `http://localhost:${listen}`;
   const logFile = path.join(dataDir, 'server.log');

@@ -1,0 +1,70 @@
+.pool-balances {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--line);
+}
+
+.pool-balance strong {
+  display: block;
+  font-size: var(--text-md);
+  font-variant-numeric: tabular-nums;
+}
+
+.pool-balance span {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.pool-terms {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px 16px;
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.pool-terms dt {
+  color: var(--muted);
+}
+
+.pool-terms dd {
+  margin: 0;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.pool-terms .pool-total {
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+  font-weight: 600;
+}
+
+.pay-status.declined {
+  color: var(--danger);
+}
+
+.pool-phrase {
+  padding: 12px 14px;
+  border-top: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: var(--text-sm);
+}
+
+.pool-phrase code {
+  display: block;
+  margin: 6px 0;
+  overflow-wrap: anywhere;
+}
+
+.pool-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pool-row.end {
+  justify-content: flex-end;
+}

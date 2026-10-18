@@ -29,6 +29,7 @@ const stealthPayouts = {
         txHash: r.tx_hash,
         status: r.status,
         announced: Boolean(r.announced_at),
+        via: r.via ?? null,
         createdAt: r.created_at,
         balance: held ? { eth: held.eth, token: held.token } : null,
         balanceCheckedAt: held?.checkedAt ?? null,

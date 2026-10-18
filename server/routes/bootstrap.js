@@ -100,6 +100,8 @@ router.get(
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
       stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei, registry: config.stealth.registry } : null,
+      // admins see the pool tools only when the server has private pool payouts on
+      privacyPools: config.pools.enabled && req.user.isAdmin,
       sourceUrl: config.sourceUrl,
       // the web app this server hands out, so an open tab can notice it's out of date
       build: buildId(),

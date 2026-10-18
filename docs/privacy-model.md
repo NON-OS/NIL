@@ -48,12 +48,27 @@ The server itself contacts other hosts in these cases:
 - Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs, never a private task, and never who asked. See [AI assistants](ai-assistants.md#built-in-ai).
 - The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
 
+- The Privacy Pools relayer and association set provider, only on a server with [pool payouts](private-payouts.md#pay-from-the-teams-pool) on and only for admins using the team pool. The server reaches only the hosts in `PRIVACY_POOLS_RELAYER_URL` and `PRIVACY_POOLS_ASP_URL`, on a fixed few paths, refuses redirects, and passes on nothing about the admin: no cookie, no IP address, no headers of theirs. What each one learns is under [The team pool](#the-team-pool).
+
 If you connect your own AI assistant over MCP, the assistant fetches from Nil, and whatever it reads goes on to that assistant's provider.
 
 ## What is public on purpose
 
 - On-chain payments are public, like any Ethereum transaction. [Private payouts](private-payouts.md) hide which person a payout belongs to, but the payer, the token, the amount and the time are still visible. Moving funds from a one-time address to a wallet people know links them.
 - Without signing in, anyone can see the workspace name, whether the token-holder door is open and its minimum, the public proof key, the [public bounty board](public-bounty-board.md), any share link they hold, and the tasks in any [calendar feed](views.md#your-tasks-in-your-own-calendar-app) link they hold.
+
+## The team pool
+
+Paying bounties from a [Privacy Pools](private-payouts.md#pay-from-the-teams-pool) pool keeps the chain from linking the team's wallet to the people it pays. It doesn't make the team invisible. What each party can see:
+
+- Anyone can see each deposit: the wallet that made it, the token, the amount and the time. That's the point where the team's money visibly enters the pool.
+- Anyone can see each withdrawal: the pool, the amount, the fee, the one-time address it went to and the time. What nobody can see on the chain is which deposit paid it; the proof shows only that it was one of the deposits the association set approved.
+- The association set provider (0xbow on mainnet) decides which deposits may leave privately. It sees every deposit and who made it, like everyone else, and can decline one, which leaves only a public ragequit to the depositing wallet. Nil downloads the whole association set, the same file for every team, so that tells the provider nothing. Asking it about particular deposits (**Ask the provider**, needed to tell a declined deposit from one still under review) tells it that this server holds them, which is why an admin has to ask.
+- The relayer sends each withdrawal and is paid its fee from it. It sees the one-time address, the amount and the Nil server's IP address, never an admin's. On Sepolia the default relayer is 0xbow's; on mainnet the operator picks one. If the relayer and the association set provider are run by the same people and they compare notes, the server's IP address ties the team's questions about its deposits to its withdrawals.
+- Nil's server knows which bounties were paid from the pool and which deposits the team made, as it knows every payment. The pool key and the notes are sealed and encrypted in admins' browsers, so the server can't spend the pool or read which deposit paid what, but an operator who watches the API can line up deposits and payouts by time.
+- The Ethereum node in `NOX_RPC_URL` sees the server look up the team's deposits and, later, its relayed withdrawals. A node run by someone else can link the two by the server's IP address. Run your own node if the team pool matters to you.
+
+Timing and amounts give the most away. A deposit of 250 USDC followed an hour later by a 250 USDC payout is easy to match, whatever the cryptography says. Deposit well ahead, in round amounts larger than any one bounty, and let several payouts come out of one deposit at different times. A pool with more deposits from other people hides the team better; a quiet pool hides less.
 
 ## How the server protects data
 
@@ -69,7 +84,9 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 
 ## Honest limits
 
-- Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
+- Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit. Privacy Pools itself was audited (circuits, contracts and the entry contract upgrade by Oxorio, contracts by Auditware); Nil's use of it wasn't.
+- A payout from the team's pool is never announced on-chain, since the announcement would come from a team wallet. The contributor finds it through Nil, so if the server's data is lost before they move it, they need the payout's key, which **Key** shows, to reach it.
+- An admin who once opened the team's pool key still knows it after they stop being an admin, and could spend what the pool holds. If that matters, take every deposit back with a ragequit, then **Start over with a new key**.
 - Encrypted weighted votes are in beta. The ballot circuit (`circuits/ballot.circom`) hasn't been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2, recorded in `circuits/CEREMONY.json`, was a development ceremony with every contribution made on one machine. Whoever ran it could in principle forge proofs. Rerun phase 2 with independent contributors before relying on these votes for anything that matters; [the ballot ceremony](../circuits/CEREMONY.md) in the source code shows how.
 - In an encrypted vote, two trustees working together could decrypt single ballots. That reveals each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
 - Anonymous votes hide who voted what among the members who voted. In a small team, or with a lopsided result, the totals alone can give choices away.

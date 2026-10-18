@@ -25,7 +25,8 @@
     "zk:fetch": "node scripts/zk-fetch.mjs",
     "zk:ballot": "node scripts/zk-ballot.mjs",
     "verifier": "node --disable-warning=ExperimentalWarning server/verifier/index.js",
-    "verifier:mainnet-check": "node --disable-warning=ExperimentalWarning scripts/verifier/mainnet-check.mjs"
+    "verifier:mainnet-check": "node --disable-warning=ExperimentalWarning scripts/verifier/mainnet-check.mjs",
+    "pools:fetch": "node scripts/pools-fetch.mjs"
   },
   "dependencies": {
     "@a16z/helios": "0.12.0",
@@ -46,6 +47,8 @@
     "@dnd-kit/utilities": "3.2.2",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.1.0",
+    "@scure/bip32": "1.7.0",
+    "@scure/bip39": "1.6.0",
     "@semaphore-protocol/identity": "4.14.3",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",

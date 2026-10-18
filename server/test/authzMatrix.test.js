@@ -18,6 +18,7 @@ import sealed from './helpers/sealed.js';
 import rowsOpen from './helpers/authzRowsOpen.js';
 import rowsWork from './helpers/authzRowsWork.js';
 import rowsTeam from './helpers/authzRowsTeam.js';
+import rowsPools from './helpers/authzRowsPools.js';
 import rowsAgentApi from './helpers/authzRowsAgentApi.js';
 import rowsEdge from './helpers/authzRowsEdge.js';
 
@@ -25,7 +26,7 @@ import rowsEdge from './helpers/authzRowsEdge.js';
 // what each one may and may not do written down per route. Routes are found by walking the
 // routers, so a route added without a row here fails the first test, and a row whose route is
 // gone fails it too.
-const API = { ...rowsOpen, ...rowsWork, ...rowsTeam };
+const API = { ...rowsOpen, ...rowsWork, ...rowsTeam, ...rowsPools };
 const ROWS = { ...API, ...rowsAgentApi, ...rowsEdge };
 const PEOPLE = new Set(actors.PEOPLE);
 
