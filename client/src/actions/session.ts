@@ -44,6 +44,7 @@ interface Bootstrap {
   sharing: SharingPolicy;
   plan: Plan;
   stealth: StealthInfo | null;
+  privacyPools?: boolean;
   timer: TimeEntry | null;
   sourceUrl: string | null;
   build: string | null;
@@ -79,6 +80,7 @@ async function load() {
     sharing: b.sharing,
     plan: b.plan,
     stealth: b.stealth,
+    privacyPools: Boolean(b.privacyPools),
     timer: b.timer,
     sourceUrl: b.sourceUrl,
     origin: b.origin,

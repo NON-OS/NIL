@@ -35,7 +35,7 @@ router.get(
       const found = await assetPool.get(a.symbol);
       assets.push(Object.fromEntries(Object.entries(found).map(([k, v]) => [k, text(v)])));
     }
-    return { network: config.pools.network, chainId: config.pools.chainId, entrypoint: config.pools.entrypoint, extraGas: config.pools.extraGas, head: await headBlock(), assets };
+    return { network: config.pools.network, chainId: config.pools.chainId, entrypoint: config.pools.entrypoint, extraGas: config.pools.extraGas, head: await headBlock(), logRangeBlocks: config.pools.logRangeBlocks, assets };
   }),
 );
 
