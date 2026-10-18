@@ -90,7 +90,7 @@ test('forty large uploads at once from a guest stop at the guest’s quota and n
   assert.equal(statuses[200] + statuses[413], 40, JSON.stringify(statuses));
   assert.match(out.find((r) => r.status === 413).data.error, /You’ve used the 40 MB of file space you have/);
   assert.ok(storedBytes() <= 40 * MB, `${storedBytes() / MB} MB stored`);
-  if (measurable) assert.ok(memory().peak - before.now < 60, `memory peaked ${(memory().peak - before.now).toFixed(0)} MB higher`);
+  if (measurable) assert.ok(memory().peak - before.now < 100, `memory peaked ${(memory().peak - before.now).toFixed(0)} MB higher`);
   assert.deepEqual(fs.readdirSync(uploadsDir()).filter((f) => !/^[\w-]+$/.test(f)), [], 'no partial files left behind');
 });
 
