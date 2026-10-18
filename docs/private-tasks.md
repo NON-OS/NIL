@@ -20,7 +20,7 @@ Your keys live only in that browser tab's memory once unlocked. When you close o
 
 Your browser encrypts the title, the description, the checklist, every comment and every attached file, including the file's name and type. Each file gets its own key, which is sealed under the task's key.
 
-Whoever writes signs their words, and each save carries the next revision number under that signature. If the server later sends an older version than one you've already opened in this browser, the task shows a warning that the server may be holding back newer changes.
+Whoever writes signs their words together with who the task is for and which key protects it, and each save carries the next revision number under that signature. If the server later sends an older version than one you've already opened in this browser, the task shows a warning that the server may be holding back newer changes.
 
 The server can still see:
 
@@ -50,7 +50,9 @@ For everyone else, a private task doesn't exist: it isn't in their lists, live u
 
 When a private task gets a new assignee, your browser makes a new key, encrypts the task and all its comments again with it, re-seals each file's key under it (the files themselves stay as they are), and seals the new key for the creator and the new assignee. The previous assignee loses access. They may still have copies of anything they read before.
 
-Your browser seals a task key only to keys you've confirmed. If you haven't checked the other person's key yet, Nil asks you to **Check their keys** first, as for [docs](encrypted-docs.md#check-your-teammates-keys). If you click **Not now**, or they haven't set up keys yet, the task is sealed without them and they see "This task hasn't been shared with your key yet". Once you've confirmed their key, your browser hands the task over the next time you unlock in Nil.
+If the assignee gives the task to someone else, it's their browser that makes the new key. The task then says who handed it on, and the next time the creator or the new assignee edits it, it moves to another new key that the previous assignee never saw. A browser that has opened the task before only accepts this from someone who was on the task.
+
+Your browser seals a task key only to keys you've confirmed. If you haven't checked the other person's key yet, Nil asks you to **Check their keys** first, as for [docs](encrypted-docs.md#check-your-teammates-keys). If you click **Not now**, or they haven't set up keys yet, the task is sealed without them and they see "This task hasn't been shared with your key yet". Once you've confirmed their key, your browser hands the task over the next time you unlock in Nil. It only ever hands a task to the creator or assignee its words were signed for, never to someone the server lists in their place.
 
 ## Private tasks from before encryption
 
@@ -62,9 +64,19 @@ Private tasks made before encryption existed are encrypted the next time their c
 |---|---|
 | Unlock with your wallet to change this private task | You haven't unlocked in this tab yet. Click **Unlock** |
 | This task hasn't been shared with your key yet | The other person on the task hasn't confirmed your key. Ask them to check your fingerprint. Once they have, their browser hands you the task the next time they unlock |
-| This task couldn't be opened and checked here | It was sealed to keys you no longer hold, or Nil can't confirm that a teammate wrote it. If someone's key changed recently, check it under **Teammates' keys** in **Settings → Sign-in & security** |
+| This task couldn't be opened and checked here | It was sealed to keys you no longer hold, Nil can't confirm that a teammate wrote it, or it lists someone its words weren't written for. If someone's key changed recently, check it under **Teammates' keys** in **Settings → Sign-in & security** |
 
 If you start over with new keys (see [Encrypted docs](encrypted-docs.md#if-unlocking-fails)), Nil drops your copies of private-task keys. The other person's browser hands each task to you again once they've confirmed your new key.
+
+## Notes on an open task
+
+| What you see | What it means |
+|---|---|
+| This private task was saved in an older format that can't show who it's for | It was saved before Nil signed who a task is for. It opens as before, but Nil won't share it with anyone on its own until someone edits it, and that edit takes the creator and assignee the server lists |
+| Someone handed this task on | The previous assignee gave it away and made its current key. The next edit gives it a new key |
+| Someone signed this with an earlier key | They wrote it before their key changed, and you had confirmed that earlier key. The note shows its fingerprint |
+
+Comments and files carry the same kind of note. A comment can also say it's an older version than one you've already seen here, or that it was deleted and the server sent it again.
 
 ## How it works
 
@@ -72,7 +84,7 @@ Each private task has its own random 256-bit key. The title, the notes, the chec
 
 The task key is sealed separately for the creator and for the assignee. Your browser makes a throwaway X25519 key pair, agrees on a secret with that person's public key, turns the secret into a wrapping key with HKDF-SHA256, and wraps the task key with AES-256-GCM. Only that person's private key can unwrap it.
 
-Before it's encrypted, each piece of text is signed with its writer's Ed25519 key. Anyone can seal a key to your public key, so the signature, not the encryption, shows who wrote the words. A task whose words don't check out stays locked. Comments are signed for the task and their author, so they keep their signatures when the task moves to a new key.
+Before it's encrypted, each piece of text is signed with its writer's Ed25519 key, together with the revision, the time, the creator and assignee it's for, and a SHA-256 hash of the task key. Anyone can seal a key to your public key, so the signature, not the encryption, shows who wrote the words and who they're for. A task opens only when its writer is its creator or assignee as signed (or the assignee who handed it on), the key it opened with has the signed hash, and the people the server shows on the task are among those signed. Otherwise it stays locked. Comments are signed for the task, their own id, their author and their edit number, so they keep their signatures when the task moves to a new key. A file's name, type, size and hash are signed by whoever attached it.
 
 Your own keys come from a random seed your browser makes, which the server holds only locked to your wallets. [Encryption and trust](encryption.md) explains how that works and how teammates check each other's keys.
 
