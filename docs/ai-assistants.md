@@ -8,8 +8,8 @@ Nil speaks the Model Context Protocol (MCP), a standard way for AI assistants to
 
 1. Open **Settings → Connect AI**.
 2. Give the key a name you'll recognise, such as the name of the assistant.
-3. Choose **Read only** or **Read and write**, and when the key expires: in 30 days, 90 days, a year, or never.
-4. Click **Create key** and copy the key straight away. It's shown only once.
+3. Choose **Read only** or **Read and write**, and when the key expires: in 30 days, 90 days or a year. Every key expires, after at most a year unless the server allows less (`ACCESS_KEY_MAX_DAYS`).
+4. Click **Create key**, sign the "Confirm it's you" message with a wallet linked to your account, and copy the key straight away. It's shown only once. The signature means someone using your signed-in browser can't make a key without your wallet.
 5. Under **Set it up**, copy the snippet that fits your assistant: the command for Claude Code, or the JSON for a Claude Code project file or Cursor. Both already contain your server's address and your new key.
 
 Other assistants take the same address and key in their own formats: VS Code, and the Claude app and claude.ai as a custom connector, are in [AI agents](ai-agents.md#connect-an-external-agent-over-mcp); use your personal key where those steps say `nonos_agt_…`. ChatGPT can't send a key, so it can't connect.
@@ -40,7 +40,7 @@ Whatever your assistant reads goes to that assistant's provider, under their ter
 
 ### Manage your keys
 
-**Your keys** lists every key with its access, expiry and when it was last used. Click **Revoke** to stop a key working at once. A key also stops working when it expires or when your access to the workspace is removed.
+**Your keys** lists every key with its access, expiry and when it was last used. Click **Revoke** to stop a key working at once. A key also stops working when it expires, when your access to the workspace is removed, and while the token-holder door has you locked out. A sign-in reset revokes all your keys, and **Sign out on all devices** offers to. Keys made before keys had to expire stop once they're `ACCESS_KEY_MAX_DAYS` old.
 
 On a server that charges for [Nil Pro](nox-and-nil-pro.md), the connection needs an active plan.
 

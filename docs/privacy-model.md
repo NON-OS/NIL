@@ -29,6 +29,7 @@ Everything else is stored in plain form in the server's database, where anyone w
 - time entries, reminders and their notes,
 - the list of people, their names, roles and wallet addresses,
 - the names you give your passkeys, when each was added and last used, and whether you've downloaded a recovery kit (never the kit itself),
+- for members who joined through the token-holder door, which account each wallet's NOX last counted for, kept until 3 days after it last counted, even once the wallet is unlinked,
 - bounty amounts and payment records,
 - signed votes, with each voter's wallet and choice.
 
@@ -56,10 +57,12 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 ## How the server protects data
 
 - Session, invite, share-link and access-key tokens are random, and only their SHA-256 hashes are stored. A leaked database can't be used to sign in.
+- A signed-in browser alone can't add a way back in. Linking another wallet or making an access key needs a fresh signature from a wallet already linked to the account. Access keys expire after at most `ACCESS_KEY_MAX_DAYS` (365). A sign-in reset revokes them, and **Sign out on all devices** offers to.
+- Sign-in challenges aren't kept in a list on the server that others could fill up. Each one comes back signed by the server for the network that asked for it, and works once.
 - Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix.
 - Every change needs a custom header and a same-origin check, which blocks cross-site request forgery. The live connection and the MCP endpoint check the origin too.
 - The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy` that still lets the site itself use passkeys, and HSTS over HTTPS.
-- Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited.
+- Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited. Limits by address count an IPv6 /64 as one client and also cap each /56 and /48.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run.
 - SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is erased after 30 days by default and read notifications after 90 days.
 - Receipts are signed with a key kept outside the database, in `DATA_DIR/keys`.
@@ -85,7 +88,8 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Keys live in the browser tab while it's open. Anything that can read that tab's memory, such as a malicious browser extension, could read them.
 - Never lose `DATA_DIR/keys`. The signing key there signs every receipt, and every message that unlocks or publishes encryption keys names the workspace by it. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, no wallet opens anyone's encryption keys, and Nil won't restore recovery kits made for the old key. Everyone starts over with new keys. Back it up with the database.
 - If you lose every wallet linked to your account, only an admin's sign-in reset gets you back in. Link a second one.
-- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin when there is one, and every reset is in the sign-in history. The link doesn't open the member's encryption keys. Whoever uses it needs the member's recovery kit and its passphrase, or has to set up new keys, which teammates see as a changed key.
+- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin who has been one for at least 72 hours, or, with nobody to approve, waits 72 hours while the owner and the other admins are told and can cancel it. Every reset is in the sign-in history. The link doesn't open the member's encryption keys. Whoever uses it needs the member's recovery kit and its passphrase, or has to set up new keys, which teammates see as a changed key.
+- The token-holder door checks wallets, not tokens. One stack of NOX keeps one person in, but someone who moves it to fresh wallets can still join as new people one after another. Each of those accounts is signed out once its grace period runs out.
 - Receipts prove what the workspace said, not that the workspace is honest. See [Proof of work](proof-of-work.md).
 - Memory-only mode still writes to disk if the host swaps memory. Turn swap off or encrypt it.
 - The server runs as one process with SQLite. Live updates and rate limits are kept in memory, so run a single instance.
