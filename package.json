@@ -22,7 +22,9 @@
     "release:manifest": "node scripts/release/manifest.mjs",
     "verify:server": "node scripts/release/verify.mjs",
     "zk:fetch": "node scripts/zk-fetch.mjs",
-    "zk:ballot": "node scripts/zk-ballot.mjs"
+    "zk:ballot": "node scripts/zk-ballot.mjs",
+    "verifier": "node --disable-warning=ExperimentalWarning server/verifier/index.js",
+    "verifier:mainnet-check": "node --disable-warning=ExperimentalWarning scripts/verifier/mainnet-check.mjs"
   },
   "dependencies": {
     "@a16z/helios": "0.12.0",
