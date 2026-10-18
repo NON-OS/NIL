@@ -1,13 +1,16 @@
 import sql from '../db/sql.js';
+import checkpoint from '../db/checkpoint.js';
 import config from '../config.js';
 import retention from '../services/retention.js';
 
 const DAY = 86_400_000;
 
-// Runs hourly. Spent idempotency keys, bulk-limit counters and old delivery logs go. Run logs
-// quote task text and comments, so a run whose task was erased loses its log (its token count
-// stays for the usage numbers), and logs and the audit trail follow the workspace's zero-state
-// policy for comments and history.
+// Runs hourly, and when an admin changes the retention settings. Spent idempotency keys,
+// bulk-limit counters and old delivery logs go. Run logs quote task text and comments, so a run
+// whose task was erased loses its log (its token count stays for the usage numbers), and logs,
+// run summaries, the audit trail, decided approval cards and stored replies follow the
+// workspace's zero-state policy for comments and history. A request still waiting for approval
+// stays until someone decides it.
 export default function pruneAgentData() {
   const now = Date.now();
   const policy = retention.get();
@@ -23,6 +26,10 @@ export default function pruneAgentData() {
       sql.run('DELETE FROM agent_steps WHERE created_at < ?', cutoff);
       sql.run('UPDATE agent_runs SET summary = NULL WHERE created_at < ?', cutoff);
       sql.run('DELETE FROM agent_audit WHERE created_at < ?', cutoff);
+      sql.run("DELETE FROM agent_approvals WHERE status != 'pending' AND created_at < ?", cutoff);
+      sql.run('DELETE FROM agent_idempotency WHERE created_at < ?', cutoff);
     }
   });
+  // what was erased mustn't survive in the write-ahead log
+  checkpoint();
 }

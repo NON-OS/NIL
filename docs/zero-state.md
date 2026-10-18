@@ -14,6 +14,8 @@ In **Settings → Data & privacy → Zero-state**, admins choose how long each k
 
 Each can be kept forever (the default) or erased after 1, 7, 30, 90, 180 or 365 days. An hourly sweep on the server erases whatever has expired, for good. SQLite's `secure_delete` overwrites the freed space in the database file, and after every sweep, wipe or erase the write-ahead log (`nonos.db-wal`) is folded back in and cut to nothing, so erased text doesn't linger there either. Neither can reach copies the filesystem, a snapshot or a backup already made.
 
+Agents' run logs, run summaries and audit trails, their decided approval cards and the replies stored for their repeated requests quote task text too, so they're erased after the shorter of the comment and task history settings.
+
 Receipts survive this, so proofs that people already exported stay valid. The data needed to reveal a task's title in a proof is erased with the task, and the Proof of work page then shows "Title erased by a retention policy".
 
 Some things are always erased on a schedule, whatever the settings: deleted tasks after 30 days in the trash (the operator can change this with `TRASH_DAYS`), read notifications after 90 days, and expired sessions and invites.

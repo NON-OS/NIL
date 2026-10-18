@@ -91,5 +91,6 @@ const worker = {
 signals.on('run', () => {
   if (started) setImmediate(worker.tick);
 });
+signals.on('stop', (taskId, reason) => cancelWhere('task_id = ?', [taskId], reason));
 
 export default worker;
