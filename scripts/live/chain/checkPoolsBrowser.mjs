@@ -2,14 +2,14 @@
 // signs with real keys and sends real transactions to a mainnet fork holding 0xbow's real
 // Privacy Pools contracts. The admin sets up the pool, deposits, pays a bounty with From pool
 // (proved in the page) and takes the rest back; the contributor turns private payouts on and
-// moves the payout out. Needs `npm run build` and Playwright (`npm install --prefix marketing/video`).
+// moves the payout out. Needs `npm run build` and a Chromium for Playwright (CHROMIUM_PATH,
+// or `npx playwright-core install chromium`).
 //
 //   ANVIL=/path/to/anvil node scripts/live/chain/checkPoolsBrowser.mjs [--shots dir]
 import os from 'node:os';
 import path from 'node:path';
 import assert from 'node:assert/strict';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
 import openPerson from './browser/openPerson.mjs';
 import mineWhile from './browser/mineWhile.mjs';
 import untilApi from './browser/untilApi.mjs';
@@ -17,8 +17,6 @@ import calls from './calls.mjs';
 import SETUP_TOKEN from './setupToken.mjs';
 import poolFork from './pools/poolFork.mjs';
 
-const video = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../marketing/video/package.json');
-const { chromium } = createRequire(video)('playwright');
 const shots = process.argv.includes('--shots') ? process.argv[process.argv.indexOf('--shots') + 1] : os.tmpdir();
 const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const step = (what) => console.log(`  ${what}`);

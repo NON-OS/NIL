@@ -1,19 +1,15 @@
 // The live chain check in a real browser: the same on-chain flows, driven through Nil's own
 // screens with a wallet injected into Chromium that signs with real keys and sends real
 // transactions to the local mainnet fork. Opt-in and slow; see "Live chain checks" in
-// docs/development.md. Needs `npm run build` first, and Playwright from marketing/video
-// (`npm install --prefix marketing/video`).
+// docs/development.md. Needs `npm run build` first, and a Chromium for
+// Playwright (CHROMIUM_PATH, or `npx playwright-core install chromium`).
 //
 //   ANVIL=/path/to/anvil node scripts/live/chain/checkBrowser.mjs
 import os from 'node:os';
 import path from 'node:path';
-import { createRequire } from 'node:module';
-import { fileURLToPath } from 'node:url';
+import { chromium } from 'playwright-core';
 import liveContext from './liveContext.mjs';
 import steps from './browser/steps.mjs';
-
-const video = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../marketing/video/package.json');
-const { chromium } = createRequire(video)('playwright');
 
 const ctx = await liveContext();
 ctx.people = {};

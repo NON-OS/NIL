@@ -86,7 +86,6 @@ docs/             these pages, also bundled into the app as its help center
 circuits/         encrypted-ballot circuit and its setup record
 scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live checks for agents and the chain (scripts/live/)
 deploy/tor/       Tor onion service image
-marketing/        video kits; not part of the app or the Docker image
 ```
 
 ## The help center
@@ -105,7 +104,7 @@ Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, 
 
 `npm test` runs against a small fake Ethereum node. The live chain checks run Nil against a local fork of Ethereum mainnet instead: the real NOX, staking, Zero-State Pass, USDC, ERC-5564 announcer, Chainlink feed, Uniswap V2 pair and Coinbase Smart Wallet factory, with their real state, and every payment a real signed transaction. They are slow, need network access and an anvil binary, and are never part of `npm test`. Run them before a release that touches anything on-chain.
 
-You need anvil from Foundry, either from `foundryup` or from npm (`npm install -g @foundry-rs/anvil`), on your PATH or named in `ANVIL`. The browser check also needs `npm run build` and Playwright: `npm install --prefix marketing/video`, then `npx --prefix marketing/video playwright install chromium` (or set `CHROMIUM_PATH`).
+You need anvil from Foundry, either from `foundryup` or from npm (`npm install -g @foundry-rs/anvil`), on your PATH or named in `ANVIL`. The browser check also needs `npm run build` and a Chromium for Playwright: `npx playwright-core install chromium`, or set `CHROMIUM_PATH`.
 
 ```bash
 node scripts/live/chain/checkNode.mjs               # read-only: does NOX_RPC_URL have what Nil needs?

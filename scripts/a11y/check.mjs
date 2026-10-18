@@ -13,7 +13,7 @@ import seed from './seed.mjs';
 import screens from './screens.mjs';
 
 const { values: opt } = parseArgs({ options: { shots: { type: 'string' }, only: { type: 'string' }, port: { type: 'string', default: process.env.A11Y_PORT ?? '3989' } } });
-const world = createRequire(import.meta.url)('../../marketing/overnight/screen/world.cjs');
+const world = createRequire(import.meta.url)('./world.cjs');
 const SIZES = {
   desktop: { viewport: { width: 1440, height: 900 } },
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },

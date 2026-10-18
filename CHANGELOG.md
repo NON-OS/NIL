@@ -310,7 +310,6 @@ Version 3 makes the Ethereum wallet the only way in and adds NOX token utility: 
 **Other**
 
 - The official NØNOS brand: logo, mark and icons, Geist and JetBrains Mono, and motion that turns off under reduced motion.
-- `marketing/video`: a kit that renders marketing videos in code. It is not part of the app or the Docker image.
 
 ### Changed
 
