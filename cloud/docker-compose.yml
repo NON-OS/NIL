@@ -38,8 +38,14 @@ services:
       - control-data:/var/lib/nil-cloud
       - caddy-config:/srv/caddy
       - ./workspace.env:/etc/nil/workspace.env:ro
-      # the mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups
-      - ${NIL_BACKUP_DIR:-/mnt/nil-backups}:/backups
+      # The mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups. rslave passes the
+      # share through even when it is mounted (or mounted again) after this container started.
+      - type: bind
+        source: ${NIL_BACKUP_DIR:-/mnt/nil-backups}
+        target: /backups
+        bind:
+          propagation: rslave
+          create_host_path: true
     networks:
       - edge
     read_only: true

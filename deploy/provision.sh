@@ -293,17 +293,33 @@ fi
 env_set "$NIL_DIR/.env" NIL_MODE "$MODE"
 [ -z "$docker_gid" ] || env_set "$NIL_DIR/.env" DOCKER_GID "$docker_gid"
 run cp -r "$HERE/." "$NIL_DIR/deploy/"
-run chown -R "$DEPLOY_USER:$DEPLOY_USER" "$NIL_DIR"
+# Everything but chain/: the Ethereum node's engine API secret stays root's, since Reth and
+# Lighthouse run as root without capabilities and can only read a file root owns.
+run find "$NIL_DIR" -path "$NIL_DIR/chain" -prune -o -exec chown -h "$DEPLOY_USER:$DEPLOY_USER" {} +
 if [ "$MODE" = hosted ]; then
   env_set "$NIL_DIR/.env" NIL_BACKUP_DIR "$BACKUP_DIR"
   # the control plane runs as uid 1000 in its container and writes backups here
   run install -d -m 700 -o 1000 -g 1000 "$BACKUP_DIR"
+  # Docker waits for the backup share at boot, so the control plane never binds the empty folder
+  # underneath it. Wants rather than Requires: a share that fails to mount must not keep every
+  # workspace down; backups then stop with an alert (the .nil-backup-target check).
+  backup_mount=$(systemd-escape --path --suffix=mount "$BACKUP_DIR")
+  if printf '# Written by deploy/provision.sh: start Docker once the backup share is mounted, or has\n# failed to mount.\n[Unit]\nWants=%s\nAfter=%s\n' "$backup_mount" "$backup_mount" |
+    install_file /etc/systemd/system/docker.service.d/10-nil-backups.conf 644; then
+    run systemctl daemon-reload
+  fi
 fi
 if [ "$WITH_CHAIN" = 1 ]; then
   run install -d -m 700 "$NIL_DIR/chain"
   if [ ! -s "$NIL_DIR/chain/jwt.hex" ]; then
     if [ "$DRY_RUN" = 1 ]; then log "would create the engine API secret $NIL_DIR/chain/jwt.hex"; else (umask 077 && openssl rand -hex 32 > "$NIL_DIR/chain/jwt.hex"); fi
   fi
+fi
+# also puts right a secret an earlier run of this script handed to the deploy user
+if [ -d "$NIL_DIR/chain" ]; then
+  run chown -R root:root "$NIL_DIR/chain"
+  run chmod 700 "$NIL_DIR/chain"
+  if [ -f "$NIL_DIR/chain/jwt.hex" ]; then run chmod 600 "$NIL_DIR/chain/jwt.hex"; fi
 fi
 
 step "Done"

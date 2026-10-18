@@ -164,7 +164,7 @@ sudo mount /mnt/nil-backups
 touch /mnt/nil-backups/.nil-backup-target
 ```
 
-`uid=1000` is the control plane's user inside its container. `seal` encrypts the SMB traffic as well; the backups are encrypted either way. The `.nil-backup-target` file tells the control plane the share is mounted: if the mount ever drops, the folder underneath is empty, and backups stop with an alert instead of filling the server's own disk. In `cloud.env` use `CLOUD_BACKUP_TARGET=file:///backups`. Old backups are pruned after `CLOUD_BACKUP_KEEP_DAYS`.
+`uid=1000` is the control plane's user inside its container. `seal` encrypts the SMB traffic as well; the backups are encrypted either way. The `.nil-backup-target` file tells the control plane the share is mounted: if the mount ever drops, the folder underneath is empty, and backups stop with an alert instead of filling the server's own disk. At boot Docker waits for the share (provision.sh adds `Wants=` and `After=` for its mount unit to `docker.service`, without making Docker depend on it), and the control plane mounts the folder with `rslave` propagation, so a share that mounts late, or again after a drop, still reaches it. In `cloud.env` use `CLOUD_BACKUP_TARGET=file:///backups`. Old backups are pruned after `CLOUD_BACKUP_KEEP_DAYS`.
 
 The server can delete whatever it can write on the share, so someone who took it over could delete every backup. Turn on the Storage Box's snapshots in Robot (an automatic snapshot plan, daily, keeping at least 30): Hetzner takes them, the sub-account on the server can read them under `.zfs/snapshot` but can't change or delete them, and only the main account in Robot can. Keep the Robot login and its API credentials off the server.
 
