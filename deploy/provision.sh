@@ -131,6 +131,8 @@ if [ -n "$REMOVE_USER" ]; then
   fi
   home=$(getent passwd "$REMOVE_USER" | cut -d: -f6)
   case "$HERE/" in "$home"/*) die "This copy of the deploy scripts is in $home, which goes with $REMOVE_USER. Run $NIL_DIR/deploy/provision.sh instead." ;; esac
+  # userdel --remove deletes the home folder, so it has to be the account's own
+  if [ -e "$home" ] && [ "$(stat -c %u "$home")" != "$(id -u "$REMOVE_USER")" ]; then die "$home doesn't belong to $REMOVE_USER, so it can't go with it. Remove the account by hand."; fi
   # sudoers files with rules for this account and no one else, such as 90-cloud-init-users
   sudoers=()
   for file in /etc/sudoers.d/*; do
