@@ -39,6 +39,8 @@ export default interface State {
   inbox: InboxItem[] | null;
   feed: Activity[] | null;
   ai: boolean;
+  // members with a voting key send built-in AI requests anonymously while this is on
+  aiAnonymous: boolean;
   nox: NoxInfo | null;
   rewards: RewardToken[];
   // true when you're a guest who can see only the projects shared with you

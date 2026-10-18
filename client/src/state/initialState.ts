@@ -17,6 +17,7 @@ const initialState: State = {
   inbox: null,
   feed: null,
   ai: false,
+  aiAnonymous: false,
   nox: null,
   rewards: [],
   guest: false,

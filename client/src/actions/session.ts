@@ -38,6 +38,7 @@ interface Bootstrap {
   focus: FocusItem[];
   unread: number;
   ai: boolean;
+  aiAnonymous: boolean;
   nox: NoxInfo | null;
   rewards: RewardToken[];
   guest: boolean;
@@ -73,6 +74,7 @@ async function load() {
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
+    aiAnonymous: b.aiAnonymous,
     nox: b.nox,
     rewards: b.rewards ?? [],
     guest: b.guest,
