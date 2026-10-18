@@ -10,6 +10,7 @@ import dates from '../../lib/dates';
 import PlanNotice from '../plan/PlanNotice';
 import type AccessKey from '../../types/AccessKey';
 import HelpLink from '../help/HelpLink';
+import AnonymousAiCard from './AnonymousAiCard';
 
 // every key expires, at most a year out unless the server allows less
 const EXPIRY = [
@@ -151,6 +152,7 @@ export default function AiSettings() {
               : 'Built-in AI is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server. Connecting your own assistant above works either way.'}
           </p>
         </div>
+        {aiOn && <AnonymousAiCard />}
       </section>
     </>
   );

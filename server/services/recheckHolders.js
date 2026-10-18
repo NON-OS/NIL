@@ -2,7 +2,7 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import sessions from '../auth/sessions.js';
 import hub from '../realtime/hub.js';
-import headBlock from '../chain/headBlock.js';
+import finalBlockRef from '../chain/finalBlockRef.js';
 import holderGate from './holderGate.js';
 import holdings from './holdings.js';
 import holderStanding from './holderStanding.js';
@@ -13,8 +13,8 @@ let running = null;
 let again = false;
 
 // One pass over the members who came in through the holder door and are due a check, or all of
-// them with `force`. Everyone is read at the same block, so tokens moved during the pass can't
-// count for two people. Someone below gets the grace period and a notice; once it's over they
+// them with `force`. Everyone is read at the same final block, named by hash, so tokens moved
+// during the pass can't count for two people. Someone below gets the grace period and a notice; once it's over they
 // are signed out, and their access keys stop working while they stay locked.
 async function pass({ force, now }) {
   holderWallets.forgetOld(now);
@@ -25,7 +25,7 @@ async function pass({ force, now }) {
   if (!members.length) return;
   let block;
   try {
-    block = `0x${(await headBlock()).toString(16)}`;
+    block = { blockHash: (await finalBlockRef()).hash, requireCanonical: true };
   } catch {
     // the node didn't answer: nobody loses access over that, try again next round
     return;

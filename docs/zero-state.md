@@ -9,10 +9,12 @@ In **Settings → Data & privacy → Zero-state**, admins choose how long each k
 | Setting | What it covers |
 |---|---|
 | Finished and canceled tasks | The tasks, with their comments and files |
-| Comments | Comments on every task, open or not |
+| Comments | Comments on every task, open or not, with the words quoted from them in notifications and in agent briefings |
 | Task history | The activity log: who changed what and when |
 
 Each can be kept forever (the default) or erased after 1, 7, 30, 90, 180 or 365 days. An hourly sweep on the server erases whatever has expired, for good. SQLite's `secure_delete` overwrites the freed space in the database file, and after every sweep, wipe or erase the write-ahead log (`nonos.db-wal`) is folded back in and cut to nothing, so erased text doesn't linger there either. Neither can reach copies the filesystem, a snapshot or a backup already made.
+
+Agents' run logs, run summaries and audit trails, their decided approval cards and the replies stored for their repeated requests quote task text too, so they're erased after the shorter of the comment and task history settings.
 
 Receipts survive this, so proofs that people already exported stay valid. The data needed to reveal a task's title in a proof is erased with the task, and the Proof of work page then shows "Title erased by a retention policy".
 
@@ -32,6 +34,6 @@ For the strictest setups, run Nil with its data folder in memory. Nothing is wri
 docker compose -f docker-compose.yml -f docker-compose.ram.yml up -d --build
 ```
 
-The data folder gets up to 1 GB of memory. To carry a workspace from one session to the next, restore an encrypted capsule when you start and download a fresh one before you stop.
+The data folder gets up to 1 GB of memory, and files attached to tasks can take up to 768 MB of it, so the database always has room. Set `UPLOAD_QUOTA_MB` in `.env` to change that. To carry a workspace from one session to the next, restore an encrypted capsule when you start and download a fresh one before you stop.
 
 > If the host swaps memory to disk, data can still end up on disk. Turn swap off, or use encrypted swap, for real memory-only operation.

@@ -43,6 +43,8 @@ export default interface Task {
   rolledBack?: boolean;
   // set while the bounty is on the public board
   listedAt: number | null;
+  // set while a listed bounty takes no new applications
+  applicationsClosedAt: number | null;
   position: number;
   commentCount: number;
   attachmentCount: number;

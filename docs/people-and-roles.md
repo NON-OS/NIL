@@ -35,9 +35,9 @@ Admins can open the workspace to anyone who holds enough NOX:
 1. In **Settings → Team → Token holders**, type the **Minimum** amount.
 2. Click **Open the door**.
 
-The sign-in page then offers **Have NOX tokens? Join without an invite**. Newcomers join as members once the server has checked their wallet. NOX in the wallet, NOX staked in the official staking contract and Zero-State Passes all count.
+The sign-in page then offers **Have NOX tokens? Join without an invite**. Newcomers join as members once the server has checked their wallet. NOX in the wallet, NOX staked in the official staking contract and Zero-State Passes all count. Nil reads them at the newest final block, which on Ethereum is usually about 15 minutes old, so NOX that only just arrived counts a little later.
 
-People who joined this way are checked again at every sign-in, every few hours (6 by default), and whenever someone new joins through the door. The regular checks look at all of them at the same block, so one stack of NOX counts for one of them at a time.
+People who joined this way are checked again at every sign-in, every few hours (6 by default), and whenever someone new joins through the door. The regular checks look at all of them at the same final block, so one stack of NOX counts for one of them at a time.
 
 If all their linked wallets together fall below the minimum, they get a notice and a few days (3 by default) with full access to hold enough again. After that they are signed out, their access keys stop working, and they can't sign in until they hold enough again.
 

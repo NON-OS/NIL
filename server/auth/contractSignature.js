@@ -12,12 +12,14 @@ const IS_VALID_SIGNATURE = '1626ba7e';
 const ACCEPTED = `0x${IS_VALID_SIGNATURE}${'0'.repeat(56)}`;
 const COUNTERFACTUAL = '6492'.repeat(16);
 
-// A reverted call is the wallet saying no. A node that doesn't answer in time is not.
+// A reverted call is the wallet saying no. A node that doesn't answer in time is not, and nor
+// is an answer Nil's verifier couldn't prove: that one never signs anyone in or turns them away.
 async function call(params) {
   try {
     return String(await rpc('eth_call', [params, 'latest'], { timeoutMs: config.signIn.chainTimeoutMs })).toLowerCase();
   } catch (err) {
     if (err.refused) return null;
+    if (err.unverified) throw new HttpError(503, 'This looks like a smart wallet, which Nil checks with the Ethereum network, and that check couldn’t be verified just now. Try again in a few minutes.');
     throw new HttpError(503, 'This looks like a smart wallet, which Nil checks with the Ethereum network, and that check didn’t finish in time. Try again in a minute.');
   }
 }

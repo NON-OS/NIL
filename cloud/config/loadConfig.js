@@ -4,10 +4,8 @@ import parsePlans from './parsePlans.js';
 import parseDailyTime from './parseDailyTime.js';
 import parseBackupTarget from './parseBackupTarget.js';
 import parseEnvFile from './parseEnvFile.js';
-import readWordList from './readWordList.js';
+import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
-import reservedNames from '../names/reservedNames.js';
-import blockedWords from '../names/blockedWords.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -34,9 +32,12 @@ export default function loadConfig(env = process.env) {
   if (port === internalPort) read.fail('CLOUD_PORT and CLOUD_INTERNAL_PORT must differ: the internal port must never be public.');
   const dataDir = path.resolve(read.text('CLOUD_DATA_DIR', 'data'));
 
-  const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example nonos/nil:3.0.0.');
-  const user = read.text('CLOUD_APP_USER', '1000:1000');
-  if (!/^\d+:\d+$/.test(user)) read.fail('CLOUD_APP_USER must be uid:gid, for example 1000:1000.');
+  const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example localhost/nonos/nil:3.0.0.');
+  // each workspace runs as its own uid, this plus its number, never 1000 like the control plane
+  const uidBase = read.number('CLOUD_APP_UID_BASE', 200_000, { max: 2_000_000_000 });
+  if (uidBase > 0 && uidBase < 10_000) read.fail('CLOUD_APP_UID_BASE must be 10000 or more, clear of the uids of accounts on the host, or 0.');
+  if (uidBase === 0) read.warn('CLOUD_APP_UID_BASE=0 runs every workspace as uid 1000, the control plane’s own. Use it only to go back to a release from before each workspace had its own uid.');
+  if (read.raw('CLOUD_APP_USER')) read.warn('CLOUD_APP_USER is no longer used: each workspace runs as its own uid from CLOUD_APP_UID_BASE.');
 
   const treasury = read.text('CLOUD_PLAN_TREASURY');
   if (treasury && !ADDRESS.test(treasury)) read.fail('CLOUD_PLAN_TREASURY must be an Ethereum address (0x and 40 hex characters).');
@@ -59,6 +60,17 @@ export default function loadConfig(env = process.env) {
   const rpcUrl = read.raw('CLOUD_RPC_URL') === 'off' ? 'off' : read.url('CLOUD_RPC_URL', { protocols: ['https:', 'http:'] });
   if (!rpcUrl) read.fail('CLOUD_RPC_URL is not set. Point it at your own Ethereum node (see README), or set it to off to turn on-chain features and billing off.');
   if (rpcUrl === 'off' && treasury) read.warn('CLOUD_RPC_URL is off, so workspaces can’t check payments and run in community mode despite CLOUD_PLAN_TREASURY.');
+  // How workspaces use Nil's verifier: off, shadow (check on the side, the launch default) or
+  // enforce (act only on proven answers; CLOUD_RPC_URL is then the verifier itself).
+  const verifierKey = read.text('CLOUD_VERIFIER_KEY');
+  if (verifierKey && verifierKey.length < 32) read.fail('CLOUD_VERIFIER_KEY must be at least 32 characters. Make one with: openssl rand -hex 32');
+  const verifierUrl = read.url('CLOUD_VERIFIER_URL', { protocols: ['http:', 'https:'] });
+  let verifierMode = rpcUrl === 'off' ? 'off' : read.oneOf('CLOUD_VERIFIER_MODE', ['off', 'shadow', 'enforce'], 'shadow');
+  if (verifierMode === 'enforce' && !verifierKey) read.fail('CLOUD_VERIFIER_MODE=enforce needs the verifier’s key: set VERIFIER_KEY in .env, which the control plane gets as CLOUD_VERIFIER_KEY, and point CLOUD_RPC_URL at the verifier.');
+  if (verifierMode === 'shadow' && (!verifierKey || !verifierUrl)) {
+    read.warn(`CLOUD_VERIFIER_MODE=shadow, but ${verifierKey ? 'CLOUD_VERIFIER_URL' : 'VERIFIER_KEY in .env'} is not set, so workspaces’ chain reads aren’t checked. Run Nil’s verifier (docker-compose.verifier.yml) to turn it on.`);
+    verifierMode = 'off';
+  }
   const egress = read.oneOf('CLOUD_EGRESS', ['rpc-only', 'open'], 'rpc-only');
 
   const sourceUrl = read.url('CLOUD_SOURCE_URL');
@@ -94,9 +106,6 @@ export default function loadConfig(env = process.env) {
   const backupTime = parseDailyTime(read.text('CLOUD_BACKUP_TIME', '03:15'));
   if (backupTime === undefined) read.fail('CLOUD_BACKUP_TIME must be HH:MM in UTC, or off.');
 
-  const nameMin = read.number('CLOUD_NAME_MIN', 3, { min: 1, max: 63 });
-  const nameMax = read.number('CLOUD_NAME_MAX', 32, { min: nameMin, max: 63 });
-
   const config = {
     domain,
     signupHost,
@@ -115,16 +124,20 @@ export default function loadConfig(env = process.env) {
     docker: Object.freeze({
       socket: read.text('CLOUD_DOCKER_SOCKET', '/var/run/docker.sock'),
       apiVersion: /^1\.\d{2}$/.test(read.raw('CLOUD_DOCKER_API')) ? read.raw('CLOUD_DOCKER_API') : '1.44',
-      pull: read.oneOf('CLOUD_IMAGE_PULL', ['missing', 'never', 'always'], 'missing'),
+      // images arrive with deploy/release.sh; pulling is for a registry the operator controls
+      pull: read.oneOf('CLOUD_IMAGE_PULL', ['missing', 'never', 'always'], 'never'),
     }),
     app: Object.freeze({
       image,
-      user,
+      uidBase,
       port: read.number('CLOUD_APP_PORT', 3000, { min: 1, max: 65535 }),
       treasury: treasury ? treasury.toLowerCase() : null,
       invoiceSlots,
       invoiceKey: invoiceKey || null,
       rpcUrl,
+      verifierMode,
+      verifierKey: verifierMode === 'off' ? null : verifierKey,
+      verifierUrl: verifierMode === 'shadow' ? verifierUrl : null,
       egress,
       extraEnv,
       tmpfsMb: read.number('CLOUD_APP_TMPFS_MB', 64, { min: 8, max: 4096 }),
@@ -148,30 +161,16 @@ export default function loadConfig(env = process.env) {
       controlUpstream,
       askUpstream,
       rpcRelayPort: read.number('CLOUD_RPC_RELAY_PORT', 8545, { min: 1, max: 65535 }),
+      verifierRelayPort: read.number('CLOUD_VERIFIER_RELAY_PORT', 8546, { min: 1, max: 65535 }),
       streamCloseDelayMin: read.number('CLOUD_STREAM_CLOSE_DELAY_MIN', 5, { max: 120 }),
     }),
-    signup: Object.freeze({
-      open: read.oneOf('CLOUD_SIGNUP', ['open', 'closed'], 'open') === 'open',
-      maxWorkspaces: read.number('CLOUD_MAX_WORKSPACES', 300, { min: 1 }),
-      perWallet: read.number('CLOUD_MAX_PER_WALLET', 3, { min: 1 }),
-      perWalletPerDay: read.number('CLOUD_SIGNUPS_PER_WALLET_PER_DAY', 2, { min: 1 }),
-      perIpPerDay: read.number('CLOUD_SIGNUPS_PER_IP_PER_DAY', 3, { min: 1 }),
-      perHour: read.number('CLOUD_SIGNUPS_PER_HOUR', 30, { min: 1 }),
-      challengesPerIp: read.number('CLOUD_CHALLENGES_PER_IP', 20, { min: 1 }),
-      nameChecksPerIp: read.number('CLOUD_NAME_CHECKS_PER_IP', 60, { min: 1 }),
-      powBits: read.number('CLOUD_POW_BITS', 16, { max: 24 }),
-      nameMin,
-      nameMax,
-      reserved: Object.freeze(new Set([...reservedNames, ...read.list('CLOUD_RESERVED_NAMES').map((n) => n.toLowerCase())])),
-      blocked: Object.freeze([...blockedWords, ...readWordList(read.text('CLOUD_BLOCKLIST_FILE'), read)]),
-      quarantineDays: read.number('CLOUD_NAME_QUARANTINE_DAYS', 90),
-      unclaimedDays: read.number('CLOUD_UNCLAIMED_DAYS', 7),
-      ticketMinutes: read.number('CLOUD_TICKET_MINUTES', 30, { min: 5, max: 1440 }),
-    }),
+    signup: signupRules(read),
     lifecycle: Object.freeze({
       deleteGraceDays: read.number('CLOUD_DELETE_GRACE_DAYS', 14),
       upgradeMaxFailures: read.number('CLOUD_UPGRADE_MAX_FAILURES', 1),
       checkpointKeepDays: read.number('CLOUD_CHECKPOINT_KEEP_DAYS', 7),
+      lockWaitSec: read.number('CLOUD_LOCK_WAIT_SEC', 900, { max: 86_400 }),
+      lockLeaseSec: read.number('CLOUD_LOCK_LEASE_SEC', 300, { min: 30, max: 86_400 }),
     }),
     backup: Object.freeze({
       enabled: Boolean(target && recipients.length && recipients.every(Boolean)),
@@ -186,7 +185,11 @@ export default function loadConfig(env = process.env) {
       maxRestartsPerHour: read.number('CLOUD_MAX_RESTARTS_PER_HOUR', 3, { min: 1 }),
       diskFreeAlertPercent: read.number('CLOUD_DISK_FREE_ALERT_PERCENT', 15, { max: 99 }),
     }),
-    usage: Object.freeze({ intervalMin: read.number('CLOUD_USAGE_INTERVAL_MIN', 15, { min: 1 }) }),
+    usage: Object.freeze({
+      intervalMin: read.number('CLOUD_USAGE_INTERVAL_MIN', 15, { min: 1 }),
+      suspendPercent: read.number('CLOUD_DISK_SUSPEND_PERCENT', 120, { max: 10_000 }),
+      resumeGraceHours: read.number('CLOUD_DISK_RESUME_GRACE_HOURS', 24, { max: 24 * 365 }),
+    }),
     alerts: Object.freeze({
       webhook: read.url('CLOUD_ALERT_WEBHOOK', { protocols: ['https:', 'http:'] }),
       token: read.text('CLOUD_ALERT_TOKEN'),

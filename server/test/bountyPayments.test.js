@@ -15,6 +15,7 @@ const tx = () => `0x${crypto.randomBytes(32).toString('hex')}`;
 let srv;
 let sql;
 let checkPayments;
+let refreshBountyState;
 const chain = mockChain();
 const base = () => srv.base;
 const owner = client(base);
@@ -27,6 +28,7 @@ before(async () => {
   srv = await startServer({ chain, env: { NOX_MISSING_TX_HOURS: '1', REWARD_TOKENS: 'USDC:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48:6,GUSD:0x056fd409e1d7a124bd7017459dfea2f387b6d5cd:2' } });
   ({ default: sql } = await import('../db/sql.js'));
   ({ default: checkPayments } = await import('../jobs/checkPayments.js'));
+  ({ default: refreshBountyState } = await import('../services/refreshBountyState.js'));
   await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
   const inv = await owner('POST', '/api/invites', { role: 'member' });
   ids.member = (await member.wallet(memberWallet, 'invite', { name: 'Jane Doe', inviteToken: inv.data.token })).data.user.id;
@@ -186,6 +188,48 @@ test('a stuck payment can be cancelled and paid again; if it lands anyway it sti
   assert.deepEqual({ ...landed }, { status: 'confirmed', amount: intent.amount });
   const paidOut = (await owner('GET', '/api/bounties')).data.payments.filter((p) => p.taskId === t.id && p.status === 'confirmed');
   assert.equal(paidOut.length, 2);
+});
+
+test('a bounty’s amount and token are fixed while a payment for it is on its way, paid, or cancelled but watched', async () => {
+  const t = await task(String(UNIT));
+  const intent = await start(t.id);
+  const stuck = tx();
+  const p = (await record(t.id, intent.id, stuck)).data.payment;
+  const change = () => owner('PATCH', `/api/tasks/${t.id}`, { bounty: String(1_000_000n * 10n ** 6n), bountyToken: 'USDC' });
+  assert.equal((await change()).status, 409, 'on its way');
+  assert.equal((await owner('POST', `/api/payments/${p.id}/cancel`)).status, 200);
+  const refused = await change();
+  assert.equal(refused.status, 409, 'cancelled, but its transaction may still land');
+  assert.match(refused.data.error, /still watched/);
+  assert.equal((await owner('PATCH', `/api/tasks/${t.id}`, { bounty: null })).status, 409);
+
+  // the 1 NOX lands after all and pays the 1 NOX bounty it was sent for
+  chain.addTransferAt({ hash: stuck, token: NOX, from: ownerWallet.address, to: intent.to, value: intent.amount, atBlock: chain.head() + 1 });
+  chain.mine(4);
+  await checkPayments();
+  const detail = (await owner('GET', `/api/tasks/${t.id}/detail`)).data.task;
+  assert.deepEqual([detail.bounty, detail.bountyToken, detail.bountyState], [String(UNIT), 'NOX', 'paid']);
+  assert.equal((await change()).status, 409);
+
+  // once the watch is over, a cancelled payment no longer holds a bounty that nothing paid
+  const other = await task(String(UNIT));
+  const otherIntent = await start(other.id);
+  const gone = (await record(other.id, otherIntent.id, tx())).data.payment;
+  await owner('POST', `/api/payments/${gone.id}/cancel`);
+  sql.run('UPDATE payments SET cancelled_at = ? WHERE id = ?', Date.now() - 8 * 86_400_000, gone.id);
+  assert.equal((await owner('PATCH', `/api/tasks/${other.id}`, { bounty: '2' })).status, 200);
+});
+
+test('what a bounty has received counts only payments in the bounty’s own token', async () => {
+  const t = await task(String(UNIT));
+  const intent = await start(t.id);
+  chain.mine(4);
+  assert.equal((await record(t.id, intent.id, send(intent.to, intent.amount, { depth: 4 }))).data.payment.state, 'paid');
+  // a task whose token was switched under a confirmed payment, before the rule above existed
+  sql.run("UPDATE tasks SET bounty = ?, bounty_token = 'USDC' WHERE id = ?", String(10n ** 6n), t.id);
+  assert.equal(refreshBountyState(t.id), null, 'NOX units never pay a USDC bounty');
+  const usdcIntent = await start(t.id);
+  assert.equal(BigInt(usdcIntent.amount) >= 10n ** 6n, true, 'the whole USDC bounty is still owed');
 });
 
 test('a payment whose transaction is already in a block can’t be cancelled', async () => {

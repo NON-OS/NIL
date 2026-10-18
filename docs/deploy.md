@@ -36,6 +36,8 @@ sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli container
 docker compose version
 ```
 
+Nil runs as uid 1000 inside its container, and on many cloud images the first login user (such as `ubuntu`) is uid 1000 too, with sudo. Someone who broke out of the container would then be that user. Check with `id -u`; if it prints 1000, run the server from another login user, or move this one to another uid with `sudo usermod -u 1500 <user>` while it has nothing running. Don't add your user to the `docker` group, which is as powerful as root.
+
 ## 2. Point DNS at the server
 
 Create an `A` record for `nonos.example.com` with the server's IPv4 address, and an `AAAA` record if it has IPv6. Wait until it resolves:
@@ -105,6 +107,7 @@ Then decide on these:
 | Variable | Recommendation |
 |---|---|
 | `NOX_RPC_URL` | Required. Your own Ethereum node (an execution client such as Geth, Nethermind or Reth, with a consensus client), or a provider you trust. The node sees every wallet and payout address your server looks up, and from which IP. Nil reads private-payout balances one address at a time at random moments, with other payees' addresses mixed in, and reads vote snapshots in a shuffled order a few wallets at a time, so a node can't group one person's addresses by timing. It can still tell that a snapshot's wallets were read together. Only your own node keeps every lookup to yourself. Use `off` if you don't want any on-chain features |
+| `NOX_VERIFIER_MODE`, `NOX_VERIFIER_KEY` | Recommended with on-chain features: run Nil's verifier next to Nil. Start with `shadow`, which checks your node's answers on the side and tells admins when one was false, and move to `enforce` after a week without a mismatch: Nil then acts only on chain reads the verifier proved, so a lying or broken node can't make it credit a payment that never happened or count a balance nobody holds. See [Verified chain reads](self-hosting.md#verified-chain-reads) for the steps and for what it can't catch |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run Nil for others and charge them for Nil Pro; see [Charging for Nil Pro](#charging-for-nil-pro) |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Only if you want built-in AI: the key and the name of the Anthropic model to use. Text goes to Anthropic only when someone clicks an AI button |
@@ -209,7 +212,7 @@ curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security
 
 The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set, or doesn't match the address Caddy connects from.
 
-`/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, and whether the Ethereum node answered the last time it was asked. It holds nothing about the workspace or its people, so it is safe to leave public.
+`/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, whether the Ethereum node answered the last time it was asked, the short code of any payment or check the billing watchdog found stalled (see [NOX and Nil Pro](nox-and-nil-pro.md#nothing-waits-for-a-person)) and, with Nil's verifier, its mode, whether the node was caught in a false answer in the last day (`chain.verification.mismatchAt`) and, in enforce mode, whether answers can be verified right now and if not why. It holds nothing about the workspace or its people, so it is safe to leave public.
 
 The Nil container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
 
@@ -250,6 +253,8 @@ Then review these settings:
 ## 9. Optional: Tor onion service
 
 Nil can also be reached as a Tor onion service. Details are in [Tor onion service](tor.md). Since v3, a wallet is the only way to sign in, and Tor Browser ships without wallet extensions, so plan how your team will sign in first.
+
+The Tor container is built from a Debian image pinned by digest, and runs with a read-only root, `no-new-privileges` and only the capabilities it needs to hand its key folder to Tor's own user, which Tor then switches to.
 
 ### Onion and HTTPS together
 
@@ -440,6 +445,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] The startup log has no `[config]` lines, and `/healthz` shows the version you meant to deploy.
 - [ ] Responses carry `Strict-Transport-Security` and `Content-Security-Policy`.
 - [ ] `NOX_RPC_URL` points at your own node or one you trust (or is `off`), and the app shows no Ethereum node errors.
+- [ ] With Nil's verifier: `NOX_VERIFIER_KEY` matches its `VERIFIER_KEY`, its checkpoint came from two sources that agree, and `/healthz` shows `"verification"` in the mode you meant (`shadow` with `NOX_VERIFIER_URL` set, or `enforce` with `NOX_RPC_URL` pointing at the verifier) and `"ok": true`.
 - [ ] `PLAN_TREASURY` is unset, unless you deliberately charge for Nil Pro. If set: the address, prices and trial are right, the NOX price bounds and fallback are set, and each server sharing the treasury has its own `PLAN_INVOICE_SLOT` and the shared `PLAN_INVOICE_KEY`.
 - [ ] `REWARD_TOKENS` matches your chain.
 - [ ] You created the workspace, the name is final, and you linked a second wallet.
@@ -517,6 +523,26 @@ That wallet isn't linked to any account. Sign in with a linked wallet, or ask an
 
 `NOX_RPC_URL` is wrong, the node is down, or outbound HTTPS is blocked.
 
+### "Nil couldn't verify what its Ethereum node said: …"
+
+`NOX_VERIFIER_MODE=enforce` and the answer didn't come back proven. Nothing was counted or refused on it, and Nil tries again by itself. The end of the message says why:
+
+- "its verifier didn't answer": the verifier isn't running, or `NOX_RPC_URL` doesn't reach it.
+- "the answer didn't come through Nil's verifier": `NOX_RPC_URL` points at the node itself instead of the verifier, or `NOX_VERIFIER_KEY` and `VERIFIER_KEY` differ.
+- "the verifier is still catching up with the chain": it is starting, or lost its consensus API for a while. `docker compose logs verifier` says which.
+- "the verifier's checkpoint is too old to trust": the newest checkpoint it has is older than `VERIFIER_CHECKPOINT_MAX_AGE_DAYS`. Take a new one from two sources that agree (see [Verified chain reads](self-hosting.md#verified-chain-reads)) and restart the verifier.
+- "the verifier can't reach its consensus node": `VERIFIER_CONSENSUS_RPC` is wrong, down, or lacks the light-client endpoints.
+- "the Ethereum node didn't give an answer that could be proven": the execution node failed, or keeps no state proofs for that block (Reth without `--rpc.eth-proof-window`, or a public node without a proof window).
+- "the Ethereum node's answer didn't match the chain": the node said something the signed chain contradicts. Once can be a fault in the node; if it keeps happening, treat the node as compromised and replace it.
+
+### "The Ethereum node … gave this server an answer that its verifier proved false"
+
+Shadow mode caught the node: `/healthz` shows when under `chain.verification.mismatchAt`, and the log has a `[verification]` error line naming the kind of read (never the address). Nil acted on that answer, so look at payments, invoices, votes and holder sign-ups from around then, and at the node: a node that is still syncing or out of step with the network answers wrongly too. Don't move to enforce until a week passes without one.
+
+### A payment says it is "older than Nil's verifier can check"
+
+The verifier can only tie blocks of about the last 27 hours to the chain it follows. A transaction first checked after that, for example one named for an invoice days after it was sent, isn't counted by itself, since Nil counts nothing without proof. If you trust your node for that one transaction, take its word for it: set `NOX_VERIFIER_MODE=shadow` (with `NOX_VERIFIER_URL` and `NOX_RPC_URL` back at your node), restart, check the payment again, then go back to `enforce` and restart. On a hosted server the same goes for `CLOUD_VERIFIER_MODE`, followed by `node cli.js refresh <workspace>`.
+
 ### "The Ethereum node is on chain …, but this server expects chain …"
 
 `NOX_RPC_URL` points at a different network than `NOX_CHAIN_ID`.
@@ -527,7 +553,7 @@ That wallet isn't linked to any account. Sign in with a linked wallet, or ask an
 
 ### A payment stays pending
 
-It counts once its block is finalized, which on Ethereum usually takes under 15 minutes, and it's re-checked every minute. On a node without the `finalized` tag, `NOX_FINALITY_DEPTH` blocks are used instead. If the transaction never appears on-chain, it fails after `NOX_MISSING_TX_HOURS` (24 by default). A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address, or an amount without the digits Nil asked for). Fix the cause, remove the failed payment and pay again. A bounty payment that never gets mined can be cancelled and paid again.
+It counts once its block is finalized, which on Ethereum usually takes under 15 minutes, and it's re-checked every minute. On a node without the `finalized` tag, `NOX_FINALITY_DEPTH` blocks are used instead. If a bounty payment's transaction never appears on-chain, it fails after `NOX_MISSING_TX_HOURS` (24 by default); with `NOX_VERIFIER_MODE=enforce` it is only flagged, because a light client can't prove a transaction doesn't exist, and an admin cancels it. A Nil Pro transaction that never appears is given up on after the same time in every mode, so its invoice can expire, and it is still counted, as credit, if it's mined later. A failed payment shows why (for example a sender that isn't the admin's wallet or a treasury address, or an amount without the digits Nil asked for). Fix the cause, remove the failed payment and pay again. A bounty payment that never gets mined can be cancelled and paid again.
 
 ### A Nil Pro payment isn't found
 
@@ -562,6 +588,10 @@ That wallet can't hold encryption keys, because its signature is what opens them
 ### "That file is too large"
 
 Raise `MAX_UPLOAD_MB`. For a capsule restore, raise `MAX_CAPSULE_MB`.
+
+### "You've used the 2 GB of file space you have on this server"
+
+Each person's files count against `UPLOAD_QUOTA_PER_MEMBER_MB` (2048), a guest's against `UPLOAD_QUOTA_PER_GUEST_MB` (100), and everyone's together against `UPLOAD_QUOTA_MB` (20480), which gives "This workspace has used its 20 GB of file space" instead. Remove files, or raise the limit and restart. `0` turns a quota off. "You've attached a lot of files in the last hour" means `UPLOADS_PER_HOUR` (120); it clears within the hour.
 
 ### "This server already has a workspace. Restore only works on a fresh install"
 

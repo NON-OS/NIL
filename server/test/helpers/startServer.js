@@ -27,7 +27,7 @@ export default async function startServer({ chain, env = {} } = {}) {
     chain.server.listen(0);
     await once(chain.server, 'listening');
     process.env.NOX_RPC_URL = `http://127.0.0.1:${chain.server.address().port}`;
-  } else {
+  } else if (!env.NOX_RPC_URL) {
     // keeps tests that don't need a chain from ever calling a real Ethereum node
     process.env.NOX_RPC_URL = 'off';
   }

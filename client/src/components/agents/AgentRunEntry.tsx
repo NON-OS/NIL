@@ -37,6 +37,10 @@ export default function AgentRunEntry({ run }: { run: AgentRun }) {
             <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
               The step log isn’t shown to guests, since it can quote work outside the projects shared with you.
             </p>
+          ) : !run.steps?.length && run.stepCount > 0 ? (
+            <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+              This run’s log has been erased, by a retention setting or because the task was made private.
+            </p>
           ) : (
             <ol className="agent-steps">{(run.steps ?? []).map((step) => <StepLine key={step.seq} step={step} />)}</ol>
           )}

@@ -32,6 +32,34 @@ jobs:
       - run: npm run build
       - run: npm audit --omit=dev
 
+  # The Lean proofs in formal/: build, axiom check, and the committed test vectors must be what
+  # the models produce today. elan is pinned by version and checksum; it installs the Lean
+  # version named in formal/lean-toolchain.
+  formal:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+      - name: Install elan
+        env:
+          ELAN_VERSION: v4.1.2
+          ELAN_SHA256: f81c2e48c1588d4612cd2c8851947898a45ac8d72748a07dff3a5694f1cf589b
+        run: |
+          curl -fsSL -o elan.tar.gz "https://github.com/leanprover/elan/releases/download/$ELAN_VERSION/elan-x86_64-unknown-linux-gnu.tar.gz"
+          echo "$ELAN_SHA256  elan.tar.gz" | sha256sum -c -
+          tar xzf elan.tar.gz
+          ./elan-init -y --default-toolchain none --no-modify-path
+          rm elan-init elan.tar.gz
+          echo "$HOME/.elan/bin" >> "$GITHUB_PATH"
+      - run: npm run formal
+      - name: Check the committed vectors are current
+        run: git diff --exit-code formal/vectors
+
   # The hosted control plane has its own dependencies and tests; the deploy scripts it uses
   # must stay shellcheck-clean.
   cloud:

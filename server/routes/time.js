@@ -107,7 +107,7 @@ router.get(
        WHERE e.user_id = ? AND e.started_at >= ? AND e.started_at < ? AND e.ended_at IS NOT NULL ORDER BY e.started_at`,
       ...visible.params, req.user.id, from, to,
     );
-    const lines = [['Start', 'End', 'Minutes', 'Task', 'Title', 'Note'].join(',')];
+    const lines = [['Start', 'End', 'Minutes', 'Task', 'Title', 'Note'].map(csvCell).join(',')];
     for (const r of rows) {
       const title = r.sealed ? 'Private task (encrypted)' : r.number ? r.title : r.task_id ? 'A task you can no longer open' : '';
       lines.push([new Date(r.started_at).toISOString(), new Date(r.ended_at).toISOString(), Math.round((r.ended_at - r.started_at) / 60_000), r.number ? `${taskPrefix}-${r.number}` : '', title, r.note].map(csvCell).join(','));

@@ -16,6 +16,8 @@ import providerFor from './providerFor.js';
 import systemPrompt from './systemPrompt.js';
 import briefing from './briefing.js';
 import stepLog from './stepLog.js';
+import stepOutput from './stepOutput.js';
+import taskIdOfKey from '../taskIdOfKey.js';
 import publishRun from './publishRun.js';
 import tokensToday from './tokensToday.js';
 import runComment from './runComment.js';
@@ -111,6 +113,8 @@ export default async function executeRun(row, signal) {
 
     for (let step = 0; step < agent.limits.maxSteps && !stop; step++) {
       const turn = await provider.step(state, { signal: abort, maxTokens: config.agents.maxOutputTokens });
+      // a turn that comes back after the run was stopped, say because its task turned private, is dropped
+      abort.throwIfAborted();
       usage.input += turn.usage.input;
       usage.output += turn.usage.output;
       // 0 when the agent has no prices: Settings then shows token counts only
@@ -137,7 +141,7 @@ export default async function executeRun(row, signal) {
           }
           // a checklist item is ticked only with the work for it; the rest of the call goes ahead
           const guarded = call.name === 'update_task' ? checklistDone(call.input, user) : null;
-          for (const r of guarded?.refused ?? []) steps.add('guard', { tool: call.name, input: { item: r.text }, output: `Didn’t tick “${r.text}”: ${r.reason}.`, ok: false });
+          for (const r of guarded?.refused ?? []) steps.add('guard', { tool: call.name, input: { item: r.text }, output: `Didn’t tick “${r.text}”: ${r.reason}.`, ok: false, taskId: taskIdOfKey(call.input.key) });
           if (guarded && !guarded.input) {
             results.push({ id: call.id, content: `${refusalText(guarded.refused)}\nPut the work in your reply and attach it as the result, or leave the item open.`, isError: true });
             continue;
@@ -147,7 +151,7 @@ export default async function executeRun(row, signal) {
           if (out.ok && byName.get(call.name)?.write && out.data?.changed !== false) changes += 1;
           if (out.ok && guarded) done.push(...guarded.accepted.filter((a) => !done.some((d) => d.id === a.id)));
           if (out.pending) pending.push(out.pending);
-          steps.add(out.pending ? 'approval' : out.ok ? 'tool' : 'refused', { tool: call.name, input: call.input, output: resultText(out), ok: out.ok || Boolean(out.pending) });
+          steps.add(out.pending ? 'approval' : out.ok ? 'tool' : 'refused', { tool: call.name, input: call.input, output: stepOutput(call.name, out, resultText(out)), ok: out.ok || Boolean(out.pending), taskId: out.taskId });
           const refusals = guarded?.refused.length ? `\n${refusalText(guarded.refused)}` : '';
           results.push({ id: call.id, content: resultText(out) + refusals, isError: !out.ok && !out.pending });
         }
@@ -195,7 +199,7 @@ export default async function executeRun(row, signal) {
   const now = loadTask(task.id);
   if (stop === 'done' && !pending.length && triggers.includes('assigned') && agent.doneStatus !== 'none' && now && now.assigneeId === agent.id && !['done', 'canceled', agent.doneStatus].includes(now.status)) {
     const out = runTool(principal, 'update_task', { key: `${task.number}`, status: agent.doneStatus }, { via: 'runner', runId: run.id, actingFor: run.acting_for });
-    steps.add(out.ok ? 'tool' : 'refused', { tool: 'update_task', input: { status: agent.doneStatus }, output: resultText(out), ok: out.ok });
+    steps.add(out.ok ? 'tool' : 'refused', { tool: 'update_task', input: { status: agent.doneStatus }, output: resultText(out), ok: out.ok, taskId: task.id });
     if (out.ok && out.data.changed) changes += 1;
   }
 

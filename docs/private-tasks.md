@@ -8,6 +8,8 @@ When you create it, click **Private** in the new task box before you save. The b
 
 For a task that already exists, open it, click the **Visible to** field and choose **Only the creator and assignee**. Only the creator or the assignee can change this field.
 
+When a task that was visible to the team turns private, the server also deletes the plain copies of its words it kept: old titles and checklist items in the task's history, previews in notifications, the title stored for proof of work, and what [agents](ai-agents.md#history-and-audit) kept of it. That means the logs and summaries of agent runs on the task, its approval cards, the details of agents' calls about it in their audit trails and the replies stored for their repeated requests. Agent runs still going on it stop. Words someone already copied elsewhere, such as an agent's reply on another task, stay there.
+
 To open a private task up again, choose **Everyone in the workspace**. Your browser then sends its title, notes, checklist and comments back to the server as plain text.
 
 ## Unlock with your wallet
@@ -54,7 +56,7 @@ Your browser seals a task key only to keys you've confirmed. If you haven't chec
 
 ## Private tasks from before encryption
 
-Private tasks made before encryption existed are encrypted the next time their creator or assignee unlocks, files included. When a task is encrypted for the first time, the server also deletes the plain copies of its words it kept: old titles and checklist items in the task's history, previews in notifications and the title stored for proof of work. The signed receipt stays valid, but its title can no longer be revealed in a proof.
+Private tasks made before encryption existed are encrypted the next time their creator or assignee unlocks, files included. When a task is encrypted for the first time, the server also deletes the plain copies of its words it kept, as it does for a [team task that turns private](#make-a-task-private). The signed receipt stays valid, but its title can no longer be revealed in a proof.
 
 ## If a private task won't open
 

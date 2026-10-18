@@ -6,7 +6,7 @@ A bounty is a reward on a task, paid in NOX, USDC or another token the server li
 
 Only admins can set bounties. Open the task, type an amount like 250 or 12.5 in its **Bounty** field, and pick the token under **Paid in**. Press Enter or click elsewhere to save. To remove a bounty, clear the field.
 
-Once a payment for a bounty has been recorded, the bounty can't change.
+Once a payment for a bounty has been recorded, the bounty's amount and token can't change. That holds for a cancelled payment too while Nil still watches for its transaction (7 days, `PAYMENT_WATCH_DAYS`), since money that lands then counts toward the bounty it was sent for.
 
 On a server that charges for [Nil Pro](nox-and-nil-pro.md), adding a bounty needs an active plan. Bounties that already exist can always be paid.
 
@@ -49,7 +49,7 @@ The list shows the reason. Fix the cause, click **Remove** on the failed payment
 
 If less arrived than was asked for, the payment is confirmed as part of the bounty and the bounty shows as partly paid. Click **Pay the rest** to send what's still owed. If more arrived, the bounty is paid and the payment shows as overpaid.
 
-If NOX's governance switches on a fee for transfers between wallets, the NOX token keeps that share of every payment, so the exact amount Nil asks for arrives short by it. Admins see a notice on the Bounties page while that's the case. Nil still recognises a payment short by exactly the fee and counts it as paid in full; the Payments list shows what arrived and what the token kept. The contributor receives that much less than the bounty.
+If NOX's governance switches on a fee for transfers between wallets, the NOX token keeps that share of every payment, so the exact amount Nil asks for arrives short by it. Admins see a notice on the Bounties page while that's the case. Nil still recognises a payment short by exactly the fee and counts it as paid in full, as long as the same transaction shows the token keeping that fee from your wallet; the Payments list shows what arrived and what the token kept. The contributor receives that much less than the bounty.
 
 A transaction that is stuck and never gets mined can be cancelled: click **Cancel** on it, then pay again. Before that, it's best to speed the transaction up or cancel it in your wallet, so it can't land later. If it does land anyway, Nil still counts it for 7 days (`PAYMENT_WATCH_DAYS`), so the record always shows money that moved. A transaction that is already in a block can't be cancelled.
 

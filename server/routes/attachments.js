@@ -14,6 +14,9 @@ import publishTask from '../services/publishTask.js';
 import logActivity from '../services/logActivity.js';
 import incomingFile from '../services/incomingFile.js';
 import toAttachment from '../mappers/toAttachment.js';
+import rateLimit from '../auth/rateLimit.js';
+import receiveUpload from '../lib/receiveUpload.js';
+import uploadQuota from '../services/uploadQuota.js';
 
 const router = express.Router();
 
@@ -21,7 +24,20 @@ const router = express.Router();
 // so an uploaded .html or .svg can never run script on our origin.
 const INLINE = new Set(['image/png', 'image/jpeg', 'image/gif', 'image/webp', 'application/pdf']);
 
-const raw = express.raw({ type: () => true, limit: config.maxUploadBytes });
+const TOO_LARGE = 'That file is too large.';
+// what AES-GCM adds to a file the browser encrypts: the 12-byte IV and the 16-byte tag
+const SEAL_OVERHEAD = 28;
+
+const uploadsPerHour = rateLimit({ windowMs: 3_600_000, max: config.uploads.perHour, key: (req) => req.user.id, message: 'You’ve attached a lot of files in the last hour. Wait a while and try again.' });
+
+// A body is read only once everything else about the request checks out, and a size it
+// announces up front is checked before any of it is.
+function declaredSize(req, limit) {
+  const declared = Number(req.headers['content-length']);
+  if (declared > limit) throw new HttpError(413, TOO_LARGE);
+  if (req.headers['content-length'] !== undefined && !declared) throw HttpError.badRequest('That file is empty.');
+  return declared || null;
+}
 
 function syncCount(taskId) {
   const { n } = sql.get('SELECT COUNT(*) AS n FROM attachments WHERE task_id = ?', taskId);
@@ -39,18 +55,29 @@ function privacyHolder(taskId, user) {
 
 router.post(
   '/tasks/:id/attachments',
-  raw,
-  route((req) => {
-    const task = visibleTask(req.params.id, req.user);
-    if (!Buffer.isBuffer(req.body) || !req.body.length) throw HttpError.badRequest('That file is empty.');
-    const file = incomingFile(req.headers, task);
-
+  uploadsPerHour,
+  route(async (req) => {
+    incomingFile(req.headers, visibleTask(req.params.id, req.user));
+    const release = uploadQuota(req.user, declaredSize(req, config.maxUploadBytes) ?? config.maxUploadBytes);
     const id = newId();
-    fs.writeFileSync(path.join(uploadDir, id), req.body, { mode: 0o600 });
-    sql.run(
-      'INSERT INTO attachments (id, task_id, uploader_id, filename, mime, size, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-      id, task.id, req.user.id, file.filename, file.mime, req.body.length, file.sealed ? JSON.stringify(file.sealed) : null, Date.now(),
-    );
+    const stored = path.join(uploadDir, id);
+    let task;
+    let file;
+    try {
+      const size = await receiveUpload(req, stored, { limit: config.maxUploadBytes, tooLarge: TOO_LARGE });
+      // the task may have changed hands or been sealed while the file was on its way
+      task = visibleTask(req.params.id, req.user);
+      file = incomingFile(req.headers, task);
+      sql.run(
+        'INSERT INTO attachments (id, task_id, uploader_id, filename, mime, size, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        id, task.id, req.user.id, file.filename, file.mime, size, file.sealed ? JSON.stringify(file.sealed) : null, Date.now(),
+      );
+    } catch (err) {
+      fs.rmSync(stored, { force: true });
+      throw err;
+    } finally {
+      release();
+    }
     const attachment = toAttachment(sql.get('SELECT * FROM attachments WHERE id = ?', id));
     toTaskViewers(task.id, { type: 'attachment', attachment });
     // an encrypted task's history says that a file arrived, never what it's called
@@ -83,13 +110,14 @@ router.get(
 // task does, which swaps every staged copy in at once.
 router.put(
   '/attachments/:id/content',
-  raw,
-  route((req) => {
+  route(async (req) => {
     const row = sql.get('SELECT * FROM attachments WHERE id = ?', req.params.id);
     if (!row) throw HttpError.notFound('That file');
     privacyHolder(row.task_id, req.user);
-    if (!Buffer.isBuffer(req.body) || !req.body.length) throw HttpError.badRequest('That file is empty.');
-    fs.writeFileSync(stagedFile.path(row.id, !row.sealed), req.body, { mode: 0o600 });
+    // the same file encrypted or decrypted, so it's never more than a little larger
+    const limit = row.size + SEAL_OVERHEAD;
+    declaredSize(req, limit);
+    await receiveUpload(req, stagedFile.path(row.id, !row.sealed), { limit, tooLarge: 'That isn’t the same file. Try changing who sees the task again.' });
     return { ok: true };
   }),
 );

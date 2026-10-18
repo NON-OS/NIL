@@ -52,5 +52,7 @@ export default Object.freeze({
   missingTxMs: envNumber('NOX_MISSING_TX_HOURS', 24, { min: 1 }) * units.HOUR,
   // how far under the head the node still answers eth_getLogs; the public node stops at 10,000
   logHistoryBlocks: envNumber('NOX_LOG_HISTORY_BLOCKS', 10_000, { min: 500 }),
+  // the highest fee on transfers between wallets the token's governance can set, in basis points
+  maxTransferFeeBps: envNumber('NOX_MAX_TRANSFER_FEE_BPS', 300, { max: 10_000 }),
   explorer: explorer(env.NOX_EXPLORER),
 });

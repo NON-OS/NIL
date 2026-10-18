@@ -21,7 +21,7 @@ while [ $# -gt 0 ]; do
     *) VERSION=$1; shift ;;
   esac
 done
-if [ -f "$NIL_DIR/.env" ]; then load_env; else NIL_IMAGE=${NIL_IMAGE:-nonos/nil}; fi
+if [ -f "$NIL_DIR/.env" ]; then load_env; else NIL_IMAGE=${NIL_IMAGE:-localhost/nonos/nil}; fi
 VERSION=${VERSION:-${NIL_VERSION:-latest}}
 image="$NIL_IMAGE:$VERSION"
 require docker
@@ -43,7 +43,7 @@ trap cleanup EXIT
 step "Throwaway workspace from $image"
 run docker network create --internal "$name" > /dev/null
 run docker volume create "$name" > /dev/null
-run docker run --detach --name "$name" --network "$name" --volume "$name:/data" \
+run docker run --detach --pull never --name "$name" --network "$name" --volume "$name:/data" \
   --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --cap-drop ALL --security-opt no-new-privileges \
   --user 1000:1000 --memory 768m --pids-limit 256 --init \
   --env NOX_RPC_URL=off --env "SETUP_TOKEN=$token" "$image" > /dev/null

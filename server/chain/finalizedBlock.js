@@ -10,8 +10,10 @@ export default async function finalizedBlock() {
   try {
     const block = await rpc('eth_getBlockByNumber', ['finalized', false]);
     if (typeof block?.number === 'string') return Number(BigInt(block.number));
-  } catch {
-    // an "unknown block tag" error is the expected answer from a node without finality
+  } catch (err) {
+    // an "unknown block tag" error is the expected answer from a node without finality; a
+    // finalized block that couldn't be proven is not, and a guess under the head won't do
+    if (err.unverified) throw err;
   }
   return Number(BigInt(await rpc('eth_blockNumber'))) - config.finality.depth;
 }

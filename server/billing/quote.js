@@ -2,8 +2,7 @@ import config from '../config.js';
 import HttpError from '../lib/HttpError.js';
 import plan from '../services/plan.js';
 import adminHoldings from './adminHoldings.js';
-import zspPerk from './zspPerk.js';
-import stakerPercent from './stakerPercent.js';
+import steadyStakes from './steadyStakes.js';
 import noxRate from './noxRate.js';
 import creditBalance from './creditBalance.js';
 import priceBreakdown from './priceBreakdown.js';
@@ -20,9 +19,10 @@ function whole(value, field, min, max) {
   return n;
 }
 
-// The price of an invoice as it would be made right now, with everything read fresh: the
-// admins' stakes for the staker discount, their Zero-State Passes, the NOX rate and the credit
-// on hand. Shown before paying, and used as is when the invoice is made.
+// The price of an invoice as it would be made right now: the admins' stakes read fresh for the
+// staker discount (which counts only stakes the scheduled checks have seen too), the NOX rate and
+// the credit on hand. Whether a Zero-State Pass covers the workspace is only read here; only the
+// scheduled checks grant or end that. Shown before paying, and used as is when the invoice is made.
 export default async function quote({ kind = 'periods', periods = 1, people } = {}) {
   const status = plan.status();
   if (!status.enforced) throw HttpError.badRequest('This server runs in community mode: everything is already unlocked.');
@@ -36,7 +36,6 @@ export default async function quote({ kind = 'periods', periods = 1, people } = 
   }
 
   const holdings = await adminHoldings();
-  const perk = zspPerk.record(holdings);
   const staked = holdings.reduce((max, h) => (h.staked > max ? h.staked : max), 0n);
   const rate = await noxRate();
 
@@ -47,7 +46,7 @@ export default async function quote({ kind = 'periods', periods = 1, people } = 
     freeSeats: config.plan.freeSeats,
     priceUsd: config.billing.priceUsd,
     seatUsd: config.billing.seatUsd,
-    stakerPercent: stakerPercent(staked),
+    stakerPercent: steadyStakes.percent(holdings),
     credit: creditBalance(),
     seatLimit: status.seatLimit ?? 0,
     remainingMs,
@@ -61,5 +60,5 @@ export default async function quote({ kind = 'periods', periods = 1, people } = 
     })
     .filter(Boolean);
 
-  return { ...breakdown, noxPercent: config.billing.noxDiscount, noxDueUsd, tokens, staked, zsp: Boolean(perk.until && perk.until > Date.now()) };
+  return { ...breakdown, noxPercent: config.billing.noxDiscount, noxDueUsd, tokens, staked, zsp: status.zsp.active };
 }

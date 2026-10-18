@@ -6,6 +6,7 @@ import Spinner from '../components/ui/Spinner';
 import ProposalCard from '../components/votes/ProposalCard';
 import NewProposalModal from '../components/votes/NewProposalModal';
 import PlanNotice from '../components/plan/PlanNotice';
+import VerificationNotice from '../components/bounty/VerificationNotice';
 import useStore from '../state/useStore';
 import toast from '../state/toast';
 import votes from '../actions/votes';
@@ -46,6 +47,7 @@ export default function VotesView() {
       />
       <div className="page page-narrow">
         <PlanNotice what="New votes" />
+        <VerificationNotice />
         {!list ? (
           <Spinner size={20} />
         ) : list.length ? (

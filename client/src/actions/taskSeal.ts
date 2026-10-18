@@ -1,6 +1,7 @@
 import store from '../state/store';
 import keyring from '../state/keyring';
 import sealedCache from '../state/sealedCache';
+import knownWords from '../state/knownWords';
 import taskVersions from '../state/taskVersions';
 import taskText, { type TaskField } from '../lib/crypto/taskText';
 import taskRevision from '../lib/crypto/taskRevision';
@@ -42,7 +43,7 @@ const taskSeal = {
   // the whole task later adds the notes, without decrypting the rest a second time. The
   // revision is checked against the task, not its key, which changes when it's handed on.
   async open(sealed: SealedTask, taskId: string): Promise<OpenedWords> {
-    const known = sealedCache.get(sealed);
+    const known = knownWords(sealed, taskId);
     if (known && (known.description !== undefined || sealed.description === undefined)) return known;
     const { key } = await taskKeys.open(sealed);
     const title = known ? { text: known.title, rev: known.rev } : await openField(key, sealed.id, 'title', sealed.title);

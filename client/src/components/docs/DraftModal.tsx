@@ -3,7 +3,8 @@ import { Sparkles } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
-import http from '../../api/http';
+import askAi from '../../actions/askAi';
+import AiMode from '../ai/AiMode';
 
 interface Props {
   title: string;
@@ -21,7 +22,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
   const draft = async () => {
     setBusy(true);
     try {
-      const { text } = await http.post<{ text: string }>('/ai/draft', { instruction, title, context: useDoc ? body : '' });
+      const { text } = await askAi<{ text: string }>('draft', { instruction, title, context: useDoc ? body : '' });
       onDraft(text);
       onClose();
     } catch (err) {
@@ -61,6 +62,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
           This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ' and the doc’s current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to Anthropic without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
         </p>
+        <AiMode />
       </div>
     </Modal>
   );

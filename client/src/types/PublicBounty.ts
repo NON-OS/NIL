@@ -7,4 +7,6 @@ export default interface PublicBounty {
   due: string | null;
   listedAt: string;
   applicants: number;
+  // false once the team stops taking applications; the bounty stays listed
+  acceptingApplications: boolean;
 }

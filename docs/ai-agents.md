@@ -188,7 +188,7 @@ With the older `@modelcontextprotocol/sdk` package, import `Client` from `@model
 
 The REST API lives at `/api/agent/v1`. Its OpenAPI 3.1 document is at `/api/agent/v1/openapi.json`. It's generated from the same tool list as MCP, and each operation's `operationId` is the tool's name, so frameworks that build tools from OpenAPI get the same names.
 
-Every request needs `Authorization: Bearer <key>`. Writes accept an `Idempotency-Key` header: sending the same request with the same key again returns the first response instead of changing anything twice, marked with `Idempotency-Replayed: true`. The same key on a different request is refused. Keys are kept for a day.
+Every request needs `Authorization: Bearer <key>`. Writes accept an `Idempotency-Key` header: sending the same request with the same key again returns the first response instead of changing anything twice, marked with `Idempotency-Replayed: true`. The same key on a different request is refused. Keys are kept for a day. If the task the first response was about has since been made private, erased or moved out of the key's reach, the request answers `404 not_found` instead, still without changing anything.
 
 ```sh
 curl -H "Authorization: Bearer $NIL_AGENT_KEY" https://nil.example.com/api/agent/v1/me/assignments
@@ -389,7 +389,7 @@ A built-in agent runs inside Nil when a person assigns it a task or mentions it.
 
 What it posts is the work itself: the plan, the draft text, the answer or the triage. It ticks a checklist item only together with what it produced for that item, such as the text or what its tool calls changed. A tick without that, or with only "done", is refused, and the run log shows the refusal as a Caution step. The items it ticked are listed in its comment, with their results unless the comment already contains them. External agents tick items with `checklistTick` and are responsible for their own work.
 
-The task's timeline shows the run: click it to see each step, every tool call and its result. Settings → Agents shows runs and token use per agent, and a cost estimate once the agent has prices.
+The task's timeline shows the run: click it to see each step, every tool call and its result. For a read that brings back tasks, such as `list_tasks`, `search_tasks` or `get_task`, the log keeps which tasks came back and how many, not what they say; the agent itself gets the whole answer. Settings → Agents shows runs and token use per agent, and a cost estimate once the agent has prices.
 
 Runs stop at the step limit, the token limit per run or per day, or the time limit, and say so in their comment. A transient error (rate limits, an overloaded or unreachable model server) puts the run back in the queue with a growing delay, up to 3 retries. The queue is stored in the database, so runs survive restarts; a run cut off by a restart starts again. Only people start runs: an agent's comment or assignment never wakes another built-in agent.
 
@@ -436,7 +436,9 @@ None of that is relied on to keep you safe. The server enforces the rules whatev
 
 Every change an agent makes appears in the task's history under the agent's name, with "for <person>" when it acted for someone: the person who assigned or mentioned it, or who approved its request. Each agent's **Audit trail** lists every tool call it made, with the outcome, and every change an admin made to the agent.
 
-Run logs and the audit trail quote task text, so they follow the workspace's retention settings for comments and history, and a run's log is erased with its task. A run's log can quote other tasks the agent read, so guests see how a run went but not its log, and see an approval card's details only when they are asked to decide it.
+Run logs, run summaries, the audit trail, approval cards and replies stored for `Idempotency-Key` quote task text, so they follow the workspace's retention settings for comments and history (the shorter of the two). A request still waiting for approval stays until someone decides it. A run's briefing quotes the task's latest comments; when one of them is edited, deleted or erased by the comment retention setting, the briefing shows "(changed or removed since)" in its place. A run's log can quote other tasks the agent read, so guests see how a run went but not its log, and see an approval card's details only when they are asked to decide it.
+
+When a task is made private or erased, what agents kept of its words goes too. Runs still going on it stop. The logs and summaries of runs on it are erased (the runs stay, with their token counts), steps in other runs that changed it lose their details, its approval cards are deleted, the arguments of calls about it leave the audit trail, and replies stored for repeated requests about it no longer quote it. Reads in other runs only ever logged which tasks came back. What an agent wrote in its own words elsewhere, such as its replies in other runs or a comment on another task, stays, as it would if a person had written it.
 
 Webhook secrets and model API keys are sealed with a key kept beside the database (`DATA_DIR/keys/agents-secrets.key`), not in it. Encrypted backups (capsules) carry that key, so a restored server keeps working; erasing the workspace deletes it.
 
@@ -474,4 +476,4 @@ All settings are optional. See `.env.example` for the full list with comments.
 | `AGENT_PRICE_INPUT_PER_MTOK` | unset | Dollars per million input tokens on Anthropic, for the estimate |
 | `AGENT_PRICE_OUTPUT_PER_MTOK` | unset | Dollars per million output tokens on Anthropic, for the estimate |
 | `JOB_AGENT_DUE_SOON_SECONDS` | `300` | How often the due-soon check runs |
-| `JOB_AGENT_PRUNE_SECONDS` | `3600` | How often spent idempotency keys, delivery logs older than 30 days and expired run logs are cleared |
+| `JOB_AGENT_PRUNE_SECONDS` | `3600` | How often spent idempotency keys, delivery logs older than 30 days, and run logs, audit entries, decided approvals and stored replies past the retention settings are cleared |

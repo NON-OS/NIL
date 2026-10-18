@@ -79,12 +79,18 @@ test('a file name can’t break out of its Content-Disposition header', async ()
 });
 
 test('spreadsheet cells never start with something a spreadsheet runs', () => {
-  const formulas = ['=1+1', '+1+1', '-1+1', '@SUM(A1)', '\t=1', '\r=1', '=HYPERLINK("https://evil.example","x")', "=cmd|' /C calc'!A0", '-2+3+cmd|\' /C calc\'!A0'];
-  for (const value of formulas) {
+  const content = (cell) => cell.slice(1, -1).replace(/""/g, '"');
+  const formulas = ['=1+1', '+1+1', '-1+1', '@SUM(A1)', '\t=1', '\r=1', '=HYPERLINK("https://evil.example","x")', "=cmd|' /C calc'!A0", '-2+3+cmd|\' /C calc\'!A0', '＝1+1', '  =1+1'];
+  // a spreadsheet that splits on ; or tab finds a formula after the separator
+  const split = ['x;=HYPERLINK("https://evil.example","x")', 'a\t=1+1', 'a,=1+1', 'notes; +1+1', 'a;@SUM(A1)', 'a; ＝1'];
+  for (const value of [...formulas, ...split]) {
     const cell = csvCell(value);
-    const content = cell.startsWith('"') ? cell.slice(1, -1).replace(/""/g, '"') : cell;
-    assert.equal(content[0], "'", `${JSON.stringify(value)} became ${JSON.stringify(cell)}`);
+    assert.match(cell, /^".*"$/s, `${JSON.stringify(value)} isn’t quoted: ${JSON.stringify(cell)}`);
+    assert.equal(content(cell), `'${value}`, `${JSON.stringify(value)} became ${JSON.stringify(cell)}`);
   }
+  // ordinary text keeps its words, quoted
+  for (const value of ['Plan the 2026-10-18 launch', 'ana@example.com', 'semi;colon', 'a-b', '3 + 4', '']) assert.equal(content(csvCell(value)), value);
+  assert.equal(csvCell(null), '""');
   // a quote or line break inside a cell stays inside it
   assert.equal(csvCell('a"b\nc,d'), '"a""b\nc,d"');
 });

@@ -16,5 +16,7 @@ export default async function checkHolderJoin(address) {
   seatGate('member');
   holderWallets.checkFree(address);
   const held = (await holderPower([address])).total;
-  if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)} counting NOX held, staked and Zero-State Passes. Joining without an invite needs at least ${nox(gate.minimum)}.`);
+  if (held < BigInt(gate.minimum)) {
+    throw HttpError.forbidden(`This wallet holds ${nox(held)} counting NOX held, staked and Zero-State Passes. Joining without an invite needs at least ${nox(gate.minimum)}. Only final blocks count, so NOX that arrived in the last 15 minutes or so may not show yet.`);
+  }
 }

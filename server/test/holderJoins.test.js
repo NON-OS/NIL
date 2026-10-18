@@ -59,7 +59,9 @@ test('a burst of joins shares the re-check passes instead of each starting its o
   const results = await joinAtOnce(8);
   assert.ok(results.every((r) => r.status === 200));
   await recheckHolders();
-  const passes = chain.calls.slice(before).filter((c) => c.method === 'eth_blockNumber').length;
+  // every join and every pass looks up the final block once
+  const lookups = chain.calls.slice(before).filter((c) => c.method === 'eth_getBlockByNumber' && c.params[0] === 'finalized').length;
+  const passes = lookups - 8;
   // one pass already running when the burst arrives, and one more for everyone who asked during it
   assert.ok(passes <= 2, `${passes} passes`);
   const members = sql.get("SELECT COUNT(*) AS n FROM users WHERE joined_via = 'holder'").n;

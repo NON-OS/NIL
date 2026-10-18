@@ -60,6 +60,7 @@ export default function InboxView() {
     if (task) detail.open(task);
     else if (n.type === 'proposal') router.navigate('/votes');
     else if (n.type === 'plan_ending') router.navigate('/settings?tab=plan');
+    else if (n.type === 'billing_stalled') router.navigate(n.data.code === 'bounty_pending' ? '/bounties' : '/settings?tab=plan');
     else if (n.type === 'sign_in_reset') router.navigate('/settings?tab=team');
     else if (n.type.startsWith('agent_')) router.navigate('/settings?tab=agents');
   };

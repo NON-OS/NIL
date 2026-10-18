@@ -6,6 +6,7 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import decks from '../../actions/decks';
+import AiMode from '../ai/AiMode';
 import type DeckScope from '../../types/DeckScope';
 
 const PERIODS = [7, 14, 30].map((d) => ({ value: String(d), label: `Last ${d} days` }));
@@ -84,8 +85,9 @@ export default function DeckModal() {
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
           The deck is built in your browser: cover, at a glance, shipped, in progress, goals (an editable chart), risks, {cryptoTools ? 'bounties and ' : ''}next steps, each with speaker notes.
-          {aiOn && withAi ? ' With Claude on, the task titles, names and counts on the slides go to Anthropic through this Nil server as readable text, including any private tasks you chose to show.' : ' Nothing leaves this device.'}
+          {aiOn && withAi ? ' With Claude on, the task titles, names and counts on the slides go to Anthropic through this Nil server as readable text. Private tasks never go; they stay on your slides only.' : ' Nothing leaves this device.'}
         </p>
+        {aiOn && withAi && <AiMode />}
       </div>
     </Modal>
   );

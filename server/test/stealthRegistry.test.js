@@ -162,3 +162,16 @@ test('a member reads back what their wallet sent to the registry', async () => {
   assert.equal((await payee(kim.id)).source, 'registry');
   assert.equal((await client(base)('GET', '/api/me/stealth/registry')).status, 401);
 });
+
+test('someone who holds keys in Nil is never paid at a registry entry, which could predate a key reset', async () => {
+  const { default: sql } = await import('../db/sql.js');
+  const lee = await invite('Lee');
+  assert.ok(chain.registerKeys(lee.wallet.address, registerKeysCall(mine.meta)));
+  // keys set up again after a reset; the row only has to exist for the rule to apply
+  sql.run('INSERT INTO encryption_keys (user_id, public_key, signing_key, address, signature, created_at) VALUES (?, ?, ?, ?, ?, ?)', lee.id, 'pk', 'sk', lee.wallet.address.toLowerCase(), 'sig', Date.now());
+  assert.deepEqual(await payee(lee.id), { metaAddress: null, source: null, problem: 'off' });
+  const t = (await owner('POST', '/api/tasks', { title: 'For Lee', assigneeId: lee.id, bounty: BOUNTY })).data.task;
+  const res = await owner('POST', `/api/tasks/${t.id}/payments/intent`, { stealth: newStealthPayment(mine.meta) });
+  assert.equal(res.status, 400);
+  assert.match(res.data.error, /hasn’t turned on private payouts/);
+});

@@ -27,9 +27,10 @@ test('/healthz checks the database and reports versions, jobs and the node, noth
   assert.equal(res.status, 200);
   assert.equal(res.headers.get('cache-control'), 'no-store');
   const body = await res.json();
-  assert.deepEqual(Object.keys(body), ['ok', 'version', 'schema', 'jobs', 'chain']);
+  assert.deepEqual(Object.keys(body), ['ok', 'version', 'schema', 'jobs', 'chain', 'billing']);
   assert.deepEqual([body.ok, body.version, body.schema], [true, VERSION, migrations.length]);
-  assert.deepEqual(Object.keys(body.jobs).sort(), ['agentDueSoon', 'agentPrune', 'agentQueue', 'dueAlerts', 'optimize', 'payments', 'poolPrice', 'purge', 'reminders', 'transferFee', 'votes', 'webhooks']);
+  assert.deepEqual(Object.keys(body.jobs).sort(), ['agentDueSoon', 'agentPrune', 'agentQueue', 'billingWatchdog', 'dueAlerts', 'optimize', 'payments', 'poolPrice', 'purge', 'reminders', 'transferFee', 'votes', 'webhooks']);
+  assert.deepEqual(body.billing, { stalled: [] }, 'nothing stalled, and only short codes when something is');
   // purge and optimize run at startup; the rest haven't been due yet
   assert.ok(Date.parse(body.jobs.purge.lastSuccess) > Date.now() - 60_000);
   assert.ok(body.jobs.optimize.lastSuccess);

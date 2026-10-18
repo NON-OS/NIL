@@ -7,6 +7,7 @@ import checkKeyStatement from '../keys/checkKeyStatement.js';
 import parseWrap from '../keys/parseWrap.js';
 import dropTaskKeys from '../keys/dropTaskKeys.js';
 import publishTask from '../services/publishTask.js';
+import publishUser from '../services/publishUser.js';
 import toEncryptionKey from '../mappers/toEncryptionKey.js';
 
 const router = express.Router();
@@ -28,8 +29,9 @@ router.get(
 // Publishing your keys always takes a fresh signature from one of your wallets. Signing the same
 // keys again (after removing the wallet that signed them, say) changes nothing else. New keys
 // need `reset`: that gives up every doc and private task sealed to the old ones, every wallet and
-// passkey wrap of them and the note of a recovery kit, and teammates' browsers flag the change
-// until each of them confirms it.
+// passkey wrap of them and the note of a recovery kit, and turns private payouts off, since new
+// payouts to the old payout keys couldn't be opened. Teammates' browsers flag the change until
+// each of them confirms it.
 router.put(
   '/me/encryption-key',
   route((req) => {
@@ -50,6 +52,7 @@ router.put(
         sql.run('DELETE FROM identity_wraps WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM passkey_wraps WHERE user_id = ?', req.user.id);
         sql.run('UPDATE encryption_keys SET kit_saved_at = NULL WHERE user_id = ?', req.user.id);
+        sql.run('UPDATE users SET stealth_meta = NULL WHERE id = ?', req.user.id);
         dropped = dropTaskKeys(req.user.id);
       }
       sql.run(
@@ -65,6 +68,7 @@ router.put(
       }
     });
     for (const id of dropped) publishTask(id);
+    if (current && !same) publishUser(req.user.id);
     hub.broadcast({ type: 'keys' });
     // online teammates' browsers react by sealing team docs for a newcomer they've confirmed
     if (!same) hub.broadcast({ type: 'docs', id: null });

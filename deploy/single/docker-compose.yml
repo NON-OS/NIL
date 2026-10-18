@@ -5,7 +5,9 @@ name: nil
 
 services:
   nil:
-    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    image: ${NIL_IMAGE:-localhost/nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    # release.sh ships the image over SSH; a missing one is an error, never a download
+    pull_policy: never
     container_name: nil-app
     restart: unless-stopped
     env_file:
@@ -26,7 +28,9 @@ services:
     security_opt:
       - no-new-privileges:true
     init: true
+    # no swap, so session secrets and keys in memory never reach the disk
     mem_limit: ${NIL_MEMORY:-2g}
+    memswap_limit: ${NIL_MEMORY:-2g}
     pids_limit: 512
     logging:
       driver: local
@@ -34,8 +38,49 @@ services:
         max-size: 10m
         max-file: "5"
 
+  # Nil's verifier, off unless .env has COMPOSE_PROFILES=verifier (docs/self-hosting.md,
+  # "Verified chain reads"). Its settings go in verifier.env, apart from nil.env, so it never
+  # holds the app's secrets. Then set NOX_VERIFIER_KEY and NOX_VERIFIER_MODE in nil.env, with
+  # NOX_VERIFIER_URL=http://verifier:8545 for shadow or NOX_RPC_URL=http://verifier:8545 for enforce.
+  verifier:
+    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    container_name: nil-verifier
+    profiles:
+      - verifier
+    restart: unless-stopped
+    command: ["node", "server/verifier/index.js"]
+    env_file:
+      - path: verifier.env
+        required: false
+    environment:
+      VERIFIER_DATA_DIR: /data
+    volumes:
+      - verifier-data:/data
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    mem_limit: ${VERIFIER_MEMORY:-1g}
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8545/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 2m
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
   caddy:
-    image: ${CADDY_IMAGE:-caddy:2.10.2}
+    image: ${CADDY_IMAGE:-caddy:2.10.2@sha256:c3d7ee5d2b11f9dc54f947f68a734c84e9c9666c92c88a7f30b9cba5da182adb}
     container_name: nil-caddy
     restart: unless-stopped
     depends_on:
@@ -63,6 +108,7 @@ services:
     security_opt:
       - no-new-privileges:true
     mem_limit: 1g
+    memswap_limit: 1g
     logging:
       driver: local
       options:
@@ -78,3 +124,4 @@ volumes:
     name: nil-data
   caddy-data:
   caddy-state:
+  verifier-data:

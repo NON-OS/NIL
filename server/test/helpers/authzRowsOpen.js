@@ -35,6 +35,9 @@ export default {
   'GET /api/proofs/key': { open: true, allow: ALL },
   'POST /api/auth/restore': { open: true, allow: NOBODY, denied: [409] },
   'POST /api/anonymous-ballots/:id': { open: true, allow: NOBODY, id: 'proposal', denied: [404] },
+  // only a proof gets in; a session cookie is refused before anything is read, and this
+  // server has no AI configured for anyone who comes without one
+  'POST /api/ai-credits/:feature': { open: true, allow: NOBODY, feature: () => 'draft', denied: [400, 503] },
   'GET /api/calendar/:file': { open: true, allow: ALL, file: ({ t }) => t.fresh.calendarFile() },
   'POST /api/export/capsule': { allow: ADMINS, body: { passphrase: 'a long enough passphrase' } },
   'GET /api/bootstrap': { allow: PEOPLE },

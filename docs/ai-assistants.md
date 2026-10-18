@@ -71,6 +71,39 @@ Text goes to Anthropic only when someone clicks one of these buttons, and only w
 - For notes: the notes you pasted and the names of the people in the workspace, so tasks can be assigned. Nil doesn't store the notes.
 - For the weekly brief: the key, title, status, priority, assignee, due date and project of recently finished, overdue, upcoming and stalled team tasks, each person's workload and the goals' progress. Private tasks are never sent.
 - For a doc draft: your instruction, and the doc's current text if you leave **Use what's already in this doc as context** on. That text is decrypted in your browser and leaves it for this one request.
-- For a deck: the task titles, names and counts on the slides. If you included your private tasks, their titles are among them.
+- For a deck: the task titles, names and counts on the slides. Private tasks never go, even when you put them on your slides.
 
-Encrypted private tasks can't use the task features at all, because the server can't read them. Each person can make up to 12 AI requests a minute. On a server that charges for Nil Pro, built-in AI needs an active plan.
+Private tasks can't use the task features at all: the server can't read them, and their AI buttons are hidden. Each person can make up to 12 signed-in AI requests a minute and 100 a day (`AI_REQUESTS_PER_MINUTE` and `AI_REQUESTS_PER_DAY`), and the same 100 a day anonymously, as below. On a server that charges for Nil Pro, built-in AI needs an active plan.
+
+### Anonymous requests
+
+Members can send these requests without the server learning which of them asked. The server learns that some current member of the workspace asked, checks that this member hasn't used up today's requests, and passes the request on. It doesn't learn who it was.
+
+Every AI button says how its request goes: **Anonymous**, or **Signed in**, which means the server knows it's yours. Hover over it for the details; dialogs spell them out.
+
+To send anonymously, a member needs a voting key, the same one [anonymous votes](votes.md#anonymous-votes) use. Open **Settings → Connect AI** and click **Set up anonymous requests**, or join an anonymous vote. Your wallet signs to unlock your keys, and only the public half of the key goes to the server. Do it a while before you use AI, so the key and your first anonymous request don't arrive together. Guests, and members who haven't set up a key, send their requests signed in. So does a member whose key changed after a key reset while an anonymous vote still holds the old one: the new key can't be registered until that vote closes, and meanwhile the old one is taken out of the group, so it can't be used alongside. The button says **Signed in** and why.
+
+Admins turn anonymous requests on or off for the workspace with the **Anonymous AI requests** switch in the same place. It's on by default. While it's on, a member whose key is in the group can only send anonymously. Signed-in requests count against an allowance of their own, per person and per UTC day, kept only for that day. Once a changed key is accepted, the signed-in path closes again, so nobody keeps both allowances. Admins see how many anonymous requests were made each day and nothing else about them.
+
+### What anonymous requests don't hide
+
+The server can't tell which member sent a request, and nothing it stores links a request to a person. Some things can still point to you, and you should know them before relying on this:
+
+- The group you hide in is the workspace's members who have a voting key. In a small team that's only a few people, and the button's note says how many. With two members, the other one knows it was you.
+- The server and Anthropic still read every request in full, as they would signed in. If the prompt or the doc text says who you are, or is something only you would ask, the request points to you.
+- The time a request arrives can point to you too, for example when you keep the draft and your signed-in save follows a moment later. The browser waits a short random moment before sending, which helps only a little.
+- The server and any proxy in front of it see your IP address, the same one your signed-in requests come from. Use [Tor](tor.md) if that matters.
+- The server hands out the member list your browser proves against. A dishonest server could hand you a list of its own making and recognise your requests by it. Your browser checks that you're on the list and works out everything else itself, but it can't check who else is.
+
+### How anonymous requests work
+
+They use Semaphore (version 4) zero-knowledge proofs, the same audited circuit and trusted setup as anonymous votes. The idea comes from "ZK API Usage Credits: LLMs and Beyond" by Davide Crapis and Vitalik Buterin (ethresear.ch, February 2026).
+
+1. Each UTC day has a number of slots per member, the daily limit above. Your browser picks one of yours at random that it hasn't used today. To tell which it has used, it fetches today's spent nullifiers, so any member's browser could count how many anonymous requests the team made today, though not whose.
+2. It proves, in the browser, that you're in the group of members with a voting key. The proof's scope is that slot of that day in this workspace, under the protocol name `nil/ai-credit/v1`, and its message is a hash of the exact request. So the proof can't carry a different prompt, and the nullifier it produces is unique to you and that slot, unrelated to your nullifiers for other slots, other days or any vote.
+3. It sends the proof and the request to `/api/ai-credits/<feature>` without the session cookie, with the usual same-origin and CSRF checks. A request that carries a session cookie is refused.
+4. The server checks the proof, the day and the slot, refuses a nullifier it has already seen, checks the plan, and passes the request on. Requests that name a task can only name one every member can see, never a private one.
+
+The server keeps each spent nullifier with its day and nothing else, no time, address or account, and deletes it when the day is over; a count per day stays for admins, for 30 days. When someone joins, the previous few member lists stay good for ten minutes so requests already being proven still go through. When someone leaves or becomes a guest, every list that still has them is refused at once. These are `AI_CREDIT_ROOT_MINUTES`, `AI_CREDIT_ROOTS` and `AI_CREDIT_USAGE_DAYS` in `.env.example`. Since the server can't tell members apart here, the only short-term limit is per IP address, `AI_CREDIT_PER_ADDRESS_PER_MINUTE`.
+
+A request still uses its slot if the AI provider fails on it, because the slot is spent before the request goes out.
