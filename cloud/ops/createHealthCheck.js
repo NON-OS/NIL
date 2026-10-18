@@ -7,9 +7,11 @@ const HOUR = 3_600_000;
 // container; this reads the result). A workspace that is unhealthy or not running for
 // CLOUD_HEALTH_FAILURES checks in a row is restarted and the operator told. One that needs more
 // than CLOUD_MAX_RESTARTS_PER_HOUR restarts is left alone with a critical alert: restarting in
-// a loop would hide whatever is wrong with it.
+// a loop would hide whatever is wrong with it. A workspace whose Ethereum node was caught in a
+// false answer by Nil's verifier is a critical alert of its own, once for each time it happens.
 export default function createHealthCheck(ctx) {
   const strikes = new Map();
+  const mismatches = new Map();
   const restarts = new Map();
   const givenUp = new Set();
 
@@ -25,6 +27,11 @@ export default function createHealthCheck(ctx) {
       } catch (err) {
         ctx.log.warn('health.status_failed', { workspace: workspace.id, error: err });
         continue;
+      }
+      const caught = status.report?.chainMismatchAt;
+      if (caught && caught !== mismatches.get(workspace.id)) {
+        mismatches.set(workspace.id, caught);
+        await ctx.alert('workspace.chain_mismatch', { workspace, severity: 'critical', repeatMin: 0, message: `Nil’s verifier caught the Ethereum node in a false answer at ${new Date(caught).toISOString()}. ${ctx.config.app.verifierMode === 'enforce' ? 'The workspace threw it away; check the node.' : 'In shadow mode the workspace acted on it: check the node, and the workspace’s recent payments and votes.'}` });
       }
       if (status.health === 'healthy') {
         strikes.delete(workspace.id);

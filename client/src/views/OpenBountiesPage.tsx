@@ -61,6 +61,8 @@ export default function OpenBountiesPage() {
                     <span className="pay-status confirmed">
                       <CheckCircle2 /> Applied. Sign in with this wallet once the team accepts.
                     </span>
+                  ) : !b.acceptingApplications ? (
+                    <span className="muted">Not taking applications right now</span>
                   ) : (
                     open !== b.id && (
                       <button type="button" className="btn btn-primary btn-sm" onClick={() => setOpen(b.id)}>
@@ -69,7 +71,7 @@ export default function OpenBountiesPage() {
                     )
                   )}
                 </div>
-                {open === b.id && !applied.has(b.id) && <ApplyForm bounty={b} onDone={() => setApplied(new Set([...applied, b.id]))} />}
+                {open === b.id && b.acceptingApplications && !applied.has(b.id) && <ApplyForm bounty={b} onDone={() => setApplied(new Set([...applied, b.id]))} />}
               </article>
             ))}
           </div>

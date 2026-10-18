@@ -19,6 +19,10 @@ export default function fakeDriver() {
   const fail = {};
   const unhealthy = new Set();
   const probes = new Map();
+  // images "on the server", for hasImage; ensureImage accepts any
+  const images = new Set();
+  // what lastWrite reports per workspace: { at, startedAt }
+  const writes = new Map();
 
   const container = (id) => {
     const c = containers.get(id);
@@ -45,6 +49,11 @@ export default function fakeDriver() {
     probes,
 
     upstream: (id) => `nil-${id}:3000`,
+    images,
+    writes,
+    async hasImage(image) {
+      return images.has(image);
+    },
     async ensureImage(image) {
       step('ensureImage', image);
     },
@@ -87,7 +96,7 @@ export default function fakeDriver() {
       const c = containers.get(id);
       if (!c) return { exists: false, running: false, health: 'none', report: null };
       const healthy = c.running && !unhealthy.has(c.spec.image) && !c.sick;
-      return { exists: true, running: c.running, health: c.running ? (healthy ? 'healthy' : 'unhealthy') : 'none', report: healthy ? { ok: true, members: 4 } : null, image: c.spec.image, exitCode: 0 };
+      return { exists: true, running: c.running, health: c.running ? (healthy ? 'healthy' : 'unhealthy') : 'none', report: healthy ? { ok: true, members: 4, ...c.report } : null, image: c.spec.image, exitCode: 0 };
     },
     async probe(id, path) {
       step('probe', id, path);
@@ -133,6 +142,9 @@ export default function fakeDriver() {
     },
     async ensureProxy() {
       return 0;
+    },
+    async lastWrite(id) {
+      return containers.has(id) ? (writes.get(id) ?? { at: null, startedAt: null }) : null;
     },
     async usage() {
       return new Map([...volumes].map(([name, files]) => [name, [...files.values()].reduce((sum, b) => sum + b.length, 0)]));

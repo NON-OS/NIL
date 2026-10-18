@@ -59,7 +59,7 @@ server/
   routes/         one router per resource
   services/       task logic, visibility, bounties, plan, voting power, sharing
   chain/          Ethereum JSON-RPC reads and raw transactions
-  stealth/        ERC-5564 stealth address derivation
+  stealth/        checks for ERC-5564 meta-addresses, one-time addresses and ERC-6538 registry answers
   votes/          Semaphore ballots, voter groups, encrypted ballots and trustee tally
   mcp/            Model Context Protocol endpoint and tools
   proofs/         receipt signing key, issuing, revocation

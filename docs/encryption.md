@@ -1,6 +1,6 @@
 # Encryption and trust
 
-What Nil encrypts in the browser, who holds which key, what teammates check for each other, and what a server operator can still do. The code is in `client/src/lib/crypto`, `client/src/actions/vault.ts`, `client/src/actions/keyDirectory.ts`, `server/keys` and `server/votes/encrypted`.
+What Nil encrypts in the browser, who holds which key, what teammates check for each other, and what a server operator can still do. The code is in `client/src/lib/crypto`, `client/src/actions/vault.ts`, `client/src/actions/passkeys.ts`, `client/src/actions/keyDirectory.ts`, `server/keys` and `server/votes/encrypted`.
 
 ## Your identity
 
@@ -8,10 +8,10 @@ What Nil encrypts in the browser, who holds which key, what teammates check for 
   - an X25519 key pair, which teammates seal doc keys, private-task keys and vote shares to;
   - an Ed25519 key pair, which signs what you write in docs and private tasks;
   - your private payout keys (ERC-5564 spending and viewing keys) and your anonymous voting key (Semaphore).
-- The seed leaves your browser only wrapped. The server keeps one wrap per linked wallet: the seed under AES-256-GCM, with a key derived from that wallet's signature of its unlock message (below). That signature never leaves the browser, so the server can't open a wrap.
+- The seed leaves your browser only wrapped. The server keeps one wrap per linked wallet: the seed under AES-256-GCM, with a key derived from that wallet's signature of its unlock message (below). That signature never leaves the browser, so the server can't open a wrap. It also keeps one wrap per passkey you add (see [Passkeys](#passkeys)).
 - Any linked wallet that has a wrap unlocks the same identity. Linking a wallet while your keys are unlocked gives it a wrap too, and **Add the wallet in your browser** under **Encryption keys** in **Settings → Sign-in & security** adds one later (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)).
-- Unlocked keys live only in the tab's memory and are wiped when you lock, sign out or reload.
-- Optional recovery kit: a small JSON file with the seed under a passphrase (scrypt with N = 2^17, r = 8, p = 1, then AES-256-GCM, the same cost as workspace capsules). Everything else in the file is bound in as additional data, so it can't be edited to claim another account or a cheaper cost.
+- Unlocked keys live only in the tab's memory and are wiped when you lock, sign out or reload. Locking and signing out also forget every private task, comment and file the tab opened with them.
+- Optional recovery kit: a small JSON file with the seed under a passphrase (scrypt with N = 2^17, r = 8, p = 1, then AES-256-GCM, the same cost as workspace capsules). Everything else in the file is bound in as additional data, so it can't be edited to claim another account or a cheaper cost. A kit asking for more than 4 times the memory or 8 times the work of that cost is refused before anything runs, so a doctored file can't stall the tab.
 
 ## Messages your wallet signs
 
@@ -24,13 +24,26 @@ Every key message has the Sign-In with Ethereum (EIP-4361) layout and names the 
 
 A new wrap signs its unlock message twice, because a wallet that signs the same message differently each time could never open the wrap again.
 
-The server writes the messages for signing in and for signed ballots. A dishonest server could try to pass off a key message as one of those and collect its signature, so the browser refuses to sign any server-written text that carries the `urn:nil:` resources key messages use.
+The server writes the messages for signing in, for signed ballots and for applying to a bounty on the public board. A dishonest server could try to pass off a key message as one of those and collect its signature, so every server-written message goes through one check before the wallet sees it, and the browser refuses to sign any that carries the `urn:nil:` resources key messages use. Only key messages the browser builds itself are signed without that check. The sign-up page of hosted Nil makes the same check.
+
+## Passkeys
+
+- A passkey is one more wrap of your seed, next to the wallet wraps and the recovery kit. It only unlocks your keys. Signing in stays with your wallet, and so does publishing keys, because teammates check a key statement by recovering a wallet's signature.
+- Adding a passkey needs your keys unlocked. The browser makes a passkey for the site's hostname (user verification required, ES256 or RS256) with the WebAuthn PRF extension, then asks that passkey for its PRF output for 32 random bytes made for it, the salt. HKDF-SHA256 with the label `nil/passkey-wrap/v1` turns the 32-byte output into a key, and AES-256-GCM wraps the seed, with your account, the workspace key and the passkey's credential id as additional data.
+- Before saving, the browser asks the passkey a second time and keeps the wrap only if that output opens it again. It looks for an actual PRF output, never at the flags a browser reports about the extension. A passkey manager that gives no output can't hold your keys, and Nil says so and saves nothing.
+- The server keeps the credential id, the salt, the wrap, the name you gave the passkey, and when it was added and last used. It never sees the PRF output or the seed, and it never checks the passkey's own signature. A passkey's details go only to its owner, in their own start-up data.
+- Unlocking with a passkey asks for all of your passkeys at once, each with its own salt, and opens the wrap of the one you use. The seed then goes down the same path as after a wallet unlock: it has to derive the keys published for you, or it's wiped and refused.
+- A passkey is never your only way back. Nil adds one only while a wallet holds your keys or you've downloaded a recovery kit for your current keys, and refuses to remove the last wallet that holds your keys while passkeys do and no kit was downloaded. For that, the browser tells the server when you download a kit for your current keys: the server learns that one exists, never what's in it.
+- A passkey belongs to the site's hostname. If the workspace moves to a new address, its passkey wraps stop working.
+- Removing a passkey deletes its wrap on the server and changes nothing about your keys, just as removing a wallet doesn't. It stays in your passkey manager until you delete it there. Starting over with new keys deletes every passkey wrap and the note that you have a kit, since the passkeys and the kit hold the old keys.
 
 ## The key directory, and what teammates check
 
 - Publishing keys, or replacing them with a reset, needs a key statement signed in the last ten minutes by one of your linked wallets. The server checks the signature, the site, the workspace and the account. A stolen session cookie alone can't publish or reset keys.
 - Every browser rebuilds each statement from the published fields and recovers the signer itself (secp256k1). A key whose statement doesn't check out is ignored.
 - The server is the only source for which wallets belong to whom, and a browser can't check that. So each browser pins every key the server lists the first time it sees it, in local storage (public data only, per site, workspace and account), and seals nothing to a key until you confirm it. If a teammate's published keys later differ from the pinned ones, the key shows as changed, with the old and new fingerprints, and nothing new is sealed to it until you confirm the change.
+- The site, the workspace key and your account come from the server, again at every reconnect. Unlocking records the ones your keys were opened for, and pins and version records stay filed under those. If the server later names anything else, the browser locks your keys, says so, and until you reload it won't unlock them or file any pins in that tab. A server could otherwise move an unlocked browser to an empty set of pins and slip in a key of its own for a teammate you had already confirmed.
+- When this browser holds pins for another workspace or account but none for the one the server names, Nil warns you at sign-in. That's expected the first time someone uses this browser, and otherwise a sign that the server may be starting your pins over.
 - Clicking **Confirm** pins exactly the key on screen, and only if a fresh look at the directory still lists it. If the server swapped the key while you were comparing, nothing is confirmed and the window shows the new fingerprint. Any fetch that changes the listing redraws whatever shows keys.
 - A signature counts only against a key you can see. That's a key you confirmed, or a key first seen for an active member, which the notice and **Teammates' keys** show while it's listed. A key first seen for someone deactivated, or for someone the workspace doesn't list, shows up there too, but counts only once you confirm it.
 - When you confirm a teammate's new key, the one it replaces is kept if you had confirmed it as well. What they signed with it before the new key was published still checks out, since each signature carries its time, and says it was signed with their earlier key, with that key's fingerprint. Content in the older format carries no time and checks out only against the current key. A key you never confirmed isn't kept.
@@ -72,20 +85,20 @@ Docs, private tasks, comments and files saved before signatures named who they'r
 - Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. [Check what a server sends](verify-a-server.md) compares a server with a release byte for byte; it can't see code sent only to one person or for a moment. Running a build you trust on a server you control is the strongest defence.
 - See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
 - Refuse service, delete data, or serve old data. Docs and private tasks carry a signed version or revision number, and a browser warns when the server sends an older one than it has already opened. A new browser or device has nothing to compare with.
-- Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned, and counts for their signatures while it's listed. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.
+- Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned, and counts for their signatures while it's listed. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins, and so does a workspace key or account your browser hasn't used before, which is why it warns when it holds pins for another one.
 - Copy a private task's sealed contents onto another task for the same people. The words are still their writer's real words.
 - Pass words off as a hand-on, with the help of a member whose key you trust. A browser can't tell a real hand-on from one made up by someone who was never on the task, since it may have missed who held the task in between. The task names whoever signed as handing it on, and its next edit moves it to a new key, so nothing written after that reaches them.
 - Read with a former reader's help. Someone who once held a doc or task key can still read, with the server, what was saved under it, and an assignee who handed a task on holds its key until the next edit. They can't write under a key they never held, and a key of their own gets in only as the hand-on above, which the task names.
 
 ## Recovery and moves
 
-- Lost the wallet you usually use: unlock with another linked wallet that has a wrap.
-- Keys gone from the server: if it lists no keys and no wraps for you, but this browser has seen you hold keys in the workspace (your own key pinned, or encrypted docs, tasks or comments opened here), unlocking stops and says so instead of making new keys. You restore from your kit, or start over only by choosing to.
-- Lost every wallet with a wrap: an admin resets your sign-in, you link a new wallet with the one-time link, then restore from your recovery kit on the **Docs** screen that appears when the new wallet can't unlock. Without a kit, start over with new keys. Docs and private tasks sealed to the old keys must be shared again, teammates see your key as changed, and private payouts sent to your old keys stay with the old keys.
-- Moving the workspace to a different web address changes the unlock messages. Each member restores from their kit once, or starts over, and every browser's pins start over too, because they are stored per site.
+- Lost the wallet you usually use: unlock with another linked wallet that has a wrap, or with a passkey.
+- Keys gone from the server: if it lists no keys and no wraps for you, and no passkey either when you unlock with one, but this browser has seen you hold keys in the workspace (your own key pinned, or encrypted docs, tasks or comments opened here), unlocking stops and says so instead of making new keys. You restore from your kit, or start over only by choosing to.
+- Lost every wallet with a wrap: an admin resets your sign-in and you link a new wallet with the one-time link. If one of your passkeys still works, unlock with it and add the new wallet to your keys. Otherwise restore from your recovery kit on the **Docs** screen that appears when the new wallet can't unlock. Without a kit, start over with new keys. Docs and private tasks sealed to the old keys must be shared again, teammates see your key as changed, and private payouts sent to your old keys stay with the old keys.
+- Moving the workspace to a different web address changes the unlock messages, and passkeys stop working because they belong to the old address. Each member restores from their kit once, or starts over, and every browser's pins start over too, because they are stored per site. Passkeys can be added again at the new address.
 - Losing the workspace signing key in `DATA_DIR/keys` changes the workspace key that every message names. No wrap opens after that, and the browser refuses recovery kits made for the old workspace key, so everyone starts over. Back that key up with the database.
 
 ## Limits
 
-- Smart-contract wallets (EIP-1271) can't publish keys yet: browsers check key statements by recovering the signer, which only works for ordinary accounts.
+- Smart-contract wallets (EIP-1271), passkey wallets among them, can't publish keys yet: browsers check key statements by recovering the signer, which only works for ordinary accounts. A passkey added under **Encryption keys** only unlocks keys that an ordinary wallet published.
 - The encrypted-vote circuit is beta and its trusted setup is a development ceremony. See the README's Honest limits.

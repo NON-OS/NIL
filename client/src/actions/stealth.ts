@@ -27,7 +27,9 @@ function saveMe(user: User) {
 async function keyFor(payout: StealthPayout) {
   const keys = await unlockPrivateKeys();
   const derived = stealthKey(keys.spendingKey, keys.viewingKey, payout.ephemeralPublicKey);
-  if (derived.address !== payout.address) throw new Error('These keys don’t open this payout: it was paid to keys you no longer hold. If yours were reset and you kept a recovery kit from before, restore it to move the payout.');
+  if (derived.address !== payout.address) {
+    throw new Error('Your Nil keys don’t open this payout. If it was paid to a meta-address your wallet published in the public stealth registry from another app, open it in that app. If your keys were reset, restore a recovery kit from before the reset to move it.');
+  }
   return derived;
 }
 

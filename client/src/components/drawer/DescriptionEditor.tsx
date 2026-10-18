@@ -5,6 +5,7 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import ai from '../../actions/ai';
+import AiMode from '../ai/AiMode';
 import toast from '../../state/toast';
 import type LoadedTask from '../../types/LoadedTask';
 
@@ -36,7 +37,7 @@ export default function DescriptionEditor({ task }: { task: LoadedTask }) {
     setDrafting(true);
     try {
       const previous = task.description;
-      const { description } = await ai.describe(task.id);
+      const { description } = await ai.describe(task);
       await taskActions.update(task.id, { description });
       toast.show('Description drafted. Edit it to make it yours.', { action: { label: 'Undo', run: () => taskActions.update(task.id, { description: previous }) } });
     } catch (err) {
@@ -50,11 +51,14 @@ export default function DescriptionEditor({ task }: { task: LoadedTask }) {
     <section className="drawer-section">
       <div className="section-head">
         <h3>Description</h3>
-        {aiOn && !editing && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={draftWithAi} disabled={drafting}>
-            {drafting ? <Spinner size={13} /> : <Sparkles />}
-            {task.description ? 'Rewrite with AI' : 'Draft with AI'}
-          </button>
+        {aiOn && !editing && !task.private && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <AiMode compact />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={draftWithAi} disabled={drafting}>
+              {drafting ? <Spinner size={13} /> : <Sparkles />}
+              {task.description ? 'Rewrite with AI' : 'Draft with AI'}
+            </button>
+          </span>
         )}
       </div>
       {editing ? (

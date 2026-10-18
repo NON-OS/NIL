@@ -47,6 +47,7 @@ export default function AppEffects() {
         if (task) router.setParam('task', String(task.number));
         else if (n.type === 'proposal') router.navigate('/votes');
         else if (n.type === 'plan_ending') router.navigate('/settings?tab=plan');
+        else if (n.type === 'billing_stalled') router.navigate(n.data.code === 'bounty_pending' ? '/bounties' : '/settings?tab=plan');
         shown.close();
       };
     };

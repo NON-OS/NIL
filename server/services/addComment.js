@@ -12,6 +12,7 @@ import notify from './notify.js';
 import canSeeTask from './canSeeTask.js';
 import cipherText from '../lib/cipherText.js';
 import HttpError from '../lib/HttpError.js';
+import commentQuotes from './commentQuotes.js';
 
 // An encrypted comment's signature names its id, so the browser picks the id before it signs.
 function chosenId(value) {
@@ -38,7 +39,8 @@ export default function addComment(actor, taskId, text, { sealed = false, id: wa
 
   // a mention of someone who can't open the task neither tells them about it nor lets them in
   const mentioned = sealed ? [] : findMentions(body).filter((userId) => canSeeTask(task, { id: userId }));
-  const preview = sealed ? {} : { title: task.title, excerpt: body.slice(0, 140) };
+  // the comment's id lets the excerpt follow an edit or a delete
+  const preview = sealed ? {} : { title: task.title, excerpt: commentQuotes.excerpt(body), commentId: id };
   notify(mentioned, 'mention', task.id, actor.id, preview);
   notify([...watchers.of(task.id), task.assigneeId].filter((u) => !mentioned.includes(u)), 'comment', task.id, actor.id, preview);
   for (const userId of mentioned) watchers.add(task.id, userId);

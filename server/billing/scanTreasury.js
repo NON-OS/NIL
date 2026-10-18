@@ -6,7 +6,7 @@ import transferLogs from '../chain/transferLogs.js';
 import billingState from './billingState.js';
 import recordTransfer from './recordTransfer.js';
 import scanGaps from './scanGaps.js';
-import transferFee from '../services/transferFee.js';
+import blockFees from './blockFees.js';
 
 const DAY = 86_400_000;
 // the head moves on during a scan, so it keeps this many blocks inside the node's window
@@ -31,8 +31,12 @@ export default async function scanTreasury(now = Date.now()) {
   if (!watched.length) return;
   const [head, final] = await Promise.all([headBlock(), finalizedBlock()]);
   const cursors = billingState.get('scan', {});
-  const oldest = Math.max(0, head - config.nox.logHistoryBlocks + MARGIN);
+  // the verifier proves nothing older than the chain keeps block hashes for
+  const history = config.verification.required ? Math.min(config.nox.logHistoryBlocks, config.verification.historyBlocks) : config.nox.logHistoryBlocks;
+  const oldest = Math.max(0, head - history + MARGIN);
   let failure = null;
+
+  const feeFor = blockFees();
 
   for (const { token, start } of watched) {
     let from = Math.max(start, (cursors[token] ?? 0) + 1);
@@ -44,7 +48,7 @@ export default async function scanTreasury(now = Date.now()) {
     try {
       for (let at = from; at <= head; at += config.billing.logBlocks) {
         const to = Math.min(head, at + config.billing.logBlocks - 1);
-        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer, { feeBps: transferFee.current().bps });
+        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer, { feeBps: await feeFor(transfer) });
         cursors[token] = Math.max(cursors[token] ?? 0, Math.min(final, to));
       }
     } catch (err) {

@@ -7,7 +7,8 @@ const sha256 = (data) => crypto.createHash('sha256').update(data).digest('hex');
 
 // Just enough S3 for backups: streaming multipart upload and download, path-style addressing
 // so it works with any S3-compatible store (Hetzner Object Storage, MinIO, Backblaze, R2, AWS).
-// The access key only needs to write objects (and read them, for restores from the bucket).
+// The access key only needs to write objects (and read them, for restores from the bucket), and
+// to read the bucket's versioning and Object Lock settings for the check at startup.
 export default function createS3Client({ endpoint, region, bucket, accessKeyId, secretAccessKey, partBytes, fetchImpl = fetch, timeoutMs = 300_000 }) {
   async function send(method, key, { query = {}, body, headers = {} } = {}) {
     const url = new URL(`${endpoint}/${bucket}/${key.split('/').map(encodeURIComponent).join('/')}`);
@@ -19,7 +20,8 @@ export default function createS3Client({ endpoint, region, bucket, accessKeyId, 
     const res = await fetchImpl(url, { method, headers: signed, body, signal: AbortSignal.timeout(timeoutMs) });
     if (res.status >= 300) {
       const text = await res.text().catch(() => '');
-      throw new Error(`S3 ${method} failed with ${res.status}${xmlValue(text, 'Code') ? ` (${xmlValue(text, 'Code')}: ${xmlValue(text, 'Message')})` : ''}.`);
+      const err = new Error(`S3 ${method} failed with ${res.status}${xmlValue(text, 'Code') ? ` (${xmlValue(text, 'Code')}: ${xmlValue(text, 'Message')})` : ''}.`);
+      throw Object.assign(err, { status: res.status });
     }
     return res;
   }
@@ -67,6 +69,24 @@ export default function createS3Client({ endpoint, region, bucket, accessKeyId, 
     async get(key) {
       const res = await send('GET', key);
       return Readable.fromWeb(res.body);
+    },
+
+    // Whether the bucket keeps every version and locks them: without both, the server's own key
+    // could overwrite or delete every backup it ever made.
+    async protection() {
+      const read = async (query) => {
+        try {
+          return await (await send('GET', '', { query })).text();
+        } catch (err) {
+          // a bucket that never had Object Lock answers 404
+          if (err.status === 404) return '';
+          throw err;
+        }
+      };
+      const versioning = xmlValue(await read({ versioning: '' }), 'Status');
+      const lock = await read({ 'object-lock': '' });
+      const days = Number(xmlValue(lock, 'Days')) || Number(xmlValue(lock, 'Years')) * 365 || 0;
+      return { versioning: versioning === 'Enabled', objectLock: xmlValue(lock, 'ObjectLockEnabled') === 'Enabled', mode: xmlValue(lock, 'Mode'), days };
     },
   };
 }

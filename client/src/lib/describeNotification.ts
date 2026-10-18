@@ -16,8 +16,11 @@ export default function describeNotification(n: InboxItem) {
       return `moved to ${meta.status[n.data.to as keyof typeof meta.status] ?? n.data.to}`;
     case 'due':
       return n.data.to ? `set the due date to ${dates.short(n.data.to)} on` : 'removed the due date on';
-    case 'application':
-      return 'applied for your public bounty';
+    case 'application': {
+      // applications for one bounty add up in a single line until it's read
+      const others = Number(n.data.count ?? 1) - 1;
+      return others > 0 ? `and ${others} ${others === 1 ? 'other' : 'others'} applied for your public bounty` : 'applied for your public bounty';
+    }
     case 'reminder':
       return 'reminder:';
     case 'proposal':

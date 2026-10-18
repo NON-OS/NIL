@@ -47,7 +47,7 @@ Ask an admin to reset your sign-in. They send you a link that works once and exp
 
 It's the same account: your tasks, comments, history, role and proof of work stay as they were. Using the link signs you out on every other device.
 
-Your encryption keys were locked to your old wallets, so the new one can't open them yet. Open **Docs** and click **Unlock with your wallet**. Nil says this wallet doesn't unlock your keys yet and shows two ways forward.
+Your encryption keys were locked to your old wallets, so the new one can't open them yet. If you added a [passkey](#unlock-with-a-passkey) to your keys, open **Docs**, click **Unlock with a passkey**, then [add the new wallet to your keys](#add-a-wallet-to-your-keys). Otherwise open **Docs** and click **Unlock with your wallet**. Nil says this wallet doesn't unlock your keys yet and shows two ways forward.
 
 - If you have your [recovery kit](#keep-a-recovery-kit), pick the file under **Restore from your recovery kit**, type its passphrase and click **Restore**. Your keys come back as they were, and the new wallet unlocks them from then on.
 - If you don't, click **Start over with new keys**. Teammates are asked to confirm your new key, and docs and private tasks sealed to the old keys reach you again only once they have. See [Encrypted docs](encrypted-docs.md#if-unlocking-fails).
@@ -56,7 +56,7 @@ Resetting an owner needs a second admin to approve when the workspace has two or
 
 ## Sign out
 
-Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**.
+Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them.
 
 ## The signatures for encryption keys
 
@@ -66,16 +66,16 @@ Click your name at the bottom of the sidebar, then **Sign out**. To end your ses
 - Each wallet you add to your keys later signs its own unlock message twice.
 - After that, one signature per browser tab unlocks your keys.
 
-The unlock message is signed twice because the signature is what opens your keys. A wallet that signs the same message differently each time could never open them again, so Nil compares the two and stops with "Your wallet signs the same message differently each time, so it can't hold your keys." That wallet can still sign you in, and another of your wallets can hold your keys. MetaMask, Rabby, Ledger and Trezor work. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet.
+The unlock message is signed twice because the signature is what opens your keys. A wallet that signs the same message differently each time could never open them again, so Nil compares the two and stops with "Your wallet signs the same message differently each time, so it can't hold your keys." That wallet can still sign you in, and another of your wallets can hold your keys. MetaMask, Rabby, Ledger and Trezor work. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet. Once a regular wallet has set up your keys, though, a passkey can unlock them (see [Unlock with a passkey](#unlock-with-a-passkey)).
 
-Your keys are listed under **Encryption keys** in **Settings → Sign-in & security**: your key fingerprint, which teammates compare with theirs, and the wallets that unlock your keys. [Encryption and trust](encryption.md) explains the design.
+Your keys are listed under **Encryption keys** in **Settings → Sign-in & security**: your key fingerprint, which teammates compare with theirs, the wallets that unlock your keys, and any passkeys that do. [Encryption and trust](encryption.md) explains the design.
 
 ### Add a wallet to your keys
 
 Any wallet you add unlocks the same keys, so losing one wallet doesn't lock you out of your docs.
 
 1. Link the wallet to your account first (see [Link a second wallet](#link-a-second-wallet)).
-2. In **Settings → Sign-in & security**, under **Encryption keys**, click **Unlock with your wallet** and sign with a wallet that already holds your keys.
+2. In **Settings → Sign-in & security**, under **Encryption keys**, click **Unlock with your wallet** and sign with a wallet that already holds your keys, or click **Unlock with a passkey**.
 3. Switch your wallet to the new account, or connect the other wallet.
 4. Click **Add the wallet in your browser** and sign twice.
 
@@ -90,6 +90,22 @@ A recovery kit is a small file with your keys locked under a passphrase you choo
 3. Click **Download recovery kit**. You get a file named like `nil-recovery-kit-nonos.example.com.json`.
 
 Keep the file and the passphrase apart, for example the file on a USB stick and the passphrase in a password manager. Anyone with both can open your keys. The kit belongs to one account in one workspace. It still works after the workspace moves to a new address with a capsule. Make a new kit if you ever start over with new keys, because an old kit holds the old ones.
+
+### Unlock with a passkey
+
+A passkey on your phone or computer, or in a password manager, can unlock your encryption keys instead of a wallet signature. It doesn't sign you in: that stays with your wallet.
+
+1. Unlock your keys, then go to **Encryption keys** in **Settings → Sign-in & security**.
+2. Under **Passkeys that unlock your keys**, type a name for it, such as "Work laptop", and click **Add a passkey**.
+3. Your passkey manager asks three times: once to make the passkey, then twice so Nil can check that it opens your keys.
+
+From then on, **Unlock with a passkey** appears next to **Unlock with your wallet** in **Docs**, on locked private tasks and under **Encryption keys**. The list shows when each passkey was added and last used. Click a name to rename it. **Remove** takes it off your keys, but your passkey manager keeps it until you delete it there.
+
+A passkey is never your only way back to your keys. Nil adds one only while a wallet holds your keys too or after you've downloaded a recovery kit, and it won't let you remove the last wallet that holds your keys while you have passkeys and no kit.
+
+The passkey manager has to support the WebAuthn PRF extension. If yours doesn't, Nil says "Your passkey manager doesn't support unlocking encryption keys" and saves nothing. You can delete the passkey it made in your passkey manager.
+
+A passkey belongs to the web address it was made on. If the workspace moves to a new address, your passkeys stop working there: unlock with your wallet or recovery kit and add new ones. Starting over with new keys removes your passkeys too, since they held the old keys.
 
 ## When sign-in doesn't work
 

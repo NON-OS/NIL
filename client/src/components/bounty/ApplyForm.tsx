@@ -1,12 +1,9 @@
 import { useState, type FormEvent } from 'react';
 import { Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
-import http from '../../api/http';
-import ethereum from '../../lib/ethereum';
+import applyForBounty from '../../actions/applyForBounty';
 import type PublicBounty from '../../types/PublicBounty';
 
-// Applying signs one message with your wallet. No account, no email: the signature proves you
-// control the address you'd be paid at. If the team accepts, you sign in with that wallet.
 export default function ApplyForm({ bounty, onDone }: { bounty: PublicBounty; onDone: () => void }) {
   const [name, setName] = useState('');
   const [pitch, setPitch] = useState('');
@@ -18,10 +15,7 @@ export default function ApplyForm({ bounty, onDone }: { bounty: PublicBounty; on
     setBusy(true);
     setError('');
     try {
-      const { address } = await ethereum.account();
-      const { challengeId, message } = await http.post<{ challengeId: string; message: string }>(`/public/bounties/${bounty.id}/challenge`, { address, name: name.trim(), pitch });
-      const signature = await ethereum.sign(message, address);
-      await http.post(`/public/bounties/${bounty.id}/apply`, { challengeId, signature });
+      await applyForBounty(bounty.id, name.trim(), pitch);
       onDone();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t apply.');

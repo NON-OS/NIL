@@ -59,6 +59,8 @@ function handler(tool) {
       const seen = idempotency.find(req.principal.key, key);
       if (seen) {
         if (seen.request_hash !== fingerprint) return sendError(res, 409, 'idempotency_conflict', 'This Idempotency-Key was already used for a different request.');
+        const { GONE } = idempotency;
+        if (!idempotency.replayable(seen, req.principal.user)) return sendError(res, GONE.status, GONE.code, GONE.message);
         res.setHeader('Idempotency-Replayed', 'true');
         return res.status(seen.status).json(JSON.parse(seen.response));
       }
@@ -66,7 +68,7 @@ function handler(tool) {
     const out = runTool(req.principal, tool.name, args, { via: 'rest' });
     const [status, body] = out.ok ? [tool.http.status ?? 200, out.data] : out.pending ? [202, pendingBody(out.pending)] : [out.error.status, { error: out.error }];
     // server errors aren't kept, so a retry after one gets a real second try
-    if (key !== undefined && status < 500) idempotency.save(req.principal.key, key, fingerprint, status, body);
+    if (key !== undefined && status < 500) idempotency.save(req.principal.key, key, fingerprint, status, body, out.taskId ?? null);
     res.status(status).json(body);
   };
 }

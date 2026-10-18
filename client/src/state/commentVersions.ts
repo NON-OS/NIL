@@ -1,30 +1,29 @@
 import storage from '../lib/storage';
-import store from './store';
+import keyScope from './keyScope';
 
 // The newest edit of each comment on a private task this browser has opened and checked, and the
 // comments it saw deleted, per workspace and account. Comment ids and numbers only. A server that
 // later shows an earlier edit of a comment, or brings a deleted one back, is caught.
 const DELETED = -1;
-const slot = () => {
-  const s = store.get();
-  return `comment-versions:${s.workspaceKey}:${s.me?.id ?? ''}`;
-};
-const all = () => storage.get<Record<string, number>>(slot(), {});
+const slot = () => keyScope.slot('comment-versions');
+const all = (here: string | null) => (here ? storage.get<Record<string, number>>(here, {}) : {});
 
 const commentVersions = {
   seen(commentId: string): number | 'deleted' {
-    const edit = all()[commentId];
+    const edit = all(slot())[commentId];
     return edit === DELETED ? 'deleted' : (edit ?? 0);
   },
 
   record(commentId: string, edit: number) {
-    const known = all();
+    const here = slot();
+    const known = all(here);
     const held = known[commentId];
-    if (held !== DELETED && (held === undefined || held < edit)) storage.set(slot(), { ...known, [commentId]: edit });
+    if (here && held !== DELETED && (held === undefined || held < edit)) storage.set(here, { ...known, [commentId]: edit });
   },
 
   drop(commentId: string) {
-    storage.set(slot(), { ...all(), [commentId]: DELETED });
+    const here = slot();
+    if (here) storage.set(here, { ...all(here), [commentId]: DELETED });
   },
 };
 

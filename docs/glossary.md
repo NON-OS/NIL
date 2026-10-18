@@ -13,6 +13,7 @@
 | Encrypted weighted vote | An anonymous vote where each ballot carries the voter's power, encrypted, and only the totals are ever decrypted. In beta |
 | ERC-20 | The common standard for tokens on Ethereum. NOX and USDC are ERC-20 tokens |
 | ERC-5564 | The standard for stealth addresses, which private payouts use |
+| ERC-6538 | The stealth meta-address registry, a public contract where a wallet can publish its meta-address so anyone can pay it privately |
 | Finality | The point after which a block can no longer be undone by a chain reorganisation. Nil counts a payment only once its block is final |
 | Fingerprint | A short code that identifies a key, so two people can compare it out loud. A person's key fingerprint has five groups of four characters, such as `5c1e-90ab-3f27-d4e8-a061`, and is under **Encryption keys** in **Settings → Sign-in & security**. The workspace's signing key has a shorter one, such as `dac6-f4fb-e063-2afb`. See [Encryption and trust](encryption.md) |
 | Grace period | Days after a Nil Pro plan runs out during which the paid tools keep working. 7 by default |
@@ -29,6 +30,7 @@
 | Nullifier | A number in an anonymous ballot that is unique to one member and one vote. It stops double voting without revealing who voted |
 | One-time address | A fresh Ethereum address that receives a single private payout |
 | Onion service | A way to reach a server through Tor without a domain name or open ports. See [Tor onion service](tor.md) |
+| Passkey | A key your phone, computer or password manager keeps for one website and unlocks with your fingerprint, face or PIN. In Nil it can unlock your encryption keys, but not sign you in. See [Unlock with a passkey](signing-in.md#unlock-with-a-passkey) |
 | Private task | A task only its creator and assignee can see, with its words encrypted in the browser. See [Private tasks](private-tasks.md) |
 | Proof file | A JSON file of signed receipts that someone can check at `/verify`. See [Proof of work](proof-of-work.md) |
 | PWA | Progressive web app: a website you can install and open like an app |
@@ -42,7 +44,7 @@
 | Token-holder door | A setting that lets anyone holding enough NOX join without an invite |
 | Treasury address | An extra address, such as a team's Safe, allowed to pay bounties |
 | Trustee | One of the three members who together hold the key of an encrypted weighted vote. Any two can decrypt the totals |
-| Unlock | Signing your wallet's unlock message so your browser can open your encryption keys in that tab, for docs, private tasks, private payouts and anonymous votes |
+| Unlock | Signing your wallet's unlock message, or using a passkey you added, so your browser can open your encryption keys in that tab, for docs, private tasks, private payouts and anonymous votes |
 | Unlock message | The message a wallet signs to open your encryption keys. It names the site, the workspace and your account, and its signature never leaves your browser |
 | Voting power | NOX held, plus NOX staked, plus Zero-State Passes held times the power per pass |
 | X25519 | The key agreement Nil uses to seal a doc's or private task's key for each reader |

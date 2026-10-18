@@ -4,9 +4,12 @@ import loadConfig from '../config/loadConfig.js';
 import openDatabase from '../db/openDatabase.js';
 import createStore from '../store/createStore.js';
 import workspaceSpec from '../runtime/workspaceSpec.js';
+import createWorkspace from '../provisioning/createWorkspace.js';
 import baseEnv from './helpers/baseEnv.js';
+import testContext from './helpers/testContext.js';
 
 const KEY = 'a'.repeat(64);
+const OWNER = `0x${'d'.repeat(40)}`;
 const make = (store, name) => store.workspaces.insert({ id: name.padEnd(16, '0'), name, owner: null, state: 'provisioning', image: 'nonos/nil:1.0.0', plan: 'standard', volume: `nil-${name}-data` });
 
 test('every workspace gets its own invoice slot, never handed out twice', () => {
@@ -17,6 +20,26 @@ test('every workspace gets its own invoice slot, never handed out twice', () => 
   // a deleted workspace keeps its slot, so its old invoices can't collide with a newcomer's
   db.exec("UPDATE workspaces SET state = 'deleted' WHERE name = 'initech'");
   assert.equal(make(store, 'umbrella').invoiceSlot, 3);
+});
+
+test('a forgotten workspace’s slot stays used, and running out of slots is alerted', async () => {
+  const db = openDatabase(':memory:');
+  const store = createStore(db);
+  make(store, 'acme');
+  const last = make(store, 'globex');
+  db.exec(`UPDATE workspaces SET state = 'deleted', deleted_at = 0 WHERE name = 'globex'`);
+  store.workspaces.forget(last.id);
+  assert.equal(make(store, 'initech').invoiceSlot, 2, 'the counter never goes back');
+  assert.throws(() => make(store, 'acme'), /UNIQUE/);
+  assert.equal(make(store, 'umbrella').invoiceSlot, 3, 'a failed insert doesn’t use up a slot');
+
+  const ctx = testContext({ env: { CLOUD_INVOICE_SLOTS: '2' } });
+  createWorkspace(ctx, { name: 'one', owner: OWNER });
+  createWorkspace(ctx, { name: 'two', owner: OWNER });
+  assert.equal(ctx.alerts.length, 0);
+  const third = createWorkspace(ctx, { name: 'three', owner: OWNER });
+  assert.equal(ctx.alerts.at(-1).event, 'billing.slots_used_up');
+  assert.equal(workspaceSpec(ctx.config, third).env.PLAN_INVOICE_SLOT, undefined);
 });
 
 test('a workspace bills with its slot and the shared key, and only when both are set', () => {

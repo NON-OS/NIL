@@ -41,3 +41,18 @@ test('a server that drops someone’s keys can’t quietly move them to new ones
   await vault.unlock({ reset: true });
   assert.deepEqual(published().map((r) => r.body.reset), [true]);
 });
+
+test('unlocking with a passkey stops the same way when the server drops everything', async () => {
+  const V = person();
+  route('GET', '/api/encryption-keys', () => [entry('v', V)]);
+  await keyDirectory.load({ fresh: true });
+  // the server now lists no keys, no wallet copies and no passkeys for Vic
+  route('GET', '/api/encryption-keys', () => []);
+  await assert.rejects(vault.unlock({ passkey: true }), (err) => err.kind === 'missing');
+  assert.equal(published().length, 0);
+  assert.equal(keyring.identity(), null);
+});
+
+test('someone who never had keys here is told to add a passkey, not that keys are missing', async () => {
+  await assert.rejects(vault.unlock({ passkey: true }), (err) => err.kind !== 'missing' && /No passkey unlocks your keys yet/.test(err.message));
+});

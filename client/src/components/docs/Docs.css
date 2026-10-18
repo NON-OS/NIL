@@ -208,6 +208,13 @@
   font-size: var(--text-sm);
 }
 
+.docs-locked-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+}
+
 .docs-locked-card li b {
   color: var(--accent-text);
   font-family: var(--font-mono);

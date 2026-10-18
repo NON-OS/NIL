@@ -5,14 +5,15 @@ import paidFraction from './paidFraction.js';
 const { SCALE } = paidFraction;
 
 // How far an invoice is covered once everything on its way lands (settled on-time payments plus
-// transfers waiting for finality), in billionths, and for each token what's left and the exact
-// amount to send to finish: what's left, rounded up to the price grid, with the same suffix, so
-// a top-up is matched to this invoice like the first payment was.
+// transfers in a block waiting for finality), in billionths, and for each token what's left and
+// the exact amount to send to finish: what's left, rounded up to the price grid, with the same
+// suffix, so a top-up is matched to this invoice like the first payment was. A transfer that a
+// reorg took out of its block doesn't count until it's in one again.
 export default function coverage(invoice) {
   const amounts = sql.all('SELECT * FROM billing_amounts WHERE invoice_id = ? ORDER BY symbol', invoice.id);
   const arriving = new Map();
   // what was sent: what arrived plus anything the token kept as a fee
-  for (const p of sql.all("SELECT token, amount, token_fee FROM billing_payments WHERE invoice_id = ? AND ((status = 'final' AND on_time = 1) OR status = 'confirming')", invoice.id)) {
+  for (const p of sql.all("SELECT token, amount, token_fee FROM billing_payments WHERE invoice_id = ? AND ((status = 'final' AND on_time = 1) OR (status = 'confirming' AND block_hash IS NOT NULL))", invoice.id)) {
     arriving.set(p.token, (arriving.get(p.token) ?? 0n) + BigInt(p.amount) + BigInt(p.token_fee));
   }
   let covered = invoice.due_usd === 0 ? SCALE : 0n;

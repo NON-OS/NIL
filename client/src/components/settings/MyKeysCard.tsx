@@ -1,6 +1,6 @@
 import '../keys/Keys.css';
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
-import { Download, KeyRound, Wallet } from 'lucide-react';
+import { Download, Fingerprint, KeyRound, Wallet } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
@@ -13,6 +13,7 @@ import shortAddress from '../../lib/shortAddress';
 // a recovery kit for when none of those wallets is at hand any more.
 export default function MyKeysCard() {
   const unlocked = useStore((s) => s.docsUnlocked);
+  const hasPasskey = useStore((s) => s.passkeys.length > 0);
   const [wallets, setWallets] = useState<string[] | null>(null);
   const [pass, setPass] = useState('');
   const [again, setAgain] = useState('');
@@ -52,6 +53,11 @@ export default function MyKeysCard() {
           <button type="button" className="btn" disabled={busy !== null} onClick={() => run('unlock', () => vault.unlock(), 'Unlocked.')}>
             {busy === 'unlock' ? <Spinner size={14} /> : <KeyRound />} Unlock with your wallet
           </button>
+          {hasPasskey && (
+            <button type="button" className="btn" disabled={busy !== null} onClick={() => run('passkey', () => vault.unlock({ passkey: true }), 'Unlocked.')}>
+              {busy === 'passkey' ? <Spinner size={14} /> : <Fingerprint />} Unlock with a passkey
+            </button>
+          )}
         </div>
       </div>
     );

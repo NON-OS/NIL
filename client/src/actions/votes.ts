@@ -1,6 +1,6 @@
 import http from '../api/http';
 import ethereum from '../lib/ethereum';
-import assertNotKeyMessage from '../lib/crypto/assertNotKeyMessage';
+import signServerText from '../lib/signServerText';
 import saveBlob from '../lib/saveBlob';
 import type Proposal from '../types/Proposal';
 
@@ -24,8 +24,7 @@ const votes = {
   async cast(id: string, choice: number) {
     const { address } = await ethereum.account();
     const { ballotId, message } = await http.post<{ ballotId: string; message: string }>(`/proposals/${id}/ballot`, { choice });
-    assertNotKeyMessage(message);
-    const signature = await ethereum.sign(message, address);
+    const signature = await signServerText(message, address);
     // a smart wallet's signature doesn't say who made it, so the wallet's address goes along
     return http.post<{ proposal: Proposal }>(`/proposals/${id}/vote`, { ballotId, signature, address }).then((r) => r.proposal);
   },

@@ -146,5 +146,5 @@ test('plain files, assistants and proofs stay away from what they can’t read',
   assert.equal(JSON.parse(receipt.body).task.commit, null);
 
   const csv = (await ana('GET', '/api/export/tasks.csv')).data;
-  assert.ok(csv.includes(`NON-${task.number},Private task (encrypted)`));
+  assert.ok(csv.includes(`"NON-${task.number}","Private task (encrypted)"`));
 });

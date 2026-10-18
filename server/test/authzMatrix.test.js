@@ -203,6 +203,9 @@ test('routes that act on your own things never reach someone else’s', async ()
     ['DELETE', '/api/me/tokens/:id', await own.token('owner'), async (id) => (await owner('GET', '/api/me/tokens')).data.some((k) => k.id === id)],
     ['DELETE', '/api/me/credentials/:id', await own.credential('owner'), async (id) => (await owner('GET', '/api/me/credentials')).data.credentials.some((c) => c.id === id)],
     ['PATCH', '/api/me/credentials/:id', await own.mainCredential('owner'), async (id) => (await owner('GET', '/api/me/credentials')).data.credentials.find((c) => c.id === id).label !== 'Taken'],
+    ['DELETE', '/api/me/passkeys/:id', await own.passkey('owner'), async (id) => (await owner('GET', '/api/bootstrap')).data.passkeys.some((p) => p.id === id)],
+    ['PATCH', '/api/me/passkeys/:id', await own.passkey('owner'), async (id) => (await owner('GET', '/api/bootstrap')).data.passkeys.find((p) => p.id === id).label !== 'Taken'],
+    ['POST', '/api/me/passkeys/:id/used', await own.passkey('owner'), async (id) => (await owner('GET', '/api/bootstrap')).data.passkeys.find((p) => p.id === id).lastUsedAt === null],
   ];
   for (const [method, routePath, id, stillThere] of checks) {
     for (const actor of ['guest', 'member', 'admin']) await authzRequest(world, actor, { method, url: routePath.replace(':id', id), body: method === 'PATCH' ? { label: 'Taken' } : undefined });

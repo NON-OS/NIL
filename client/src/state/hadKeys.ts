@@ -1,5 +1,6 @@
 import storage from '../lib/storage';
 import store from './store';
+import keyScope from './keyScope';
 import keyPins from './keyPins';
 
 // Records this browser keeps per workspace and account only once someone has opened encrypted
@@ -10,8 +11,11 @@ const OPENED = ['doc-versions', 'task-versions', 'comment-versions'];
 // pinned, or encrypted content opened. Then a server that suddenly lists no keys and no wallet
 // copies for you can't quietly move you onto a fresh identity.
 export default function hadKeys() {
-  const { workspaceKey, me } = store.get();
+  const me = store.get().me?.id;
   if (!me) return false;
-  if (keyPins.all()[me.id]) return true;
-  return OPENED.some((name) => Object.keys(storage.get<Record<string, unknown>>(`${name}:${workspaceKey}:${me.id}`, {})).length > 0);
+  if (keyPins.all()[me]) return true;
+  return OPENED.some((kind) => {
+    const here = keyScope.slot(kind);
+    return Boolean(here) && Object.keys(storage.get<Record<string, unknown>>(here!, {})).length > 0;
+  });
 }

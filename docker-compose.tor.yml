@@ -13,6 +13,23 @@ services:
       - nonos
     volumes:
       - tor-keys:/var/lib/tor
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    # The entrypoint hands the key folder to Tor's user, then Tor drops to that user: these are
+    # the only capabilities that takes, and none is kept once Tor runs.
+    cap_drop:
+      - ALL
+    cap_add:
+      - CHOWN
+      - DAC_READ_SEARCH
+      - FOWNER
+      - SETUID
+      - SETGID
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    memswap_limit: 256m
 
 volumes:
   tor-keys:

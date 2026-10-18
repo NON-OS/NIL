@@ -89,6 +89,12 @@ export default function applyEvent(event: any): void {
     case 'plan':
       store.set({ plan: event.plan });
       break;
+    case 'ai-credits':
+      store.set({ aiAnonymous: s.ai && Boolean(event.on) });
+      break;
+    case 'verification':
+      if (s.nox) store.set({ nox: { ...s.nox, verification: event.verification } });
+      break;
     case 'docs':
       store.set({ docsRev: s.docsRev + 1 });
       break;

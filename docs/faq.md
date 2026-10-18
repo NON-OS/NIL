@@ -12,7 +12,7 @@ Your wallet proves who you are, so Nil never needs to store an email address, a 
 
 If you only lose one, sign in with another linked wallet and remove the lost one. If you lose every wallet linked to your account, ask an admin to reset your sign-in: they send you a one-time link that lets you link a new wallet to the same account. Save yourself that step by linking a second wallet now in **Settings → Sign-in & security**. See [Signing in](signing-in.md#if-you-lose-every-wallet).
 
-Your encryption keys work the same way. Any wallet you've added to them unlocks them. If you lose all of those, your recovery kit brings them back; without one, you start over with new keys. See [Keep a recovery kit](signing-in.md#keep-a-recovery-kit).
+Your encryption keys work the same way. Any wallet or passkey you've added to them unlocks them. If you lose all of those, your recovery kit brings them back; without one, you start over with new keys. See [Keep a recovery kit](signing-in.md#keep-a-recovery-kit).
 
 ## Can I use Nil on my phone?
 

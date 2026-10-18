@@ -23,7 +23,8 @@ async function call(to, data, block) {
 }
 
 // What one address held at one block: NOX in the wallet, NOX staked in the official staking
-// contract (the first word of getStakeInfo is the staked amount), and Zero-State Passes.
+// contract (the first word of getStakeInfo is the staked amount), and Zero-State Passes. `block`
+// is anything eth_call takes: a tag, a number, or an EIP-1898 object naming the block by hash.
 export default async function holdingsAt(address, block) {
   const arg = address.slice(2).toLowerCase().padStart(64, '0');
   const [nox, stake, zsp] = await Promise.all([

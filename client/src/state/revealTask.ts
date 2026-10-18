@@ -1,19 +1,17 @@
-import sealedCache from './sealedCache';
+import knownWords from './knownWords';
 import countSteps from '../lib/countSteps';
 import readersCover from '../lib/readersCover';
 import type Task from '../types/Task';
 
 // A sealed task straight from the server. If this tab has opened that exact version before, and
 // the task still shows only people its words were sealed for, its words show at once (the notes
-// too, if it opened the whole task); otherwise it shows as a locked private task until the keyring
-// can open it.
+// too, if it opened the whole task), with the warning if it's older than a version opened since;
+// otherwise it shows as a locked private task until the keyring can open it.
 function opened(task: Task): Task {
-  const words = sealedCache.get(task.sealed!);
-  if (words && readersCover(words, task)) {
-    const { title, checklist, description, by, readers, from, oldKey } = words;
-    return { ...task, title, checklist, description, signedBy: by, olderFormat: !readers, handedOnBy: from, oldKey, locked: false };
-  }
-  return { ...task, title: 'Private task', description: undefined, checklist: undefined, steps: null, locked: true };
+  const words = knownWords(task.sealed!, task.id);
+  if (!words || !readersCover(words, task)) return { ...task, title: 'Private task', description: undefined, checklist: undefined, steps: null, locked: true };
+  const { title, checklist, description, rollback, by, readers, from, oldKey } = words;
+  return { ...task, title, checklist, description, rolledBack: rollback, signedBy: by, olderFormat: !readers, handedOnBy: from, oldKey, locked: false };
 }
 
 // Shapes a task for the store. Tasks already shaped in the browser (optimistic edits) keep

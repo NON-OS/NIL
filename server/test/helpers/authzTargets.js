@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import wallet from './wallet.js';
 import client from './client.js';
+import passkeyBody from './passkeyBody.js';
 
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 
@@ -61,7 +62,7 @@ export default async function authzTargets(world) {
     },
     // an open sign-in reset for the member, issued at once since members need no second admin
     reset: async () => (await admin('POST', `/api/users/${ids.member}/sign-in-reset`, {})).data.reset.id,
-    // the caller's own: a personal key, a time entry, a reminder, their wallet, a second wallet
+    // the caller's own: a personal key, a time entry, a reminder, their wallet, a second wallet, a passkey
     own: {
       token: async (who) => (await people[who]('POST', '/api/me/tokens', { name: 'Throwaway' })).data.tokens[0].id,
       time: async (who) => (await people[who]('POST', '/api/time', { startedAt: Date.now() - 120_000, endedAt: Date.now() - 60_000 })).data.entry.id,
@@ -71,6 +72,10 @@ export default async function authzTargets(world) {
         const extra = wallet();
         await people[who].wallet(extra, 'add');
         return (await people[who]('GET', '/api/me/credentials')).data.credentials.find((c) => c.address === extra.address).id;
+      },
+      passkey: async (who) => {
+        const body = passkeyBody();
+        return (await people[who]('POST', '/api/me/passkeys', body)).data.passkeys.find((p) => p.credentialId === body.credentialId).id;
       },
     },
   };

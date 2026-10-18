@@ -10,7 +10,7 @@ import recordTransfer from './recordTransfer.js';
 export default function attachReceipt(placeholder, receipt, { feeBps = 0 } = {}) {
   const tokens = new Map(acceptedTokens().map((t) => [t.address, t]));
   const toTreasury = receipt.transfers.filter((t) => t.to === config.plan.treasury && tokens.has(t.token));
-  const saved = toTreasury.map((t) => recordTransfer({ ...t, txHash: placeholder.tx_hash, blockNumber: receipt.blockNumber, blockHash: receipt.blockHash }, { named: true, feeBps })).filter(Boolean);
+  const saved = toTreasury.map((t) => recordTransfer({ ...t, txHash: placeholder.tx_hash, blockNumber: receipt.blockNumber, blockHash: receipt.blockHash }, { named: placeholder.invoice_id, feeBps })).filter(Boolean);
   if (saved.length) return saved;
 
   let problem = `This transaction sends no ${[...tokens.values()].map((t) => t.symbol).join(' or ')} to ${config.billing.treasuryName}.`;

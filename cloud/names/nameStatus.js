@@ -11,5 +11,6 @@ export default function nameStatus(ctx, input) {
   // can't be picked up by someone else
   if (held === 'live') return { available: false, name: check.name, reason: 'That address is taken.' };
   if (held === 'quarantined') return { available: false, name: check.name, reason: 'That address was in use recently. It becomes available again later.' };
+  if (ctx.store.requests.byName(check.name)) return { available: false, name: check.name, reason: 'That address is taken.' };
   return { available: true, name: check.name };
 }

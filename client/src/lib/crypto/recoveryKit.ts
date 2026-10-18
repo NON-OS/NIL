@@ -5,6 +5,11 @@ import b64u from './b64u';
 
 // The same cost as workspace capsules: about half a second per guess on a laptop, 128 MB each.
 const COST = { N: 2 ** 17, r: 8, p: 1 };
+// The most a kit may ask for. scrypt holds 128 * N * r bytes and its time grows with N * r * p,
+// so a doctored kit asking for more could run the tab out of memory or stall it for hours. This
+// allows 4 times the memory and 8 times the work of the cost above.
+const MAX_MEMORY = 4 * COST.N * COST.r;
+const MAX_WORK = 8 * COST.N * COST.r * COST.p;
 const MIN_PASSPHRASE = 12;
 
 export interface RecoveryKit {
@@ -19,6 +24,12 @@ export interface RecoveryKit {
 }
 
 type KitHeader = Omit<RecoveryKit, 'sealed'>;
+
+// No cheaper than the cost this app writes, so guessing stays slow, and no dearer than the limits.
+function fairCost({ N, r, p }: KitHeader['kdf']) {
+  if (![N, r, p].every(Number.isSafeInteger) || (N & (N - 1)) !== 0) return false;
+  return N >= COST.N && r >= COST.r && p >= COST.p && N * r <= MAX_MEMORY && N * r * p <= MAX_WORK;
+}
 
 // Everything in the file except the ciphertext goes in as additional data, so a kit can't be
 // edited to claim another account or a cheaper passphrase cost without failing to open.
@@ -47,8 +58,7 @@ const recoveryKit = {
   async open(file: unknown, passphrase: string, onProgress?: (p: number) => void): Promise<{ seed: Uint8Array; kit: RecoveryKit }> {
     const kit = file as RecoveryKit;
     const shaped = kit?.type === 'nil.recovery-kit' && kit.v === 1 && kit.kdf?.name === 'scrypt' && [kit.origin, kit.workspaceKey, kit.userId, kit.fingerprint, kit.kdf.salt, kit.sealed].every((v) => typeof v === 'string');
-    // refuse a cost below the one this app writes, so a doctored kit can't make guessing cheap
-    if (!shaped || kit.kdf.N < COST.N || kit.kdf.r < COST.r || kit.kdf.p < COST.p || kit.kdf.N > 2 ** 20) throw new Error('That file isn’t a Nil recovery kit.');
+    if (!shaped || !fairCost(kit.kdf)) throw new Error('That file isn’t a Nil recovery kit.');
     const key = await stretch(passphrase, kit, onProgress);
     try {
       return { seed: await aesGcm.open(key, b64u.decode(kit.sealed), aad(kit)), kit };

@@ -10,7 +10,7 @@ export default function containerBody(spec, settings) {
   const network = `nil-${spec.id}`;
   return {
     Image: spec.image,
-    User: settings.user,
+    User: spec.user,
     Env: Object.entries(spec.env).map(([key, value]) => `${key}=${value}`),
     Labels: { 'org.nonos.cloud.role': 'workspace', 'org.nonos.cloud.workspace': spec.id },
     StopTimeout: settings.stopTimeoutSec,
