@@ -4,7 +4,7 @@ The NØNOS foundation runs Nil for anyone who doesn't want to run their own serv
 
 ## What you get
 
-- Your own copy of Nil, in its own container with its own storage. Other teams' workspaces can't reach it, and it has no network access of its own except to the Ethereum node that checks payments.
+- Your own copy of Nil, in its own container with its own storage. Other teams' workspaces can't reach it, and it has no network access of its own except to the Ethereum node that checks payments. That is also why push notifications are off: they would have to go through the browser makers' push services.
 - The free tier, with Nil Pro paid from inside your workspace (Settings → Plan), in USDC or NOX, straight to the NØNOS DAO treasury. Nothing is charged automatically.
 - Nightly encrypted backups, updates and monitoring done for you.
 
