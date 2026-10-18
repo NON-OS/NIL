@@ -17,7 +17,7 @@ docker compose up -d --build
 
 Open `http://localhost:3000`, connect your wallet and create the workspace. You become the owner. The database, uploaded files and the signing key live in the `nonos-data` volume.
 
-The container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
+The container runs as an unprivileged user (uid 1000) with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable. If your own login on the server is uid 1000 too, as on many cloud images, read [the note in the deployment guide](deploy.md#1-pick-a-server) first.
 
 ## With plain Node
 

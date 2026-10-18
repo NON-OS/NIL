@@ -63,7 +63,11 @@ if [ "$NIL_MODE" = hosted ]; then
   previous=$NIL_VERSION
   before_previous=$NIL_PREVIOUS_VERSION
   step "Control plane: $previous -> $VERSION"
+  # going back needs the running version's images; Compose never pulls them, so check first
   if [ "$previous" != "$VERSION" ]; then
+    for image in "$NIL_CLOUD_IMAGE:$previous" "$NIL_IMAGE:$previous"; do
+      image_present "$image" || die "$image, the version running now, is no longer on this server, so a failed upgrade couldn't go back to it. Ship $previous again with deploy/release.sh first. Nothing was changed."
+    done
     env_set "$NIL_DIR/.env" NIL_PREVIOUS_VERSION "$previous"
     env_set "$NIL_DIR/.env" NIL_VERSION "$VERSION"
   fi
@@ -103,6 +107,8 @@ if [ "$previous" = "$VERSION" ]; then
   log "Already running $VERSION."
   exit 0
 fi
+# the checkpoint and a rollback both run the running version's image, which is never pulled
+image_present "$NIL_IMAGE:$previous" || die "$NIL_IMAGE:$previous, the version running now, is no longer on this server, so a failed upgrade couldn't go back to it. Ship $previous again with deploy/release.sh first. Nothing was changed."
 
 step "Checkpoint the database ($previous)"
 compose stop nil

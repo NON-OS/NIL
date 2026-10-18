@@ -17,6 +17,8 @@ const states = Object.freeze({
   paused: Object.freeze(['stopped', 'suspended', 'deleting', 'failed']),
   // states a background job may leave alone because an operation is under way
   busy: Object.freeze(['provisioning', 'starting', 'upgrading', 'restoring']),
+  // the reasons the control plane suspends a workspace by itself, each with its own notice
+  reasons: Object.freeze({ idle: 'automatic: unused', disk: 'automatic: over its disk' }),
 });
 
 export default states;

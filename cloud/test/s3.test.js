@@ -4,6 +4,7 @@ import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import signRequest from '../backups/s3/signRequest.js';
 import createS3Client from '../backups/s3/createS3Client.js';
+import checkBackupTarget from '../ops/checkBackupTarget.js';
 import collect from './helpers/collect.js';
 
 test('SigV4 signatures match the example in AWS’s S3 documentation', () => {
@@ -21,7 +22,7 @@ test('SigV4 signatures match the example in AWS’s S3 documentation', () => {
 });
 
 // An S3 endpoint in memory that keeps multipart uploads the way S3 does.
-function fakeS3({ failPart = 0, errorInBody = false } = {}) {
+function fakeS3({ failPart = 0, errorInBody = false, bucket = {} } = {}) {
   const uploads = new Map();
   const objects = new Map();
   const requests = [];
@@ -52,6 +53,14 @@ function fakeS3({ failPart = 0, errorInBody = false } = {}) {
       uploads.delete('up-1');
       return new Response('', { status: 204 });
     }
+    if (method === 'GET' && u.searchParams.has('versioning')) {
+      if (bucket.denied) return new Response('<Error><Code>AccessDenied</Code><Message>no</Message></Error>', { status: 403 });
+      return new Response(`<VersioningConfiguration>${bucket.versioning ? `<Status>${bucket.versioning}</Status>` : ''}</VersioningConfiguration>`);
+    }
+    if (method === 'GET' && u.searchParams.has('object-lock')) {
+      if (!bucket.lock) return new Response('<Error><Code>ObjectLockConfigurationNotFoundError</Code><Message>none</Message></Error>', { status: 404 });
+      return new Response(`<ObjectLockConfiguration><ObjectLockEnabled>Enabled</ObjectLockEnabled><Rule><DefaultRetention><Mode>${bucket.lock.mode}</Mode><Days>${bucket.lock.days}</Days></DefaultRetention></Rule></ObjectLockConfiguration>`);
+    }
     if (method === 'GET') return objects.has(key) ? new Response(objects.get(key)) : new Response('<Error><Code>NoSuchKey</Code><Message>gone</Message></Error>', { status: 404 });
     throw new Error(`unexpected ${method} ${key}`);
   };
@@ -69,6 +78,26 @@ test('uploads stream in parts of the configured size and download intact', async
   assert.deepEqual(s3.requests.filter((r) => r.method === 'PUT').map((r) => r.query.partNumber), ['1', '2', '3']);
   assert.deepEqual(await collect(await s3.client.get('workspaces/ab/x.nilbackup')), data);
   await assert.rejects(s3.client.get('missing'), /404 \(NoSuchKey: gone\)/);
+});
+
+test('the startup check says when the bucket can’t survive a compromised server', async () => {
+  const check = async (bucket) => {
+    const ctx = { config: { backup: { keepDays: 30 } }, backupTarget: { protection: () => fakeS3({ bucket }).client.protection() }, alerts: [], log: { info() {}, warn: () => ctx.alerts.push('warned') } };
+    ctx.alert = async (event, details) => ctx.alerts.push({ event, ...details });
+    return { result: await checkBackupTarget(ctx), alerts: ctx.alerts };
+  };
+  const bare = await check({});
+  assert.deepEqual([bare.result.versioning, bare.result.objectLock], [false, false]);
+  assert.match(bare.alerts[0].message, /versioning is off.*Object Lock is off/);
+  const short = await check({ versioning: 'Enabled', lock: { mode: 'GOVERNANCE', days: 7 } });
+  assert.match(short.alerts[0].message, /GOVERNANCE for 7 days, not compliance for at least 30/);
+  const safe = await check({ versioning: 'Enabled', lock: { mode: 'COMPLIANCE', days: 30 } });
+  assert.deepEqual(safe.result.problems, []);
+  assert.equal(safe.alerts.length, 0);
+  const denied = await check({ denied: true });
+  assert.equal(denied.result, null, 'a key that may not read bucket settings only logs that');
+  assert.deepEqual(denied.alerts, ['warned']);
+  assert.equal(await checkBackupTarget({ backupTarget: { describe: () => 'file:///backups' } }), null, 'a file target can’t be checked from here');
 });
 
 test('a failed part or a failure reported in a 200 aborts the upload', async () => {

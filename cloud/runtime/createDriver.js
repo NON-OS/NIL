@@ -4,9 +4,11 @@ import dockerDriver from './docker/dockerDriver.js';
 // in terms of workspaces rather than containers, so another one (Podman, Firecracker, a remote
 // host) can be added without touching provisioning, backups or routing:
 //
+//   hasImage(image)             whether the image is on this server already
 //   ensureImage(image)          make the app image available locally
 //   create(spec)                isolated network, data volume and stopped workload for a spec
-//                               (see workspaceSpec.js); safe to call when parts already exist
+//                               (see workspaceSpec.js); safe to call when parts already exist.
+//                               With spec.isolated, the reverse proxy isn't attached either
 //   start(id) stop(id) restart(id)
 //   remove(id)                  remove the workload, keep its volume
 //   destroy(id, volumes)        remove the workload, its network and the given volumes
@@ -24,6 +26,8 @@ import dockerDriver from './docker/dockerDriver.js';
 //   ensureProxy(ids)            the same for many workspaces, cheaply; returns how many it fixed
 //   upstream(id)                host:port the reverse proxy forwards to
 //   usage()                     Map of volume name to bytes used
+//   lastWrite(id)               { at, startedAt }: when the database files last changed (their
+//                               modification time only) and when the workload started
 export default function createDriver(config, log) {
   if (config.runtime === 'docker') return dockerDriver({ config, log });
   throw new Error(`Unknown runtime: ${config.runtime}`);

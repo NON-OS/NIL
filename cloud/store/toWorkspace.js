@@ -20,5 +20,6 @@ export default function toWorkspace(row) {
     deleteAfter: row.delete_after,
     deletedAt: row.deleted_at,
     lastHealthyAt: row.last_healthy_at,
+    activeAt: row.active_at ?? null,
   };
 }

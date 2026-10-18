@@ -10,14 +10,16 @@ name: nil
 
 services:
   control:
-    image: ${NIL_CLOUD_IMAGE:-nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    image: ${NIL_CLOUD_IMAGE:-localhost/nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    # release.sh ships the image over SSH; a missing one is an error, never a download
+    pull_policy: never
     container_name: nil-control
     restart: unless-stopped
     env_file:
       - path: cloud.env
     # Set here rather than in cloud.env, so they always match the rest of this file.
     environment:
-      CLOUD_APP_IMAGE: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION}
+      CLOUD_APP_IMAGE: ${NIL_IMAGE:-localhost/nonos/nil}:${NIL_VERSION}
       CLOUD_DATA_DIR: /var/lib/nil-cloud
       CLOUD_CADDYFILE: /srv/caddy/Caddyfile
       CLOUD_CADDY_CONTAINER: nil-caddy
@@ -39,8 +41,14 @@ services:
       - control-data:/var/lib/nil-cloud
       - caddy-config:/srv/caddy
       - ./workspace.env:/etc/nil/workspace.env:ro
-      # the mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups
-      - ${NIL_BACKUP_DIR:-/mnt/nil-backups}:/backups
+      # The mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups. rslave passes the
+      # share through even when it is mounted (or mounted again) after this container started.
+      - type: bind
+        source: ${NIL_BACKUP_DIR:-/mnt/nil-backups}
+        target: /backups
+        bind:
+          propagation: rslave
+          create_host_path: true
     networks:
       - edge
     read_only: true
@@ -50,7 +58,9 @@ services:
       - ALL
     security_opt:
       - no-new-privileges:true
+    # no swap: setup codes, cloud.env's keys and a restore's backup key (in /tmp) stay in memory
     mem_limit: 1g
+    memswap_limit: 1g
     pids_limit: 512
     stop_grace_period: 30s
     logging:
@@ -60,7 +70,8 @@ services:
         max-file: "5"
 
   caddy:
-    image: ${CADDY_IMAGE:-caddy:2.10.2}
+    # pinned by digest; a pull of the stock image can only ever fetch exactly this one
+    image: ${CADDY_IMAGE:-caddy:2.10.2@sha256:c3d7ee5d2b11f9dc54f947f68a734c84e9c9666c92c88a7f30b9cba5da182adb}
     container_name: nil-caddy
     restart: unless-stopped
     depends_on:
@@ -94,7 +105,9 @@ services:
       - NET_BIND_SERVICE
     security_opt:
       - no-new-privileges:true
+    # no swap: TLS keys and the DNS token stay in memory
     mem_limit: 2g
+    memswap_limit: 2g
     pids_limit: 1024
     logging:
       driver: local

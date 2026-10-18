@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 # Builds a Nil release from this repository and ships it to the server, without needing a
-# public registry. Run it on your own machine (or CI) with Docker, from a clean checkout:
+# public registry. Run it on your own machine (or CI) with Docker, from a clean checkout. The
+# images are built from the committed tree (git archive of HEAD), so a file that isn't committed
+# never ships, and the web app is byte for byte the release anyone can rebuild:
 #
 #   deploy/release.sh --host deploy@nil.example          build, copy over SSH, verify, load, install
 #   deploy/release.sh --registry registry.example/nonos  build and push to your own registry
@@ -23,8 +25,11 @@ ALLOW_DIRTY=0
 PLATFORM=linux/amd64
 CADDY_DNS_MODULE=
 CADDY_VERSION=2.10.2
-APP_REPO=${NIL_IMAGE_NAME:-nonos/nil}
-CLOUD_REPO=${NIL_CLOUD_IMAGE_NAME:-nonos/nil-cloud}
+# localhost/ keeps the names off Docker Hub, where nonos/... would belong to whoever owns that
+# account: the server only ever runs images this script copied to it
+APP_REPO=${NIL_IMAGE_NAME:-localhost/nonos/nil}
+CLOUD_REPO=${NIL_CLOUD_IMAGE_NAME:-localhost/nonos/nil-cloud}
+CADDY_REPO=${NIL_CADDY_IMAGE_NAME:-localhost/nonos/nil-caddy}
 
 usage() {
   cat << 'EOF'
@@ -33,12 +38,14 @@ Usage: release.sh [options]
   --mode hosted|single        hosted builds the app and the control plane (default); single only the app
   --version V                 release version (default: package.json's, plus the commit unless it is tagged vV)
   --host USER@SERVER          copy the release to the server over SSH, check it and load it there
-  --registry PREFIX           push the images to PREFIX/nil and PREFIX/nil-cloud instead
-  --caddy-dns-module MODULE   also build Caddy with a DNS module, for wildcard TLS
-                              (e.g. github.com/caddy-dns/hetzner)
+  --registry PREFIX           also push the images to PREFIX/nil and PREFIX/nil-cloud, a registry
+                              the foundation controls
+  --caddy-dns-module MODULE   also build Caddy with a DNS module at a fixed version, for wildcard
+                              TLS (e.g. github.com/caddy-dns/hetzner@v1.0.0)
   --out DIR                   where to put the release files
   --platform P                image platform (default linux/amd64)
-  --allow-dirty               build from a checkout with uncommitted changes
+  --allow-dirty               a test build from the working tree as it is, uncommitted and
+                              untracked files included
   --dry-run                   print what would happen without building or copying anything
 EOF
 }
@@ -59,6 +66,9 @@ while [ $# -gt 0 ]; do
   esac
 done
 case $MODE in hosted | single) ;; *) die "--mode must be hosted or single." ;; esac
+if [ -n "$CADDY_DNS_MODULE" ] && ! [[ $CADDY_DNS_MODULE =~ @v[0-9] ]]; then
+  die "--caddy-dns-module needs a version, such as github.com/caddy-dns/hetzner@v1.0.0, so a build never takes whatever the module's latest is."
+fi
 require git tar gzip sha256sum
 [ "$DRY_RUN" = 1 ] || require docker
 [ -z "$HOST" ] || require ssh scp
@@ -67,6 +77,8 @@ step "Version"
 cd "$ROOT"
 dirty=$(git status --porcelain --untracked-files=no)
 [ -z "$dirty" ] || [ "$ALLOW_DIRTY" = 1 ] || die "The checkout has uncommitted changes. Commit them, or pass --allow-dirty for a test build."
+# a test build takes the working tree as it is, untracked files too, and says so in its version
+[ "$ALLOW_DIRTY" = 0 ] || dirty=$(git status --porcelain)
 commit=$(git rev-parse HEAD)
 if [ -z "$VERSION" ]; then
   base=$(sed -n 's/^  "version": "\(.*\)",$/\1/p' package.json | head -n 1)
@@ -80,6 +92,18 @@ fi
 OUT=${OUT:-${XDG_CACHE_HOME:-$HOME/.cache}/nil-releases/$VERSION}
 log "Release $VERSION ($MODE) from commit ${commit:0:12}, files in $OUT"
 run mkdir -p "$OUT"
+
+# Everything below builds from SRC: the files of HEAD, unpacked from git, or with --allow-dirty
+# the working tree. Untracked files under client/public or docs would otherwise end up in the
+# image and break the byte-for-byte check of a running server against the release.
+SRC=$ROOT
+if [ "$ALLOW_DIRTY" = 0 ]; then
+  SRC=$(mktemp -d "${TMPDIR:-/tmp}/nil-release-XXXXXX")
+  trap 'rm -rf "$SRC"' EXIT
+  git archive --format=tar HEAD | tar -x -C "$SRC"
+elif [ -n "$(git status --porcelain --untracked-files=normal | grep '^??' || true)" ]; then
+  warn "--allow-dirty: untracked files go into this build, so it won't match a release."
+fi
 
 # Where the source can be found, for the image labels. Credentials in a remote URL are dropped.
 source_url=${NIL_SOURCE_URL:-$(git remote get-url origin 2> /dev/null | sed -E 's#://[^/@]+@#://#; s#^git@([^:]+):#https://\1/#; s#\.git$##' || true)}
@@ -98,17 +122,17 @@ labels() {
 
 step "Build"
 mapfile -d '' app_labels < <(labels Nil 'Nil, the private task app for teams, by NØNOS')
-run docker build --pull --platform "$PLATFORM" "${app_labels[@]}" -t "$APP_REPO:$VERSION" -t "$APP_REPO:latest" "$ROOT"
+run docker build --pull --platform "$PLATFORM" "${app_labels[@]}" -t "$APP_REPO:$VERSION" -t "$APP_REPO:latest" "$SRC"
 images=("$APP_REPO:$VERSION")
 if [ "$MODE" = hosted ]; then
   mapfile -d '' cloud_labels < <(labels 'Nil control plane' 'Runs hosted Nil: one isolated container per workspace')
-  run docker build --pull --platform "$PLATFORM" "${cloud_labels[@]}" -t "$CLOUD_REPO:$VERSION" -t "$CLOUD_REPO:latest" "$ROOT/cloud"
+  run docker build --pull --platform "$PLATFORM" "${cloud_labels[@]}" -t "$CLOUD_REPO:$VERSION" -t "$CLOUD_REPO:latest" "$SRC/cloud"
   images+=("$CLOUD_REPO:$VERSION")
 fi
 if [ -n "$CADDY_DNS_MODULE" ]; then
-  run docker build --pull --platform "$PLATFORM" --build-arg "CADDY_VERSION=$CADDY_VERSION" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" \
-    -t "nil-caddy:$CADDY_VERSION-dns" "$ROOT/cloud/caddy"
-  images+=("nil-caddy:$CADDY_VERSION-dns")
+  run docker build --pull --platform "$PLATFORM" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" \
+    -t "$CADDY_REPO:$CADDY_VERSION-dns" "$SRC/cloud/caddy"
+  images+=("$CADDY_REPO:$CADDY_VERSION-dns")
 fi
 
 step "Image archives"
@@ -136,7 +160,7 @@ if npm sbom --help > /dev/null 2>&1; then
     target="$OUT/$name-$VERSION.npm.cdx.json"
     if [ "$DRY_RUN" = 1 ]; then
       log "would write $target"
-    elif ! (cd "$ROOT/$dir" && npm sbom --sbom-format cyclonedx --omit dev --package-lock-only) > "$target"; then
+    elif ! (cd "$SRC/$dir" && npm sbom --sbom-format cyclonedx --omit dev --package-lock-only) > "$target"; then
       rm -f "$target"
       warn "npm couldn't list the dependencies of $dir."
     fi
@@ -148,7 +172,7 @@ fi
 step "Deploy bundle"
 bundle_files=(deploy/lib.sh deploy/provision.sh deploy/install.sh deploy/upgrade.sh deploy/rollback.sh deploy/smoke.sh deploy/smoke-check.mjs
   deploy/hosted.env.example deploy/host deploy/single .env.example cloud/docker-compose.yml cloud/docker-compose.chain.yml cloud/docker-compose.verifier.yml cloud/.env.example cloud/workspace.env.example)
-run tar -czf "$OUT/nil-deploy-$VERSION.tar.gz" --owner=0 --group=0 -C "$ROOT" "${bundle_files[@]}"
+run tar -czf "$OUT/nil-deploy-$VERSION.tar.gz" --owner=0 --group=0 -C "$SRC" "${bundle_files[@]}"
 
 step "Checksums"
 if [ "$DRY_RUN" = 1 ]; then
@@ -173,7 +197,7 @@ if [ -n "$REGISTRY" ]; then
       run docker push "$target:$tag"
     done
   done
-  log "On the server, set NIL_IMAGE=$REGISTRY/nil (and NIL_CLOUD_IMAGE=$REGISTRY/nil-cloud) in /opt/nil/.env and docker pull the $VERSION tags."
+  log "On the server, set NIL_IMAGE=$REGISTRY/nil (and NIL_CLOUD_IMAGE=$REGISTRY/nil-cloud) in /opt/nil/.env, docker pull the $VERSION tags, and set CLOUD_IMAGE_PULL=missing in cloud.env only if workspaces should pull from there."
 fi
 
 if [ -n "$HOST" ]; then
