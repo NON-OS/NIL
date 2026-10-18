@@ -72,8 +72,8 @@ router.get(
   }),
 );
 
-// The meta-address an admin's browser works a private payout to this person out from, and why
-// there is none when there isn't. A node that can't be read leaves only the public payout.
+// For an admin about to pay someone: the meta-address a private payout to them is worked out
+// from, or why there is none. A node that can't be read leaves only the public payout.
 router.get(
   '/stealth/payees/:id',
   requireAdmin,
