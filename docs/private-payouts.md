@@ -36,7 +36,7 @@ The arrow icon opens the address on a block explorer in a new tab.
 
 ## If you start over with new keys
 
-Each payout belongs to the keys that were yours when it was paid. If you lose every wallet that holds your keys, your [recovery kit](signing-in.md#keep-a-recovery-kit) brings those keys back, payouts included. If you start over with new keys instead, Nil can't open payouts sent to the old ones and says "Private payouts were turned on with keys from before your last key reset." Switch private payouts off and on again to receive new payouts at your new keys. The older payouts stay out of reach unless you copied their keys with **Key** beforehand. If you receive private payouts, keep a recovery kit.
+Each payout belongs to the keys that were yours when it was paid. If you lose every wallet that holds your keys, your [recovery kit](signing-in.md#keep-a-recovery-kit) brings those keys back, payouts included. If you start over with new keys instead, Nil can't open payouts sent to the old ones. Starting over also switches private payouts off, so nobody pays you at keys you no longer have: new bounties go to your sign-in wallet until you switch private payouts on again with your new keys. The older payouts stay out of reach unless you copied their keys with **Key** beforehand. If you receive private payouts, keep a recovery kit.
 
 ## What stays visible
 
