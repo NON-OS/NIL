@@ -20,4 +20,7 @@ export default Object.freeze({
   // a hard stop per attempt; retries cover rate limits and brief outages
   timeoutMs: envNumber('AI_TIMEOUT_SECONDS', 120, { min: 1 }) * units.SECOND,
   maxRetries: envNumber('AI_MAX_RETRIES', 1, { max: 10 }),
+  // per member, in both modes: signed in, and anonymous where each request spends one of the day's slots
+  perMinute: envNumber('AI_REQUESTS_PER_MINUTE', 12, { min: 1 }),
+  perDay: envNumber('AI_REQUESTS_PER_DAY', 100, { min: 1, max: 1000 }),
 });
