@@ -1,0 +1,18 @@
+import storage from '../lib/storage';
+import store from './store';
+import keyPins from './keyPins';
+
+// Records this browser keeps per workspace and account only once someone has opened encrypted
+// docs, private tasks or comments here (see docVersions, taskVersions, commentVersions,
+// taskReaders).
+const OPENED = ['doc-versions', 'task-versions', 'comment-versions', 'task-readers'];
+
+// Whether this browser has seen this account hold encryption keys in this workspace: its own key
+// pinned, or encrypted content opened. Then a server that suddenly lists no keys and no wallet
+// copies for you can't quietly move you onto a fresh identity.
+export default function hadKeys() {
+  const { workspaceKey, me } = store.get();
+  if (!me) return false;
+  if (keyPins.all()[me.id]) return true;
+  return OPENED.some((name) => Object.keys(storage.get<Record<string, unknown>>(`${name}:${workspaceKey}:${me.id}`, {})).length > 0);
+}

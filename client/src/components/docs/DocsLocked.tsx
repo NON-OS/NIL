@@ -50,8 +50,8 @@ export default function DocsLocked() {
         <button type="button" className="btn btn-primary btn-lg" onClick={() => unlock()} disabled={busy} style={{ justifySelf: 'center' }}>
           {busy ? <Spinner size={14} /> : <Wallet />} Unlock with your wallet
         </button>
-        {kind === 'no-wrap' && <RestoreKit />}
-        {(kind === 'no-wrap' || kind === 'mismatch') && (
+        {(kind === 'no-wrap' || kind === 'missing') && <RestoreKit />}
+        {(kind === 'no-wrap' || kind === 'mismatch' || kind === 'missing') && (
           <ConfirmButton className="btn btn-ghost btn-sm" onConfirm={() => unlock(true)} confirmLabel="Reset, and lose access to what was shared with your old keys?">
             Start over with new keys
           </ConfirmButton>

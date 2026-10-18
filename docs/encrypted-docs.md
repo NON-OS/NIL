@@ -88,6 +88,7 @@ This is the one time a doc's text leaves your browser. Your instruction goes to 
 | Your keys were set up with a wallet that's no longer linked to your account | Restore from your recovery kit, or start over with new keys |
 | Your wallet's signature doesn't open your keys here | The workspace moved to a new web address since your keys were set up. Restore from your recovery kit. If it didn't move, tell your admin |
 | The server lists different keys for you than the ones your wallet unlocks | If you didn't start over with new keys on another device, tell your admin before you do anything else |
+| Your keys seem to be missing from the server | The server lists no keys and no wallet copies for you, though this browser has seen you hold keys here. Restore from your recovery kit. Start over with new keys only if you reset them yourself; otherwise tell your admin first |
 | Your wallet signs the same message differently each time | That wallet can't hold your keys. Use another linked wallet, such as MetaMask, Rabby, Ledger or Trezor |
 | Your wallet returned a signature Nil can't read | Smart wallets, including passkey wallets, can't hold encryption keys yet. Use a regular wallet |
 

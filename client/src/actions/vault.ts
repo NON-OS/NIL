@@ -6,6 +6,7 @@ import records from '../state/records';
 import sealedCache from '../state/sealedCache';
 import revealTask from '../state/revealTask';
 import lockedDetail from '../state/lockedDetail';
+import hadKeys from '../state/hadKeys';
 import ethereum from '../lib/ethereum';
 import VaultError from '../lib/VaultError';
 import b64u from '../lib/crypto/b64u';
@@ -50,6 +51,8 @@ async function unlockWithWallet(reset: boolean) {
   const wrap = wraps.find((w) => w.address === address.toLowerCase());
   if (!wrap) {
     if (listed || wraps.length) throw new VaultError('no-wrap', 'This wallet doesn’t unlock your keys yet. Unlock once with a wallet that does and add this one in Settings, under Sign-in & security, or restore from your recovery kit.');
+    // nothing on record, yet this browser has seen you hold keys: new ones only when you say so
+    if (hadKeys()) throw new VaultError('missing', 'Your keys seem to be missing from the server. Restore them from your recovery kit, or start over with new keys. If you didn’t reset them yourself, tell your admin first.');
     return create(address, false);
   }
   const identity = await fromSeed(await walletWraps.open(wrap, address));

@@ -79,6 +79,7 @@ Docs, private tasks, comments and files saved before signatures named who they'r
 ## Recovery and moves
 
 - Lost the wallet you usually use: unlock with another linked wallet that has a wrap.
+- Keys gone from the server: if it lists no keys and no wraps for you, but this browser has seen you hold keys in the workspace (your own key pinned, or encrypted docs, tasks or comments opened here), unlocking stops and says so instead of making new keys. You restore from your kit, or start over only by choosing to.
 - Lost every wallet with a wrap: an admin resets your sign-in, you link a new wallet with the one-time link, then restore from your recovery kit on the **Docs** screen that appears when the new wallet can't unlock. Without a kit, start over with new keys. Docs and private tasks sealed to the old keys must be shared again, teammates see your key as changed, and private payouts sent to your old keys stay with the old keys.
 - Moving the workspace to a different web address changes the unlock messages. Each member restores from their kit once, or starts over, and every browser's pins start over too, because they are stored per site.
 - Losing the workspace signing key in `DATA_DIR/keys` changes the workspace key that every message names. No wrap opens after that, and the browser refuses recovery kits made for the old workspace key, so everyone starts over. Back that key up with the database.
