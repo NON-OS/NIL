@@ -249,7 +249,7 @@ docker compose exec control node cli.js delete restore-drill --now --no-export -
 
 ### 10. Monitoring and alerts
 
-- `CLOUD_ALERT_WEBHOOK` receives every alert (restarts, failed upgrades and backups, a degraded RAID, a full disk). Test it: `docker compose exec control node cli.js alert-test`.
+- `CLOUD_ALERT_WEBHOOK` receives every alert (restarts, failed upgrades and backups, a degraded RAID, a full disk, and a workspace whose billing watchdog reports a stalled payment or check, usually a sign that its Ethereum node is down or behind). Test it: `docker compose exec control node cli.js alert-test`.
 - The control plane can't report its own server being down. Add an outside check of `https://nil.example` and of one workspace's `https://nonos.nil.example/healthz`, from another machine or an uptime service, and turn on Robot's server monitoring.
 - `smartd` watches the NVMe drives and logs to the journal; the control plane watches the RAID arrays.
 

@@ -87,7 +87,7 @@ export default function fakeDriver() {
       const c = containers.get(id);
       if (!c) return { exists: false, running: false, health: 'none', report: null };
       const healthy = c.running && !unhealthy.has(c.spec.image) && !c.sick;
-      return { exists: true, running: c.running, health: c.running ? (healthy ? 'healthy' : 'unhealthy') : 'none', report: healthy ? { ok: true, members: 4 } : null, image: c.spec.image, exitCode: 0 };
+      return { exists: true, running: c.running, health: c.running ? (healthy ? 'healthy' : 'unhealthy') : 'none', report: healthy ? { ok: true, members: 4, ...c.report } : null, image: c.spec.image, exitCode: 0 };
     },
     async probe(id, path) {
       step('probe', id, path);

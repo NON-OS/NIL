@@ -1,6 +1,7 @@
 // The body of a workspace's /healthz, read from inside the workspace and so untrusted: only a
-// few small, typed values are kept. The app reports its version and database schema; a member
-// count is used if a future app version reports one. Nothing else about a team is learned here.
+// few small, typed values are kept. The app reports its version and database schema, and the
+// short codes of any billing stall its watchdog found; a member count is used if a future app
+// version reports one. Nothing else about a team is learned here.
 export default function readHealthReport(text) {
   if (typeof text !== 'string' || text.length > 4096) return null;
   let body;
@@ -14,5 +15,7 @@ export default function readHealthReport(text) {
   if (typeof body.version === 'string' && /^[\w.+-]{1,32}$/.test(body.version)) report.version = body.version;
   if (Number.isSafeInteger(body.schema) && body.schema >= 0) report.schema = body.schema;
   if (Number.isSafeInteger(body.members) && body.members >= 0 && body.members < 1e7) report.members = body.members;
+  const stalled = body.billing?.stalled;
+  if (Array.isArray(stalled)) report.billingStalled = stalled.filter((code) => typeof code === 'string' && /^[a-z_]{1,40}$/.test(code)).slice(0, 10);
   return report;
 }
