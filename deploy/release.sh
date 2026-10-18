@@ -130,9 +130,17 @@ if [ "$MODE" = hosted ]; then
   images+=("$CLOUD_REPO:$VERSION")
 fi
 if [ -n "$CADDY_DNS_MODULE" ]; then
-  run docker build --pull --platform "$PLATFORM" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" \
-    -t "$CADDY_REPO:$CADDY_VERSION-dns" "$SRC/cloud/caddy"
-  images+=("$CADDY_REPO:$CADDY_VERSION-dns")
+  caddy_image="$CADDY_REPO:$CADDY_VERSION-dns"
+  run docker build --pull --platform "$PLATFORM" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" -t "$caddy_image" "$SRC/cloud/caddy"
+  # The Dockerfile already stops a module that raises Caddy's version. This holds the tag to the
+  # binary as well, should the Dockerfile's images move to another Caddy without this script.
+  if [ "$DRY_RUN" = 1 ]; then
+    log "would check that $caddy_image runs Caddy v$CADDY_VERSION"
+  else
+    built=$(docker run --rm --pull never --network none --platform "$PLATFORM" "$caddy_image" caddy version | cut -d ' ' -f 1) || true
+    [ "$built" = "v$CADDY_VERSION" ] || die "$caddy_image should run Caddy v$CADDY_VERSION, and caddy version says ${built:-nothing}. Move CADDY_VERSION here and the images in cloud/caddy/Dockerfile to the same Caddy."
+  fi
+  images+=("$caddy_image")
 fi
 
 step "Image archives"
