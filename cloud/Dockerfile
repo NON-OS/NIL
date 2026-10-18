@@ -1,10 +1,17 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
 # The Nil control plane. Build from the repository root with
 #   docker build -t localhost/nonos/nil-cloud:<version> cloud
 # (deploy/release.sh does this, with labels). It needs the Docker socket at run time; see
 # docker-compose.yml for how it is mounted and why the container is still locked down.
-FROM node:22-alpine
+
+# Node 22 on Alpine, pinned by version and by digest like the app's own image (the root
+# Dockerfile), so a rebuild gets exactly the same base. To take a newer one, look up the digest
+# of the new tag with
+#   docker buildx imagetools inspect node:<version>-alpine<release>
+# and change both here and in the root Dockerfile.
+ARG NODE_IMAGE=node:22.23.3-alpine3.24@sha256:0a7108bf6c7bf5de370ffb1a3ed6be93d405b43ff159f681a8d18c0e2bc2e402
+FROM ${NODE_IMAGE}
 ENV NODE_ENV=production
 WORKDIR /srv/cloud
 COPY package.json package-lock.json ./

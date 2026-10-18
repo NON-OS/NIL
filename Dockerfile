@@ -1,4 +1,4 @@
-# syntax=docker/dockerfile:1
+# syntax=docker/dockerfile:1.27.1@sha256:4edf897a3ffa55b89f906fc8cc78afdb3f1834cc9c7083565e611a8a7d5fe99e
 
 # Node 22 on Alpine, pinned by version and by digest so a rebuild gets exactly the same base.
 # To take a newer base (security fixes), look up the digest of the new tag with

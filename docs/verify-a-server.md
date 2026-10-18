@@ -57,10 +57,10 @@ npm run release:manifest -- --out release/web-$(node -p "require('./package.json
 
 Commit the manifest, tag the release, and put the printed hash in the release notes and on nonos.software. The manifest isn't part of the build, so committing it doesn't change the hash.
 
-The Docker image builds the web app the same way, from the pinned base image and the lockfile. To confirm an image carries the release, copy its build out and hash it:
+The Docker image builds the web app the same way, from the pinned base image and the lockfile. `deploy/release.sh` builds it from the committed tree only (`git archive` of the tagged commit), so a stray file in `client/public` or `docs` on the release machine can't end up in it. To confirm an image carries the release, copy its build out and hash it:
 
 ```bash
-docker create --name nil-image nil:3.0.0
+docker create --name nil-image localhost/nonos/nil:3.0.0
 docker cp nil-image:/app/dist image-dist
 docker rm nil-image
 npm run release:manifest -- --dist image-dist
