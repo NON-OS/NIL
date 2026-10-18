@@ -79,6 +79,8 @@ const ethereum = {
     }
   },
 
+  // For key messages this browser builds itself. Text the server wrote goes through
+  // signServerText, which refuses anything that could be a key message.
   async sign(message: string, address: string): Promise<string> {
     const hex = `0x${[...new TextEncoder().encode(message)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
     try {

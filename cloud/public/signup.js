@@ -149,6 +149,10 @@
         throw walletError(err);
       }
       const challenge = await api('POST', '/api/challenge', { name, address, chainId });
+      // the same check a workspace makes: never sign a workspace's key message for a server
+      if (typeof challenge.message !== 'string' || challenge.message.includes('urn:nil:')) {
+        throw new Error('The server asked your wallet to sign something other than a sign-up message, so nothing was signed.');
+      }
       const [nonce, signature] = await Promise.all([
         solve(challenge.pow.salt, challenge.pow.bits),
         wallet.request({ method: 'personal_sign', params: [toHex(challenge.message), address] }).catch((err) => {
