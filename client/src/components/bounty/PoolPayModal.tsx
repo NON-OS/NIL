@@ -23,8 +23,9 @@ export default function PoolPayModal({ task, name, onClose, onDone }: { task: Ta
   useEffect(() => {
     let live = true;
     (async () => {
-      const opened = poolAccount.book() ? null : await poolAccount.open();
-      if (opened && opened.state !== 'open') throw new Error('Open the team’s pool on the Bounties page first.');
+      // the notes fresh from the server, in case another admin paid from the same deposit
+      const opened = await poolAccount.open();
+      if (opened.state !== 'open') throw new Error('Open the team’s pool on the Bounties page first.');
       const p = await poolPayout.prepare(task);
       if (live) setPrepared(p);
     })().catch((err) => live && setProblem(err instanceof Error ? err.message : String(err)));

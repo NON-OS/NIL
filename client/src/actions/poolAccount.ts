@@ -27,7 +27,7 @@ async function identity() {
 // it yet. Admins whose keys aren't confirmed here get it from someone who has confirmed them.
 async function share(key: Uint8Array, account: PoolAccount) {
   const { users, me } = store.get();
-  const admins = Object.values(users).filter((u) => (u.role === 'owner' || u.role === 'admin') && u.id !== me?.id && !account.holders?.includes(u.id));
+  const admins = Object.values(users).filter((u) => (u.role === 'owner' || u.role === 'admin') && u.kind === 'human' && !u.deactivated && u.id !== me?.id && !account.holders?.includes(u.id));
   if (!admins.length) return;
   const { poolKeySeal } = await kit();
   const keys = await keyDirectory.sharable(admins.map((u) => u.id));
