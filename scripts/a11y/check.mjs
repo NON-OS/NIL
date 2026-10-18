@@ -19,8 +19,10 @@ const SIZES = {
   phone: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 },
 };
 const FAILING = new Set(['serious', 'critical']);
-// built-in AI on, so its buttons are checked too; the address answers nothing, as nothing is asked
-const AI = { ANTHROPIC_API_KEY: 'stand-in', ANTHROPIC_MODEL: 'stand-in', ANTHROPIC_BASE_URL: 'http://127.0.0.1:9' };
+// Built-in AI and pool payouts on, so their buttons and cards are checked too. The AI and pool
+// service addresses are a closed local port: nothing is ever sent anywhere.
+const NOWHERE = 'http://127.0.0.1:9';
+const FEATURES = { ANTHROPIC_API_KEY: 'stand-in', ANTHROPIC_MODEL: 'stand-in', ANTHROPIC_BASE_URL: NOWHERE, PRIVACY_POOLS: 'on', PRIVACY_POOLS_RELAYER_URL: NOWHERE, PRIVACY_POOLS_ASP_URL: NOWHERE };
 
 if (opt.shots) fs.mkdirSync(opt.shots, { recursive: true });
 const wanted = (name) => !opt.only || opt.only === name;
@@ -45,7 +47,7 @@ async function check(page, size, name, reach) {
   if (opt.shots) await page.screenshot({ path: path.join(opt.shots, `${size}-${name}.png`), fullPage: true }).catch(() => {});
 }
 
-const app = await world({ port: Number(opt.port), env: AI });
+const app = await world({ port: Number(opt.port), env: FEATURES });
 const browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || undefined });
 const open = async (size, { cookies = [], key } = {}) => {
   const context = await browser.newContext({ ...SIZES[size], colorScheme: 'light', reducedMotion: 'reduce' });

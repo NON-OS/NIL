@@ -55,6 +55,7 @@ const signedIn = [
   { name: 'project', path: ({ project }) => `/projects/${project}` },
   { name: 'settings', path: '/settings' },
   { name: 'settings-security', path: '/settings?tab=security' },
+  { name: 'settings-team', path: '/settings?tab=team' },
   { name: 'help', path: '/help' },
   { name: 'task', path: '/board?task=1' },
   { name: 'menu', path: '/board', then: openMenu, phoneOnly: true },

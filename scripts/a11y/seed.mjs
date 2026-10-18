@@ -1,6 +1,6 @@
 // Sets up a workspace the way a new owner does, through the setup screen and their wallet, then
-// adds what the checked screens show: a project, tasks on every column, a listed bounty and a
-// signed vote. Leaves the owner signed in on the page and returns the ids it made.
+// adds what the checked screens show: a project, tasks on every column, a listed bounty and
+// votes of each kind. Leaves the owner signed in on the page and returns the ids it made.
 
 const TASKS = [
   ['Write the launch post', 'todo'],
@@ -10,7 +10,13 @@ const TASKS = [
 ];
 // 250 NOX, in the token's smallest unit as the API takes it
 const BOUNTY = { title: 'Translate the help pages', amount: `250${'0'.repeat(18)}` };
-const VOTE = { title: 'Move the weekly call to Thursday?', body: 'Thursday suits the people in Asia better.' };
+// one of each kind a member meets: signed, anonymous, sealed until it closes, and closed
+const VOTES = [
+  { title: 'Move the weekly call to Thursday?', body: 'Thursday suits the people in Asia better.', options: ['Yes', 'No'], days: 7 },
+  { title: 'Pick the offsite city', options: ['Lisbon', 'Porto', 'Madeira'], days: 7, anonymous: true },
+  { title: 'Raise the bounty budget?', options: ['Yes', 'No'], days: 7, sealed: true },
+  { title: 'Adopt the new label set?', options: ['Yes', 'No'], days: 3, close: true },
+];
 
 export const api = (page, method, url, body) =>
   page.evaluate(
@@ -38,6 +44,9 @@ export default async function seed(page, world) {
   const { task } = await api(page, 'POST', '/tasks', { title: BOUNTY.title, status: 'todo', projectId: project });
   await api(page, 'PATCH', `/tasks/${task.id}`, { bounty: BOUNTY.amount });
   await api(page, 'PATCH', `/tasks/${task.id}`, { listed: true });
-  await api(page, 'POST', '/proposals', { ...VOTE, options: ['Yes', 'No'], days: 7 });
+  for (const { close, ...vote } of VOTES) {
+    const { proposal } = await api(page, 'POST', '/proposals', vote);
+    if (close) await api(page, 'POST', `/proposals/${proposal.id}/close`);
+  }
   return { me, project };
 }
