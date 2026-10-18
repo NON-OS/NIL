@@ -57,6 +57,9 @@ test('with rpc-only egress Caddy relays JSON-RPC to the node; with open egress i
   assert.match(relay, /respond 405/);
   assert.doesNotMatch(caddyfile(config({ CLOUD_EGRESS: 'open' }), [], upstream), /:8545/);
   assert.doesNotMatch(caddyfile(config({ CLOUD_RPC_URL: 'off' }), [], upstream), /:8545/);
+  // in shadow mode the verifier gets a relay of its own
+  assert.match(relay, /http:\/\/:8546 \{[\s\S]*reverse_proxy http:\/\/verifier:8545/);
+  assert.doesNotMatch(caddyfile(config({ CLOUD_VERIFIER_MODE: 'off' }), [], upstream), /:8546/);
   // braces would be read as a Caddy placeholder; the URL parser leaves them alone in a query
   assert.throws(() => caddyfile(config({ CLOUD_RPC_URL: 'https://node.example/rpc?key={env.SECRET}' }), [], upstream), /can’t be written/);
 });

@@ -1,7 +1,8 @@
 // The body of a workspace's /healthz, read from inside the workspace and so untrusted: only a
-// few small, typed values are kept. The app reports its version and database schema, and the
-// short codes of any billing stall its watchdog found; a member count is used if a future app
-// version reports one. Nothing else about a team is learned here.
+// few small, typed values are kept. The app reports its version and database schema, the short
+// codes of any billing stall its watchdog found, and when its Ethereum node was last caught in a
+// false answer by Nil's verifier; a member count is used if a future app version reports one.
+// Nothing else about a team is learned here.
 export default function readHealthReport(text) {
   if (typeof text !== 'string' || text.length > 4096) return null;
   let body;
@@ -17,5 +18,7 @@ export default function readHealthReport(text) {
   if (Number.isSafeInteger(body.members) && body.members >= 0 && body.members < 1e7) report.members = body.members;
   const stalled = body.billing?.stalled;
   if (Array.isArray(stalled)) report.billingStalled = stalled.filter((code) => typeof code === 'string' && /^[a-z_]{1,40}$/.test(code)).slice(0, 10);
+  const mismatchAt = body.chain?.verification?.mismatchAt;
+  if (typeof mismatchAt === 'string' && mismatchAt.length <= 32 && !Number.isNaN(Date.parse(mismatchAt))) report.chainMismatchAt = Date.parse(mismatchAt);
   return report;
 }

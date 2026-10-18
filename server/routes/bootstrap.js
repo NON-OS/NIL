@@ -3,6 +3,7 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import config from '../config.js';
 import transferFee from '../services/transferFee.js';
+import verifyHealth from '../chain/verifyHealth.js';
 import buildId from '../lib/buildId.js';
 import toUser from '../mappers/toUser.js';
 import userRows from '../services/userRows.js';
@@ -86,7 +87,16 @@ router.get(
       // members with a voting key send built-in AI requests anonymously while this is on
       aiAnonymous: config.ai.enabled && creditSetting.on(),
       nox: config.nox.enabled
-        ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer, transferFeeBps: transferFee.current().bps }
+        ? {
+            token: config.nox.token,
+            chainId: config.nox.chainId,
+            symbol: config.nox.symbol,
+            decimals: config.nox.decimals,
+            explorer: config.nox.explorer,
+            transferFeeBps: transferFee.current().bps,
+            // admins are told when chain reads can't be verified; nobody else needs the plumbing
+            ...(req.user.isAdmin ? { verification: verifyHealth.report() } : {}),
+          }
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
       stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei, registry: config.stealth.registry } : null,

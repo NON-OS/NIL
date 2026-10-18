@@ -10,6 +10,7 @@ import InvoiceCard from '../plan/InvoiceCard';
 import InvoiceHistory from '../plan/InvoiceHistory';
 import RevenueCard from '../plan/RevenueCard';
 import TransferFeeNotice from '../bounty/TransferFeeNotice';
+import VerificationNotice from '../bounty/VerificationNotice';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import plan from '../../actions/plan';
@@ -68,6 +69,7 @@ export default function PlanSettings() {
           </div>
           <p style={{ margin: 0 }}>{planSummary(status).detail}</p>
           <TransferFeeNotice />
+          <VerificationNotice />
           {status.enforced && (
             <div className="plan-facts">
               <StatTile label="Price" value={usd(status.priceUsd ?? 0)} sub={`per ${status.periodDays} days, plus ${usd(status.seatUsd ?? 0)} a seat above ${free}`} />

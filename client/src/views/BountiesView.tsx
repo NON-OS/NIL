@@ -12,6 +12,7 @@ import PaymentList from '../components/bounty/PaymentList';
 import TreasuryCard from '../components/bounty/TreasuryCard';
 import PlanNotice from '../components/plan/PlanNotice';
 import TransferFeeNotice from '../components/bounty/TransferFeeNotice';
+import VerificationNotice from '../components/bounty/VerificationNotice';
 import StealthPayouts from '../components/bounty/StealthPayouts';
 import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
@@ -87,6 +88,7 @@ export default function BountiesView() {
       <div className="page page-narrow">
         <PlanNotice what="New bounties" />
         <TransferFeeNotice />
+        <VerificationNotice />
         <div className="bounty-kpis">
           <StatTile label="Open bounties" value={sum(open)} sub={`${open.length} task${open.length === 1 ? '' : 's'}`} />
           <StatTile label="Ready to pay" value={sum(owed)} sub={owed.length ? `${owed.length} finished` : 'Nothing owed'} />

@@ -15,6 +15,12 @@ export default function workspaceSpec(config, workspace) {
     TRUST_PROXY: '1',
     NOX_RPC_URL: rpc,
   };
+  if (rpc !== 'off' && app.verifierMode !== 'off') {
+    env.NOX_VERIFIER_MODE = app.verifierMode;
+    env.NOX_VERIFIER_KEY = app.verifierKey;
+    // in shadow mode the verifier is a second address next to the node, through its own relay
+    if (app.verifierMode === 'shadow') env.NOX_VERIFIER_URL = app.egress === 'rpc-only' ? `http://${caddy.container}:${caddy.verifierRelayPort}` : app.verifierUrl;
+  }
   if (app.treasury) env.PLAN_TREASURY = app.treasury;
   if (app.treasury && app.invoiceKey && workspace.invoiceSlot !== null && workspace.invoiceSlot < app.invoiceSlots) {
     env.PLAN_INVOICE_SLOT = `${workspace.invoiceSlot}/${app.invoiceSlots}`;

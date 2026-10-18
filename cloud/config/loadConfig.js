@@ -59,6 +59,17 @@ export default function loadConfig(env = process.env) {
   const rpcUrl = read.raw('CLOUD_RPC_URL') === 'off' ? 'off' : read.url('CLOUD_RPC_URL', { protocols: ['https:', 'http:'] });
   if (!rpcUrl) read.fail('CLOUD_RPC_URL is not set. Point it at your own Ethereum node (see README), or set it to off to turn on-chain features and billing off.');
   if (rpcUrl === 'off' && treasury) read.warn('CLOUD_RPC_URL is off, so workspaces can’t check payments and run in community mode despite CLOUD_PLAN_TREASURY.');
+  // How workspaces use Nil's verifier: off, shadow (check on the side, the launch default) or
+  // enforce (act only on proven answers; CLOUD_RPC_URL is then the verifier itself).
+  const verifierKey = read.text('CLOUD_VERIFIER_KEY');
+  if (verifierKey && verifierKey.length < 32) read.fail('CLOUD_VERIFIER_KEY must be at least 32 characters. Make one with: openssl rand -hex 32');
+  const verifierUrl = read.url('CLOUD_VERIFIER_URL', { protocols: ['http:', 'https:'] });
+  let verifierMode = rpcUrl === 'off' ? 'off' : read.oneOf('CLOUD_VERIFIER_MODE', ['off', 'shadow', 'enforce'], 'shadow');
+  if (verifierMode === 'enforce' && !verifierKey) read.fail('CLOUD_VERIFIER_MODE=enforce needs the verifier’s key: set VERIFIER_KEY in .env, which the control plane gets as CLOUD_VERIFIER_KEY, and point CLOUD_RPC_URL at the verifier.');
+  if (verifierMode === 'shadow' && (!verifierKey || !verifierUrl)) {
+    read.warn(`CLOUD_VERIFIER_MODE=shadow, but ${verifierKey ? 'CLOUD_VERIFIER_URL' : 'VERIFIER_KEY in .env'} is not set, so workspaces’ chain reads aren’t checked. Run Nil’s verifier (docker-compose.verifier.yml) to turn it on.`);
+    verifierMode = 'off';
+  }
   const egress = read.oneOf('CLOUD_EGRESS', ['rpc-only', 'open'], 'rpc-only');
 
   const sourceUrl = read.url('CLOUD_SOURCE_URL');
@@ -125,6 +136,9 @@ export default function loadConfig(env = process.env) {
       invoiceSlots,
       invoiceKey: invoiceKey || null,
       rpcUrl,
+      verifierMode,
+      verifierKey: verifierMode === 'off' ? null : verifierKey,
+      verifierUrl: verifierMode === 'shadow' ? verifierUrl : null,
       egress,
       extraEnv,
       tmpfsMb: read.number('CLOUD_APP_TMPFS_MB', 64, { min: 8, max: 4096 }),
@@ -148,6 +162,7 @@ export default function loadConfig(env = process.env) {
       controlUpstream,
       askUpstream,
       rpcRelayPort: read.number('CLOUD_RPC_RELAY_PORT', 8545, { min: 1, max: 65535 }),
+      verifierRelayPort: read.number('CLOUD_VERIFIER_RELAY_PORT', 8546, { min: 1, max: 65535 }),
       streamCloseDelayMin: read.number('CLOUD_STREAM_CLOSE_DELAY_MIN', 5, { max: 120 }),
     }),
     signup: Object.freeze({

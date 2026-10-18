@@ -204,6 +204,10 @@ export default function mockChain() {
           const r = receipts.get(params[0].toLowerCase());
           result = r && r.blockNumber <= block ? receiptOut(params[0].toLowerCase(), r) : null;
         } else if (method === 'eth_getLogs') result = logs(params[0]);
+        else if (method === 'eth_getBlockReceipts') {
+          const want = String(params[0]).toLowerCase();
+          result = [...receipts].filter(([, r]) => r.blockNumber <= block && blockHash(r.blockNumber) === want).map(([hash, r]) => receiptOut(hash, r));
+        }
         else if (method === 'eth_getBalance') result = hex(ethBalances.get(params[0].toLowerCase()) ?? 0n);
         else if (method === 'eth_getTransactionCount') result = hex(nonces.get(params[0].toLowerCase()) ?? 0);
         else if (method === 'eth_estimateGas') result = params[0].data && params[0].data !== '0x' ? '0xea60' : '0x5208';

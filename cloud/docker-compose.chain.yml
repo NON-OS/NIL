@@ -6,9 +6,10 @@
 # Turn it on in /opt/nil/.env: set COMPOSE_FILE=docker-compose.yml:docker-compose.chain.yml and
 # RETH_IMAGE and LIGHTHOUSE_IMAGE to the clients' current stable release tags (an outdated
 # client stops following the chain at the next network upgrade). Then set
-# CLOUD_RPC_URL=http://reth:8545 in cloud.env. deploy/provision.sh --with-chain writes the
-# engine API secret to /opt/nil/chain/jwt.hex. Peer-to-peer traffic is outbound only, since
-# the firewall leaves 30303 and 9000 closed; both clients sync fine that way.
+# CLOUD_RPC_URL=http://reth:8545 in cloud.env, or http://verifier:8545 once Nil's verifier
+# (docker-compose.verifier.yml) runs in enforce mode in front of this node. deploy/provision.sh
+# --with-chain writes the engine API secret to /opt/nil/chain/jwt.hex. Peer-to-peer traffic is
+# outbound only, since the firewall leaves 30303 and 9000 closed; both clients sync fine that way.
 services:
   reth:
     image: ${RETH_IMAGE:?set RETH_IMAGE in .env to a current Reth release}
@@ -25,7 +26,7 @@ services:
     volumes:
       - reth-data:/data
       - ./chain/jwt.hex:/jwt/jwt.hex:ro
-    # chain: reached by Caddy's relay only. p2p: the way out to other Ethereum nodes.
+    # chain: reached by Caddy's relay or the verifier only. p2p: the way out to other Ethereum nodes.
     networks:
       - chain
       - p2p
@@ -47,15 +48,21 @@ services:
     restart: unless-stopped
     # Checkpoint sync downloads a recent finalized state once, from the URL below, instead of
     # replaying the whole beacon chain. It is the only request that goes to a fixed third party.
+    # The beacon API (--http) is for Nil's verifier, which reads its light-client data from it;
+    # it is reachable on the internal chain network only and never published. Current Lighthouse
+    # releases serve the light-client endpoints by default (only --disable-light-client-server
+    # turns them off).
     command: >-
       lighthouse bn --network mainnet --datadir /data
       --execution-endpoint http://reth:8551 --execution-jwt /jwt/jwt.hex
       --checkpoint-sync-url ${CHECKPOINT_SYNC_URL:-https://mainnet.checkpoint.sigp.io}
       --disable-deposit-contract-sync
+      --http --http-address 0.0.0.0 --http-port 5052
     volumes:
       - lighthouse-data:/data
       - ./chain/jwt.hex:/jwt/jwt.hex:ro
     networks:
+      - chain
       - p2p
     cap_drop:
       - ALL

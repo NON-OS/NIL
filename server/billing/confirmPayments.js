@@ -9,6 +9,7 @@ import logLimited from '../lib/logLimited.js';
 import feeAt from '../services/feeAt.js';
 
 const DAY = 86_400_000;
+const OUT_OF_RANGE = 'This transaction is in a block older than Nil’s verifier can check (about 27 hours), so it can’t be counted automatically.';
 const GIVEN_UP = {
   seen: 'The transaction never showed up on-chain. If it is mined after all, Nil still finds it.',
   confirming: 'The transaction left the chain and didn’t come back in time. If it does, Nil still finds it.',
@@ -86,8 +87,10 @@ export default async function confirmPayments(now = Date.now()) {
       if (unreachable) throw unreachable;
       await follow(row, await readReceipt(row.tx_hash), final, now);
     } catch (err) {
-      // one odd row or one refused receipt mustn't hold up the rest; it's tried again next minute
-      if (!giveUp(row, now)) logLimited('billing:confirm', 'warn', 'billing', 'A Nil Pro payment couldn’t be checked on the Ethereum node. It is tried again every minute.', err);
+      // a block older than the verifier can check is noted for the operator; anything else is one
+      // odd row or one refused receipt, which mustn't hold up the rest. Both are tried again next minute.
+      if (err.reason === 'out-of-range') sql.run('UPDATE billing_payments SET problem = ?, checked_at = ? WHERE id = ?', OUT_OF_RANGE, now, row.id);
+      else if (!giveUp(row, now)) logLimited('billing:confirm', 'warn', 'billing', 'A Nil Pro payment couldn’t be checked on the Ethereum node. It is tried again every minute.', err);
     }
   }
 }

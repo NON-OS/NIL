@@ -30,7 +30,7 @@ run install -m 644 "$RELEASE/deploy/smoke-check.mjs" "$RELEASE/deploy/hosted.env
 run cp -r "$RELEASE/deploy/host/." "$NIL_DIR/deploy/host/"
 run cp -r "$RELEASE/deploy/single/." "$NIL_DIR/deploy/single/"
 if [ "$NIL_MODE" = hosted ]; then
-  run install -m 644 "$RELEASE/cloud/docker-compose.yml" "$RELEASE/cloud/docker-compose.chain.yml" "$NIL_DIR/"
+  run install -m 644 "$RELEASE/cloud/docker-compose.yml" "$RELEASE/cloud/docker-compose.chain.yml" "$RELEASE/cloud/docker-compose.verifier.yml" "$NIL_DIR/"
   run install -m 644 "$RELEASE/cloud/.env.example" "$NIL_DIR/examples/cloud.env.example"
   run install -m 644 "$RELEASE/cloud/workspace.env.example" "$NIL_DIR/examples/workspace.env.example"
   settings=(cloud.env:examples/cloud.env.example workspace.env:examples/workspace.env.example)
