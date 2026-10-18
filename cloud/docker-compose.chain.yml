@@ -14,9 +14,13 @@ services:
     image: ${RETH_IMAGE:?set RETH_IMAGE in .env to a current Reth release}
     container_name: nil-reth
     restart: unless-stopped
+    # The proof window lets eth_getProof answer for recent blocks, not only the tip, so a light
+    # client or verifier in front of this node can check the server's reads. 10,000 blocks is
+    # about a day and a half, roughly the state history a full node keeps anyway.
     command: >-
       node --chain mainnet --full --datadir /data
       --http --http.addr 0.0.0.0 --http.port 8545 --http.api eth,net,web3
+      --rpc.eth-proof-window 10000
       --authrpc.addr 0.0.0.0 --authrpc.port 8551 --authrpc.jwtsecret /jwt/jwt.hex
     volumes:
       - reth-data:/data
