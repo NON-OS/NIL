@@ -57,7 +57,7 @@ From a clean checkout with `npm ci` done:
    npm run ceremony:finish -- ceremony/ballot_0005.zkey --beacon-block 23600150
    ```
 
-   This applies the beacon, verifies the entire chain from phase 1 through every contribution, and only if it verifies installs `client/public/zk/ballot.zkey`, `client/public/zk/ballot.wasm`, `server/votes/ballotKey.json` and the new `circuits/CEREMONY.json`. It prints each contribution's name and hash. Check them against what the contributors posted.
+   This applies the beacon, verifies the entire chain from phase 1 through every contribution, refuses fewer than three contributors (`CEREMONY_MIN_CONTRIBUTORS` changes that) and a final key whose gamma equals its delta (a setup phase 2 never touched, which anyone could forge proofs for), and only then installs `client/public/zk/ballot.zkey`, `client/public/zk/ballot.wasm`, `server/votes/ballotKey.json` and the new `circuits/CEREMONY.json`. It prints each contribution's name and hash. Check them against what the contributors posted.
 
 5. Run `npm test`, then commit the four files. Votes started with the old keys can't be finished with the new ones, so do this before anyone relies on encrypted votes, or let open ones close first.
 

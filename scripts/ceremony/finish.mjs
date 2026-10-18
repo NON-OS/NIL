@@ -13,6 +13,8 @@ import ptauFile from './ptauFile.mjs';
 import beaconHash from './beaconHash.mjs';
 
 const ITERATIONS_EXP = 10;
+// fewer independent people than this and the ceremony isn't worth the name
+const MIN_PEOPLE = Number(process.env.CEREMONY_MIN_CONTRIBUTORS || 3);
 const args = process.argv.slice(2);
 const option = (name) => (args.includes(name) ? args[args.indexOf(name) + 1] : null);
 const input = args.find((arg) => arg.endsWith('.zkey'));
@@ -42,11 +44,16 @@ const chain = said
   .map(([, n, name, hex]) => ({ contribution: Number(n), name: name.trim(), hash: hex.replace(/\s+/g, '') }))
   .sort((a, b) => a.contribution - b.contribution);
 const people = chain.filter((c) => c.name !== `Ethereum block ${block}`);
+if (people.length < MIN_PEOPLE) throw new Error(`Only ${people.length} contributions; the ceremony needs at least ${MIN_PEOPLE}. Nothing was installed.`);
+// A key whose gamma and delta are equal never went through phase 2, and anyone can forge proofs
+// for it. Verifiers drained in 2026 had exactly this, so it's checked here before installing.
+const vkey = await zKey.exportVerificationKey(final, quiet);
+if (JSON.stringify(vkey.vk_gamma_2) === JSON.stringify(vkey.vk_delta_2)) throw new Error('The final key has gamma equal to delta, so phase 2 never took effect. Nothing was installed.');
 
 const out = path.resolve('client/public/zk');
 fs.copyFileSync(compiled.wasm, path.join(out, 'ballot.wasm'));
 fs.copyFileSync(final, path.join(out, 'ballot.zkey'));
-fs.writeFileSync('server/votes/ballotKey.json', `${JSON.stringify(await zKey.exportVerificationKey(final, quiet), null, 2)}\n`);
+fs.writeFileSync('server/votes/ballotKey.json', `${JSON.stringify(vkey, null, 2)}\n`);
 const sha = (file) => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
 const record = {
   circuit: 'circuits/ballot.circom',
