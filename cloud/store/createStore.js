@@ -108,6 +108,7 @@ export default function createStore(db, now = () => Date.now()) {
   const events = {
     add: (workspaceId, kind, detail = null) => run('INSERT INTO events (workspace_id, at, kind, detail) VALUES (?, ?, ?, ?)', workspaceId, now(), kind, detail),
     recent: (workspaceId, limit = 20) => all('SELECT at, kind, detail FROM events WHERE workspace_id = ? ORDER BY id DESC LIMIT ?', workspaceId, limit),
+    lastAt: (workspaceId, kind) => get('SELECT MAX(at) AS at FROM events WHERE workspace_id = ? AND kind = ?', workspaceId, kind).at ?? null,
   };
 
   const backups = {

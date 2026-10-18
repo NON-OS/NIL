@@ -14,6 +14,8 @@ export default function workspaceSpec(config, workspace) {
     APP_URL: `https://${workspace.name}.${config.domain}`,
     TRUST_PROXY: '1',
     NOX_RPC_URL: rpc,
+    // the plan's disk, as the storage quota the app enforces on uploads (Docker can't cap a volume)
+    WORKSPACE_STORAGE_MB: String(Math.floor(plan.diskBytes / 1024 ** 2)),
   };
   if (app.treasury) env.PLAN_TREASURY = app.treasury;
   if (app.treasury && app.invoiceKey && workspace.invoiceSlot !== null && workspace.invoiceSlot < app.invoiceSlots) {

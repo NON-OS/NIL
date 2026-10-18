@@ -9,6 +9,9 @@ import collectUsage from '../ops/collectUsage.js';
 import checkHost from '../ops/checkHost.js';
 import nextDailyRun from '../ops/nextDailyRun.js';
 import nameStatus from '../names/nameStatus.js';
+import resumeWorkspace from '../provisioning/resumeWorkspace.js';
+import states from '../provisioning/states.js';
+import workspaceSpec from '../runtime/workspaceSpec.js';
 import testContext from './helpers/testContext.js';
 
 const OWNER = `0x${'c'.repeat(40)}`;
@@ -73,14 +76,39 @@ test('claims: the token is forgotten once set up; untouched workspaces are remov
 });
 
 test('usage records disk and the member count the app reports, and flags plans outgrown', async () => {
-  const ctx = testContext({ env: { CLOUD_PLANS: 'tiny:cpus=0.5,memory=256m,pids=64,disk=1k' } });
+  const ctx = testContext({ env: { CLOUD_PLANS: 'tiny:cpus=0.5,memory=256m,pids=64,disk=4k', CLOUD_DISK_SUSPEND_PERCENT: '200' } });
   const ws = await running(ctx);
+  assert.equal(ctx.driver.containers.get(ws.id).spec.env.WORKSPACE_STORAGE_MB, '0', 'the plan’s disk is the app’s storage quota');
   ctx.driver.volumes.get(ws.volume).set('uploads/big', Buffer.alloc(4096));
   await collectUsage(ctx);
   const usage = ctx.store.usage.all().get(ws.id);
   assert.equal(usage.members, 4);
   assert.ok(usage.diskBytes > 4096);
   assert.equal(ctx.alerts.at(-1).event, 'workspace.over_disk');
+  assert.equal(ctx.store.workspaces.get(ws.id).state, 'active', 'over the plan but under the suspension line');
+});
+
+test('a workspace far past its plan’s disk is suspended with a notice, and gets time after a resume', async () => {
+  let now = Date.UTC(2026, 9, 21);
+  const ctx = testContext({ now: () => now, env: { CLOUD_PLANS: 'small:cpus=1,memory=256m,pids=64,disk=10k' } });
+  const ws = await running(ctx);
+  ctx.driver.volumes.get(ws.volume).set('uploads/big', Buffer.alloc(13 * 1024));
+  await collectUsage(ctx);
+  const suspended = ctx.store.workspaces.get(ws.id);
+  assert.equal(suspended.state, 'suspended');
+  assert.equal(suspended.suspendReason, states.reasons.disk);
+  assert.equal(ctx.alerts.at(-1).event, 'workspace.disk_suspended');
+  assert.equal(ctx.alerts.at(-1).severity, 'critical');
+
+  await resumeWorkspace(ctx, ws.id);
+  now += 3_600_000;
+  await collectUsage(ctx);
+  assert.equal(ctx.store.workspaces.get(ws.id).state, 'active', 'the owner gets a day to clean up');
+  assert.equal(ctx.alerts.at(-1).event, 'workspace.over_disk');
+  now += 24 * 3_600_000;
+  await collectUsage(ctx);
+  assert.equal(ctx.store.workspaces.get(ws.id).state, 'suspended');
+  assert.equal(workspaceSpec(testContext().config, { ...ws, plan: 'pro' }).env.WORKSPACE_STORAGE_MB, String(50 * 1024));
 });
 
 test('host checks catch a degraded RAID mirror', async () => {

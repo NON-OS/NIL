@@ -167,7 +167,11 @@ export default function loadConfig(env = process.env) {
       maxRestartsPerHour: read.number('CLOUD_MAX_RESTARTS_PER_HOUR', 3, { min: 1 }),
       diskFreeAlertPercent: read.number('CLOUD_DISK_FREE_ALERT_PERCENT', 15, { max: 99 }),
     }),
-    usage: Object.freeze({ intervalMin: read.number('CLOUD_USAGE_INTERVAL_MIN', 15, { min: 1 }) }),
+    usage: Object.freeze({
+      intervalMin: read.number('CLOUD_USAGE_INTERVAL_MIN', 15, { min: 1 }),
+      suspendPercent: read.number('CLOUD_DISK_SUSPEND_PERCENT', 120, { max: 10_000 }),
+      resumeGraceHours: read.number('CLOUD_DISK_RESUME_GRACE_HOURS', 24, { max: 24 * 365 }),
+    }),
     alerts: Object.freeze({
       webhook: read.url('CLOUD_ALERT_WEBHOOK', { protocols: ['https:', 'http:'] }),
       token: read.text('CLOUD_ALERT_TOKEN'),

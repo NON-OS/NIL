@@ -42,6 +42,8 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     TRUST_PROXY: '1',
     // rpc-only egress: the chain is reached through Caddy's relay, never directly
     NOX_RPC_URL: 'http://nil-caddy:8545',
+    // the standard plan's 5 GB, as the app's storage quota
+    WORKSPACE_STORAGE_MB: '5120',
     PLAN_TREASURY: `0x${'7'.repeat(40)}`,
     // the first workspace's slice of the invoice amounts, with the key every workspace shares
     PLAN_INVOICE_SLOT: '0/1000',
