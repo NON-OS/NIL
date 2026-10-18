@@ -27,7 +27,7 @@ import agents from './migrations/026-agents.js';
 import smartWalletBallots from './migrations/027-smart-wallet-ballots.js';
 import tokenFees from './migrations/028-token-fees.js';
 import passkeyWraps from './migrations/029-passkey-wraps.js';
-import signInHardening from './migrations/029-sign-in-hardening.js';
+import signInHardening from './migrations/030-sign-in-hardening.js';
 
 // Append new migrations to the end. Never edit one that has shipped.
 // An object entry with `rebuild: true` runs with foreign keys off, which SQLite
