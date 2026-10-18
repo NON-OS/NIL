@@ -19,6 +19,8 @@ export default function fakeDriver() {
   const fail = {};
   const unhealthy = new Set();
   const probes = new Map();
+  // images "on the server", for hasImage; ensureImage accepts any
+  const images = new Set();
 
   const container = (id) => {
     const c = containers.get(id);
@@ -45,6 +47,10 @@ export default function fakeDriver() {
     probes,
 
     upstream: (id) => `nil-${id}:3000`,
+    images,
+    async hasImage(image) {
+      return images.has(image);
+    },
     async ensureImage(image) {
       step('ensureImage', image);
     },

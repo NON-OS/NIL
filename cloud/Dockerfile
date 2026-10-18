@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1
 
 # The Nil control plane. Build from the repository root with
-#   docker build -t nonos/nil-cloud:<version> cloud
+#   docker build -t localhost/nonos/nil-cloud:<version> cloud
 # (deploy/release.sh does this, with labels). It needs the Docker socket at run time; see
 # docker-compose.yml for how it is mounted and why the container is still locked down.
 FROM node:22-alpine

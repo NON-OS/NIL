@@ -82,6 +82,22 @@ test('a backup can rebuild a workspace this control plane has never seen', async
   assert.equal(rebuilt.state, 'active');
 });
 
+test('a rebuilt workspace runs an image from its manifest only if it is ours and already here', async () => {
+  const restoreAs = async (ctx, name, image) => {
+    const tar = Readable.from([Buffer.alloc(1024)]);
+    return restoreWorkspace(ctx, { name, tar, manifest: { name, owner: OWNER, plan: 'standard', image } });
+  };
+  const ctx = testContext({ env: { CLOUD_APP_IMAGE: 'localhost/nonos/nil:3.0.1' } });
+  ctx.driver.images.add('localhost/nonos/nil:3.0.0');
+  ctx.driver.images.add('someone/else:latest');
+  assert.equal((await restoreAs(ctx, 'older', 'localhost/nonos/nil:3.0.0')).image, 'localhost/nonos/nil:3.0.0');
+  assert.equal((await restoreAs(ctx, 'foreign', 'someone/else:latest')).image, 'localhost/nonos/nil:3.0.1', 'another repository is never run, even when present');
+  assert.equal((await restoreAs(ctx, 'missing', 'localhost/nonos/nil:9.9.9')).image, 'localhost/nonos/nil:3.0.1', 'an image that isn’t here maps to the current one');
+  assert.equal((await restoreAs(ctx, 'hub', 'nonos/nil:3.0.0')).image, 'localhost/nonos/nil:3.0.1');
+  const asked = ctx.driver.calls.filter(([op]) => op === 'ensureImage').map(([, image]) => image);
+  assert.deepEqual([...new Set(asked)].sort(), ['localhost/nonos/nil:3.0.0', 'localhost/nonos/nil:3.0.1']);
+});
+
 test('the nightly run backs up every workspace and the control database, and prunes old files', async () => {
   const ctx = testContext({ backups: true });
   for (const name of ['one', 'two']) await provisionWorkspace(ctx, createWorkspace(ctx, { name, owner: OWNER }).id);

@@ -81,10 +81,14 @@ export default function dockerDriver({ config, log, client = dockerClient(config
 
     upstream: (id) => `${containerName(id)}:${app.port}`,
 
+    hasImage: async (image) => Boolean(await client.quiet('GET', `/images/${encodeURIComponent(image)}/json`)),
+
+    // Images arrive with deploy/release.sh, so by default (CLOUD_IMAGE_PULL=never) nothing is
+    // ever pulled: a missing image is an error, never a download from whoever owns that name.
     async ensureImage(image) {
-      const present = Boolean(await client.quiet('GET', `/images/${encodeURIComponent(image)}/json`));
+      const present = await driver.hasImage(image);
       if (present && docker.pull !== 'always') return;
-      if (docker.pull === 'never') throw new Error(`The image ${image} isn’t on this server, and CLOUD_IMAGE_PULL is never.`);
+      if (docker.pull === 'never') throw new Error(`The image ${image} isn’t on this server. Ship it with deploy/release.sh; CLOUD_IMAGE_PULL is never, so it isn’t pulled.`);
       const res = await client.stream('POST', '/images/create', { query: { fromImage: image }, timeout: 900_000 });
       // progress arrives as JSON lines, and a failure can arrive mid-stream with status 200
       let rest = '';

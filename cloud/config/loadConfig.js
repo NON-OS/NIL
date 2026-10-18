@@ -34,7 +34,7 @@ export default function loadConfig(env = process.env) {
   if (port === internalPort) read.fail('CLOUD_PORT and CLOUD_INTERNAL_PORT must differ: the internal port must never be public.');
   const dataDir = path.resolve(read.text('CLOUD_DATA_DIR', 'data'));
 
-  const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example nonos/nil:3.0.0.');
+  const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example localhost/nonos/nil:3.0.0.');
   const user = read.text('CLOUD_APP_USER', '1000:1000');
   if (!/^\d+:\d+$/.test(user)) read.fail('CLOUD_APP_USER must be uid:gid, for example 1000:1000.');
 
@@ -115,7 +115,8 @@ export default function loadConfig(env = process.env) {
     docker: Object.freeze({
       socket: read.text('CLOUD_DOCKER_SOCKET', '/var/run/docker.sock'),
       apiVersion: /^1\.\d{2}$/.test(read.raw('CLOUD_DOCKER_API')) ? read.raw('CLOUD_DOCKER_API') : '1.44',
-      pull: read.oneOf('CLOUD_IMAGE_PULL', ['missing', 'never', 'always'], 'missing'),
+      // images arrive with deploy/release.sh; pulling is for a registry the operator controls
+      pull: read.oneOf('CLOUD_IMAGE_PULL', ['missing', 'never', 'always'], 'never'),
     }),
     app: Object.freeze({
       image,

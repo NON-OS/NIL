@@ -1,23 +1,30 @@
 import HttpError from '../lib/HttpError.js';
 import workspaceSpec from '../runtime/workspaceSpec.js';
 import createWorkspace from './createWorkspace.js';
+import restoreImage from './restoreImage.js';
 import waitHealthy from './waitHealthy.js';
+import withLock from './withLock.js';
 
 // Replaces a workspace's data with a backup (already decrypted, as a tar stream). The backup
 // goes into a new volume; the old one is removed only once the restored workspace is healthy,
 // so a damaged backup or a failed start leaves the workspace as it was. A workspace this
-// control plane doesn't know (a restore onto a new server) is recreated from the manifest.
+// control plane doesn't know (a restore onto a new server) is recreated from the manifest, on
+// an image this server already has (see restoreImage.js).
 export default async function restoreWorkspace(ctx, { name, tar, manifest = null, owner = null }) {
   const existing = ctx.store.workspaces.byName(name);
   let workspace = existing;
-  if (existing) {
-    if (!ctx.store.workspaces.transition(existing.id, ['active', 'stopped', 'suspended', 'failed'], 'restoring')) throw new HttpError(409, `The workspace is ${existing.state}, so it can’t be restored now.`);
-  } else {
+  if (!existing) {
     const plan = ctx.config.plans[manifest?.plan] ? manifest.plan : ctx.config.defaultPlan;
-    workspace = createWorkspace(ctx, { name, owner: owner ?? manifest?.owner, plan, image: manifest?.image ?? ctx.config.app.image, anyName: true });
-    ctx.store.workspaces.transition(workspace.id, ['provisioning'], 'restoring');
+    const image = await restoreImage(ctx, manifest?.image);
+    workspace = createWorkspace(ctx, { name, owner: owner ?? manifest?.owner, plan, image, anyName: true });
   }
-  const { id } = workspace;
+  return withLock(ctx, workspace.id, 'restore', () => restore(ctx, { workspace, existing, tar, manifest }));
+}
+
+async function restore(ctx, { workspace, existing, tar, manifest }) {
+  const { id, name } = workspace;
+  const from = existing ? ['active', 'stopped', 'suspended', 'failed'] : ['provisioning'];
+  if (!ctx.store.workspaces.transition(id, from, 'restoring')) throw new HttpError(409, `The workspace is ${ctx.store.workspaces.get(id)?.state}, so it can’t be restored now.`);
   const volume = `nil-${id}-r${ctx.store.now().toString(36)}`;
 
   try {

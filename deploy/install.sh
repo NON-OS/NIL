@@ -23,6 +23,24 @@ for archive in "$RELEASE"/*.tar.gz; do
   run docker load --quiet --input "$archive"
 done
 
+# Releases up to 3.0.0 named the images nonos/nil and nonos/nil-cloud, which Docker reads as an
+# account on Docker Hub that NØNOS doesn't own. Switch .env to the local names, and give the
+# images already here those names as well, so the running version and a rollback still find them.
+renames=(NIL_IMAGE:nonos/nil:localhost/nonos/nil)
+[ "$NIL_MODE" = single ] || renames+=(NIL_CLOUD_IMAGE:nonos/nil-cloud:localhost/nonos/nil-cloud)
+for entry in "${renames[@]}"; do
+  IFS=: read -r key old new <<< "$entry"
+  [ "$(env_get "$NIL_DIR/.env" "$key")" = "$old" ] || continue
+  step "Image name $old -> $new"
+  if docker info > /dev/null 2>&1; then
+    while read -r tag; do
+      run docker tag "$old:$tag" "$new:$tag"
+    done < <(docker image ls --format '{{.Tag}}' "$old" | grep -vx '<none>' || true)
+  fi
+  env_set "$NIL_DIR/.env" "$key" "$new"
+done
+load_env
+
 step "Scripts and compose files"
 run install -d -m 750 "$NIL_DIR/deploy/host" "$NIL_DIR/deploy/single" "$NIL_DIR/examples"
 for script in lib.sh provision.sh install.sh upgrade.sh rollback.sh smoke.sh; do run install -m 755 "$RELEASE/deploy/$script" "$NIL_DIR/deploy/$script"; done

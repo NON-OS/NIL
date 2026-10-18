@@ -5,7 +5,9 @@ name: nil
 
 services:
   nil:
-    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    image: ${NIL_IMAGE:-localhost/nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    # release.sh ships the image over SSH; a missing one is an error, never a download
+    pull_policy: never
     container_name: nil-app
     restart: unless-stopped
     env_file:

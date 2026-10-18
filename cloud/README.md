@@ -184,7 +184,9 @@ On your own machine, from a clean checkout of the release you want to run:
 deploy/release.sh --host deploy@203.0.113.10
 ```
 
-It builds the app and control plane images, writes their SBOMs and a `SHA256SUMS` file, copies everything to `/opt/nil/releases/<version>`, checks the checksums on the server, loads the images and installs the scripts and compose files. Nothing starts yet. For wildcard TLS add `--caddy-dns-module github.com/caddy-dns/hetzner` (or your provider's module) and set `CADDY_IMAGE=nil-caddy:2.10.2-dns` in `/opt/nil/.env`. To use your own registry instead of SSH, pass `--registry`.
+It builds the app and control plane images, writes their SBOMs and a `SHA256SUMS` file, copies everything to `/opt/nil/releases/<version>`, checks the checksums on the server, loads the images and installs the scripts and compose files. Nothing starts yet. For wildcard TLS add `--caddy-dns-module github.com/caddy-dns/hetzner` (or your provider's module) and set `CADDY_IMAGE=localhost/nonos/nil-caddy:2.10.2-dns` in `/opt/nil/.env`.
+
+The images are named `localhost/nonos/nil` and `localhost/nonos/nil-cloud`. The `localhost/` prefix means Docker never looks for them on Docker Hub, where `nonos/nil` would be whatever the owner of the `nonos` account put there. Nothing on the server pulls them: the compose files say `pull_policy: never`, the control plane's `CLOUD_IMAGE_PULL` is `never`, and the deploy scripts check that the version they would fall back to is still on the server before they change anything. A restore onto a new server runs the image named in the backup only if it is ours and already there, and otherwise the current one. To ship through a registry instead, pass `--registry` with a registry the foundation controls, set `NIL_IMAGE` and `NIL_CLOUD_IMAGE` in `/opt/nil/.env` to the names there, and set `CLOUD_IMAGE_PULL=missing` only if workspaces should pull from it. A server set up before this change gets the new names from `install.sh`, which also gives the images already there the new names.
 
 ### 6. Configure
 
@@ -344,7 +346,7 @@ node --test cloud/test/          # from the repository root; about 3 seconds
 The tests run every operation against an in-memory fake runtime and a fake Docker Engine on a unix socket, so no Docker is needed. To try the sign-up page locally:
 
 ```bash
-CLOUD_DOMAIN=nil.localhost CLOUD_APP_IMAGE=nonos/nil:dev CLOUD_RPC_URL=off CLOUD_EGRESS=open \
+CLOUD_DOMAIN=nil.localhost CLOUD_APP_IMAGE=localhost/nonos/nil:dev CLOUD_RPC_URL=off CLOUD_EGRESS=open \
 CLOUD_DATA_DIR=/tmp/nil-cloud node cloud/index.js      # then open http://localhost:8080
 ```
 

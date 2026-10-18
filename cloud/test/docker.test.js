@@ -206,6 +206,16 @@ test('pull failures reported mid-stream, missing things on removal, and Caddy re
   assert.equal(await caddyReloader({ ...config, caddy: { ...config.caddy, container: null } })(), false);
 });
 
+test('by default a missing image is an error and nothing is pulled', async (t) => {
+  const { seen, config } = await fakeEngine(t);
+  const { config: defaults } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: config.docker.socket });
+  assert.equal(defaults.docker.pull, 'never');
+  const driver = dockerDriver({ config: defaults, log: { info() {}, warn() {}, error() {} } });
+  assert.equal(await driver.hasImage('nonos/nil:9.9.9'), false);
+  await assert.rejects(driver.ensureImage('nonos/nil:9.9.9'), /isn’t on this server.*isn’t pulled/);
+  assert.equal(seen.filter((r) => r.path.endsWith('/images/create')).length, 0);
+});
+
 test('exec output is demultiplexed and capped, whatever the workspace sends', async () => {
   const flood = Readable.from([frame(1, 'a'.repeat(100)), frame(2, 'err'), frame(1, 'b'.repeat(100))]);
   assert.deepEqual(await readExecOutput(flood, 150), { stdout: `${'a'.repeat(100)}${'b'.repeat(50)}`, stderr: 'err' });

@@ -10,14 +10,16 @@ name: nil
 
 services:
   control:
-    image: ${NIL_CLOUD_IMAGE:-nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    image: ${NIL_CLOUD_IMAGE:-localhost/nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    # release.sh ships the image over SSH; a missing one is an error, never a download
+    pull_policy: never
     container_name: nil-control
     restart: unless-stopped
     env_file:
       - path: cloud.env
     # Set here rather than in cloud.env, so they always match the rest of this file.
     environment:
-      CLOUD_APP_IMAGE: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION}
+      CLOUD_APP_IMAGE: ${NIL_IMAGE:-localhost/nonos/nil}:${NIL_VERSION}
       CLOUD_DATA_DIR: /var/lib/nil-cloud
       CLOUD_CADDYFILE: /srv/caddy/Caddyfile
       CLOUD_CADDY_CONTAINER: nil-caddy

@@ -4,6 +4,7 @@ import dockerDriver from './docker/dockerDriver.js';
 // in terms of workspaces rather than containers, so another one (Podman, Firecracker, a remote
 // host) can be added without touching provisioning, backups or routing:
 //
+//   hasImage(image)             whether the image is on this server already
 //   ensureImage(image)          make the app image available locally
 //   create(spec)                isolated network, data volume and stopped workload for a spec
 //                               (see workspaceSpec.js); safe to call when parts already exist

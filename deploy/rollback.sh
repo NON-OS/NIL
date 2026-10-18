@@ -48,7 +48,7 @@ fi
 
 step "Check the checkpoint"
 if [ "$DRY_RUN" = 0 ]; then
-  saved=$(docker run --rm --network none --read-only --cap-drop ALL --user 1000:1000 --volume nil-data:/data:ro --entrypoint cat "$NIL_IMAGE:$previous" /data/.nil-checkpoint/version 2> /dev/null || true)
+  saved=$(docker run --rm --pull never --network none --read-only --cap-drop ALL --user 1000:1000 --volume nil-data:/data:ro --entrypoint cat "$NIL_IMAGE:$previous" /data/.nil-checkpoint/version 2> /dev/null || true)
   [ "$saved" = "$previous" ] || die "The checkpoint in nil-data is ${saved:-missing}, not $previous. Restore from a backup instead (docs/DEPLOY.md)."
 fi
 

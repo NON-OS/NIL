@@ -23,8 +23,11 @@ ALLOW_DIRTY=0
 PLATFORM=linux/amd64
 CADDY_DNS_MODULE=
 CADDY_VERSION=2.10.2
-APP_REPO=${NIL_IMAGE_NAME:-nonos/nil}
-CLOUD_REPO=${NIL_CLOUD_IMAGE_NAME:-nonos/nil-cloud}
+# localhost/ keeps the names off Docker Hub, where nonos/... would belong to whoever owns that
+# account: the server only ever runs images this script copied to it
+APP_REPO=${NIL_IMAGE_NAME:-localhost/nonos/nil}
+CLOUD_REPO=${NIL_CLOUD_IMAGE_NAME:-localhost/nonos/nil-cloud}
+CADDY_REPO=${NIL_CADDY_IMAGE_NAME:-localhost/nonos/nil-caddy}
 
 usage() {
   cat << 'EOF'
@@ -33,7 +36,8 @@ Usage: release.sh [options]
   --mode hosted|single        hosted builds the app and the control plane (default); single only the app
   --version V                 release version (default: package.json's, plus the commit unless it is tagged vV)
   --host USER@SERVER          copy the release to the server over SSH, check it and load it there
-  --registry PREFIX           push the images to PREFIX/nil and PREFIX/nil-cloud instead
+  --registry PREFIX           also push the images to PREFIX/nil and PREFIX/nil-cloud, a registry
+                              the foundation controls
   --caddy-dns-module MODULE   also build Caddy with a DNS module, for wildcard TLS
                               (e.g. github.com/caddy-dns/hetzner)
   --out DIR                   where to put the release files
@@ -107,8 +111,8 @@ if [ "$MODE" = hosted ]; then
 fi
 if [ -n "$CADDY_DNS_MODULE" ]; then
   run docker build --pull --platform "$PLATFORM" --build-arg "CADDY_VERSION=$CADDY_VERSION" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" \
-    -t "nil-caddy:$CADDY_VERSION-dns" "$ROOT/cloud/caddy"
-  images+=("nil-caddy:$CADDY_VERSION-dns")
+    -t "$CADDY_REPO:$CADDY_VERSION-dns" "$ROOT/cloud/caddy"
+  images+=("$CADDY_REPO:$CADDY_VERSION-dns")
 fi
 
 step "Image archives"
@@ -173,7 +177,7 @@ if [ -n "$REGISTRY" ]; then
       run docker push "$target:$tag"
     done
   done
-  log "On the server, set NIL_IMAGE=$REGISTRY/nil (and NIL_CLOUD_IMAGE=$REGISTRY/nil-cloud) in /opt/nil/.env and docker pull the $VERSION tags."
+  log "On the server, set NIL_IMAGE=$REGISTRY/nil (and NIL_CLOUD_IMAGE=$REGISTRY/nil-cloud) in /opt/nil/.env, docker pull the $VERSION tags, and set CLOUD_IMAGE_PULL=missing in cloud.env only if workspaces should pull from there."
 fi
 
 if [ -n "$HOST" ]; then
