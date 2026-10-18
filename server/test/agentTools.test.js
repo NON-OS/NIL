@@ -28,13 +28,15 @@ async function both(key, name, args, method, path, body) {
 }
 
 before(async () => {
-  srv = await startServer({ env: { AGENT_BULK_LIMIT: '3', AGENT_RATE_LIMIT: '1000', AGENT_MAX_PENDING_APPROVALS: '3' } });
+  srv = await startServer({ env: { AGENT_BULK_LIMIT: '3', AGENT_RATE_LIMIT: '1000', AGENT_MAX_PENDING_APPROVALS: '3', SIGNIN_CONFIRM_MINUTES: '60' } });
   sql = (await import('../db/sql.js')).default;
   tools = (await import('../mcp/tools.js')).default;
   await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NØNOS' });
   for (const [who, name] of [[ana, 'Ana Park'], [ben, 'Ben Ito']]) {
     const inv = await owner('POST', '/api/invites', { role: 'member' });
-    await who.wallet(wallet(), 'invite', { name, inviteToken: inv.data.token });
+    const w = wallet();
+    await who.wallet(w, 'invite', { name, inviteToken: inv.data.token });
+    await who.wallet(w, 'confirm');
   }
   ids.ana = (await ana('GET', '/api/bootstrap')).data.me.id;
   ids.alpha = (await owner('POST', '/api/projects', { name: 'Alpha', color: '#3b4fe0' })).data.project.id;

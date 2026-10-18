@@ -159,11 +159,11 @@ const session = {
     }
   },
 
-  async signOutEverywhere() {
+  async signOutEverywhere(keys = false) {
     try {
-      await http.post('/me/sign-out-everywhere');
+      await http.post('/me/sign-out-everywhere', { keys });
     } finally {
-      signedOut('Signed out on every device.');
+      signedOut(keys ? 'Signed out on every device, and your access keys were revoked.' : 'Signed out on every device.');
     }
   },
 };

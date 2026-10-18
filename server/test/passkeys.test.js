@@ -114,6 +114,7 @@ test('only the owner of a passkey sees, renames, marks or removes it', async () 
 
 test('a passkey is never the only way back: a wallet wrap or a saved recovery kit must exist', async () => {
   // Ben's keys are on his first wallet only. A spare wallet without a wrap doesn't count.
+  await ben.wallet(wallets.ben, 'confirm');
   assert.equal((await ben.wallet(wallets.benSpare, 'add')).status, 200);
   const removeFirst = await ben('DELETE', `/api/me/credentials/${await credentialOf(ben, wallets.ben.address)}`);
   assert.equal(removeFirst.status, 409);
@@ -131,6 +132,7 @@ test('a passkey is never the only way back: a wallet wrap or a saved recovery ki
 
   // Cat has keys but no wallet holds them any more and she saved no kit: no passkey yet
   await publishKey(cat, wallets.cat);
+  await cat.wallet(wallets.cat, 'confirm');
   await cat.wallet(wallets.catSpare, 'add');
   assert.equal((await cat('DELETE', `/api/me/credentials/${await credentialOf(cat, wallets.cat.address)}`)).status, 200);
   const refused = await cat('POST', '/api/me/passkeys', passkeyBody());

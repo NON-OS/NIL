@@ -5,8 +5,8 @@ import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import useStore from '../../state/useStore';
 import identity from '../../actions/identity';
-import session from '../../actions/session';
 import dates from '../../lib/dates';
+import SignOutEverywhere from './SignOutEverywhere';
 import type SecurityOverview from '../../types/SecurityOverview';
 import PrivatePayouts from './PrivatePayouts';
 import BackupWalletCard from './BackupWalletCard';
@@ -26,9 +26,12 @@ export default function SecuritySettings() {
   const guest = useStore((s) => s.guest);
   const [data, setData] = useState<SecurityOverview | null>(null);
   const [linking, setLinking] = useState(false);
+  // until when a wallet that's already linked confirmed this session, which linking needs first
+  const [confirmedUntil, setConfirmedUntil] = useState(0);
   const cryptoTools = useCryptoTools();
   const flow = useWalletFlow();
   const afterReset = useRoute().query.get('reset') === '1';
+  const confirmed = confirmedUntil > Date.now();
 
   const refresh = useCallback(() => identity.overview().then(setData).catch(toast.error), []);
   useEffect(() => {
@@ -38,7 +41,14 @@ export default function SecuritySettings() {
   const link = async () => {
     setLinking(true);
     try {
+      // checked at the click, since the page may have sat open past the confirmation's few minutes
+      if (confirmedUntil <= Date.now()) {
+        setConfirmedUntil((await identity.confirm()).until);
+        toast.show('Thanks. Now switch your wallet to the one you want to link, then click Link the new wallet.', { tone: 'success', timeout: 8000 });
+        return;
+      }
       await identity.linkWallet();
+      setConfirmedUntil(0);
       toast.show('Wallet linked.', { tone: 'success' });
       await refresh();
       // while your keys are unlocked, the new wallet can be given its own copy of them right away
@@ -83,13 +93,16 @@ export default function SecuritySettings() {
           ))}
         </div>
         <div className="settings-row">
-          <button type="button" className={data.credentials.length === 1 ? 'btn btn-primary' : 'btn'} disabled={linking} onClick={() => flow.start(link)}>
-            {linking ? <Spinner size={14} /> : <Wallet />} Link another wallet
+          <button type="button" className={data.credentials.length === 1 || confirmed ? 'btn btn-primary' : 'btn'} disabled={linking} onClick={() => flow.start(link)}>
+            {linking ? <Spinner size={14} /> : <Wallet />} {confirmed ? 'Link the new wallet' : 'Link another wallet'}
           </button>
-          <ConfirmButton className="btn" onConfirm={session.signOutEverywhere} confirmLabel="Click again to sign out everywhere">
-            Sign out on all devices
-          </ConfirmButton>
+          <SignOutEverywhere />
         </div>
+        <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+          {confirmed
+            ? 'Switch your wallet to the account you want to link, or connect the other wallet, then click Link the new wallet.'
+            : 'Linking starts with a signature from a wallet that’s already linked, so nobody can add one with your session alone.'}
+        </p>
         {flow.stage === 'pick' && <WalletChoices wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} />}
         {flow.stage === 'guide' && <p className="muted">There’s no wallet in this browser. Add one, reload this page, then link it here.</p>}
         <WalletStatus flow={flow} />
