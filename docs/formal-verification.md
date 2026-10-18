@@ -90,7 +90,7 @@ If someone changes the code and the tests start failing, either the code no long
 
 ## Running it
 
-You need [elan](https://github.com/leanprover/elan), which installs the Lean version named in `formal/lean-toolchain`. The proofs use only Lean's core library, so there is nothing else to download, and a build takes about a minute.
+You need [elan](https://github.com/leanprover/elan), which installs the Lean version named in `formal/lean-toolchain`. The proofs use only Lean's core library, so there is nothing else to download, and a build from scratch takes well under a minute.
 
 ```bash
 npm run formal
