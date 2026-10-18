@@ -44,24 +44,26 @@ function TaskRow({ task, selected, onSelect }: Props) {
       aria-selected={selected}
     >
       {/* the label is the touch target; clicks on it reach the checkbox with Shift intact */}
-      <label className="row-check" onClick={stop}>
-        <input type="checkbox" checked={selected} onClick={(e) => onSelect(task, e.shiftKey)} onChange={() => {}} aria-label={`Select ${taskKey(task)}`} />
-      </label>
-      <span className="row-priority row-cell" onClick={stop}>
+      <span className="row-select" role="gridcell">
+        <label className="row-check" onClick={stop}>
+          <input type="checkbox" checked={selected} onClick={(e) => onSelect(task, e.shiftKey)} onChange={() => {}} aria-label={`Select ${taskKey(task)}`} />
+        </label>
+      </span>
+      <span className="row-priority row-cell" role="gridcell" onClick={stop}>
         <PriorityPicker value={task.priority} onChange={(priority) => taskActions.update(task.id, { priority })} className="icon-only">
           <PriorityIcon priority={task.priority} />
         </PriorityPicker>
       </span>
-      <span className="row-key mono">
+      <span className="row-key mono" role="gridcell">
         {taskKey(task)}
         {task.private && <Lock size={10} style={{ marginLeft: 3, verticalAlign: '-1px' }} aria-label="Private" />}
       </span>
-      <span className="row-cell" onClick={stop}>
+      <span className="row-cell" role="gridcell" onClick={stop}>
         <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="status-btn hit">
           <StatusIcon status={task.status} />
         </StatusPicker>
       </span>
-      <span className="row-title">
+      <span className="row-title" role="gridcell">
         <span>{task.title}</span>
         <span className="row-labels">
           <BountyChip task={task} />
@@ -74,7 +76,7 @@ function TaskRow({ task, selected, onSelect }: Props) {
           </span>
         )}
       </span>
-      <span className="row-project">
+      <span className="row-project" role="gridcell">
         {project && (
           <>
             <i style={{ background: project.color }} />
@@ -82,10 +84,10 @@ function TaskRow({ task, selected, onSelect }: Props) {
           </>
         )}
       </span>
-      <span style={{ justifySelf: 'end' }}>
+      <span style={{ justifySelf: 'end' }} role="gridcell">
         <DueBadge task={task} />
       </span>
-      <span className="row-cell" onClick={stop}>
+      <span className="row-cell" role="gridcell" onClick={stop}>
         <AssigneePicker value={task.assigneeId} onChange={(assigneeId) => taskActions.update(task.id, { assigneeId })} className="icon-only" align="end">
           <Avatar user={assignee} size={22} />
         </AssigneePicker>

@@ -43,7 +43,10 @@ export default function HelpView({ standalone = false }: { standalone?: boolean 
             Sign in
           </a>
         </header>
-        {body}
+        <main>
+          <h1 className="sr-only">Help</h1>
+          {body}
+        </main>
       </div>
     );
   }

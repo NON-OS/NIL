@@ -23,10 +23,14 @@
   outline-offset: -2px;
 }
 
+.row-select {
+  display: grid;
+  align-self: stretch;
+}
+
 .row-check {
   display: grid;
   place-items: center;
-  align-self: stretch;
   cursor: pointer;
 }
 

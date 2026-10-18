@@ -10,6 +10,8 @@ interface Props {
   renderLink?: LinkRenderer;
   // gives headings ids, so a link can point at a section
   anchors?: boolean;
+  // the heading level a single # becomes, so headings follow on from the page around the text
+  headingLevel?: number;
 }
 
 const TABLE_RULE = /^\s*\|?[\s:|-]*-{3,}[\s:|-]*$/;
@@ -17,7 +19,7 @@ const cells = (row: string) => row.trim().replace(/^\|/, '').replace(/\|$/, '').
 
 // A deliberately small Markdown subset rendered to React elements.
 // Nothing is ever injected as HTML, so user text can't smuggle in markup or script.
-export default function Markdown({ text, renderLink, anchors = false }: Props) {
+export default function Markdown({ text, renderLink, anchors = false, headingLevel = 3 }: Props) {
   const lines = text.replace(/\r\n?/g, '\n').split('\n');
   const blocks: ReactNode[] = [];
   const ids = new Map<string, number>();
@@ -46,8 +48,9 @@ export default function Markdown({ text, renderLink, anchors = false }: Props) {
 
     const heading = /^(#{1,3})\s+(.*)$/.exec(line);
     if (heading) {
-      const Tag = (['h3', 'h4', 'h5'] as const)[heading[1].length - 1];
-      blocks.push(<Tag key={key} id={anchors ? idFor(heading[2]) : undefined}>{inline(heading[2], key, renderLink)}</Tag>);
+      const depth = heading[1].length;
+      const Tag = `h${Math.min(6, headingLevel + depth - 1)}` as 'h1';
+      blocks.push(<Tag key={key} className={`md-h${depth}`} id={anchors ? idFor(heading[2]) : undefined}>{inline(heading[2], key, renderLink)}</Tag>);
       i++;
       continue;
     }

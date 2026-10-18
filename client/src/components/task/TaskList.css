@@ -17,6 +17,16 @@
   font-weight: 600;
 }
 
+.group-toggle {
+  display: flex;
+  align-self: stretch;
+  align-items: center;
+}
+
+.group-add {
+  margin-left: auto;
+}
+
 .group-head button.collapse {
   display: inline-flex;
   align-items: center;
@@ -48,7 +58,6 @@
 }
 
 .group-head .icon-only {
-  margin-left: auto;
   color: var(--muted);
 }
 

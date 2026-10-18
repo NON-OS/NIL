@@ -38,7 +38,7 @@ export default function SharePage({ token }: { token: string }) {
         <NilLogo height={42} />
         <span className="eyebrow">Read-only share</span>
       </header>
-      <div className="page page-narrow">
+      <main className="page page-narrow">
         {error ? (
           <div className="auth-error">{error}</div>
         ) : !view ? (
@@ -67,13 +67,13 @@ export default function SharePage({ token }: { token: string }) {
             {view.task.description && (
               <div className="panel">
                 <div className="panel-body">
-                  <Markdown text={view.task.description} />
+                  <Markdown text={view.task.description} headingLevel={2} />
                 </div>
               </div>
             )}
           </>
         )}
-      </div>
+      </main>
     </div>
   );
 }

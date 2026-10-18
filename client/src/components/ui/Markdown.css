@@ -7,14 +7,14 @@
   margin-top: 0.6em;
 }
 
-.md h3,
-.md h4,
-.md h5 {
+.md-h1,
+.md-h2,
+.md-h3 {
   font-size: var(--text-md);
   font-weight: 650;
 }
 
-.md h3 {
+.md-h1 {
   font-size: var(--text-lg);
 }
 
@@ -96,4 +96,10 @@
   color: var(--ink-2);
   font-weight: 600;
   white-space: nowrap;
+}
+
+/* a link inside running text is underlined, so it doesn't rely on colour alone */
+.md a {
+  text-decoration: underline;
+  text-underline-offset: 0.15em;
 }

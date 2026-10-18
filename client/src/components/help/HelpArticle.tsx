@@ -12,7 +12,7 @@ function scrollTo(hash: string) {
 }
 
 // One help page. Links to other docs files open those pages here; a link to a section of the
-// page it's on just scrolls there.
+// page it's on just scrolls there. The help center's own h1 is Help, so a page's title is an h2.
 export default function HelpArticle({ topic }: { topic: HelpTopic }) {
   useEffect(() => scrollTo(location.hash), [topic.slug]);
 
@@ -38,6 +38,7 @@ export default function HelpArticle({ topic }: { topic: HelpTopic }) {
       <Markdown
         text={topic.text}
         anchors
+        headingLevel={2}
         renderLink={(href, label, key) => {
           const to = helpPath(href, topic.slug);
           return to ? <a key={key} href={to} onClick={follow(to)}>{label}</a> : null;

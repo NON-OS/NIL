@@ -12,6 +12,7 @@ APP_URL=http://localhost:5173 npm run dev   # API on :3000 with auto-restart, we
 npm test            # API integration tests
 npm run typecheck   # strict TypeScript for the web app
 npm run build       # production bundle into dist/
+npm run check:a11y  # axe on every screen at desktop and phone sizes, after a build
 npm run zk:fetch    # download Semaphore circuit files for SEMAPHORE_DEPTH (hash- and proof-checked)
 npm run zk:ballot   # rebuild the encrypted-ballot circuit and rerun its setup (needs PTAU)
 npm run ceremony:start   # run that setup between independent people instead: circuits/CEREMONY.md
@@ -20,6 +21,10 @@ npm run ceremony:start   # run that setup between independent people instead: ci
 `npm run dev` sends `/api` and `/ws` to `http://localhost:3000`. Set `NONOS_API` in your shell to point it somewhere else.
 
 `npm run zk:ballot` needs the Perpetual Powers of Tau file in `PTAU`. `BEACON_RPC` and `CONTRIBUTORS` change the node used for the beacon block hash and the number of phase-2 contributions. These variables are read from your shell, not from `.env`.
+
+## Accessibility check
+
+`npm run check:a11y` builds nothing itself, so run `npm run build` first. It starts Nil from this checkout with a throwaway workspace and a test wallet made on the spot, fills it with a project, tasks, a listed bounty and a vote, then opens every main screen straight from its address, signed out and signed in, at 1440 by 900 and on a 390 by 844 phone. axe checks each one, and the run fails on any serious or critical problem. `--shots <folder>` also saves a screenshot of each screen and the full report, and `--only <screen>` checks one screen. It uses the Chromium that Playwright installs (`npx playwright-core install chromium`, or set `CHROMIUM_PATH`) and port 3989 (`A11Y_PORT`).
 
 ## Live agent checks
 

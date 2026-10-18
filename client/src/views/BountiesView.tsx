@@ -55,13 +55,20 @@ export default function BountiesView() {
   const row = (t: Task, action?: React.ReactNode) => {
     const person = t.assigneeId ? users[t.assigneeId] : undefined;
     return (
-      <div key={t.id} className="bounty-item" onClick={() => detail.open(t)} role="button" tabIndex={0} onKeyDown={(e) => e.key === 'Enter' && e.target === e.currentTarget && detail.open(t)}>
+      <div key={t.id} className="bounty-item" onClick={() => detail.open(t)}>
         <div style={{ minWidth: 0 }}>
-          <div className="bounty-item-title">
+          <button
+            type="button"
+            className="bounty-item-title"
+            onClick={(e) => {
+              e.stopPropagation();
+              detail.open(t);
+            }}
+          >
             <StatusIcon status={t.status} size={14} />
             <span className="mono muted">{taskKey(t)}</span>
             <span>{t.title}</span>
-          </div>
+          </button>
           <div className="bounty-item-sub">{person ? person.name : 'Unclaimed'}</div>
         </div>
         <BountyChip task={t} />

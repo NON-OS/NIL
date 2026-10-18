@@ -91,23 +91,31 @@ export default function TaskList({ tasks, groupBy, sortBy, defaults, footer }: P
         {groups.map((g) => (
           <div key={g.key} role="rowgroup">
             {groupBy !== 'none' && (
-              <div className={cx('group-head', collapsed.has(g.key) && 'collapsed')}>
-                <button type="button" className="collapse" onClick={() => toggleGroup(g.key)} aria-expanded={!collapsed.has(g.key)}>
-                  <ChevronDown size={14} className="chev" />
-                  {groupBy === 'status' && <StatusIcon status={g.tasks[0].status as Status} />}
-                  {g.color && <span className="dot" style={{ background: g.color }} />}
-                  {g.label}
-                  <span className="count num">{g.tasks.length}</span>
-                </button>
-                <button type="button" className="icon-only" onClick={() => ui.quickAdd({ ...defaults, ...groupDefaults(groupBy, g) })} aria-label={`Add task to ${g.label}`}>
-                  <Plus size={14} />
-                </button>
+              <div className={cx('group-head', collapsed.has(g.key) && 'collapsed')} role="row">
+                <span className="group-toggle" role="gridcell">
+                  <button type="button" className="collapse" onClick={() => toggleGroup(g.key)} aria-expanded={!collapsed.has(g.key)}>
+                    <ChevronDown size={14} className="chev" />
+                    {groupBy === 'status' && <StatusIcon status={g.tasks[0].status as Status} />}
+                    {g.color && <span className="dot" style={{ background: g.color }} />}
+                    {g.label}
+                    <span className="count num">{g.tasks.length}</span>
+                  </button>
+                </span>
+                <span className="group-add" role="gridcell">
+                  <button type="button" className="icon-only" onClick={() => ui.quickAdd({ ...defaults, ...groupDefaults(groupBy, g) })} aria-label={`Add task to ${g.label}`}>
+                    <Plus size={14} />
+                  </button>
+                </span>
               </div>
             )}
             {!collapsed.has(g.key) && g.tasks.map((t) => <TaskRow key={t.id} task={t} selected={selected.has(t.id)} onSelect={onSelect} />)}
           </div>
         ))}
-        {footer}
+        {footer && (
+          <div role="row">
+            <div role="gridcell">{footer}</div>
+          </div>
+        )}
       </div>
       <BulkBar ids={[...selected]} onClear={() => setSelected(new Set())} />
     </>
