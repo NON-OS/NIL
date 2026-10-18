@@ -5,8 +5,8 @@ import utcDay from './utcDay.js';
 import creditScope from './creditScope.js';
 import creditMessage from './creditMessage.js';
 import creditGroup from './creditGroup.js';
+import canonical from '../votes/canonical.js';
 
-const DIGITS = /^\d{1,78}$/;
 const refuse = (why, status = 400) => new HttpError(status, `That AI request was refused: ${why}.`);
 
 // Checks an anonymous AI request without learning who sent it. The proof shows that some current
@@ -17,8 +17,10 @@ export default async function checkCredit(feature, { day, slot, payload, proof }
   if (!proof || typeof proof !== 'object') throw refuse('no proof');
   const { merkleTreeDepth, merkleTreeRoot, nullifier, message, scope, points } = proof;
   if (merkleTreeDepth !== config.semaphore.depth) throw refuse('it was made for a different circuit');
-  if (![merkleTreeRoot, nullifier, message, scope].every((v) => typeof v === 'string' && DIGITS.test(v))) throw refuse('malformed numbers');
-  if (!Array.isArray(points) || points.length !== 8 || !points.every((p) => typeof p === 'string' && DIGITS.test(p))) throw refuse('malformed proof');
+  // one spelling per number: the ledger tells nullifiers apart by their text, and "0" + n would
+  // verify like n and spend the same slot twice
+  if (![merkleTreeRoot, nullifier, message, scope].every((v) => canonical.number(v) !== null)) throw refuse('malformed numbers');
+  if (!Array.isArray(points) || points.length !== 8 || !canonical.all(points, canonical.base)) throw refuse('malformed proof');
   // 409 like a moved member list: across midnight the browser just tries again with the new day
   if (day !== utcDay()) throw refuse('it was made for a different day; try again', 409);
   if (!Number.isInteger(slot) || slot < 0 || slot >= config.ai.perDay) throw refuse('that slot doesn’t exist');

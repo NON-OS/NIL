@@ -14,9 +14,9 @@ const COUNTERFACTUAL = '6492'.repeat(16);
 
 // A reverted call is the wallet saying no. A node that doesn't answer in time is not, and nor
 // is an answer Nil's verifier couldn't prove: that one never signs anyone in or turns them away.
-async function call(params) {
+async function call(params, block) {
   try {
-    return String(await rpc('eth_call', [params, 'latest'], { timeoutMs: config.signIn.chainTimeoutMs })).toLowerCase();
+    return String(await rpc('eth_call', [params, block], { timeoutMs: config.signIn.chainTimeoutMs })).toLowerCase();
   } catch (err) {
     if (err.refused) return null;
     if (err.unverified) throw new HttpError(503, 'This looks like a smart wallet, which Nil checks with the Ethereum network, and that check couldn’t be verified just now. Try again in a few minutes.');
@@ -27,14 +27,16 @@ async function call(params) {
 // Asks the chain whether a smart-contract wallet accepts `signature` over `digest`. Deployed
 // wallets answer through EIP-1271. A wallet that so far exists only as a factory call (passkey
 // wallets often stay that way until their first transaction) signs per EIP-6492, and the
-// validator then deploys it inside one eth_call that changes nothing on-chain.
-export default async function contractSignature(address, digest, signature) {
+// validator then deploys it inside one eth_call that changes nothing on-chain. With `block`
+// (a number) the wallet is asked at that block instead of the latest one.
+export default async function contractSignature(address, digest, signature, block = null) {
   const sig = signature.slice(2).toLowerCase();
   const hash = bytesToHex(digest);
+  const tag = block === null ? 'latest' : `0x${block.toString(16)}`;
   await nodeReady();
   if (sig.endsWith(COUNTERFACTUAL)) {
-    return (await call({ data: `0x${sigValidatorCode}${abiWithBytes([address, hash], sig)}` })) === '0x01';
+    return (await call({ data: `0x${sigValidatorCode}${abiWithBytes([address, hash], sig)}` }, tag)) === '0x01';
   }
   // exact match only: a contract that echoes its calldata back would otherwise start with the selector too
-  return (await call({ to: address, data: `0x${IS_VALID_SIGNATURE}${abiWithBytes([hash], sig)}` })) === ACCEPTED;
+  return (await call({ to: address, data: `0x${IS_VALID_SIGNATURE}${abiWithBytes([hash], sig)}` }, tag)) === ACCEPTED;
 }

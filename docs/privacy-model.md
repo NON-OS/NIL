@@ -12,6 +12,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - Guests see only the projects shared with them and the tasks assigned to them.
 - In an anonymous vote, nobody, admins included, can see who chose what.
 - A built-in AI request sent [anonymously](ai-assistants.md#anonymous-requests) isn't tied to anyone in the server's records. Admins see only how many were made each day.
+- The audit file of a sealed vote, which lists every ballot, is ready only once the vote closes.
 
 ## What the server operator can read
 
@@ -30,12 +31,13 @@ Everything else is stored in plain form in the server's database, where anyone w
 - time entries, reminders and their notes,
 - the list of people, their names, roles and wallet addresses,
 - the names you give your passkeys, when each was added and last used, and whether you've downloaded a recovery kit (never the kit itself),
+- for members who joined through the token-holder door, which account each wallet's NOX last counted for, kept until 3 days after it last counted, even once the wallet is unlinked,
 - bounty amounts and payment records,
 - signed votes, with each voter's wallet and choice.
 
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when.
 
-The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
+The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. Each signature also names who the writing is for and which key protects it, so the server can't get a private task or doc handed to someone the writer didn't name, or have you write under a key of its own. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
 
 ## What leaves your server
 
@@ -48,6 +50,8 @@ The server itself contacts other hosts in these cases:
 - Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs, never a private task, and never who asked. See [AI assistants](ai-assistants.md#built-in-ai).
 - The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
 
+- The Privacy Pools relayer and association set provider, only on a server with [pool payouts](private-payouts.md#pay-from-the-teams-pool) on and only for admins using the team pool. The server reaches only the hosts in `PRIVACY_POOLS_RELAYER_URL` and `PRIVACY_POOLS_ASP_URL`, on a fixed few paths, refuses redirects, and passes on nothing about the admin: no cookie, no IP address, no headers of theirs. What each one learns is under [The team pool](#the-team-pool).
+
 If you connect your own AI assistant over MCP, the assistant fetches from Nil, and whatever it reads goes on to that assistant's provider.
 
 ## What is public on purpose
@@ -55,13 +59,28 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - On-chain payments are public, like any Ethereum transaction. [Private payouts](private-payouts.md) hide which person a payout belongs to, but the payer, the token, the amount and the time are still visible. Moving funds from a one-time address to a wallet people know links them.
 - Without signing in, anyone can see the workspace name, whether the token-holder door is open and its minimum, the public proof key, the [public bounty board](public-bounty-board.md), any share link they hold, and the tasks in any [calendar feed](views.md#your-tasks-in-your-own-calendar-app) link they hold.
 
+## The team pool
+
+Paying bounties from a [Privacy Pools](private-payouts.md#pay-from-the-teams-pool) pool keeps the chain from linking the team's wallet to the people it pays. It doesn't make the team invisible. What each party can see:
+
+- Anyone can see each deposit: the wallet that made it, the token, the amount and the time. That's the point where the team's money visibly enters the pool.
+- Anyone can see each withdrawal: the pool, the amount, the fee, the one-time address it went to and the time. What nobody can see on the chain is which deposit paid it; the proof shows only that it was one of the deposits the association set approved.
+- The association set provider (0xbow on mainnet) decides which deposits may leave privately. It sees every deposit and who made it, like everyone else, and can decline one, which leaves only a public ragequit to the depositing wallet. Nil downloads the whole association set, the same file for every team, so that tells the provider nothing. Asking it about particular deposits (**Ask the provider**, needed to tell a declined deposit from one still under review) tells it that this server holds them, which is why an admin has to ask.
+- The relayer sends each withdrawal and is paid its fee from it. It sees the one-time address, the amount and the Nil server's IP address, never an admin's. On Sepolia the default relayer is 0xbow's; on mainnet the operator picks one. If the relayer and the association set provider are run by the same people and they compare notes, the server's IP address ties the team's questions about its deposits to its withdrawals.
+- Nil's server knows which bounties were paid from the pool and which deposits the team made, as it knows every payment. The pool key and the notes are sealed and encrypted in admins' browsers, so the server can't spend the pool or read which deposit paid what, but an operator who watches the API can line up deposits and payouts by time.
+- The Ethereum node in `NOX_RPC_URL` sees the server look up the team's deposits and, later, its relayed withdrawals. A node run by someone else can link the two by the server's IP address. Run your own node if the team pool matters to you.
+
+Timing and amounts give the most away. A deposit of 250 USDC followed an hour later by a 250 USDC payout is easy to match, whatever the cryptography says. Deposit well ahead, in round amounts larger than any one bounty, and let several payouts come out of one deposit at different times. A pool with more deposits from other people hides the team better; a quiet pool hides less.
+
 ## How the server protects data
 
 - Session, invite, share-link and access-key tokens are random, and only their SHA-256 hashes are stored. A leaked database can't be used to sign in.
+- A signed-in browser alone can't add a way back in. Linking another wallet or making an access key needs a fresh signature from a wallet already linked to the account. Access keys expire after at most `ACCESS_KEY_MAX_DAYS` (365). A sign-in reset revokes them, and **Sign out on all devices** offers to.
+- Sign-in challenges aren't kept in a list on the server that others could fill up. Each one comes back signed by the server for the network that asked for it, and works once.
 - Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix.
 - Every change needs a custom header and a same-origin check, which blocks cross-site request forgery. The live connection and the MCP endpoint check the origin too.
 - The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy` that still lets the site itself use passkeys, and HSTS over HTTPS.
-- Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited.
+- Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited. Limits by address count an IPv6 /64 as one client and also cap each /56 and /48.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run.
 - SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is erased after 30 days by default and read notifications after 90 days.
 - Receipts are signed with a key kept outside the database, in `DATA_DIR/keys`.
@@ -69,17 +88,21 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 
 ## Honest limits
 
-- Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
+- Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit. Privacy Pools itself was audited (circuits, contracts and the entry contract upgrade by Oxorio, contracts by Auditware); Nil's use of it wasn't.
+- A payout from the team's pool is never announced on-chain, since the announcement would come from a team wallet. The contributor finds it through Nil, so if the server's data is lost before they move it, they need the payout's key, which **Key** shows, to reach it.
+- An admin who once opened the team's pool key still knows it after they stop being an admin, and could spend what the pool holds. If that matters, take every deposit back with a ragequit, then **Start over with a new key**.
 - Encrypted weighted votes are in beta. The ballot circuit (`circuits/ballot.circom`) hasn't been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2, recorded in `circuits/CEREMONY.json`, was a development ceremony with every contribution made on one machine. Whoever ran it could in principle forge proofs. Rerun phase 2 with independent contributors before relying on these votes for anything that matters; [the ballot ceremony](../circuits/CEREMONY.md) in the source code shows how.
 - In an encrypted vote, two trustees working together could decrypt single ballots. That reveals each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
+- The server decides who is in a vote's census and which ballots the trustees of an encrypted vote decrypt. Browsers check what they can: voters compare the voter list they fetch without a cookie with the one they were shown signed in, and trustees check every ballot and add them up themselves. A dishonest server could still show everyone the same made-up list, or hand trustees only some of the ballots, down to a single one, whose "totals" would then be that ballot.
 - Anonymous votes hide who voted what among the members who voted. In a small team, or with a lopsided result, the totals alone can give choices away.
-- Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
+- Anonymous ballots, and the voter list fetched just before them, carry no cookie, but the server and any proxy still see the IP address and time each one arrives. Use Tor if that matters. If your keys aren't unlocked when you vote, unlocking them sends signed-in requests just before your ballot.
 - Anonymous AI requests hide which member asked only among the members with a voting key, which in a small team is a handful of people. The server and Anthropic still read each request in full, and its words and the time it arrives can point to the person who sent it. So can its IP address, unless they use Tor. A dishonest server could also hand one person a member list of its own making and recognise their requests by it. [AI assistants](ai-assistants.md#what-anonymous-requests-dont-hide) has the details.
-- Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice.
+- Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice, and in a weighted vote the voter's wallets at the snapshot, which shows they belong together.
 - Files on team tasks aren't encrypted, and an encrypted file still shows its size. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
 - Encryption only helps if the app your browser runs is Nil's own code. Whoever runs the server could serve changed code that reads everything you unlock. Anyone can [check what a server sends](verify-a-server.md) against a release, byte for byte, but that proves what the server sent to the check, not to everyone at every moment. Running a build you trust on a server you control is the strongest defence.
 - The server decides which wallets belong to whom, and your browser can't check that. The first key your browser sees for a teammate could come from the server, so compare fingerprints before you rely on it. A new browser or device starts over, and so does a workspace or account your browser hasn't used before. Nil warns when your browser already holds teammates' keys for another one, and locks your keys if the server switches an open tab to a different workspace or account.
+- Private tasks, docs, comments and files saved before Nil signed who they're for open marked as the older format. Until they're saved again, Nil doesn't share them with anyone on its own, and that save takes who they're for from the server.
 - A wallet opens your keys with its signature, so it has to give the same signature for the same message every time. A wallet that doesn't can still sign you in but can't hold your keys; Nil checks each wallet when it's added to your keys. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet. A passkey you add under Encryption keys can unlock keys a regular wallet set up, but it can't publish them.
 - A passkey unlocks your keys without your wallet, so it is only as safe as the device or passkey manager that holds it. Nil asks for user verification each time, such as a fingerprint or device PIN.
 - A passkey belongs to the web address it was made on. If the workspace moves to a new address, passkeys stop opening your keys there. That's why Nil never lets a passkey be your only way back: a wallet must hold your keys too, or you must have downloaded a recovery kit.
@@ -88,7 +111,8 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Keys, and the docs and private tasks opened with them, live in the browser tab while it's open, until you lock your keys or sign out. Anything that can read that tab's memory, such as a malicious browser extension, could read them.
 - Never lose `DATA_DIR/keys`. The signing key there signs every receipt, and every message that unlocks or publishes encryption keys names the workspace by it. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, no wallet opens anyone's encryption keys, and Nil won't restore recovery kits made for the old key. Everyone starts over with new keys. Back it up with the database.
 - If you lose every wallet linked to your account, only an admin's sign-in reset gets you back in. Link a second one.
-- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin when there is one, and every reset is in the sign-in history. The link doesn't open the member's encryption keys. Whoever uses it needs the member's recovery kit and its passphrase, or has to set up new keys, which teammates see as a changed key.
+- An admin can reset a member's sign-in, and whoever opens that link signs in as the member. Resetting an owner needs a second admin who has been one for at least 72 hours, or, with nobody to approve, waits 72 hours while the owner and the other admins are told and can cancel it. Every reset is in the sign-in history. The link doesn't open the member's encryption keys. Whoever uses it needs the member's recovery kit and its passphrase, or has to set up new keys, which teammates see as a changed key.
+- The token-holder door checks wallets, not tokens. One stack of NOX keeps one person in, but someone who moves it to fresh wallets can still join as new people one after another. Each of those accounts is signed out once its grace period runs out.
 - Receipts prove what the workspace said, not that the workspace is honest. See [Proof of work](proof-of-work.md).
 - Without Nil's verifier, or with it in shadow mode, the server believes its Ethereum node: a lying or compromised node could make it credit a payment that never happened or count holdings nobody has. Shadow mode tells admins afterwards. In enforce mode a node can no longer fake an answer, but it can still leave one out, so it can hide or hold back a payment. The verifier is built on Helios, which is unaudited; it trusts the checkpoint it starts from (refusing one older than two weeks) and can't prove blocks older than about 27 hours.
 - Memory-only mode still writes to disk if the host swaps memory. Turn swap off or encrypt it.

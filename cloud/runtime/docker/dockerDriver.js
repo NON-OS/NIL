@@ -99,9 +99,10 @@ export default function dockerDriver({ config, log, client = dockerClient(config
       try {
         // an internal network has no route out of the host; Caddy, attached to every workspace
         // network, is then the only way in and the only way to the chain. An isolated one (a
-        // restore drill) doesn't even get Caddy.
+        // restore drill) doesn't even get Caddy. IPv4 only, whatever the daemon's defaults: Docker
+        // then turns IPv6 off on the workspace's interface, so it has no IPv6 address or route.
         const internal = spec.isolated || app.egress === 'rpc-only';
-        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: internal, Labels: labels } });
+        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: internal, EnableIPv6: false, Labels: labels } });
       } catch (err) {
         if (err.status !== 409) throw err;
       }

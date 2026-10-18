@@ -4,7 +4,10 @@ import domain from '../lib/domain.js';
 import HttpError from '../lib/HttpError.js';
 import parseJSON from '../lib/parseJSON.js';
 import seatGate from './seatGate.js';
-import inviteIsLive from './inviteIsLive.js';
+import planGate from './planGate.js';
+import holderGate from './holderGate.js';
+import holderWallets from './holderWallets.js';
+import inviteUsable from './inviteUsable.js';
 import useInvite from './useInvite.js';
 import firstRunState from '../firstRun/firstRunState.js';
 
@@ -29,17 +32,30 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
       role = 'owner';
     } else if (mode === 'invite') {
       const invite = sql.get('SELECT * FROM invites WHERE token_hash = ?', inviteHash);
-      if (!inviteIsLive(invite)) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
+      if (!inviteUsable(invite)) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
       role = ['admin', 'guest'].includes(invite.role) ? invite.role : 'member';
       seatGate(role);
       guestProjects = role === 'guest' ? parseJSON(invite.project_ids, []) : [];
+    } else if (mode === 'holder') {
+      // checked before the balance was read too, but joins waiting on the node at the same time
+      // would all have passed that; here, in the insert's own transaction, they can't
+      if (!holderGate.get().enabled) throw HttpError.forbidden('This workspace is invite-only.');
+      planGate('Joining as a holder');
+      seatGate(role);
+      holderWallets.checkFree(address);
     } else if (mode === 'bounty') {
       // an accepted outside applicant: a guest who sees only the tasks given to them
       role = 'guest';
     }
     if (sql.get('SELECT 1 FROM credentials WHERE external_id = ?', address)) throw HttpError.badRequest('That wallet already has an account here. Sign in with it instead.');
-    sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, Date.now());
+    const now = Date.now();
+    const adminSince = role === 'owner' || role === 'admin' ? now : null;
+    sql.run('INSERT INTO users (id, name, role, color, joined_via, created_at, admin_since) VALUES (?, ?, ?, ?, ?, ?, ?)', id, name, role, randomColor(), mode, now, adminSince);
     if (mode === 'invite') useInvite(inviteHash, id);
+    if (mode === 'holder') {
+      sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', now, id);
+      holderWallets.record(id, [address], now);
+    }
     for (const projectId of guestProjects) sql.run('INSERT OR IGNORE INTO project_guests (project_id, user_id) SELECT id, ? FROM projects WHERE id = ?', id, projectId);
     sql.run(
       "INSERT INTO credentials (id, user_id, kind, external_id, label, created_at) VALUES (?, ?, 'wallet', ?, 'Ethereum wallet', ?)",

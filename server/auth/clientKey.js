@@ -1,16 +1,15 @@
 import net from 'node:net';
+import ipv6Groups from './ipv6Groups.js';
 
-// Who a request counts as for rate limits and pending challenges. One IPv6 connection usually
+// Who a request counts as for rate limits and signed challenges. One IPv6 connection usually
 // comes with a whole /64 to pick addresses from, so the /64 counts as one client; an IPv4
-// address seen through a dual-stack socket counts as itself.
+// address seen through a dual-stack socket counts as itself. Wider IPv6 prefixes have their own
+// limits too (see networkKeys).
 export default function clientKey(ip = '') {
   const address = String(ip).split('%')[0];
   const mapped = address.toLowerCase().startsWith('::ffff:') ? address.slice(7) : address;
   if (net.isIPv4(mapped)) return mapped;
-  if (!net.isIPv6(address)) return address;
-  const [head, tail = ''] = address.split('::');
-  const left = head ? head.split(':') : [];
-  const right = tail ? tail.split(':') : [];
-  const groups = [...left, ...Array(Math.max(0, 8 - left.length - right.length)).fill('0'), ...right];
-  return `${groups.slice(0, 4).map((g) => parseInt(g, 16).toString(16)).join(':')}::/64`;
+  const groups = ipv6Groups(address);
+  if (!groups) return address;
+  return `${groups.slice(0, 4).map((g) => g.toString(16)).join(':')}::/64`;
 }

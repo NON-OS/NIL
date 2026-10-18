@@ -5,8 +5,8 @@ import taskSeal from './taskSeal';
 import commentText from './commentText';
 import moveFiles from './moveFiles';
 import taskWords from './taskWords';
-import sealedCache from '../state/sealedCache';
 import taskVersions from '../state/taskVersions';
+import type { TaskReaders } from '../lib/crypto/taskFacts';
 import type Task from '../types/Task';
 import type TaskPatch from '../types/TaskPatch';
 import type Comment from '../types/Comment';
@@ -35,7 +35,9 @@ async function moveContents(task: Task, to: TaskKey | null) {
 // task private seals it under a fresh key, handing it to someone new does the same, opening it
 // up sends the plain text back, and an ordinary edit re-seals the words under the same key.
 // Anything that doesn't touch a private task's words passes through as it is. Every one of
-// these sends all of the words, so a task held only as a card has its notes fetched first.
+// these sends all of the words, so a task held only as a card has its notes fetched first. A
+// sealed task changes only once its words check out for the people it shows, and its key goes
+// only to them: the creator and the assignee, never anyone the server adds later.
 export default async function sealedPatch(task: Task, patch: TaskPatch): Promise<Record<string, unknown>> {
   const sealing = patch.private === true && !task.sealed;
   const opening = patch.private === false && Boolean(task.sealed);
@@ -47,16 +49,20 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   await vault.unlock();
   const next = { ...task, ...patch };
   const held = await taskWords(task);
+  const ref = task.sealed ? { ...task, sealed: task.sealed } : null;
+  const opened = ref ? await taskSeal.open(ref) : null;
   const words = { title: patch.title ?? held.title, description: patch.description ?? held.description, checklist: patch.checklist ?? held.checklist };
   const rest = Object.fromEntries(Object.entries(patch).filter(([k]) => !(WORDS as readonly string[]).includes(k)));
 
   if (opening) return { ...rest, private: false, ...words, ...(await moveContents(task, null)) };
   // one past the newest revision known here, from this browser's record or the words just opened
-  const rev = Math.max(taskVersions.seen(task.id), task.sealed ? (sealedCache.get(task.sealed)?.rev ?? 0) : 0) + 1;
-  if (sealing || rehoming) {
+  const rev = Math.max(taskVersions.seen(task.id), opened?.rev ?? 0) + 1;
+  const readers: TaskReaders = [task.creatorId, next.assigneeId ?? null];
+  // an assignee who handed the task on made its key, so the first edit after that leaves it behind
+  if (sealing || rehoming || opened?.from) {
     const fresh = taskKeys.fresh();
-    const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId], { ask: true });
-    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys, rev), ...(await moveContents(task, fresh)) };
+    const keys = await taskKeys.wrap(fresh.key, readers, { ask: true });
+    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys, { rev, readers }), ...(await moveContents(task, fresh)) };
   }
-  return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys, rev) };
+  return { ...rest, sealed: await taskSeal.seal(words, await taskSeal.key(ref!), task.sealed!.keys, { rev, readers }) };
 }

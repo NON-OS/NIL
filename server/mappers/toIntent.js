@@ -10,6 +10,8 @@ export default function toIntent(row) {
     stealth: Boolean(row.stealth_ephemeral),
     ephemeralPublicKey: row.stealth_ephemeral,
     viewTag: row.stealth_view_tag,
+    // 'pool' when the team pays from its Privacy Pools pool, null for a wallet
+    via: row.via ?? null,
     createdAt: row.created_at,
     expiresAt: row.expires_at,
   };

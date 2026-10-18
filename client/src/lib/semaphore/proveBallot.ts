@@ -6,10 +6,13 @@ import fieldHash from './fieldHash';
 import type AnonymousVote from '../../types/AnonymousVote';
 import type BallotProof from '../../types/BallotProof';
 
-// A Semaphore proof that "a member of this vote's group chose option N", made entirely in this
-// browser from circuit files this server hosts. It runs single-threaded so the page needs no
-// worker loaded from a data: URL; that costs a couple of seconds and nothing in safety.
-export default async function proveBallot(identity: Identity, vote: AnonymousVote, choice: number): Promise<BallotProof> {
+// A Semaphore proof that "a member of this vote's group chose option N in hour H", made entirely
+// in this browser from circuit files this server hosts. The message is H × 8 + N, with H the
+// hour since the Unix epoch, so the server can refuse a copy of the proof sent in a later hour.
+// It runs single-threaded so the page needs no worker loaded from a data: URL; that costs a
+// couple of seconds and nothing in safety.
+export default async function proveBallot(identity: Identity, vote: Pick<AnonymousVote, 'scope' | 'depth' | 'members'>, choice: number, hour: number): Promise<BallotProof> {
+  const message = BigInt(hour) * 8n + BigInt(choice);
   const group = voterGroup(vote.members);
   const index = group.indexOf(identity.commitment);
   if (index < 0) throw new Error('You’re not on this vote’s voter list yet. Reload and try again.');
@@ -22,7 +25,7 @@ export default async function proveBallot(identity: Identity, vote: AnonymousVot
       merkleProofIndex: merkle.index,
       merkleProofSiblings: siblings,
       scope: fieldHash(vote.scope),
-      message: fieldHash(BigInt(choice)),
+      message: fieldHash(message),
     },
     `/zk/semaphore-${vote.depth}.wasm`,
     `/zk/semaphore-${vote.depth}.zkey`,
@@ -34,7 +37,7 @@ export default async function proveBallot(identity: Identity, vote: AnonymousVot
     merkleTreeDepth: vote.depth,
     merkleTreeRoot: merkle.root.toString(),
     nullifier: String(publicSignals[1]),
-    message: String(choice),
+    message: message.toString(),
     scope: vote.scope,
     points: packGroth16Proof(proof).map(String),
   };

@@ -49,7 +49,7 @@ test('signing out forgets every private task this tab opened', async () => {
   keyring.unlock(vic);
   route('GET', '/api/encryption-keys', () => [keyEntry('v', vic)]);
   const fresh = taskKeys.fresh();
-  const sealed = await taskSeal.seal({ title: 'Therapy appointment', description: 'Tue 5pm', checklist: [] }, fresh, await taskKeys.wrap(fresh.key, ['v']), 1);
+  const sealed = await taskSeal.seal({ title: 'Therapy appointment', description: 'Tue 5pm', checklist: [] }, fresh, await taskKeys.wrap(fresh.key, ['v']), { rev: 1, readers: ['v', null] });
   assert.equal(sealedCache.get(sealed)?.title, 'Therapy appointment');
 
   await session.logout();
@@ -72,7 +72,7 @@ test('a bootstrap naming another workspace key locks the keys instead of moving 
   keyring.unlock(vic);
   route('GET', '/api/encryption-keys', () => [keyEntry('v', vic), keyEntry('b', bob)]);
   await keyDirectory.load({ fresh: true });
-  await keyDirectory.confirm(['b']);
+  await keyDirectory.confirm(await keyDirectory.pending(['b']));
   taskVersions.record('t1', 4);
 
   // a reconnect brings a bootstrap with another workspace key and a key the server made for Bob
@@ -106,9 +106,10 @@ test('a switched tab files no pins, so the warning still shows after a reload', 
   await keyDirectory.load({ fresh: true });
 
   await enter({ workspaceKey: 'switched-again' });
-  route('GET', '/api/encryption-keys', () => [keyEntry('b', person(), { workspaceKey: 'switched-again' })]);
+  const stranger = keyEntry('b', person(), { workspaceKey: 'switched-again' });
+  route('GET', '/api/encryption-keys', () => [stranger]);
   await keyDirectory.load({ fresh: true });
-  await keyDirectory.confirm(['b']);
+  await keyDirectory.confirm(await keyDirectory.pending(['b']));
   assert.deepEqual(keyPins.all(), {});
 
   await session.logout();

@@ -60,8 +60,8 @@ export default function DocsLocked() {
             </button>
           )}
         </div>
-        {kind === 'no-wrap' && <RestoreKit />}
-        {(kind === 'no-wrap' || kind === 'mismatch') && (
+        {(kind === 'no-wrap' || kind === 'missing') && <RestoreKit />}
+        {(kind === 'no-wrap' || kind === 'mismatch' || kind === 'missing') && (
           <ConfirmButton className="btn btn-ghost btn-sm" onConfirm={() => unlock({ reset: true })} confirmLabel="Reset, and lose access to what was shared with your old keys?">
             Start over with new keys
           </ConfirmButton>

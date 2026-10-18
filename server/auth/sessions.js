@@ -26,14 +26,17 @@ const sessions = {
     sql.run('DELETE FROM sessions WHERE user_id = ?', userId);
   },
 
-  // for live connections, which keep only the hash of the token they opened with
-  isLive: (hash) => Boolean(hash && sql.get('SELECT 1 FROM sessions WHERE token_hash = ? AND expires_at > ?', hash, Date.now())),
+  // For live connections, which keep only the hash of the token they opened with. The person has
+  // to still have access too, so a socket outlives neither a removal nor a deleted agent.
+  isLive: (hash) =>
+    Boolean(hash && sql.get("SELECT 1 FROM sessions s JOIN users u ON u.id = s.user_id WHERE s.token_hash = ? AND s.expires_at > ? AND u.deactivated = 0 AND u.kind = 'human'", hash, Date.now())),
 
+  // Agents work through their keys and never hold a browser session, whatever the table says.
   userRow(token) {
     if (!token) return null;
     const session = sql.get('SELECT user_id FROM sessions WHERE token_hash = ? AND expires_at > ?', tokenHash(token), Date.now());
     const row = session && userRows.one(session.user_id);
-    return row && !row.deactivated ? row : null;
+    return row && !row.deactivated && row.kind === 'human' ? row : null;
   },
 };
 

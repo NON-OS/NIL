@@ -30,10 +30,10 @@ If the device has no wallet, **Sign in with your wallet** explains what a wallet
 If you lose every wallet linked to your account, you can't sign in until an admin resets your sign-in (see below). So link a spare now, ideally a different wallet such as a hardware wallet:
 
 1. Open **Settings → Sign-in & security**.
-2. Under **Your wallets**, click **Link another wallet**.
-3. In your wallet, switch to the other account or connect the other wallet, then sign.
+2. Under **Your wallets**, click **Link another wallet** and sign with a wallet that's already linked. The message starts "Confirm it's you".
+3. In your wallet, switch to the other account or connect the other wallet, then click **Link the new wallet** and sign.
 
-Any linked wallet can sign you in. You can rename each one by clicking its name, and remove any of them as long as one is left. The first wallet in the list is marked "receives bounties": bounties are paid there unless you turn on [private payouts](private-payouts.md).
+The first signature proves the request comes from you and not just from someone using your signed-in browser. It's good for 5 minutes in that browser (the server can change this). Any linked wallet can sign you in. You can rename each one by clicking its name, and remove any of them as long as one is left. The first wallet in the list is marked "receives bounties": bounties are paid there unless you turn on [private payouts](private-payouts.md).
 
 If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
 
@@ -45,18 +45,18 @@ Ask an admin to reset your sign-in. They send you a link that works once and exp
 2. Click **Link a new wallet and sign in** and sign with the new wallet.
 3. You land on **Settings → Sign-in & security**, with the new wallet named "Wallet from your sign-in reset". Remove the wallets you lost, so nobody else can sign in with them.
 
-It's the same account: your tasks, comments, history, role and proof of work stay as they were. Using the link signs you out on every other device.
+It's the same account: your tasks, comments, history, role and proof of work stay as they were. Using the link signs you out on every other device and revokes your [access keys](ai-assistants.md), in case whoever has your old wallet made one. Make new keys once you're back.
 
 Your encryption keys were locked to your old wallets, so the new one can't open them yet. If you added a [passkey](#unlock-with-a-passkey) to your keys, open **Docs**, click **Unlock with a passkey**, then [add the new wallet to your keys](#add-a-wallet-to-your-keys). Otherwise open **Docs** and click **Unlock with your wallet**. Nil says this wallet doesn't unlock your keys yet and shows two ways forward.
 
 - If you have your [recovery kit](#keep-a-recovery-kit), pick the file under **Restore from your recovery kit**, type its passphrase and click **Restore**. Your keys come back as they were, and the new wallet unlocks them from then on.
 - If you don't, click **Start over with new keys**. Teammates are asked to confirm your new key, and docs and private tasks sealed to the old keys reach you again only once they have. See [Encrypted docs](encrypted-docs.md#if-unlocking-fails).
 
-Resetting an owner needs a second admin to approve when the workspace has two or more other admins. Every reset is written to the sign-in history admins see under **Settings → Team**.
+Resetting an owner needs a second admin to approve. When nobody can approve, the link can only be made after 3 days (the server can change this), and the owner and the other admins are told so they can cancel it. [People and roles](people-and-roles.md#reset-someones-sign-in) has the details. Every reset is written to the sign-in history admins see under **Settings → Team**. Agents never sign in, so their sign-in can't be reset.
 
 ## Sign out
 
-Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them.
+Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. It also offers to revoke your access keys, so AI assistants and scripts using them stop working. Leave that ticked if someone else may have used your account. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them.
 
 ## The signatures for encryption keys
 
@@ -119,9 +119,13 @@ A passkey belongs to the web address it was made on. If the workspace moves to a
 | No account here uses this wallet | The wallet isn't linked to an account here, or your access was removed. Switch to a linked wallet, or ask an admin for an invite. |
 | You declined the request in your wallet | You pressed reject in the wallet. Try again and approve it. |
 | Your wallet already has a request waiting | Open your wallet and finish or reject the request that is already there. |
-| That wallet request expired | More than 5 minutes passed before you signed. Start again. |
+| That wallet request expired | More than 5 minutes passed before you signed, or your device moved to another network in between, for example from Wi-Fi to mobile data. Start again. |
+| Confirm it's you first | Linking a wallet or making an access key needs a signature from a wallet that's already linked, and it's been more than a few minutes. Start again from the button, which asks for it. |
+| That wallet isn't linked to your account | Nil asked a wallet that's already linked to confirm, and your wallet signed with another one. Switch to a linked wallet and try again. |
 | Your bounty application is still waiting for the team | You applied on the public bounty board and haven't been accepted yet. |
 | Your linked wallets hold, followed by an amount | You joined as a NOX holder and your linked wallets now hold less than the workspace's minimum. Top them up, or ask an admin to keep you without the check. |
+| Your linked wallets hold enough again | Your grace period ran out while you held too little. Nil lets you back in once its regular checks have seen enough in your wallets for 6 hours. Try again later, or ask an admin to keep you without the check. |
+| The NOX in this wallet counted for someone already in this workspace | That wallet's NOX let someone else in recently, and one stack can only keep one person in. It's free again 3 days after it last counted for them. |
 | This invite can't be used | The link expired or someone already used it. Ask for a new one. |
 | Your wallet warns that the request doesn't match the site | The server's configured address differs from the one in your address bar. Don't sign. Tell whoever runs the server. |
 
@@ -129,6 +133,6 @@ A passkey belongs to the web address it was made on. If the workspace moves to a
 
 Nil finds the wallets in your browser through EIP-6963 and falls back to `window.ethereum` for wallets that don't announce themselves. It accepts a wallet's icon only as an embedded image, so showing it never loads anything.
 
-Nil uses Sign-In with Ethereum (EIP-4361). The server writes the whole message, including a one-time nonce that expires after 5 minutes. Your wallet signs it with `personal_sign`, and the server recovers the signing address (EIP-191 on secp256k1) and compares it with the address the message was written for. If that doesn't match, and the server is connected to Ethereum, it asks the configured chain whether the address is a smart-contract wallet that accepts the signature: through `isValidSignature` (EIP-1271) for a deployed wallet, or the EIP-6492 validator in a single `eth_call` for one that isn't deployed yet. That check has its own timeout, `SIGNIN_CHAIN_TIMEOUT_SECONDS`.
+Nil uses Sign-In with Ethereum (EIP-4361). The server writes the whole message, including a one-time nonce that expires after 5 minutes. It doesn't keep the message waiting in a list where other people's requests could push it out: it hands it to your browser together with an HMAC over the message, your network and the expiry, made with a key that never leaves the server, and checks that when you sign. So you finish signing from the same network you started on: the same IPv4 address, or the same IPv6 /64. Each message works once, and the server remembers the used ones only until they would have expired anyway. Your wallet signs the message with `personal_sign`, and the server recovers the signing address (EIP-191 on secp256k1) and compares it with the address the message was written for. If that doesn't match, and the server is connected to Ethereum, it asks the configured chain whether the address is a smart-contract wallet that accepts the signature: through `isValidSignature` (EIP-1271) for a deployed wallet, or the EIP-6492 validator in a single `eth_call` for one that isn't deployed yet. That check has its own timeout, `SIGNIN_CHAIN_TIMEOUT_SECONDS`.
 
-After that the server sets a session cookie. It is `HttpOnly` and `SameSite=Lax`, and over HTTPS it is also `Secure` and carries the `__Host-` prefix. The server stores only a SHA-256 hash of the session token, so a copy of the database can't be used to sign in. Sign-in requests are rate-limited.
+After that the server sets a session cookie. It is `HttpOnly` and `SameSite=Lax`, and over HTTPS it is also `Secure` and carries the `__Host-` prefix. The server stores only a SHA-256 hash of the session token, so a copy of the database can't be used to sign in. Sign-in requests are rate-limited per IPv4 address or IPv6 /64, and for IPv6 also per /56 and per /48, which get four and sixteen times as much, so moving between the addresses of one network doesn't get around the limit. A smart wallet's on-chain check only runs for a message the server gave out to that same network, inside those limits.

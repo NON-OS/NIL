@@ -40,6 +40,8 @@ export default async function snapshotPower() {
   const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((m) => m.id);
   const totals = new Map(members.map((id) => [id, { nox: 0n, staked: 0n, zsp: 0n }]));
   const wallets = shuffle(sql.all("SELECT user_id, external_id FROM credentials WHERE kind = 'wallet'").filter((w) => totals.has(w.user_id)));
+  // each wallet as it was read, so the audit file shows a voter's holdings then, not now
+  const rows = [];
 
   for (let i = 0; i < wallets.length; i += BATCH) {
     if (i) await pause();
@@ -48,6 +50,7 @@ export default async function snapshotPower() {
       throw new HttpError(502, `Nil couldn’t read everyone’s voting power from its Ethereum node, so the vote wasn’t opened. Try again in a minute. (${err.message})`);
     });
     group.forEach((w, k) => {
+      rows.push({ ...w, ...held[k] });
       const total = totals.get(w.user_id);
       total.nox += held[k].nox;
       total.staked += held[k].staked;
@@ -62,6 +65,12 @@ export default async function snapshotPower() {
       sql.run(
         'INSERT INTO proposal_power (proposal_id, user_id, nox, staked, zsp, power) SELECT ?, id, ?, ?, ?, ? FROM users WHERE id = ?',
         proposalId, String(t.nox), String(t.staked), Number(t.zsp), String(t.nox + t.staked + t.zsp * perZsp), id,
+      );
+    }
+    for (const w of rows) {
+      sql.run(
+        'INSERT INTO proposal_wallet_power (proposal_id, address, user_id, nox, staked, zsp) SELECT ?, ?, id, ?, ?, ? FROM users WHERE id = ?',
+        proposalId, w.external_id, String(w.nox), String(w.staked), Number(w.zsp), w.user_id,
       );
     }
   };

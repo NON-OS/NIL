@@ -41,7 +41,7 @@ Usage: release.sh [options]
   --registry PREFIX           also push the images to PREFIX/nil and PREFIX/nil-cloud, a registry
                               the foundation controls
   --caddy-dns-module MODULE   also build Caddy with a DNS module at a fixed version, for wildcard
-                              TLS (e.g. github.com/caddy-dns/hetzner@v1.0.0)
+                              TLS (e.g. github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3)
   --out DIR                   where to put the release files
   --platform P                image platform (default linux/amd64)
   --allow-dirty               a test build from the working tree as it is, uncommitted and
@@ -67,7 +67,7 @@ while [ $# -gt 0 ]; do
 done
 case $MODE in hosted | single) ;; *) die "--mode must be hosted or single." ;; esac
 if [ -n "$CADDY_DNS_MODULE" ] && ! [[ $CADDY_DNS_MODULE =~ @v[0-9] ]]; then
-  die "--caddy-dns-module needs a version, such as github.com/caddy-dns/hetzner@v1.0.0, so a build never takes whatever the module's latest is."
+  die "--caddy-dns-module needs a version, such as github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3, so a build never takes whatever the module's latest is."
 fi
 require git tar gzip sha256sum
 [ "$DRY_RUN" = 1 ] || require docker
@@ -130,9 +130,17 @@ if [ "$MODE" = hosted ]; then
   images+=("$CLOUD_REPO:$VERSION")
 fi
 if [ -n "$CADDY_DNS_MODULE" ]; then
-  run docker build --pull --platform "$PLATFORM" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" \
-    -t "$CADDY_REPO:$CADDY_VERSION-dns" "$SRC/cloud/caddy"
-  images+=("$CADDY_REPO:$CADDY_VERSION-dns")
+  caddy_image="$CADDY_REPO:$CADDY_VERSION-dns"
+  run docker build --pull --platform "$PLATFORM" --build-arg "DNS_MODULE=$CADDY_DNS_MODULE" -t "$caddy_image" "$SRC/cloud/caddy"
+  # The Dockerfile already stops a module that raises Caddy's version. This holds the tag to the
+  # binary as well, should the Dockerfile's images move to another Caddy without this script.
+  if [ "$DRY_RUN" = 1 ]; then
+    log "would check that $caddy_image runs Caddy v$CADDY_VERSION"
+  else
+    built=$(docker run --rm --pull never --network none --platform "$PLATFORM" "$caddy_image" caddy version | cut -d ' ' -f 1) || true
+    [ "$built" = "v$CADDY_VERSION" ] || die "$caddy_image should run Caddy v$CADDY_VERSION, and caddy version says ${built:-nothing}. Move CADDY_VERSION here and the images in cloud/caddy/Dockerfile to the same Caddy."
+  fi
+  images+=("$caddy_image")
 fi
 
 step "Image archives"

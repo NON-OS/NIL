@@ -25,10 +25,13 @@ router.patch(
   }),
 );
 
+// Ends every session, and with `keys`, every access key too, since a key made from a borrowed
+// session would otherwise keep working after it.
 router.post(
   '/me/sign-out-everywhere',
   route((req, res) => {
     sessions.revokeAll(req.user.id);
+    if (req.body?.keys === true) sql.run('DELETE FROM api_tokens WHERE user_id = ?', req.user.id);
     hub.disconnect(req.user.id);
     sessionCookie.clear(req, res);
     return { ok: true };

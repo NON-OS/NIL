@@ -55,6 +55,7 @@ const http = {
   bytes,
   // sent without the session cookie, so the server can't tell whose request it is
   anonymous: <T>(url: string, body: unknown) => request<T>('POST', url, body, {}, 'omit'),
+  anonymousGet: <T>(url: string) => request<T>('GET', url, undefined, {}, 'omit'),
   send: <T>(url: string, body: Blob, headers: Record<string, string>) => request<T>('POST', url, body, { 'Content-Type': 'application/octet-stream', ...headers }),
   upload: <T>(url: string, file: File) =>
     request<T>('POST', url, file, { 'Content-Type': file.type || 'application/octet-stream', 'X-Filename': encodeURIComponent(file.name) }),

@@ -10,7 +10,6 @@ import wallet from './helpers/wallet.js';
 // accept a nullifier only in the canonical form the proofs are about.
 const vectors = JSON.parse(fs.readFileSync(new URL('../../formal/vectors/canonical.json', import.meta.url)));
 const FIELD = BigInt(vectors.fieldOrder);
-const FINDING = 'audit finding: a nullifier with leading zeros verifies as the same number but is stored as a separate ballot';
 
 let srv;
 const owner = client(() => srv.base);
@@ -93,18 +92,18 @@ test('a string of something other than digits is refused as a nullifier', async 
   }
 });
 
-// Expected to fail until the canonical-nullifier fix lands on main: today both checks accept any
-// 1 to 78 digits. Once it passes, drop the todo so it guards the fix.
-test('a digit string that is not canonical is refused as a nullifier', { todo: FINDING }, async () => {
+// The audit finding this guards: a nullifier with leading zeros, or the field order added, verified
+// as the same number but was stored as a separate ballot.
+test('a digit string that is not canonical is refused as a nullifier', async () => {
   for (const c of digitStrings.filter((x) => !x.canonical)) {
     assert.doesNotMatch(await refusal(plainBallot(c.s)) ?? 'accepted', /different vote|accepted/, c.s);
     assert.doesNotMatch(await refusal(encryptedBallot(c.s)) ?? 'accepted', /different vote|accepted/, c.s);
   }
 });
 
-// Expected to fail until commitments are held to the same rule: today the voting key route takes
-// "0" followed by a key, which is the same group member as the key itself under another string.
-test('a voting key that is not canonical is refused', { todo: 'audit finding: identity commitments with leading zeros are accepted as a different string for the same key' }, async () => {
+// The audit finding this guards: the voting key route took "0" followed by a key, which is the same
+// group member as the key itself under another string.
+test('a voting key that is not canonical is refused', async () => {
   for (const c of digitStrings.filter((x) => !x.canonical)) {
     assert.equal((await owner('PUT', '/api/me/semaphore', { commitment: c.s })).status, 400, c.s);
   }

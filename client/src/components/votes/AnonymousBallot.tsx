@@ -39,7 +39,7 @@ export default function AnonymousBallot({ proposal, open, onChange }: { proposal
   return (
     <>
       {open && !key && <JoinVote onJoined={onChange} />}
-      {open && anonymousVotes.joined(proposal, key) && (
+      {open && anonymousVotes.joined(proposal.anonymous?.members, key) && (
         <div className="proposal-options" role="group" aria-label="Your anonymous vote">
           {proposal.options.map((option, i) => (
             <button key={option} type="button" className="btn" aria-pressed={mine.choice === i} disabled={busy !== null} onClick={() => cast(i)}>

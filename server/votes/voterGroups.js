@@ -4,6 +4,10 @@ import config from '../config.js';
 import heldBallots from './heldBallots.js';
 
 const OPEN = 'SELECT id FROM proposals WHERE anonymous = 1 AND closed_at IS NULL AND closes_at > ?';
+// A ballot proven against the voter list just before someone joined still counts if it arrives
+// within this long. Any older list is refused, so the root a ballot was proven against says
+// little more about when it was made than that it came after the last change.
+const GRACE = 5 * 60_000;
 
 function members(proposalId) {
   return sql
@@ -24,11 +28,17 @@ function leafPower(proposalId, userId) {
 function saveRoot(proposalId, { revokeOlder = false } = {}) {
   const root = groupRoot(members(proposalId));
   if (!root) return;
-  // removing someone must also retire every older root, or a proof against one would still count
+  // removing someone must also retire every older root at once, or a proof against one would still count
   if (revokeOlder) sql.run('UPDATE proposal_roots SET revoked = 1 WHERE proposal_id = ?', proposalId);
+  sql.run('UPDATE proposal_roots SET replaced_at = ? WHERE proposal_id = ? AND replaced_at IS NULL AND root != ?', Date.now(), proposalId, root);
   // a root appears when someone joins; stamped with the hour only, like the ballots proven against it
-  sql.run('INSERT INTO proposal_roots (proposal_id, root, created_at) VALUES (?, ?, ?) ON CONFLICT (proposal_id, root) DO UPDATE SET revoked = 0', proposalId, root, heldBallots.hourOf(Date.now()));
+  sql.run('INSERT INTO proposal_roots (proposal_id, root, created_at) VALUES (?, ?, ?) ON CONFLICT (proposal_id, root) DO UPDATE SET revoked = 0, replaced_at = NULL', proposalId, root, heldBallots.hourOf(Date.now()));
 }
+
+// The roots a ballot may be proven against right now: the current voter list, and one replaced
+// in the last few minutes. Browsers compare these with the list they were sent.
+const rootsNow = (proposalId) =>
+  sql.all('SELECT root FROM proposal_roots WHERE proposal_id = ? AND revoked = 0 AND (replaced_at IS NULL OR replaced_at > ?) ORDER BY replaced_at IS NOT NULL, replaced_at DESC', proposalId, Date.now() - GRACE).map((r) => r.root);
 
 function append(proposalId, commitment, userId) {
   if (sql.get('SELECT 1 FROM proposal_voters WHERE proposal_id = ? AND commitment = ?', proposalId, commitment)) return false;
@@ -44,7 +54,12 @@ function append(proposalId, commitment, userId) {
 const voterGroups = {
   members,
 
-  acceptedRoots: (proposalId) => new Set(sql.all('SELECT root FROM proposal_roots WHERE proposal_id = ? AND revoked = 0', proposalId).map((r) => r.root)),
+  rootsNow,
+  acceptedRoots: (proposalId) => new Set(rootsNow(proposalId)),
+
+  // Once its grace is over, when a root was replaced no longer matters, and like every other
+  // time around anonymous ballots it's kept to the hour.
+  blurTimes: () => sql.run('UPDATE proposal_roots SET replaced_at = replaced_at - replaced_at % 3600000 WHERE replaced_at % 3600000 != 0 AND replaced_at <= ?', Date.now() - GRACE),
 
   start(proposalId) {
     sql.tx(() => {

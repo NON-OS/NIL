@@ -6,8 +6,8 @@ import toast from '../../state/toast';
 import keyDirectory from '../../actions/keyDirectory';
 import type MemberKey from '../../types/MemberKey';
 
-// Every teammate's key as this browser sees it. Nothing is shared with a key until it's confirmed
-// here or in the prompt that appears when it's needed.
+// Every key the server lists as this browser sees it, deactivated members' included. Nothing is
+// shared with a key until it's confirmed here or in the prompt that appears when it's needed.
 export default function TeamKeysCard() {
   const users = useStore((s) => s.users);
   const me = useStore((s) => s.me?.id);
@@ -17,7 +17,7 @@ export default function TeamKeysCard() {
   useEffect(() => {
     keyDirectory
       .load()
-      .then((all) => setKeys([...all.values()].filter((k) => k.active && k.userId !== me).sort((a, b) => (users[a.userId]?.name ?? '').localeCompare(users[b.userId]?.name ?? ''))))
+      .then((all) => setKeys([...all.values()].filter((k) => k.userId !== me).sort((a, b) => (users[a.userId]?.name ?? '').localeCompare(users[b.userId]?.name ?? ''))))
       .catch((err) => {
         toast.error(err);
         setKeys([]);
@@ -37,7 +37,7 @@ export default function TeamKeysCard() {
             user={users[k.userId]}
             action={
               k.state !== 'confirmed' && (
-                <button type="button" className="btn btn-sm btn-primary" onClick={() => keyDirectory.confirm([k.userId]).catch(toast.error)} aria-label={`Confirm the key for ${users[k.userId]?.name ?? 'this person'}`}>
+                <button type="button" className="btn btn-sm btn-primary" onClick={() => keyDirectory.confirm([k]).catch(toast.error)} aria-label={`Confirm the key for ${users[k.userId]?.name ?? 'this person'}`}>
                   Confirm
                 </button>
               )

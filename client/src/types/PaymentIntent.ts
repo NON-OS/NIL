@@ -9,6 +9,7 @@ export default interface PaymentIntent {
   stealth: boolean;
   ephemeralPublicKey: string | null;
   viewTag: number | null;
+  via: 'pool' | null;
   createdAt: number;
   expiresAt: number;
 }

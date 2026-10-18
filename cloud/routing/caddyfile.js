@@ -1,4 +1,5 @@
 import states from '../provisioning/states.js';
+import dnsChallenge from './dnsChallenge.js';
 
 const LABEL = /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/;
 const UPSTREAM = /^[a-z0-9.-]+:\d{1,5}$/;
@@ -62,7 +63,8 @@ export default function caddyfile(config, workspaces, upstream) {
   out.push(`${signupHost} {`, '\timport nil_headers', '\tencode zstd gzip', '\trequest_body {', '\t\tmax_size 64KB', '\t}', `\treverse_proxy ${caddy.controlUpstream}`, '}', '');
 
   out.push(`${caddy.tls === 'on-demand' ? 'https://' : `*.${domain}`} {`, '\ttls {');
-  out.push(caddy.tls === 'on-demand' ? '\t\ton_demand' : `\t\tdns ${caddy.dnsProvider} {env.${caddy.dnsTokenEnv}}`);
+  const tls = caddy.tls === 'on-demand' ? ['on_demand'] : dnsChallenge(caddy.dnsProvider, caddy.dnsTokenEnv);
+  out.push(...tls.map((line) => `\t\t${line}`));
   out.push('\t}', '\timport nil_headers', '\tencode zstd gzip', '');
   for (const w of routed) {
     const target = upstream(w.id);

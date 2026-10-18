@@ -26,7 +26,7 @@ The staking contract is read with `getStakeInfo` (default `0xa94d6009790Ba13597A
 
 Admins can let anyone holding a minimum amount of NOX join without an invite. NOX in the wallet, NOX staked in the official staking contract and Zero-State Passes all count toward the minimum; one pass counts as 100,000 NOX by default (`HOLDER_ZSP_NOX`).
 
-Members who came in this way keep being checked: at every sign-in, every few hours (`HOLDER_RECHECK_HOURS`), and whenever someone new joins through the door. That way one stack of NOX can't let several wallets in one after another. Someone who falls below the minimum isn't locked out on the spot: they get a notice and 3 days (`HOLDER_GRACE_DAYS`) with full access to hold enough again. After that they are signed out and can't sign in until they do. An admin can let a member stay without the check. See [People and roles](people-and-roles.md#let-nox-holders-join-without-an-invite).
+Members who came in this way keep being checked: at every sign-in, every few hours (`HOLDER_RECHECK_HOURS`), and whenever someone new joins through the door. The regular checks read everyone at the same final block, and each wallet's NOX counts for one person at a time, even for a while after it's unlinked, so one stack of NOX can't keep several people in. Someone who falls below the minimum isn't locked out on the spot: they get a notice and 3 days (`HOLDER_GRACE_DAYS`) with full access to hold enough again. After that they are signed out, their access keys stop working, and they can't sign in until the regular checks have seen them hold enough for `HOLDER_RECHECK_HOURS`. An admin can let a member stay without the check. See [People and roles](people-and-roles.md#let-nox-holders-join-without-an-invite).
 
 ## Nil Pro
 

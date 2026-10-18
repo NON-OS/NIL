@@ -2,17 +2,17 @@ import http from '../api/http';
 import store from '../state/store';
 import unlockPrivateKeys from './unlockPrivateKeys';
 import registerVotingKey from './registerVotingKey';
+import ballotPause from '../lib/semaphore/ballotPause';
 import type Proposal from '../types/Proposal';
+import type AnonymousVote from '../types/AnonymousVote';
+import type AnonymousVoteView from '../types/AnonymousVoteView';
+
+const HOUR = 3_600_000;
 
 const loadIdentity = async () => {
   const [{ Identity }, keys] = await Promise.all([import('@semaphore-protocol/identity'), unlockPrivateKeys()]);
   return new Identity(keys.semaphoreSecret);
 };
-
-// a short random pause before sending, so a ballot doesn't arrive in lockstep with the page's
-// other (signed-in) requests; the real protection is that it carries no cookie at all, and that
-// the server holds it back and counts it with the rest of its hour
-const jitter = () => new Promise((r) => setTimeout(r, 400 + Math.random() * 1600));
 
 const anonymousVotes = {
   // Joining is its own step, well apart from voting: it registers your voting key, which puts
@@ -21,9 +21,27 @@ const anonymousVotes = {
     await registerVotingKey(await unlockPrivateKeys());
   },
 
-  // Whether your registered key holds a seat in this vote.
-  joined(proposal: Proposal, key = store.get().me?.semaphoreCommitment) {
-    return Boolean(key && proposal.anonymous?.members.some((m) => m.commitment === key && !m.removed));
+  // Whether your registered key holds a seat among these voters.
+  joined(members: AnonymousVote['members'] | undefined, key = store.get().me?.semaphoreCommitment) {
+    return Boolean(key && members?.some((m) => m.commitment === key && !m.removed));
+  },
+
+  // The vote as a ballot is proven from: fetched without the cookie, so the server can't tell
+  // whose fetch it is, and checked against the voter list this browser was shown signed in.
+  async fresh(proposal: Proposal) {
+    const view = await http.anonymousGet<AnonymousVoteView>('/anonymous-votes/' + proposal.id);
+    if (!view.open) throw new Error('This vote has closed.');
+    if (!anonymousVotes.joined(view.members)) throw new Error('You don’t have a seat in this vote.');
+    const { default: checkVoterList } = await import('../lib/semaphore/checkVoterList');
+    checkVoterList(view, proposal.anonymous?.roots ?? [], proposal.weighting === 'power');
+    return view;
+  },
+
+  // Sends a proven ballot without the cookie, after a random pause. Returns when it joins the count.
+  async send(proposalId: string, body: unknown) {
+    await ballotPause();
+    const { countsAt } = await http.anonymous<{ countsAt: number }>('/anonymous-ballots/' + proposalId, body);
+    return countsAt;
   },
 
   // Your voting identity. It must already be registered: registering it now, seconds before the
@@ -38,19 +56,16 @@ const anonymousVotes = {
     return identity;
   },
 
-  // Returns when the ballot joins the count: the end of the hour it arrived in.
+  // Returns when the ballot joins the count, once the hour it was proven in is over.
   async cast(proposal: Proposal, choice: number) {
     if (!proposal.anonymous) throw new Error('This vote isn’t anonymous.');
     const identity = await anonymousVotes.identity();
     // prove against the latest member list, which may have grown since the page loaded
-    const fresh = (await http.get<Proposal[]>('/proposals')).find((p) => p.id === proposal.id);
-    if (!fresh?.anonymous) throw new Error('That vote is gone.');
-    if (!anonymousVotes.joined(fresh)) throw new Error('You don’t have a seat in this vote.');
+    const view = await anonymousVotes.fresh(proposal);
     const { default: proveBallot } = await import('../lib/semaphore/proveBallot');
-    const proof = await proveBallot(identity, fresh.anonymous, choice);
-    await jitter();
-    const { countsAt } = await http.anonymous<{ countsAt: number }>('/anonymous-ballots/' + proposal.id, { proof });
-    return countsAt;
+    // the hour goes into the proof by the server's clock, not this device's
+    const proof = await proveBallot(identity, view, choice, Math.floor(view.now / HOUR));
+    return anonymousVotes.send(proposal.id, { proof });
   },
 
   // Whether one of the vote's counted ballots is yours, worked out locally from your key.

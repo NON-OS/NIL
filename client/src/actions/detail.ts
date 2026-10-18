@@ -2,6 +2,7 @@ import http from '../api/http';
 import ApiError from '../api/ApiError';
 import store from '../state/store';
 import fillWords from '../state/fillWords';
+import commentVersions from '../state/commentVersions';
 import toast from '../state/toast';
 import router from '../lib/router';
 import socket from '../realtime/socket';
@@ -64,7 +65,7 @@ const detail = {
   async comment(taskId: string, body: string) {
     try {
       const sent = await http.post<{ comment: Comment }>(`/tasks/${taskId}/comments`, await commentPayload(taskId, body));
-      const comment = { ...sent.comment, body, locked: false };
+      const comment = { ...sent.comment, body, locked: false, edit: 0 };
       patchDetail(taskId, (d) => ({ comments: d.comments.some((c) => c.id === comment.id) ? d.comments : [...d.comments, comment] }));
       return true;
     } catch (err) {
@@ -75,8 +76,10 @@ const detail = {
 
   async editComment(comment: Comment, body: string) {
     try {
-      const res = await http.patch<{ comment: Comment }>(`/comments/${comment.id}`, { body: (await commentPayload(comment.taskId, body)).body });
-      const edited = { ...res.comment, body, locked: false };
+      const edit = commentText.nextEdit(comment);
+      const res = await http.patch<{ comment: Comment }>(`/comments/${comment.id}`, { body: (await commentPayload(comment.taskId, body, { comment, edit })).body });
+      if (comment.sealed) commentVersions.record(comment.id, edit);
+      const edited = { ...res.comment, body, locked: false, edit };
       patchDetail(comment.taskId, (d) => ({ comments: d.comments.map((c) => (c.id === comment.id ? edited : c)) }));
     } catch (err) {
       toast.error(err);
@@ -86,6 +89,7 @@ const detail = {
   async deleteComment(comment: Comment) {
     try {
       await http.del(`/comments/${comment.id}`);
+      if (comment.sealed) commentVersions.drop(comment.id);
       patchDetail(comment.taskId, (d) => ({ comments: d.comments.filter((c) => c.id !== comment.id) }));
     } catch (err) {
       toast.error(err);
