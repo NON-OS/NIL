@@ -4,13 +4,13 @@ import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import rewardToken from '../lib/rewardToken.js';
 import headBlock from '../chain/headBlock.js';
-import stealthAddress from '../stealth/stealthAddress.js';
 import pickSuffix from '../billing/pickSuffix.js';
 import askAmount from '../billing/askAmount.js';
 import amountGrid from '../billing/amountGrid.js';
 import visibleTask from './visibleTask.js';
 import userRows from './userRows.js';
 import bountyReceived from './bountyReceived.js';
+import privateTarget from './privateTarget.js';
 import toIntent from '../mappers/toIntent.js';
 
 const DAY = 86_400_000;
@@ -18,8 +18,8 @@ const DAY = 86_400_000;
 // The first step of paying a bounty: Nil works out exactly what to send and where. The amount is
 // what's still owed, rounded up a hair, with a suffix in its last decimal places, and only a
 // transfer mined after this moment can pay it. Together they make a payment impossible to pass
-// off as one made for another task or another workspace. For a private payout, the one-time
-// address is derived here from the payer's ephemeral key, which is used once and never stored.
+// off as one made for another task or another workspace. For a private payout, the payer's
+// browser works out the one-time address and sends it with the ephemeral key's public half.
 export default async function startPayment(actor, taskId, stealth = null) {
   const task = visibleTask(taskId, actor);
   if (!task.bounty) throw HttpError.badRequest('This task has no bounty.');
@@ -37,14 +37,7 @@ export default async function startPayment(actor, taskId, stealth = null) {
   const owed = BigInt(task.bounty) - bountyReceived(task.id);
   if (owed <= 0n) throw new HttpError(409, 'This bounty is already paid.');
 
-  let to = payee.address.toLowerCase();
-  let hidden = { ephemeral: null, viewTag: null };
-  if (stealth) {
-    if (!payee.stealth_meta) throw HttpError.badRequest('That person hasn’t turned on private payouts.');
-    const derived = stealthAddress(payee.stealth_meta, stealth.ephemeralKey);
-    to = derived.address;
-    hidden = { ephemeral: derived.ephemeralPublicKey, viewTag: derived.viewTag };
-  }
+  const target = stealth ? privateTarget(payee, stealth) : { to: payee.address.toLowerCase(), ephemeral: null, viewTag: null };
 
   const startBlock = await headBlock();
   const now = Date.now();
@@ -56,7 +49,7 @@ export default async function startPayment(actor, taskId, stealth = null) {
     const { low, grid } = amountGrid(token.decimals, digits);
     sql.run(
       'INSERT INTO payment_intents (id, task_id, payer_id, payee_id, to_address, token, amount, suffix, grid, start_block, stealth_ephemeral, stealth_view_tag, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, task.id, actor.id, payee.id, to, token.symbol, String(askAmount(owed, grid, BigInt(suffix) * low)), suffix, String(grid), startBlock, hidden.ephemeral, hidden.viewTag, now, now + config.payments.intentDays * DAY,
+      id, task.id, actor.id, payee.id, target.to, token.symbol, String(askAmount(owed, grid, BigInt(suffix) * low)), suffix, String(grid), startBlock, target.ephemeral, target.viewTag, now, now + config.payments.intentDays * DAY,
     );
     return sql.get('SELECT * FROM payment_intents WHERE id = ?', id);
   });

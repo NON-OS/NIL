@@ -13,7 +13,9 @@ import type BountyOverview from '../types/BountyOverview';
 
 const BOUNTY_STATE: Record<Payment['state'], Task['bountyState']> = { sent: 'pending', confirming: 'pending', paid: 'paid', overpaid: 'paid', underpaid: 'underpaid', failed: null, cancelled: null };
 
-const start = (taskId: string, stealth?: { ephemeralKey: string }) => http.post<{ intent: PaymentIntent }>(`/tasks/${taskId}/payments/intent`, stealth ? { stealth } : {}).then((r) => r.intent);
+// a private payout names its one-time address and the ephemeral key's public half, never the
+// ephemeral private key
+const start = (taskId: string, stealth?: { address: string; ephemeralPublicKey: string; viewTag: number }) => http.post<{ intent: PaymentIntent }>(`/tasks/${taskId}/payments/intent`, stealth ? { stealth } : {}).then((r) => r.intent);
 
 async function recorded(taskId: string, intentId: string, txHash: string, announceTx?: string) {
   const { payment } = await http.post<{ payment: Payment }>(`/tasks/${taskId}/payments`, { intentId, txHash, announceTx });
@@ -55,7 +57,7 @@ const bounties = {
     // the curve maths for one-time addresses loads only for a private payout
     const { default: newStealthPayment } = await import('../lib/stealth/newStealthPayment');
     const one = newStealthPayment(payee.stealthMeta);
-    const intent = await start(task.id, { ephemeralKey: one.ephemeralKey });
+    const intent = await start(task.id, one);
     sameAddress(one.address, intent);
     const amount = BigInt(intent.amount);
     const transfer = { to: token.address, data: encodeTransfer(one.address, amount) };
