@@ -19,6 +19,7 @@ const keyring = {
   // private task keys, by seal id
   taskKey: (sealId: string) => taskKeys.get(sealId),
   rememberTaskKey: (sealId: string, key: Uint8Array) => taskKeys.set(sealId, key),
+  forgetTaskKey: (sealId: string) => taskKeys.delete(sealId),
   lock() {
     if (identity) forgetIdentity(identity);
     identity = null;
