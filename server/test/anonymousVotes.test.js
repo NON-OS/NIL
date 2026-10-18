@@ -76,7 +76,9 @@ test('anonymous votes are one person, one vote, and start with every member who 
   assert.equal((await people.ana('POST', `/api/proposals/${vote.id}/ballot`, { choice: 0 })).status, 400);
 });
 
-test('a ballot proves membership without saying who, is held until its hour ends, and can be changed', async () => {
+test('a ballot proves membership without saying who, is held until its hour ends, and can be changed', async (t) => {
+  // the server runs in this process, so this sets its clock too, whatever the hour really is
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   let vote = await getVote(ids.vote);
   const first = await prove('ana', vote, 0);
   const res = await ballot(vote.id, first);
@@ -104,13 +106,8 @@ test('a ballot proves membership without saying who, is held until its hour ends
   assert.ok(!Object.keys(held[0]).includes('created_at'));
 
   // once the hour and its grace are over, the next look at the votes counts them together
-  const realNow = Date.now;
-  Date.now = () => realNow() + hour + GRACE;
-  try {
-    vote = await getVote(ids.vote);
-  } finally {
-    Date.now = realNow;
-  }
+  t.mock.timers.tick(hour + GRACE);
+  vote = await getVote(ids.vote);
   assert.deepEqual([vote.voters, vote.totals], [2, ['0', '2', '0']]);
   assert.ok(vote.anonymous.nullifiers.includes(first.nullifier));
 });
@@ -157,7 +154,9 @@ test('late keys join open votes; removed members lose their seat and every older
 
 // The auditor's proof of concept: Ben votes No, changes to Yes, and someone holding his first
 // proof (the server, a proxy, or an admin with the audit file) sends it again without a cookie.
-test('a copy of an earlier ballot can’t undo a change of mind, in the same hour or a later one', async () => {
+test('a copy of an earlier ballot can’t undo a change of mind, in the same hour or a later one', async (t) => {
+  // the server runs in this process, so this sets its clock too, whatever the hour really is
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const vote = (await owner('POST', '/api/proposals', { title: 'Replay', anonymous: true })).data.proposal;
   const no = await prove('ben', vote, 1);
   const yes = await prove('ben', vote, 0);
@@ -172,29 +171,26 @@ test('a copy of an earlier ballot can’t undo a change of mind, in the same hou
   // a proof for an hour that hasn't begun is no good either
   assert.match((await ballot(vote.id, await proveAnonymous(keys.ben, vote, 1, { hour: Math.floor(Date.now() / HOUR) + 1 }))).data.error, /another hour/);
 
-  const realNow = Date.now;
-  Date.now = () => realNow() + HOUR + GRACE;
-  try {
-    // an hour on, Yes is counted and its proof is in the audit file, where an admin could copy it
-    const audit = (await owner('GET', `/api/proposals/${vote.id}/audit`)).data;
-    assert.deepEqual(audit.ballots.map((b) => b.proof.message), [yes.message]);
-    for (const old of [no, yes]) assert.match((await ballot(vote.id, old)).data.error, /another hour/);
-    // Ben himself can still change his mind back, with a ballot proven in this hour
-    assert.equal((await ballot(vote.id, await prove('ben', vote, 1))).status, 200);
-  } finally {
-    Date.now = realNow;
-  }
+  t.mock.timers.tick(HOUR + GRACE);
+  // an hour on, Yes is counted and its proof is in the audit file, where an admin could copy it
+  const audit = (await owner('GET', `/api/proposals/${vote.id}/audit`)).data;
+  assert.deepEqual(audit.ballots.map((b) => b.proof.message), [yes.message]);
+  for (const old of [no, yes]) assert.match((await ballot(vote.id, old)).data.error, /another hour/);
+  // Ben himself can still change his mind back, with a ballot proven in this hour
+  assert.equal((await ballot(vote.id, await prove('ben', vote, 1))).status, 200);
   const closed = (await owner('POST', `/api/proposals/${vote.id}/close`)).data.proposal;
   assert.deepEqual([closed.voters, closed.totals], [1, ['0', '1', '0']]);
 });
 
-test('browsers fetch the voter list without a cookie, and only the current list or one just replaced counts', async () => {
+test('browsers fetch the voter list without a cookie, and only the current list or one just replaced counts', async (t) => {
+  // the server runs in this process, so this sets its clock too, whatever the hour really is
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const vote = (await owner('POST', '/api/proposals', { title: 'Roots', anonymous: true })).data.proposal;
   const look = () => fetch(`${srv.base}/api/anonymous-votes/${vote.id}`, { headers: { 'X-NONOS': '1' } }).then((r) => r.json());
   let view = await look();
   assert.deepEqual([view.members, view.roots, view.scope, view.optionCount, view.open], [vote.anonymous.members, vote.anonymous.roots, vote.anonymous.scope, 3, true]);
   assert.equal(view.roots.length, 1);
-  assert.ok(Math.abs(view.now - Date.now()) < 5000);
+  assert.equal(view.now, Date.now());
   assert.equal((await fetch(`${srv.base}/api/anonymous-votes/${ids.vote}x`)).status, 404);
 
   const early = await prove('ana', { anonymous: view }, 0);
@@ -211,16 +207,11 @@ test('browsers fetch the voter list without a cookie, and only the current list 
   // the same list a few minutes on, proven for that hour so only the list is out of date
   const later = await proveAnonymous(keys.ana, { anonymous: { ...view, members: view.members.slice(0, -1) } }, 0, { hour: Math.floor((Date.now() + 6 * 60_000) / HOUR) });
   assert.equal(later.merkleTreeRoot, early.merkleTreeRoot);
-  const realNow = Date.now;
-  Date.now = () => realNow() + 6 * 60_000;
-  try {
-    assert.match((await ballot(vote.id, later)).data.error, /voter list changed/);
-    assert.deepEqual((await look()).roots, view.roots.slice(0, 1));
-    // once the grace is over, when the list changed is kept to the hour like every other time
-    await getVote(vote.id);
-  } finally {
-    Date.now = realNow;
-  }
+  t.mock.timers.tick(6 * 60_000);
+  assert.match((await ballot(vote.id, later)).data.error, /voter list changed/);
+  assert.deepEqual((await look()).roots, view.roots.slice(0, 1));
+  // once the grace is over, when the list changed is kept to the hour like every other time
+  await getVote(vote.id);
   const db = new DatabaseSync(path.join(srv.dataDir, 'nonos.db'));
   const replaced = db.prepare('SELECT replaced_at FROM proposal_roots WHERE proposal_id = ? AND replaced_at IS NOT NULL').all(vote.id);
   db.close();

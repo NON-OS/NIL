@@ -189,7 +189,10 @@ test('trustees check the shares dealt to them before any ballot is cast', async 
   assert.equal(vote.disputed, false);
 });
 
-test('weighted ballots are proven and encrypted; nobody sees totals before decryption', async () => {
+test('weighted ballots are proven and encrypted; nobody sees totals before decryption', async (t) => {
+  // the server runs in this process, so this stops its clock too: proving takes long enough under
+  // load that the hour could otherwise end mid-test and count the first ballots
+  t.mock.timers.enable({ apis: ['Date'], now: Date.now() });
   const vote = await getVote(ids.vote);
   for (const [n, choice] of [['owner', 0], ['ana', 1], ['cy', 0]]) {
     const res = await ballot(ids.vote, await proveBallot(n, vote, choice));
