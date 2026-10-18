@@ -181,6 +181,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 - Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
 - The comment box only mentions Ctrl+Enter where there is likely a keyboard.
 - The sign-in screen uses plain words. It no longer mentions gas or on-chain checks, and "Hold NOX? Join without an invite" now reads "Have NOX tokens? Join without an invite".
+- Migration 034 adds an index under every foreign key that had none, and for the lookups the app makes all the time: unread counts, where each person's archive starts, the due-date check, the retention sweep, expired sessions, pending bounty applications, upload totals and old agent logs. Erasing a task, a member or a goal no longer reads whole tables. A test fails when a new foreign key or one of these lookups has no index to use.
 - Migration files are named by the order they run in: held ballots is 020, sign-in resets 024 and billing 025. Nothing changes in the database. A test keeps file numbers unique, consecutive and in step with `server/db/migrations.js`.
 
 ### Fixed

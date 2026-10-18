@@ -24,7 +24,7 @@ export default function pruneAgentData() {
     if (keepDays.length) {
       const cutoff = now - Math.min(...keepDays) * DAY;
       sql.run('DELETE FROM agent_steps WHERE created_at < ?', cutoff);
-      sql.run('UPDATE agent_runs SET summary = NULL WHERE created_at < ?', cutoff);
+      sql.run('UPDATE agent_runs SET summary = NULL WHERE summary IS NOT NULL AND created_at < ?', cutoff);
       sql.run('DELETE FROM agent_audit WHERE created_at < ?', cutoff);
       sql.run("DELETE FROM agent_approvals WHERE status != 'pending' AND created_at < ?", cutoff);
       sql.run('DELETE FROM agent_idempotency WHERE created_at < ?', cutoff);
