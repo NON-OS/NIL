@@ -4,7 +4,7 @@ import domain from '../lib/domain.js';
 import HttpError from '../lib/HttpError.js';
 import parseJSON from '../lib/parseJSON.js';
 import seatGate from './seatGate.js';
-import inviteIsLive from './inviteIsLive.js';
+import inviteUsable from './inviteUsable.js';
 import useInvite from './useInvite.js';
 import firstRunState from '../firstRun/firstRunState.js';
 
@@ -29,7 +29,7 @@ export default function createAccount({ mode, id = newId(), name, workspaceName,
       role = 'owner';
     } else if (mode === 'invite') {
       const invite = sql.get('SELECT * FROM invites WHERE token_hash = ?', inviteHash);
-      if (!inviteIsLive(invite)) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
+      if (!inviteUsable(invite)) throw HttpError.badRequest('This invite link has expired or was already used. Ask for a new one.');
       role = ['admin', 'guest'].includes(invite.role) ? invite.role : 'member';
       seatGate(role);
       guestProjects = role === 'guest' ? parseJSON(invite.project_ids, []) : [];

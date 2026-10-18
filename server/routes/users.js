@@ -14,8 +14,11 @@ import voterGroups from '../votes/voterGroups.js';
 import guestScope from '../services/guestScope.js';
 import lostAccess from '../services/lostAccess.js';
 import seatGate from '../services/seatGate.js';
+import adminLeft from '../services/adminLeft.js';
+import revokeInvitesBy from '../services/revokeInvitesBy.js';
 
 const router = express.Router();
+const isAdminRole = (role) => role === 'owner' || role === 'admin';
 
 function target(req) {
   const row = sql.get('SELECT * FROM users WHERE id = ?', req.params.id);
@@ -37,6 +40,7 @@ router.patch(
       // a guest becoming a member takes a seat, the same as someone new joining
       if (row.role === 'guest' && role !== 'guest' && !row.deactivated) seatGate(role);
       sql.run('UPDATE users SET role = ? WHERE id = ?', role, row.id);
+      if (isAdminRole(row.role) && !isAdminRole(role)) adminLeft(row.id, req.user.id);
       // guests don't vote: becoming one empties your seat in open anonymous votes, and back again
       if (role === 'guest') voterGroups.leave(row.id);
       else voterGroups.join(row.id);
@@ -69,6 +73,8 @@ router.patch(
       if (off) {
         sessions.revokeAll(row.id);
         hub.disconnect(row.id);
+        if (isAdminRole(sql.get('SELECT role FROM users WHERE id = ?', row.id).role)) adminLeft(row.id, req.user.id);
+        else revokeInvitesBy(row.id);
       }
     }
     return { user: toUser(publishUser(row.id), req.viewer) };
