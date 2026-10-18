@@ -5,6 +5,10 @@
 //
 // A weighted vote's snapshot also keeps each wallet's holdings as read, so the audit file can
 // show what a voter held then rather than the wallets they have linked since.
+//
+// A ballot may only be proven against the current voter list, or one replaced in the last few
+// minutes, so each root notes when it was replaced. Roots of open votes count as current until
+// their list next changes.
 const odd = (column) => `(${column} GLOB '0?*' OR length(${column}) > 77 OR (length(${column}) = 77 AND ${column} >= '21888242871839275222246405745257275088548364400416034343698204186575808495617'))`;
 
 const voteReview = `
@@ -12,6 +16,8 @@ const voteReview = `
   DELETE FROM anonymous_ballots WHERE ${odd('nullifier')} AND proposal_id IN (SELECT id FROM proposals WHERE closed_at IS NULL);
   DELETE FROM encrypted_ballots WHERE ${odd('nullifier')} AND proposal_id IN (SELECT id FROM proposals WHERE closed_at IS NULL);
   UPDATE users SET semaphore_commitment = NULL WHERE semaphore_commitment IS NOT NULL AND ${odd('semaphore_commitment')};
+
+  ALTER TABLE proposal_roots ADD COLUMN replaced_at INTEGER;
 
   CREATE TABLE proposal_wallet_power (
     proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,

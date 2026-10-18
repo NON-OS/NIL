@@ -7,8 +7,21 @@ import rateLimit from '../auth/rateLimit.js';
 import heldBallots from '../votes/heldBallots.js';
 import checkBallot from '../votes/checkBallot.js';
 import checkEncryptedBallot from '../votes/encrypted/checkEncryptedBallot.js';
+import anonymousView from '../votes/anonymousView.js';
 
 const router = express.Router();
+
+// The voter list and everything else a ballot is proven from, for browsers that ask without
+// their cookie (see anonymousView). Knowing the vote's id is what lets anyone ask.
+router.get(
+  '/anonymous-votes/:id',
+  rateLimit({ windowMs: 60_000, max: 60, message: 'Too many requests at once. Wait a minute.' }),
+  route((req) => {
+    const proposal = sql.get('SELECT * FROM proposals WHERE id = ? AND anonymous = 1', req.params.id);
+    if (!proposal) throw HttpError.notFound('That vote');
+    return anonymousView(proposal);
+  }),
+);
 
 // Mounted before sign-in on purpose: browsers send these without the session cookie, so the
 // server can't tie a ballot to an account. The proof alone decides whether it counts. A valid

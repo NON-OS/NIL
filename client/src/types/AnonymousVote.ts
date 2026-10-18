@@ -4,5 +4,7 @@ export default interface AnonymousVote {
   // the voter tree in order; a removed member keeps their position with an empty leaf
   // in a weighted vote each member also carries their snapshotted power, in whole NOX
   members: { commitment: string; removed?: boolean; power?: string }[];
+  // the roots a ballot may be proven against right now: the current list, and one just replaced
+  roots: string[];
   nullifiers: string[];
 }

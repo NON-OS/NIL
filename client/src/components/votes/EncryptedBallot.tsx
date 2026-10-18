@@ -90,8 +90,8 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
   return (
     <>
       {open && !key && <JoinVote onJoined={onChange} />}
-      {open && key && !anonymousVotes.joined(proposal, key) && <p className="muted proposal-anon">You had no voting power when this vote opened, so you have no seat in it.</p>}
-      {open && anonymousVotes.joined(proposal, key) && (
+      {open && key && !anonymousVotes.joined(proposal.anonymous?.members, key) && <p className="muted proposal-anon">You had no voting power when this vote opened, so you have no seat in it.</p>}
+      {open && anonymousVotes.joined(proposal.anonymous?.members, key) && (
         <div className="proposal-options" role="group" aria-label="Your encrypted vote">
           {proposal.options.map((option, i) => (
             <button key={option} type="button" className="btn" aria-pressed={mine.choice === i} disabled={busy !== null} onClick={() => run(`vote-${i}`, () => encryptedVotes.cast(proposal, i), (countsAt) => `Ballot encrypted and proven. It joins the count at ${dates.time(countsAt)} with the others from this hour. Nobody can tell it was yours or how much weight it carried.`, () => setMine({ voted: true, choice: i }))}>

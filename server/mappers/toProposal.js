@@ -5,6 +5,7 @@ import config from '../config.js';
 import voteScope from '../votes/voteScope.js';
 import voterGroups from '../votes/voterGroups.js';
 import encryptedTally from '../votes/encrypted/encryptedTally.js';
+import publicDealings from '../votes/encrypted/publicDealings.js';
 
 // The trustee side of an encrypted vote. Every member gets each trustee's revealed commitments
 // and proofs of knowledge, so voters rebuild the vote key themselves instead of taking the
@@ -25,7 +26,7 @@ function encryptedView(row, viewer) {
       decrypted: Boolean(t.partial),
     })),
     disputed: seats.some((t) => t.shares_check?.startsWith('bad')),
-    commitments: dealings.map((d) => (d ? { commitments: d.commitments, proofs: d.proofs } : null)),
+    commitments: publicDealings(row.id),
     // members with at least one whole NOX of power in the snapshot: they join the census when they first vote
     eligible: sql.get('SELECT COUNT(*) AS n FROM proposal_power WHERE proposal_id = ? AND CAST(power AS REAL) >= ?', row.id, 10 ** config.nox.decimals).n,
     dealings: isTrustee ? dealings : null,
@@ -61,6 +62,9 @@ export default function toProposal(row, viewer) {
           scope: voteScope(row.id),
           depth: config.semaphore.depth,
           members: voterGroups.members(row.id),
+          // what a ballot may be proven against now, for the browser to compare with the list it
+          // fetches without its cookie before proving
+          roots: voterGroups.rootsNow(row.id),
           nullifiers: sql.all(`SELECT nullifier FROM ${row.weighting === 'power' ? 'encrypted_ballots' : 'anonymous_ballots'} WHERE proposal_id = ?`, row.id).map((b) => b.nullifier),
         }
       : null,

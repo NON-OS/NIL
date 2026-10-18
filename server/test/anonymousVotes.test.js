@@ -153,6 +153,43 @@ test('late keys join open votes; removed members lose their seat and every older
   assert.equal((await ballot(vote.id, await prove('ana', vote, 0))).status, 200);
 });
 
+test('browsers fetch the voter list without a cookie, and only the current list or one just replaced counts', async () => {
+  const vote = (await owner('POST', '/api/proposals', { title: 'Roots', anonymous: true })).data.proposal;
+  const look = () => fetch(`${srv.base}/api/anonymous-votes/${vote.id}`, { headers: { 'X-NONOS': '1' } }).then((r) => r.json());
+  let view = await look();
+  assert.deepEqual([view.members, view.roots, view.scope, view.optionCount, view.open], [vote.anonymous.members, vote.anonymous.roots, vote.anonymous.scope, 3, true]);
+  assert.equal(view.roots.length, 1);
+  assert.ok(Math.abs(view.now - Date.now()) < 5000);
+  assert.equal((await fetch(`${srv.base}/api/anonymous-votes/${ids.vote}x`)).status, 404);
+
+  const early = await prove('ana', { anonymous: view }, 0);
+  const eve = client(base);
+  const inv = await owner('POST', '/api/invites', { role: 'member' });
+  await eve.wallet(wallet(), 'invite', { name: 'eve', inviteToken: inv.data.token });
+  assert.equal((await eve('PUT', '/api/me/semaphore', { commitment: new Identity('test-secret-eve').commitment.toString() })).status, 200);
+  view = await look();
+  // the list Ana proved against was replaced a moment ago: still taken, for a few minutes
+  assert.deepEqual(view.roots.slice(1), [early.merkleTreeRoot]);
+  assert.deepEqual((await getVote(vote.id)).anonymous.roots, view.roots);
+  assert.equal((await ballot(vote.id, early)).status, 200);
+
+  const realNow = Date.now;
+  Date.now = () => realNow() + 6 * 60_000;
+  try {
+    assert.match((await ballot(vote.id, early)).data.error, /voter list changed/);
+    assert.deepEqual((await look()).roots, view.roots.slice(0, 1));
+    // once the grace is over, when the list changed is kept to the hour like every other time
+    await getVote(vote.id);
+  } finally {
+    Date.now = realNow;
+  }
+  const db = new DatabaseSync(path.join(srv.dataDir, 'nonos.db'));
+  const replaced = db.prepare('SELECT replaced_at FROM proposal_roots WHERE proposal_id = ? AND replaced_at IS NOT NULL').all(vote.id);
+  db.close();
+  assert.equal(replaced.length, 1);
+  assert.equal(replaced[0].replaced_at % 3_600_000, 0);
+});
+
 test('closing freezes the result, and the audit lets anyone recount every proof', async () => {
   const closed = (await owner('POST', `/api/proposals/${ids.vote}/close`)).data.proposal;
   assert.ok(closed.closedAt);

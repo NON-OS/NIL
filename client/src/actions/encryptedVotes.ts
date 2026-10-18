@@ -11,9 +11,6 @@ import type Proposal from '../types/Proposal';
 const seatOf = (proposal: Proposal) => proposal.encrypted?.trustees.find((t) => t.userId === store.get().me?.id)?.position ?? null;
 const trusteeIds = (proposal: Proposal) => proposal.encrypted!.trustees.map((t) => t.userId).filter((id): id is string => Boolean(id));
 
-// a short random pause before sending, like plain anonymous ballots, so a ballot doesn't arrive in lockstep with signed-in requests
-const jitter = () => new Promise((r) => setTimeout(r, 400 + Math.random() * 1600));
-
 async function seed() {
   await vault.unlock();
   return keyring.identity()!.seed;
@@ -72,23 +69,20 @@ const encryptedVotes = {
     if (!result.ok) throw new Error(`Trustee ${result.from}’s share doesn’t match what they committed to. The vote won’t take ballots; ask an admin to start it again.`);
   },
 
-  // Returns when the ballot joins the count: the end of the hour it arrived in.
+  // Returns when the ballot joins the count, once the hour it arrived in is over.
   async cast(proposal: Proposal, choice: number) {
     const identity = await anonymousVotes.identity();
-    const fresh = (await http.get<Proposal[]>('/proposals')).find((p) => p.id === proposal.id);
-    const enc = fresh?.encrypted;
-    if (!fresh || !enc?.publicKey) throw new Error('This vote isn’t open yet.');
-    if (!anonymousVotes.joined(fresh)) throw new Error('You don’t have a seat in this vote.');
-    if (enc.disputed) throw new Error('A trustee found a bad key share, so this vote can’t take ballots.');
+    const view = await anonymousVotes.fresh(proposal);
+    const enc = view.encrypted;
+    if (!enc?.publicKey) throw new Error('This vote isn’t open yet.');
+    if (enc.trustees.some((t) => t.shares === 'bad')) throw new Error('A trustee found a bad key share, so this vote can’t take ballots.');
     // encrypt to the key the trustees' commitments add up to, never to the server's say-so
     const { default: votePublicKey } = await import('../lib/ballot/votePublicKey');
-    const key = votePublicKey(fresh.id, enc.commitments);
+    const key = votePublicKey(view.id, enc.commitments);
     if (!key || key[0] !== enc.publicKey[0] || key[1] !== enc.publicKey[1]) throw new Error('The vote key the server sent doesn’t match the trustees’ commitments, so Nil won’t encrypt a ballot to it. Tell your admin.');
     const { default: proveEncryptedBallot } = await import('../lib/ballot/proveEncryptedBallot');
-    const { proof, publicSignals } = await proveEncryptedBallot(identity, fresh, choice, key);
-    await jitter();
-    const { countsAt } = await http.anonymous<{ countsAt: number }>('/anonymous-ballots/' + proposal.id, { proof, publicSignals });
-    return countsAt;
+    const { proof, publicSignals } = await proveEncryptedBallot(identity, view, choice, key);
+    return anonymousVotes.send(proposal.id, { proof, publicSignals });
   },
 
   // A trustee's partial decryption of the totals, proven correct, after the vote closes.

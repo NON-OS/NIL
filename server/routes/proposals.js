@@ -45,6 +45,7 @@ router.get(
   route((req) => {
     // anonymous ballots whose hour has ended join the count when someone next looks
     if (heldBallots.release()) hub.broadcast({ type: 'proposals' });
+    voterGroups.blurTimes();
     return sql.all('SELECT * FROM proposals ORDER BY closed_at IS NOT NULL, created_at DESC LIMIT 200').map((row) => toProposal(row, req.user));
   }),
 );
