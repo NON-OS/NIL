@@ -47,6 +47,15 @@ const noteBook = {
   // The relayer was never handed it after all.
   release: (book: PoolBook, at: PoolNote) => update(book, at, (n) => ({ ...n, pending: null })),
 
+  // The payout a deposit was waiting on turned up on-chain, so it's settled as that withdrawal.
+  // A deposit no longer waiting on it, say because another admin settled it first, is left as
+  // it is, so the payout is never taken off twice.
+  found(book: PoolBook, at: PoolNote, { intentId, txHash }: { intentId: string; txHash: string }) {
+    const now = book.notes.find((n) => same(n, at));
+    if (!now?.pending || now.pending.intentId !== intentId) return book;
+    return noteBook.withdrew(book, now, { gross: BigInt(now.pending.gross), intentId, txHash });
+  },
+
   exited: (book: PoolBook, at: PoolNote) => update(book, at, (n) => ({ ...n, value: '0', state: 'exited', pending: null })),
 
   // What the team holds per token, all of it and the part the association set lets out privately.

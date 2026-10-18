@@ -9,6 +9,10 @@ import shortAddress from '../../lib/shortAddress';
 import dates from '../../lib/dates';
 import type StealthPayout from '../../types/StealthPayout';
 
+// A pool payout comes with a little ETH for gas from the relayer, unless the relayer's swap for
+// it failed or the server doesn't ask for it. Without any, the tokens can't be moved yet.
+const noGas = (p: StealthPayout) => p.via === 'pool' && p.status === 'confirmed' && p.balance !== null && BigInt(p.balance.eth) === 0n && BigInt(p.balance.token) > 0n;
+
 // Bounties paid to you privately. Each sits on its own one-time address until you move it.
 export default function StealthPayouts({ revision }: { revision: unknown }) {
   const nox = useStore((s) => s.nox);
@@ -46,6 +50,7 @@ export default function StealthPayouts({ revision }: { revision: unknown }) {
                 <span className="mono">{shortAddress(p.address)}</span> · {dates.ago(p.createdAt)} · {p.balance && p.balanceCheckedAt ? `held ${tokenAmount(p.balance.token, p.token, 2)} ${dates.ago(p.balanceCheckedAt)}` : 'balance not read yet'}
                 {!p.announced && p.via !== 'pool' && ' · not announced yet'}
               </div>
+              {noGas(p) && <div className="bounty-item-sub">It arrived without ETH for gas, so send a little ETH to this address before moving it. ETH sent from your sign-in wallet links the payout to you on-chain.</div>}
               {shown?.id === p.id && (
                 <div className="key-once" style={{ marginTop: 8 }}>
                   <code>{shown.key}</code>

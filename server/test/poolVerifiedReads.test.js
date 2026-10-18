@@ -9,6 +9,7 @@ import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 import poolChain from './helpers/poolChain.js';
 import poolAbi from '../pools/poolAbi.js';
+import withdrawalContext from '../pools/withdrawalContext.js';
 import fakePoolServices from './helpers/fakePoolServices.js';
 import testVerifier from './helpers/testVerifier.js';
 import verifierProxy from './helpers/verifierProxy.js';
@@ -137,6 +138,39 @@ test('a pool payout in a block older than the verifier can prove waits, saying s
     assert.equal(row.status, 'pending');
     assert.match(row.problem, /older than Nil’s verifier can check/);
   } finally {
+    await recover();
+  }
+});
+
+test('a relay reported as failed is recovered from proven logs, and never from unproven ones', async () => {
+  const task = await poolTask();
+  const one = newStealthPayment(mine.meta);
+  const { intent } = (await owner('POST', `/api/tasks/${task.id}/payments/intent`, { stealth: one, via: 'pool' })).data;
+  const { quote } = (await owner('POST', `/api/pool-payouts/${intent.id}/quote`)).data;
+  const signals = ['11', '22', quote.gross, '33', '2', '44', '3', withdrawalContext(ENTRYPOINT, quote.withdrawalData, BigInt(quote.scope)).toString()];
+  const proof = { pi_a: ['1', '2', '1'], pi_b: [['1', '2'], ['3', '4'], ['1', '0']], pi_c: ['5', '6', '1'] };
+  const body = { withdrawal: { processooor: ENTRYPOINT, data: quote.withdrawalData }, publicSignals: signals, proof, feeCommitment: quote.feeCommitment };
+  const hash = tx();
+  chain.mine(2);
+  chain.addLogs({ hash, logs: pools.relayLogs({ to: one.address, gross: BigInt(quote.gross), fee: BigInt(quote.fee) }), depth: 1 });
+  chain.mine(4);
+  services.state.relayAnswer = { status: 200, body: { success: false, error: 'execute reverted: AS' } };
+  try {
+    // the same logs straight from the node, unsealed, count for nothing
+    proxy.set('direct');
+    const unproven = await owner('POST', `/api/pool-payouts/${intent.id}/relay`, body);
+    assert.equal(unproven.status, 502);
+    assert.match(unproven.data.error, /execute reverted: AS/);
+    assert.equal(sql.get('SELECT COUNT(*) AS n FROM payments WHERE intent_id = ?', intent.id).n, 0);
+
+    proxy.set('through');
+    const res = await owner('POST', `/api/pool-payouts/${intent.id}/relay`, body);
+    assert.equal(res.status, 200, JSON.stringify(res.data));
+    assert.deepEqual([res.data.recovered, res.data.payment.txHash], [true, hash]);
+    assert.deepEqual([payment(res.data.payment.id).status, payment(res.data.payment.id).relay_fee], ['confirmed', quote.fee]);
+    assert.ok(v.client.requests.some((r) => r.method === 'eth_getLogs' && r.params[0].topics[0] === poolAbi.relayed));
+  } finally {
+    services.state.relayAnswer = null;
     await recover();
   }
 });
