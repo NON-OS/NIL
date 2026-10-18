@@ -99,6 +99,24 @@ test('an assignee who hands a task on is named as such, and the next edit leaves
   assert.deepEqual([after.by, after.from, after.description], ['z', null, 'Raise to 150k']);
 });
 
+test('a hand-on from someone who was never on the task doesn’t open where the task has been seen', async () => {
+  signIn('v', V, users);
+  await confirm(['w', 'm']);
+  const { sealed } = await vicsTask(['v', 'w']);
+  await taskSeal.open({ id: 't1', creatorId: 'v', assigneeId: 'w', sealed });
+  // the admin, with the server's help, writes a seal of its own as if it had handed the task on
+  signIn('m', M, users);
+  await confirm(['v', 'w']);
+  const fake = taskKeys.fresh();
+  const forged = await taskSeal.seal({ title: 'Salary review for Wen', description: 'Raise cancelled', checklist: [] }, fake, await taskKeys.wrap(fake.key, ['v', 'w']), { rev: 2, readers: ['v', 'w'] });
+  signIn('v', V, users);
+  await assert.rejects(taskSeal.open({ id: 't1', creatorId: 'v', assigneeId: 'w', sealed: forged }), /for the people it shows/);
+  // a browser that never saw the task can't tell, and shows who handed it on
+  signIn('w', W, users);
+  const words = await taskSeal.open({ id: 't1', creatorId: 'v', assigneeId: 'w', sealed: forged });
+  assert.equal(words.from, 'm');
+});
+
 test('a copy of the task for its assignee alone still opens, since nobody new joined it', async () => {
   signIn('v', V, users);
   const { sealed } = await vicsTask(['v']);

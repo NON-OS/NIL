@@ -60,12 +60,13 @@ export function entry(userId, id, extra = {}) {
   return { ...fields, signature: w.sign(keyStatement({ origin: ORIGIN, workspaceKey, ...fields })) };
 }
 
-// Signs `me` in with `identity` unlocked; users are { id, name, deactivated? }.
+// Signs `me` in with a copy of `identity` unlocked, since locking wipes the one it holds; users
+// are { id, name, deactivated? }.
 export function signIn(me, identity, users) {
   keyring.lock();
   sealedCache.clear();
   store.set((s) => ({ phase: 'ready', origin: ORIGIN, workspaceKey, me: { id: me, name: me }, users: Object.fromEntries(users.map((u) => [u.id, { deactivated: false, kind: 'human', ...u }])), docsUnlocked: true, tasks: {}, keysRev: s.keysRev + 1 }));
-  if (identity) keyring.unlock(identity);
+  if (identity) keyring.unlock({ ...identity, seed: identity.seed.slice(), privateKey: identity.privateKey.slice(), signingPrivate: identity.signingPrivate.slice() });
 }
 
 // A fresh workspace: no routes, no storage, nothing unlocked.
