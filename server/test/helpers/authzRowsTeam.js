@@ -34,6 +34,8 @@ export default {
   'PUT /api/proposals/:id/dealing': { allow: MEMBERS, id: 'proposal', ok: [400, 404], denied: [403] },
   'POST /api/proposals/:id/shares-check': { allow: MEMBERS, id: 'proposal', ok: [400, 404], denied: [403] },
   'POST /api/proposals/:id/partial': { allow: MEMBERS, id: 'proposal', ok: [400, 404], denied: [403] },
+  'POST /api/proposals/:id/share-answer': { allow: MEMBERS, id: 'proposal', ok: [400, 404], denied: [403] },
+  'GET /api/proposals/:id/ballots': { allow: MEMBERS, id: 'proposal', ok: [400, 404], denied: [403] },
   'GET /api/holder-gate': { allow: MEMBERS },
   'PUT /api/holder-gate': { allow: ADMINS, body: {} },
   'PUT /api/me/stealth': { allow: PEOPLE, ok: [400] },

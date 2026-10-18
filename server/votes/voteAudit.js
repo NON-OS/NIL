@@ -5,6 +5,7 @@ import voteScope from './voteScope.js';
 import fieldHash from './fieldHash.js';
 import heldBallots from './heldBallots.js';
 import voterGroups from './voterGroups.js';
+import shareComplaints from './encrypted/shareComplaints.js';
 
 const hour = (time) => new Date(heldBallots.hourOf(time)).toISOString();
 const summary = (row, extra = {}) => ({ id: row.id, title: row.title, options: parseJSON(row.options, []), ...extra, closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) });
@@ -22,10 +23,23 @@ function encrypted(row) {
     census: voterGroups.members(row.id),
     roots: roots(row.id),
     publicKey: parseJSON(row.public_key, null),
-    trustees: sql.all('SELECT position, commitment, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => {
+    // each trustee's signed commitment and dealing, checkable against their published signing key
+    trustees: sql.all('SELECT position, user_id, commitment, commit_signature, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => {
       const dealing = parseJSON(t.dealing, {});
-      return { position: t.position, commitment: t.commitment, commitments: dealing.commitments ?? null, proofs: dealing.proofs ?? null, partial: parseJSON(t.partial, null) };
+      return {
+        position: t.position,
+        userId: t.user_id,
+        signingKey: sql.get('SELECT signing_key FROM encryption_keys WHERE user_id = ?', t.user_id)?.signing_key ?? null,
+        commitment: t.commitment,
+        commitSignature: t.commit_signature,
+        commitments: dealing.commitments ?? null,
+        proofs: dealing.proofs ?? null,
+        sharesDigest: dealing.sharesDigest ?? null,
+        signature: dealing.signature ?? null,
+        partial: parseJSON(t.partial, null),
+      };
     }),
+    complaints: shareComplaints(row.id),
     ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY nullifier', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: hour(b.created_at) })),
   };
 }

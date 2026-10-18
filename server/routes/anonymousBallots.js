@@ -35,8 +35,12 @@ router.post(
     if (proposal.closed_at || proposal.closes_at < Date.now()) throw HttpError.badRequest('This vote has closed.');
     if (proposal.weighting === 'power') {
       if (!proposal.public_key) throw HttpError.badRequest('This vote opens once its trustees have set up the key.');
-      if (sql.get("SELECT 1 FROM proposal_trustees WHERE proposal_id = ? AND shares_check LIKE 'bad:%'", proposal.id)) {
-        throw new HttpError(409, 'A trustee found a key share that doesn’t match its dealer’s commitment, so this vote can’t take ballots. Ask an admin to start it again.');
+      if (sql.get("SELECT 1 FROM share_complaints WHERE proposal_id = ? AND outcome = 'failed'", proposal.id)) {
+        throw new HttpError(409, 'A trustee dealt a key share that doesn’t match their commitment, so this vote can’t take ballots. Ask an admin to start it again.');
+      }
+      // until every trustee has checked the shares dealt to them, the totals might never decrypt
+      if (sql.get("SELECT 1 FROM proposal_trustees WHERE proposal_id = ? AND shares_check IS NOT 'ok'", proposal.id)) {
+        throw new HttpError(409, 'This vote opens once all three trustees have checked their key shares.');
       }
       const { nullifier, ciphertexts, proof } = await checkEncryptedBallot(proposal, parseJSON(proposal.options, []), req.body);
       // the ballot circuit has no field for the hour, so an encrypted ballot can't be replaced

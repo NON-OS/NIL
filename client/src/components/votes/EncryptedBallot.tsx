@@ -28,6 +28,10 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
   const decrypted = enc.trustees.filter((t) => t.decrypted).length;
   const voters = enc.eligible;
   const trusteeNames = enc.trustees.map((t) => (t.userId ? users[t.userId]?.name ?? 'A former member' : 'A former member')).join(', ');
+  const nameOf = (position: number) => {
+    const userId = enc.trustees.find((t) => t.position === position)?.userId;
+    return (userId && users[userId]?.name) || `Trustee ${position}`;
+  };
 
   useEffect(() => {
     if (privateKeys.get()) anonymousVotes.mine(proposal).then((voted) => setMine((m) => ({ ...m, voted }))).catch(() => {});
@@ -48,15 +52,21 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
   };
 
   const reveal = () => run('reveal', () => encryptedVotes.reveal(proposal), 'Your trustee share is set up.');
-  const checkShares = () => run('check', () => encryptedVotes.checkShares(proposal), null);
+  const automatic = {
+    reveal,
+    check: () => run('check', () => encryptedVotes.checkShares(proposal), null),
+    answer: () => run('answer', () => encryptedVotes.answer(proposal), 'You showed the disputed share, so everyone can check it.'),
+  };
+  // a complaint answered since the last try means the shares are due for another check
+  const attempt = `${proposal.id}:${step}:${enc.complaints.map((c) => c.outcome ?? 'open').join()}`;
 
-  // Revealing and checking shares need no decision, so a tab whose keys are unlocked does them as
-  // soon as they're due, once per vote and step.
+  // Revealing, checking shares and answering a complaint need no decision, so a tab whose keys are
+  // unlocked does them as soon as they're due, once per vote and step.
   useEffect(() => {
-    if ((step !== 'reveal' && step !== 'check') || !unlocked || busy !== null || tried.current.has(`${proposal.id}:${step}`)) return;
-    tried.current.add(`${proposal.id}:${step}`);
-    void (step === 'reveal' ? reveal() : checkShares());
-  }, [step, unlocked, busy, proposal.id]);
+    if ((step !== 'reveal' && step !== 'check' && step !== 'answer') || !unlocked || busy !== null || tried.current.has(attempt)) return;
+    tried.current.add(attempt);
+    void automatic[step]();
+  }, [step, unlocked, busy, attempt]);
 
   if (!enc.publicKey) {
     return (
@@ -77,10 +87,29 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
     );
   }
 
-  if (enc.disputed) {
+  const failed = enc.complaints.find((c) => c.outcome === 'failed');
+  if (failed) {
     return (
       <p className="muted proposal-anon" role="alert">
-        <ShieldAlert size={13} /> A trustee found a key share that doesn’t match what its dealer committed to, so this vote can’t take ballots. An admin should start it again.
+        <ShieldAlert size={13} /> {nameOf(failed.dealer)} dealt a key share that doesn’t match what they committed to, so this vote can’t take ballots. Their signed share is in the audit file. An admin should start the vote again.
+      </p>
+    );
+  }
+
+  const checked = enc.trustees.filter((t) => t.shares === 'ok').length;
+  const disputes = enc.complaints.filter((c) => !c.outcome);
+  if (open && checked < 3) {
+    return (
+      <p className="muted proposal-anon">
+        <KeyRound size={13} />
+        {disputes.length
+          ? disputes.map((c) => `${nameOf(c.accuser)} says the key share from ${nameOf(c.dealer)} doesn’t match what they committed to. The vote opens once ${nameOf(c.dealer)} shows that share and everyone can check it.`).join(' ')
+          : `Trustees are checking their key shares: ${checked} of 3 done (${trusteeNames}). The vote opens once all three have.`}
+        {(step === 'check' || step === 'answer') && !unlocked && (
+          <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => vault.unlock().catch(toast.error)}>
+            {busy !== null && <Spinner size={13} />} {step === 'check' ? 'Check my key shares' : 'Show the disputed share'}
+          </button>
+        )}
       </p>
     );
   }
@@ -105,11 +134,6 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
         {!open && !proposal.totals && `Closed. Waiting for two of ${trusteeNames} to decrypt the totals. Decrypting: ${decrypted} of 2 trustees done.`}
         {proposal.totals && `Encrypted and weighted. Two of ${trusteeNames} decrypted the totals, with proofs anyone can check in the audit file.`}
         {mine.voted && ` You voted${mine.choice !== undefined ? ` ${proposal.options[mine.choice]}` : ''}; only you can tell.`}
-        {step === 'check' && !unlocked && (
-          <button type="button" className="btn btn-sm" disabled={busy !== null} onClick={() => vault.unlock().catch(toast.error)}>
-            {busy === 'check' && <Spinner size={13} />} Check my key shares
-          </button>
-        )}
         {canDecrypt && (
           <button type="button" className="btn btn-sm btn-primary" disabled={busy !== null} onClick={() => run('decrypt', () => encryptedVotes.decrypt(proposal), 'Your part of the decryption is in, with its proof.')}>
             {busy === 'decrypt' && <Spinner size={13} />} Decrypt the totals

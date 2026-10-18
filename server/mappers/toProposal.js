@@ -6,15 +6,18 @@ import voteScope from '../votes/voteScope.js';
 import voterGroups from '../votes/voterGroups.js';
 import encryptedTally from '../votes/encrypted/encryptedTally.js';
 import publicDealings from '../votes/encrypted/publicDealings.js';
+import shareComplaints from '../votes/encrypted/shareComplaints.js';
 
-// The trustee side of an encrypted vote. Every member gets each trustee's revealed commitments
+// The trustee side of an encrypted vote. Every member gets each trustee's signed commitments
 // and proofs of knowledge, so voters rebuild the vote key themselves instead of taking the
-// server's copy. Sealed shares only go to trustees (each can open just their own); once closed,
-// trustees also get the summed ciphertexts they partially decrypt.
+// server's copy, and every complaint about a share with its answer. Sealed shares only go to
+// trustees (each can open just their own); once closed, trustees also get the summed
+// ciphertexts the server says it counted, which their browsers check against the ballots.
 function encryptedView(row, viewer) {
   const seats = sql.all('SELECT position, user_id, commitment, dealing, shares_check, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id);
   const isTrustee = seats.some((t) => t.user_id === viewer.id);
-  const dealings = seats.map((t) => parseJSON(t.dealing, null));
+  const revealed = publicDealings(row.id);
+  const complaints = shareComplaints(row.id);
   return {
     publicKey: parseJSON(row.public_key, null),
     trustees: seats.map((t) => ({
@@ -25,11 +28,13 @@ function encryptedView(row, viewer) {
       shares: t.shares_check ? (t.shares_check === 'ok' ? 'ok' : 'bad') : null,
       decrypted: Boolean(t.partial),
     })),
-    disputed: seats.some((t) => t.shares_check?.startsWith('bad')),
-    commitments: publicDealings(row.id),
+    // a dealer showed a share that doesn't match their commitments: the vote can never open
+    disputed: complaints.some((c) => c.outcome === 'failed'),
+    complaints,
+    commitments: revealed,
     // members with at least one whole NOX of power in the snapshot: they join the census when they first vote
     eligible: sql.get('SELECT COUNT(*) AS n FROM proposal_power WHERE proposal_id = ? AND CAST(power AS REAL) >= ?', row.id, 10 ** config.nox.decimals).n,
-    dealings: isTrustee ? dealings : null,
+    dealings: isTrustee ? seats.map((t, i) => (revealed[i] ? { ...revealed[i], shares: parseJSON(t.dealing, {}).shares } : null)) : null,
     aggregates: isTrustee && row.closed_at && !row.result ? encryptedTally.aggregates(row).map((a) => ({ c1: a.c1.map(String), c2: a.c2.map(String) })) : null,
   };
 }

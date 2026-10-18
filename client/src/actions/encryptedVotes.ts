@@ -1,72 +1,28 @@
 import http from '../api/http';
-import store from '../state/store';
 import keyring from '../state/keyring';
+import partialsMade from '../state/partialsMade';
 import vault from './vault';
 import anonymousVotes from './anonymousVotes';
-import keyDirectory from './keyDirectory';
-import confirmKeys from './confirmKeys';
+import trusteeSeats from './trusteeSeats';
+import trusteeSetup from './trusteeSetup';
 import type Dealing from '../lib/ballot/dealing';
 import type Proposal from '../types/Proposal';
 
-const seatOf = (proposal: Proposal) => proposal.encrypted?.trustees.find((t) => t.userId === store.get().me?.id)?.position ?? null;
-const trusteeIds = (proposal: Proposal) => proposal.encrypted!.trustees.map((t) => t.userId).filter((id): id is string => Boolean(id));
-
-async function seed() {
-  await vault.unlock();
-  return keyring.identity()!.seed;
-}
+const TELL = 'Tell your admin.';
 
 const encryptedVotes = {
-  seatOf,
+  ...trusteeSetup,
+  seatOf: trusteeSeats.of,
 
   // What this trustee's browser has to do next for the key setup to move on, if anything.
-  nextStep(proposal: Proposal): 'commit' | 'reveal' | 'check' | null {
+  nextStep(proposal: Proposal): 'commit' | 'reveal' | 'check' | 'answer' | null {
     const enc = proposal.encrypted;
-    const me = enc?.trustees.find((t) => t.position === seatOf(proposal));
+    const me = enc?.trustees.find((t) => t.position === trusteeSeats.of(proposal));
     if (!enc || !me || proposal.closedAt) return null;
     if (!me.committed) return 'commit';
     if (!me.dealt) return enc.trustees.every((t) => t.committed) ? 'reveal' : null;
+    if (enc.complaints.some((c) => c.dealer === me.position && !c.outcome)) return 'answer';
     return enc.publicKey && !me.shares ? 'check' : null;
-  },
-
-  // Step 1: commit to a dealing before seeing anyone else's. The line comes from this trustee's
-  // identity, so the reveal rebuilds the same one, even after a reload. Every trustee's key is
-  // confirmed first, since the shares will be sealed to them.
-  async commit(proposal: Proposal) {
-    const position = seatOf(proposal);
-    if (!position) throw new Error('You’re not a trustee of this vote.');
-    await confirmKeys.ask(trusteeIds(proposal), 'your trustee share');
-    const { default: commitDealing } = await import('../lib/ballot/commitDealing');
-    await http.put(`/proposals/${proposal.id}/commitment`, { commitment: commitDealing(await seed(), proposal.id, position) });
-  },
-
-  // Step 2, once all three have committed: the dealing itself, with the shares sealed to each
-  // trustee's confirmed key.
-  async reveal(proposal: Proposal) {
-    const position = seatOf(proposal);
-    if (!position) throw new Error('You’re not a trustee of this vote.');
-    await confirmKeys.ask(trusteeIds(proposal), 'your trustee share');
-    const keys = await keyDirectory.sharable(trusteeIds(proposal));
-    const recipients = proposal.encrypted!.trustees.map((t) => {
-      const publicKey = t.userId ? keys.get(t.userId) : undefined;
-      if (!publicKey) throw new Error('A trustee’s key isn’t confirmed or no longer exists, so this vote can’t be set up. Confirm it in Settings, under Sign-in & security, or ask the admin to start the vote again.');
-      return { position: t.position, publicKey };
-    });
-    const [{ default: dealingLine }, { default: dealShares }] = await Promise.all([import('../lib/ballot/dealingLine'), import('../lib/ballot/dealShares')]);
-    await http.put(`/proposals/${proposal.id}/dealing`, await dealShares(proposal.id, position, dealingLine(await seed(), proposal.id, position), recipients));
-  },
-
-  // Step 3, as soon as the key is set up: open the shares sealed to this trustee and check them
-  // against the dealers' commitments, before anyone votes.
-  async checkShares(proposal: Proposal) {
-    const position = seatOf(proposal);
-    const dealings = proposal.encrypted?.dealings;
-    if (!position || !dealings?.every(Boolean)) throw new Error('The dealings aren’t all in yet.');
-    await vault.unlock();
-    const { default: checkShares } = await import('../lib/ballot/checkShares');
-    const result = await checkShares(proposal.id, position, dealings as Dealing[], keyring.identity()!);
-    await http.post(`/proposals/${proposal.id}/shares-check`, result.ok ? { ok: true } : { ok: false, from: result.from });
-    if (!result.ok) throw new Error(`Trustee ${result.from}’s share doesn’t match what they committed to. The vote won’t take ballots; ask an admin to start it again.`);
   },
 
   // Returns when the ballot joins the count, once the hour it arrived in is over.
@@ -75,24 +31,38 @@ const encryptedVotes = {
     const view = await anonymousVotes.fresh(proposal);
     const enc = view.encrypted;
     if (!enc?.publicKey) throw new Error('This vote isn’t open yet.');
-    if (enc.trustees.some((t) => t.shares === 'bad')) throw new Error('A trustee found a bad key share, so this vote can’t take ballots.');
-    // encrypt to the key the trustees' commitments add up to, never to the server's say-so
-    const { default: votePublicKey } = await import('../lib/ballot/votePublicKey');
-    const key = votePublicKey(view.id, enc.commitments);
-    if (!key || key[0] !== enc.publicKey[0] || key[1] !== enc.publicKey[1]) throw new Error('The vote key the server sent doesn’t match the trustees’ commitments, so Nil won’t encrypt a ballot to it. Tell your admin.');
+    if (!enc.trustees.every((t) => t.shares === 'ok')) throw new Error('This vote opens once all three trustees have checked their key shares.');
+    // encrypt to the key the trustees' signed dealings add up to, never to the server's say-so
+    const [{ default: votePublicKey }, signers] = await Promise.all([import('../lib/ballot/votePublicKey'), trusteeSeats.signers(enc.trustees)]);
+    const key = votePublicKey(view.id, enc.commitments, signers);
+    if (!key || key[0] !== enc.publicKey[0] || key[1] !== enc.publicKey[1]) throw new Error(`The vote key the server sent isn’t the one the trustees signed for, so Nil won’t encrypt a ballot to it. ${TELL}`);
     const { default: proveEncryptedBallot } = await import('../lib/ballot/proveEncryptedBallot');
     const { proof, publicSignals } = await proveEncryptedBallot(identity, view, choice, key);
     return anonymousVotes.send(proposal.id, { proof, publicSignals });
   },
 
-  // A trustee's partial decryption of the totals, proven correct, after the vote closes.
+  // A trustee's partial decryption of the totals, proven correct, after the vote closes. This
+  // browser checks every ballot and adds them up itself, and decrypts only those sums, once.
   async decrypt(proposal: Proposal) {
-    const position = seatOf(proposal);
+    const position = trusteeSeats.of(proposal);
     const enc = proposal.encrypted;
-    if (!position || !enc?.dealings || !enc.aggregates) throw new Error('There’s nothing for you to decrypt yet.');
+    if (!position || !enc?.dealings || !enc.aggregates || !enc.publicKey) throw new Error('There’s nothing for you to decrypt yet.');
     await vault.unlock();
-    const { default: partialDecryption } = await import('../lib/ballot/partialDecryption');
-    const partial = await partialDecryption(proposal.id, position, enc.dealings as Dealing[], enc.aggregates, keyring.identity()!);
+    const [{ default: votePublicKey }, { default: verifyBallots }, { default: partialDecryption }, signers] = await Promise.all([
+      import('../lib/ballot/votePublicKey'),
+      import('../lib/ballot/verifyBallots'),
+      import('../lib/ballot/partialDecryption'),
+      trusteeSeats.signers(enc.trustees),
+    ]);
+    const key = votePublicKey(proposal.id, enc.commitments, signers);
+    if (!key || key[0] !== enc.publicKey[0] || key[1] !== enc.publicKey[1]) throw new Error(`The vote key isn’t the one the trustees signed for, so Nil won’t decrypt anything. ${TELL}`);
+    const { ballots, roots } = await http.get<{ ballots: { publicSignals: unknown; proof: unknown }[]; roots: string[] }>(`/proposals/${proposal.id}/ballots`);
+    if (ballots.length !== proposal.voters) throw new Error(`The server sent a different number of ballots from the count it shows, so Nil won’t decrypt anything. ${TELL}`);
+    const sums = await verifyBallots({ id: proposal.id, optionCount: proposal.options.length, publicKey: key, roots }, ballots, enc.aggregates);
+    const digest = partialsMade.digest(sums);
+    if (!partialsMade.allows(proposal.id, digest)) throw new Error(`You already decrypted your part of this vote, and the server now asks for other sums. Nil decrypts once per vote. ${TELL}`);
+    partialsMade.record(proposal.id, digest);
+    const partial = await partialDecryption(proposal.id, position, enc.dealings as Dealing[], sums, keyring.identity()!, { signers, answered: trusteeSeats.answered(enc, position) });
     await http.post(`/proposals/${proposal.id}/partial`, partial);
   },
 };
