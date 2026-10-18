@@ -3,9 +3,8 @@ import store from './store';
 import keyPins from './keyPins';
 
 // Records this browser keeps per workspace and account only once someone has opened encrypted
-// docs, private tasks or comments here (see docVersions, taskVersions, commentVersions,
-// taskReaders).
-const OPENED = ['doc-versions', 'task-versions', 'comment-versions', 'task-readers'];
+// docs, private tasks or comments here (see docVersions, taskVersions, commentVersions).
+const OPENED = ['doc-versions', 'task-versions', 'comment-versions'];
 
 // Whether this browser has seen this account hold encryption keys in this workspace: its own key
 // pinned, or encrypted content opened. Then a server that suddenly lists no keys and no wallet

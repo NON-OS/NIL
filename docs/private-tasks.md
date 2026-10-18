@@ -50,7 +50,7 @@ For everyone else, a private task doesn't exist: it isn't in their lists, live u
 
 When a private task gets a new assignee, your browser makes a new key, encrypts the task and all its comments again with it, re-seals each file's key under it (the files themselves stay as they are), and seals the new key for the creator and the new assignee. The previous assignee loses access. They may still have copies of anything they read before.
 
-If the assignee gives the task to someone else, it's their browser that makes the new key. The task then says who handed it on, and the next time the creator or the new assignee edits it, it moves to another new key that the previous assignee never saw. A browser that has opened the task before only accepts this from someone who was on the task.
+If the assignee gives the task to someone else, it's their browser that makes the new key. The task then says who handed it on, and the next time the creator or the new assignee edits it, it moves to another new key that the previous assignee never saw.
 
 Your browser seals a task key only to keys you've confirmed. If you haven't checked the other person's key yet, Nil asks you to **Check their keys** first, as for [docs](encrypted-docs.md#check-your-teammates-keys). If you click **Not now**, or they haven't set up keys yet, the task is sealed without them and they see "This task hasn't been shared with your key yet". Once you've confirmed their key, your browser hands the task over the next time you unlock in Nil. It only ever hands a task to the creator or assignee its words were signed for, never to someone the server lists in their place.
 
@@ -73,7 +73,7 @@ If you start over with new keys (see [Encrypted docs](encrypted-docs.md#if-unloc
 | What you see | What it means |
 |---|---|
 | This private task was saved in an older format that can't show who it's for | It was saved before Nil signed who a task is for. It opens as before, but Nil won't share it with anyone on its own until someone edits it, and that edit takes the creator and assignee the server lists |
-| Someone handed this task on | The previous assignee gave it away and made its current key. The next edit gives it a new key |
+| Someone handed this task on | The previous assignee gave it away and made its current key. The next edit gives it a new key. If that person was never on the task, don't rely on what it says |
 | Someone signed this with an earlier key | They wrote it before their key changed, and you had confirmed that earlier key. The note shows its fingerprint |
 
 Comments and files carry the same kind of note. A comment can also say it's an older version than one you've already seen here, or that it was deleted and the server sent it again.

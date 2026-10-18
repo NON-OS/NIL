@@ -2,7 +2,6 @@ import store from '../state/store';
 import keyring from '../state/keyring';
 import sealedCache from '../state/sealedCache';
 import taskVersions from '../state/taskVersions';
-import taskReaders from '../state/taskReaders';
 import taskText, { type TaskField } from '../lib/crypto/taskText';
 import taskRevision from '../lib/crypto/taskRevision';
 import taskFacts, { type TaskFacts, type TaskReaders } from '../lib/crypto/taskFacts';
@@ -58,13 +57,9 @@ type Sealing = Pick<OpenedWords, 'readers' | 'from' | 'key'>;
 const sealedAlike = (a: Sealing, b: Sealing) => JSON.stringify([a.readers, a.from, a.key]) === JSON.stringify([b.readers, b.from, b.key]);
 const factsOf = (p: Piece): Sealing => ({ readers: p.facts?.readers ?? null, from: p.facts?.from ?? null, key: p.facts?.key ?? null });
 
-// Words have to be for the people the task shows now, cached ones too. A hand-on has to come from
-// someone this browser last saw as a reader of the task, when it has seen the task before.
+// Words this tab opened before still have to be for the people the task shows now.
 function shownTo(words: OpenedWords, task: SealedRef) {
   if (!readersCover(words, task)) throw refused();
-  const seen = taskReaders.last(task.id);
-  if (words.from && seen && seen.seal !== task.sealed.id && !seen.readers.includes(words.from)) throw refused();
-  if (words.readers && seen?.seal !== task.sealed.id) taskReaders.record(task.id, { seal: task.sealed.id, readers: words.readers });
   return words;
 }
 
