@@ -20,6 +20,7 @@ DEPLOY_USER=deploy
 # with sudo and the docker group.
 DEPLOY_UID=1500
 MOVE_DEPLOY_UID=0
+REMOVE_USER=
 SSH_KEYS=()
 # No swap by default: what is in memory (setup codes, keys, a restore's backup key in the
 # control plane's /tmp) would otherwise be written to the disk unencrypted. The containers have
@@ -43,6 +44,11 @@ Usage: provision.sh [options]
   --deploy-uid N           its uid and gid, one no container uses (default 1500)
   --move-deploy-uid        move an existing deploy user off uid 1000; stops Nil for a minute,
                            and must run as root from a session that isn't the deploy user's
+  --remove-user NAME       do only this: remove the account NAME, its home and the sudoers files
+                           that are only its own, such as the ubuntu user (uid 1000) an OVHcloud
+                           install leaves; run it with sudo from a session logged in as the
+                           deploy user
+  --yes                    don't ask before --remove-user
   --ssh-key "KEY"          a public key for that user (repeatable)
   --ssh-key-file FILE      public keys for that user, one per line (default: root's keys)
   --swap-gb N              create an unencrypted swap file of N GB if there is no swap (default 0: none)
@@ -64,6 +70,8 @@ while [ $# -gt 0 ]; do
     --deploy-user) DEPLOY_USER=$2; shift 2 ;;
     --deploy-uid) DEPLOY_UID=$2; shift 2 ;;
     --move-deploy-uid) MOVE_DEPLOY_UID=1; shift ;;
+    --remove-user) REMOVE_USER=$2; shift 2 ;;
+    --yes) YES=1; shift ;;
     --ssh-key) SSH_KEYS+=("$2"); shift 2 ;;
     --ssh-key-file) mapfile -t -O "${#SSH_KEYS[@]}" SSH_KEYS < <(grep -E '^(ssh-|ecdsa-|sk-)' "$2"); shift 2 ;;
     --swap-gb) SWAP_GB=$2; shift 2 ;;
@@ -83,6 +91,7 @@ done
 
 case $MODE in hosted | single) ;; *) die "--mode must be hosted or single." ;; esac
 [[ $DEPLOY_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "--deploy-user must be a plain Unix user name."
+[ -z "$REMOVE_USER" ] || [[ $REMOVE_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "--remove-user must be a plain Unix user name."
 if ! [[ $DEPLOY_UID =~ ^[0-9]+$ ]] || [ "$DEPLOY_UID" -le 1000 ] || [ "$DEPLOY_UID" -ge 60000 ]; then
   die "--deploy-uid must be a whole number from 1001 to 59999 (1000 is the uid inside Nil's containers)."
 fi
@@ -99,6 +108,51 @@ if [ "${ID:-}" != ubuntu ] || [ "${VERSION_ID:-}" != 24.04 ]; then
 fi
 export DEBIAN_FRONTEND=noninteractive NEEDRESTART_MODE=a
 HOME_DIR="/home/$DEPLOY_USER"
+
+# --remove-user does this and nothing else. It is for an account the installer left, such as the
+# ubuntu user of an OVHcloud install: uid 1000, with passwordless sudo through cloud-init's
+# sudoers file. It runs only from a session that logged in as the deploy user, which shows that
+# login works, and never while anything still runs as the account it removes.
+if [ -n "$REMOVE_USER" ]; then
+  step "Remove the account $REMOVE_USER"
+  if ! getent passwd "$REMOVE_USER" > /dev/null; then
+    log "There is no account $REMOVE_USER; nothing to do."
+    exit 0
+  fi
+  if [ "$REMOVE_USER" = "$DEPLOY_USER" ] || [ "$(id -u "$REMOVE_USER")" = 0 ]; then die "--remove-user won't remove $REMOVE_USER."; fi
+  # the audit login uid is set when a session logs in, and sudo and su keep it
+  login_uid=$(cat "/proc/$$/loginuid" 2> /dev/null || true)
+  login=
+  if [[ $login_uid =~ ^[0-9]+$ ]] && [ "$login_uid" != 4294967295 ]; then login=$(getent passwd "$login_uid" | cut -d: -f1 || true); fi
+  [ "$login" != "$REMOVE_USER" ] || die "This session logged in as $REMOVE_USER. Log in as $DEPLOY_USER (ssh $DEPLOY_USER@<server>) and run this again from there."
+  [ "$login" = "$DEPLOY_USER" ] || die "Run this with sudo from a session that logged in as $DEPLOY_USER (ssh $DEPLOY_USER@<server>), so that login is known to work before $REMOVE_USER goes. This one logged in as ${login:-no known account}."
+  if pgrep -u "$REMOVE_USER" > /dev/null; then
+    die "Something still runs as $REMOVE_USER ($(pgrep -u "$REMOVE_USER" -l | head -n 3 | tr '\n' ' ')). Log out every $REMOVE_USER session, or end them with sudo loginctl terminate-user $REMOVE_USER, and run this again. Nothing was changed."
+  fi
+  home=$(getent passwd "$REMOVE_USER" | cut -d: -f6)
+  case "$HERE/" in "$home"/*) die "This copy of the deploy scripts is in $home, which goes with $REMOVE_USER. Run $NIL_DIR/deploy/provision.sh instead." ;; esac
+  # userdel --remove deletes the home folder, so it has to be the account's own
+  if [ -e "$home" ] && [ "$(stat -c %u "$home")" != "$(id -u "$REMOVE_USER")" ]; then die "$home doesn't belong to $REMOVE_USER, so it can't go with it. Remove the account by hand."; fi
+  # sudoers files with rules for this account and no one else, such as 90-cloud-init-users
+  sudoers=()
+  for file in /etc/sudoers.d/*; do
+    [ -f "$file" ] || continue
+    owner=$(awk -v name="$REMOVE_USER" '/^[[:space:]]*[#@]include/ { other = 1; next } /^[[:space:]]*(#|$)/ { next }
+      { if ($1 == name || $1 == "Defaults:" name) own = 1; else other = 1 } END { print own ? (other ? "shared" : "own") : "none" }' "$file")
+    case $owner in
+      own) sudoers+=("$file") ;;
+      shared) warn "$file also has rules for other accounts, so it stays. Take out the lines for $REMOVE_USER with: sudo visudo -f $file" ;;
+    esac
+  done
+  if [ "$DRY_RUN" = 0 ]; then
+    confirm "Remove $REMOVE_USER (uid $(id -u "$REMOVE_USER")), its home $home${sudoers[*]:+ and ${sudoers[*]}}?" || die "Nothing was changed."
+  fi
+  run userdel --remove "$REMOVE_USER"
+  for file in "${sudoers[@]}"; do run rm -f "$file"; done
+  run visudo -c > /dev/null
+  [ "$DRY_RUN" = 1 ] || log "$REMOVE_USER is gone. getent passwd 1000 should now print nothing."
+  exit 0
+fi
 
 step "Host name and time"
 if [ -n "$NEW_HOSTNAME" ] && [ "$(hostname)" != "$NEW_HOSTNAME" ]; then run hostnamectl set-hostname "$NEW_HOSTNAME"; fi
@@ -186,6 +240,14 @@ fi
 # The docker group is as powerful as root, so passwordless sudo adds nothing a stolen deploy
 # key wouldn't already give; it does keep the server manageable once root can't log in.
 printf '%s ALL=(ALL) NOPASSWD:ALL\n' "$DEPLOY_USER" | install_file "/etc/sudoers.d/90-nil-$DEPLOY_USER" 440 && run visudo -cf "/etc/sudoers.d/90-nil-$DEPLOY_USER"
+# Someone who broke out of the control plane's container would be whichever account has uid 1000
+# on the host. OVHcloud's installer leaves its ubuntu user there, with passwordless sudo.
+mapfile -t uid_1000 < <(getent passwd | awk -F: -v deploy="$DEPLOY_USER" '$3 == 1000 && $1 != deploy { print $1 }')
+for name in "${uid_1000[@]}"; do
+  rights=
+  if id -nG "$name" 2> /dev/null | tr ' ' '\n' | grep -qxE 'sudo|admin|docker' || grep -qsE "^(Defaults:)?${name}[[:space:]]" /etc/sudoers.d/*; then rights=", with sudo or Docker"; fi
+  warn "$name has uid 1000, the uid the control plane runs as inside its container, so someone who broke out of it would be $name$rights. Once ssh $DEPLOY_USER@<server> works, log in as $DEPLOY_USER and remove it: sudo $NIL_DIR/deploy/provision.sh --remove-user $name"
+done
 
 step "SSH: keys only"
 keys_ok=0
@@ -239,6 +301,14 @@ if ! dpkg -s docker-ce > /dev/null 2>&1; then
     "${VERSION_CODENAME:-noble}" "$(dpkg --print-architecture)" | install_file /etc/apt/sources.list.d/docker.sources 644 || true
   run apt-get update -q
   run apt-get -y -q install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+fi
+# Caddy's edge network has IPv6, and with the userland proxy off only ip6tables rules carry IPv6
+# visitors to it. That takes Docker Engine 27 or newer: older ones keep ip6tables experimental and
+# can't pick a ULA prefix for a network that names no subnet.
+engine=$(dockerd --version 2> /dev/null | sed -n 's/^Docker version \([0-9]*\)\..*/\1/p' || true)
+if [ "${engine:-0}" -lt 27 ]; then
+  [ "$DRY_RUN" = 1 ] || die "Docker Engine 27 or newer is needed, and this is $(dockerd --version 2>&1 | head -n 1). Upgrade docker-ce from Docker's repository and run this again."
+  log "would check that Docker Engine is 27 or newer (found: ${engine:-none})"
 fi
 if sed "s#@ADDRESS_POOL@#$ADDRESS_POOL#" "$HERE/host/docker-daemon.json" | install_file /etc/docker/daemon.json 644; then
   # live-restore keeps running containers up while the daemon restarts
@@ -324,9 +394,12 @@ fi
 
 step "Done"
 if [ -f /var/run/reboot-required ]; then warn "A reboot is needed to finish installing updates (or the HWE kernel). Run: reboot"; fi
-cat >&2 << EOF
-Next:
-  1. From a second terminal, check: ssh $DEPLOY_USER@<server>  (root logins are now off)
-  2. On your own machine: deploy/release.sh --mode $MODE --host $DEPLOY_USER@<server>
-  3. Fill in $NIL_DIR/.env and the settings files it lists, then: $NIL_DIR/deploy/upgrade.sh <version>
-EOF
+{
+  echo "Next:"
+  echo "  1. From a second terminal, check: ssh $DEPLOY_USER@<server>  (root logins are now off)"
+  for name in "${uid_1000[@]}"; do
+    echo "     Then log out of other sessions, and as $DEPLOY_USER remove $name (uid 1000): sudo $NIL_DIR/deploy/provision.sh --remove-user $name"
+  done
+  echo "  2. On your own machine: deploy/release.sh --mode $MODE --host $DEPLOY_USER@<server>"
+  echo "  3. Fill in $NIL_DIR/.env and the settings files it lists, then: $NIL_DIR/deploy/upgrade.sh <version>"
+} >&2

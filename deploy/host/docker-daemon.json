@@ -3,6 +3,7 @@
   "no-new-privileges": true,
   "icc": false,
   "userland-proxy": false,
+  "ip6tables": true,
   "log-driver": "local",
   "log-opts": {
     "max-size": "10m",

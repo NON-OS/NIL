@@ -41,10 +41,34 @@ test('on-demand TLS: certificates only for names the ask endpoint confirms, one 
   assert.match(text, /-Server/);
 });
 
+const wildcard = (provider) => caddyfile(config({ CLOUD_TLS: 'wildcard', CLOUD_DNS_PROVIDER: provider }), workspaces, upstream);
+
 test('wildcard TLS: one certificate through the DNS challenge, token read from Caddy’s environment', () => {
-  const text = caddyfile(config({ CLOUD_TLS: 'wildcard', CLOUD_DNS_PROVIDER: 'hetzner' }), workspaces, upstream);
-  assert.match(text, /\n\*\.nil\.test \{\n\ttls \{\n\t\tdns hetzner \{env\.DNS_API_TOKEN\}\n\t\}/);
+  const text = wildcard('hetzner');
+  assert.match(text, /\n\*\.nil\.test \{\n\ttls \{\n\t\tdns hetzner \{env\.DNS_API_TOKEN\}\n\t\}\n\timport nil_headers\n/);
   assert.doesNotMatch(text, /on_demand/);
+  assert.match(wildcard('cloudflare'), /\n\ttls \{\n\t\tdns cloudflare \{env\.DNS_API_TOKEN\}\n\t\}\n/);
+});
+
+test('wildcard TLS with OVHcloud: the four values its module takes, each from Caddy’s environment', () => {
+  const text = wildcard('ovh');
+  const block = ['\ttls {', '\t\tdns ovh {', '\t\t\tendpoint {env.OVH_ENDPOINT}', '\t\t\tapplication_key {env.OVH_APPLICATION_KEY}',
+    '\t\t\tapplication_secret {env.OVH_APPLICATION_SECRET}', '\t\t\tconsumer_key {env.OVH_CONSUMER_KEY}', '\t\t}', '\t}', '\timport nil_headers'];
+  assert.ok(text.includes(`\n*.nil.test {\n${block.join('\n')}\n`), text);
+  assert.doesNotMatch(text, /DNS_API_TOKEN/, 'Caddy refuses a one-token line for this module');
+});
+
+test('every credential the Caddyfile reads is passed to Caddy and has a line in .env', () => {
+  const root = new URL('../../', import.meta.url);
+  const compose = fs.readFileSync(new URL('cloud/docker-compose.yml', root), 'utf8');
+  const caddyService = compose.slice(compose.indexOf('\n  caddy:\n'), compose.indexOf('\nnetworks:\n'));
+  const env = fs.readFileSync(new URL('deploy/hosted.env.example', root), 'utf8');
+  const names = new Set(['hetzner', 'ovh'].flatMap((p) => [...wildcard(p).matchAll(/\{env\.(\w+)\}/g)].map((m) => m[1])));
+  assert.equal(names.size, 5);
+  for (const name of names) {
+    assert.match(caddyService, new RegExp(`\\n      ${name}: \\$\\{${name}:-\\}\\n`), `${name} in Caddy’s environment`);
+    assert.match(env, new RegExp(`^${name}=$`, 'm'), `${name} in hosted.env.example`);
+  }
 });
 
 test('with rpc-only egress Caddy relays JSON-RPC to the node; with open egress it doesn’t', () => {
