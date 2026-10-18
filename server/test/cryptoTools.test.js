@@ -23,12 +23,14 @@ const CRYPTO_ROUTES = [
   ['GET', '/api/proposals'],
   ['POST', '/api/proposals', { title: 'Lunch', options: ['Pizza', 'Salad'] }],
   ['GET', '/api/vote-power'],
-  ['PUT', '/api/me/semaphore', { commitment: '1' }],
   ['GET', '/api/proofs/mine'],
   ['GET', '/api/stealth/payouts'],
   ['PUT', '/api/me/stealth', { meta: 'x' }],
+  ['GET', '/api/me/stealth/registry'],
+  ['GET', '/api/stealth/payees/abc'],
   ['GET', '/api/holder-gate'],
   ['POST', '/api/applications/abc/accept'],
+  ['DELETE', '/api/applications/abc'],
 ];
 
 before(async () => {
@@ -62,6 +64,8 @@ test('with the tools off their routes answer 404, signed in or not', async () =>
 test('billing, encryption keys and everyday work keep working', async () => {
   assert.equal((await owner('GET', '/api/plan')).status, 200);
   assert.equal((await member('GET', '/api/proofs/key')).status, 200);
+  // the voting key also sends AI requests anonymously, which has nothing to do with the chain
+  assert.equal((await member('PUT', '/api/me/semaphore', { commitment: 'not a key' })).status, 400);
   assert.equal((await member('POST', '/api/tasks', { title: 'Bake sourdough' })).status, 200);
   assert.equal((await owner('GET', '/api/search?q=flour')).status, 200);
 });

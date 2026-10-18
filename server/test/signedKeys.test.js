@@ -1,6 +1,7 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
+import fs from 'node:fs';
 import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
@@ -10,6 +11,7 @@ import keyStatement from '../keys/keyStatement.js';
 import siwe from '../auth/siwe.js';
 
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
+const STEALTH_META = JSON.parse(fs.readFileSync(new URL('./fixtures/stealthVectors.json', import.meta.url)))[0].meta;
 
 let srv;
 const base = () => srv.base;
@@ -72,6 +74,7 @@ test('identity wraps belong to their owner and to linked wallets only', async ()
   const wrap = { address: wallets.anaSpare.address, nonce: 'abcdef0123456789', issuedAt: new Date().toISOString(), wrapped: blob(60) };
   assert.equal((await ana('PUT', '/api/me/identity-wraps', wrap)).status, 403);
   assert.equal((await owner('PUT', '/api/me/identity-wraps', { ...wrap, address: wallets.owner.address })).status, 409);
+  await ana.wallet(wallets.ana, 'confirm');
   assert.equal((await ana.wallet(wallets.anaSpare, 'add')).status, 200);
   assert.equal((await ana('PUT', '/api/me/identity-wraps', { ...wrap, wrapped: 'too-short' })).status, 400);
   assert.equal((await ana('PUT', '/api/me/identity-wraps', { ...wrap, issuedAt: 'yesterday' })).status, 400);
@@ -99,6 +102,8 @@ test('the same keys can be signed again by another wallet; a stale statement can
 
 test('a reset takes a fresh signature and drops what was sealed to the old key', async () => {
   await publishKey(owner, wallets.owner);
+  // private payouts on, at payout keys that come from the keys about to be replaced
+  assert.equal((await ana('PUT', '/api/me/stealth', { metaAddress: STEALTH_META })).status, 200);
   const docId = blob(16);
   await owner('POST', '/api/docs', { id: docId, titleCt: blob(40), bodyCt: blob(100), audience: 'people', grants: [{ userId: ids.owner, wrappedKey: blob(92) }, { userId: ids.ana, wrappedKey: blob(92) }] });
   const task = (await owner('POST', '/api/tasks', { private: true, assigneeId: ids.ana, sealed: sealed(ids.owner, ids.ana) })).data.task;
@@ -112,6 +117,9 @@ test('a reset takes a fresh signature and drops what was sealed to the old key',
   assert.deepEqual((await ana('GET', '/api/me/identity-wraps')).data.wraps.map((w) => w.wrapped), [reset.sent.wrap.wrapped]);
   const after = (await owner('GET', '/api/bootstrap')).data.tasks.find((t) => t.id === task.id);
   assert.deepEqual(Object.keys(after.sealed.keys), [ids.owner]);
+  // and private payouts are off, so nobody pays to keys Ana no longer has
+  assert.equal((await ana('GET', '/api/bootstrap')).data.me.stealthMeta, null);
+  assert.equal((await owner('GET', '/api/bootstrap')).data.users.find((u) => u.id === ids.ana).stealthMeta, null);
 });
 
 test('deactivated people stay checkable as authors but are marked inactive', async () => {

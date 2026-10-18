@@ -41,8 +41,17 @@ export default interface Task {
   // set in the browser: true when the server sent an older version of this private task than
   // one this browser has already opened
   rolledBack?: boolean;
+  // set in the browser once a sealed task is open: who signed its words, whether they're in the
+  // older format that can't show who the task is for, the assignee who handed it on (until its
+  // next edit), and the fingerprint of the signer's earlier key when that's what signed them
+  signedBy?: string;
+  olderFormat?: boolean;
+  handedOnBy?: string | null;
+  oldKey?: string | null;
   // set while the bounty is on the public board
   listedAt: number | null;
+  // set while a listed bounty takes no new applications
+  applicationsClosedAt: number | null;
   position: number;
   commentCount: number;
   attachmentCount: number;

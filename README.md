@@ -44,7 +44,7 @@ The full documentation is in [docs/](docs/README.md). The same pages are in the 
 | Money and decisions | [Bounties and payouts](docs/bounties-and-payouts.md), [Private payouts](docs/private-payouts.md), [Public bounty board](docs/public-bounty-board.md), [Votes](docs/votes.md), [NOX, voting power and Nil Pro](docs/nox-and-nil-pro.md), [Proof of work](docs/proof-of-work.md) |
 | Sharing and AI | [Sharing and guests](docs/sharing-and-guests.md), [AI assistants](docs/ai-assistants.md), [AI agents](docs/ai-agents.md) |
 | Your data and your server | [Backups and moving](docs/backups-and-moving.md), [Self-hosting](docs/self-hosting.md), [Hosted Nil](docs/hosted.md), [Production deployment](docs/deploy.md), [Tor onion service](docs/tor.md), [Development](docs/development.md) |
-| Reference | [Proof file format](docs/proof-format.md), [FAQ](docs/faq.md), [Glossary](docs/glossary.md) |
+| Reference | [Proof file format](docs/proof-format.md), [Formal verification](docs/formal-verification.md), [FAQ](docs/faq.md), [Glossary](docs/glossary.md) |
 
 To report a vulnerability, see [SECURITY.md](SECURITY.md). To contribute, see [CONTRIBUTING.md](CONTRIBUTING.md).
 

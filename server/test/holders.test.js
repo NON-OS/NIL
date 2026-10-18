@@ -7,6 +7,7 @@ import wallet from './helpers/wallet.js';
 
 const NOX = 10n ** 18n;
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
 let srv;
 let sql;
@@ -77,13 +78,25 @@ test('a holder who falls below gets a grace period and a notice, then is turned 
   await session.wallet(holder, 'login');
   assert.equal((await session('GET', '/api/notifications')).data.filter((n) => n.type === 'holder_low').length, 1);
 
-  // once the grace period is over the door stays shut until they hold enough again
+  // once the grace period is over the door stays shut until they've held enough for a while
   sql.run('UPDATE users SET holder_below_since = ? WHERE id = ?', Date.now() - 4 * DAY, ids.holder);
   const refused = await client(base).wallet(holder, 'login');
   assert.equal(refused.status, 403);
   assert.match(refused.data.error, /hold 10 NOX.*at least 1,000 NOX, and the grace period ended/);
   chain.setBalance(holder.address, 1000n * NOX);
+  // topping up isn't enough at the moment of signing in: the scheduled checks have to see it
+  const early = await client(base).wallet(holder, 'login');
+  assert.equal(early.status, 403);
+  assert.match(early.data.error, /hold enough again.*regular checks, every 6 hours, have seen at least 1,000 NOX there for 6 hours/);
+  sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', Date.now() - 7 * HOUR, ids.holder);
+  await recheckHolders();
+  assert.equal((await client(base).wallet(holder, 'login')).status, 403);
+  sql.run('UPDATE users SET holder_held_since = holder_held_since - ? WHERE id = ?', 6 * HOUR, ids.holder);
   assert.equal((await client(base).wallet(holder, 'login')).status, 200);
+  // the shortfall stays on record until the checks have seen them hold for a whole grace period
+  assert.ok(sql.get('SELECT holder_below_since FROM users WHERE id = ?', ids.holder).holder_below_since);
+  sql.run('UPDATE users SET holder_held_since = ?, holder_checked_at = ? WHERE id = ?', Date.now() - 4 * DAY, Date.now() - 7 * HOUR, ids.holder);
+  await recheckHolders();
   assert.equal(sql.get('SELECT holder_below_since FROM users WHERE id = ?', ids.holder).holder_below_since, null);
 
   chain.setBalance(holder.address, 0n);
@@ -118,16 +131,44 @@ test('a node that doesn’t answer never costs anyone their place', async () => 
   const steady = wallet();
   chain.setBalance(steady.address, 1500n * NOX);
   const id = (await client(base).wallet(steady, 'holder', { name: 'Steady' })).data.user.id;
-  chain.breakContract(ZSP);
+  // the node itself is out for balance reads, the way an overloaded provider answers
+  let lift = chain.refuse((method) => method === 'eth_call', { status: 503, error: { code: -32603, message: 'Service unavailable' } });
+  chain.setBalance(steady.address, 0n);
   sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', Date.now() - 7 * 3_600_000, id);
   await recheckHolders();
-  chain.fixContract(ZSP);
+  lift();
+  chain.setBalance(steady.address, 1500n * NOX);
   assert.equal(sql.get('SELECT holder_below_since FROM users WHERE id = ?', id).holder_below_since, null);
   // and a join that can't be checked is refused rather than waved through
-  chain.breakContract(ZSP);
+  lift = chain.refuse((method) => method === 'eth_call', { status: 503, error: { code: -32603, message: 'Service unavailable' } });
   const res = await client(base).wallet(wallet(), 'holder', { name: 'Unchecked' });
-  chain.fixContract(ZSP);
+  lift();
   assert.equal(res.status, 502);
+});
+
+test('a staking or pass contract that reverts counts as nothing staked and no passes, as in votes', async () => {
+  const STAKING = '0xa94d6009790ba13597a1e1b7cf4e1531ea513613';
+  chain.breakContract(ZSP);
+  chain.breakContract(STAKING);
+  try {
+    // NOX in the wallet still lets someone in and keeps them in
+    const holder = wallet();
+    chain.setBalance(holder.address, 1200n * NOX);
+    const joined = await client(base).wallet(holder, 'holder', { name: 'Plain holder' });
+    assert.equal(joined.status, 200);
+    assert.equal((await client(base).wallet(holder, 'login')).status, 200);
+    assert.equal(sql.get('SELECT holder_below_since FROM users WHERE id = ?', joined.data.user.id).holder_below_since, null);
+    // a stake behind a reverting contract counts for nothing, rather than failing the join
+    const staker = wallet();
+    chain.setBalance(staker.address, 300n * NOX);
+    chain.setStake(staker.address, 700n * NOX);
+    const refused = await client(base).wallet(staker, 'holder', { name: 'Stuck staker' });
+    assert.equal(refused.status, 403);
+    assert.match(refused.data.error, /holds 300 NOX/);
+  } finally {
+    chain.fixContract(ZSP);
+    chain.fixContract(STAKING);
+  }
 });
 
 test('members can see the gate but only admins can change it', async () => {

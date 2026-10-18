@@ -11,6 +11,7 @@ import nox from './config/nox.js';
 import rewards from './config/rewardTokens.js';
 import plan from './config/plan.js';
 import stealth from './config/stealth.js';
+import pools from './config/privacyPools.js';
 import power from './config/power.js';
 import billing from './config/billing.js';
 import finality from './config/finality.js';
@@ -23,8 +24,12 @@ import tasks from './config/tasks.js';
 import push from './config/push.js';
 import due from './config/due.js';
 import calendarFeeds from './config/calendarFeeds.js';
+import bountyBoard from './config/bountyBoard.js';
+import uploads from './config/uploads.js';
 import ai from './config/ai.js';
+import aiCredits from './config/aiCredits.js';
 import agents from './config/agents.js';
+import verification from './config/verification.js';
 import PUBLIC_NODE from './config/publicNode.js';
 
 // Every setting is optional except APP_URL, and NOX_RPC_URL on a server reached over the network.
@@ -60,6 +65,7 @@ const config = Object.freeze({
   // how deep request JSON may nest; real requests stay far below this
   maxJsonDepth: envNumber('MAX_JSON_DEPTH', 64, { min: 8 }),
   maxUploadBytes: envNumber('MAX_UPLOAD_MB', 25, { min: 1 }) * MB,
+  uploads,
   maxCapsuleBytes: envNumber('MAX_CAPSULE_MB', 4096, { min: 1 }) * MB,
   sessionDays: envNumber('SESSION_DAYS', 30, { min: 1 }),
   // messages one live connection may send a minute; the app sends a few, a flood gets cut off
@@ -72,19 +78,23 @@ const config = Object.freeze({
   rewards,
   plan,
   stealth,
+  pools,
   semaphore,
   tasks,
   power,
   push,
   due,
   calendarFeeds,
+  bountyBoard,
   signIn,
   billing,
   finality,
   payments,
   holders,
   ai,
+  aiCredits,
   agents,
+  verification,
 });
 
 // Settings that work but are wrong for a public server. Only production gets these, so a

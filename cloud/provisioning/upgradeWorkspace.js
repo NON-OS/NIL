@@ -1,5 +1,6 @@
 import HttpError from '../lib/HttpError.js';
 import recreate from './recreate.js';
+import withLock from './withLock.js';
 
 // Moves one running workspace to a new app image:
 //   1. stop it, so the database files on disk are exactly what the old version left
@@ -8,9 +9,19 @@ import recreate from './recreate.js';
 //   4. wait for /healthz; if it never comes, put the checkpoint back and start the old image
 // The checkpoint stays for CLOUD_CHECKPOINT_KEEP_DAYS so the operator can still roll back by
 // hand, then it is erased: a stale copy would keep rows the app has since deleted.
+// The whole move holds the workspace's lock, so a backup never reads it halfway.
 export default async function upgradeWorkspace(ctx, id, image) {
+  if (!ctx.store.workspaces.get(id)) throw new HttpError(404, 'No such workspace.');
+  try {
+    return await withLock(ctx, id, 'upgrade', () => upgrade(ctx, id, image));
+  } catch (err) {
+    if (err.extra?.busy) return { result: 'skipped', reason: err.message };
+    throw err;
+  }
+}
+
+async function upgrade(ctx, id, image) {
   const workspace = ctx.store.workspaces.get(id);
-  if (!workspace) throw new HttpError(404, 'No such workspace.');
   if (workspace.image === image) return { result: 'skipped', reason: 'already on that image' };
   if (workspace.state !== 'active') return { result: 'skipped', reason: `it is ${workspace.state}` };
   if (!ctx.store.workspaces.transition(id, ['active'], 'upgrading')) return { result: 'skipped', reason: 'it changed state' };

@@ -27,4 +27,18 @@ router.put(
   }),
 );
 
+// Notes that you downloaded a recovery kit for the keys you have now. The kit itself never comes
+// here. The note lets a passkey be one more way back to your keys rather than the only one, and a
+// key reset clears it, since the old kit holds the old keys.
+router.put(
+  '/me/recovery-kit',
+  route((req) => {
+    if (typeof req.body?.publicKey !== 'string') throw HttpError.badRequest('Say which keys the kit holds.');
+    const savedAt = Date.now();
+    const { changes } = sql.run('UPDATE encryption_keys SET kit_saved_at = ? WHERE user_id = ? AND public_key = ?', savedAt, req.user.id, req.body.publicKey);
+    if (!changes) throw new HttpError(409, 'Your keys changed since this kit was made. Unlock again and download a new one.');
+    return { savedAt };
+  }),
+);
+
 export default router;

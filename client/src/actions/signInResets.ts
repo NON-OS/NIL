@@ -4,7 +4,7 @@ import type SignInAuditEntry from '../types/SignInAuditEntry';
 
 interface Started {
   reset: SignInReset;
-  // only when the link exists right away; an owner's reset may wait for a second admin first
+  // only when the link exists right away; an owner's reset waits for a second admin or a delay
   token?: string;
 }
 
@@ -23,6 +23,13 @@ const signInResets = {
 
   async approve(id: string) {
     const out = await http.post<Required<Started>>(`/sign-in-resets/${encodeURIComponent(id)}/approve`);
+    changed();
+    return out;
+  },
+
+  // after the wait for an owner nobody could approve, the admin who asked makes the link
+  async makeLink(id: string) {
+    const out = await http.post<Required<Started>>(`/sign-in-resets/${encodeURIComponent(id)}/link`);
     changed();
     return out;
   },

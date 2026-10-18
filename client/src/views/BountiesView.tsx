@@ -1,5 +1,5 @@
 import '../components/bounty/Bounty.css';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { Coins, Hand } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import StatTile from '../components/charts/StatTile';
@@ -12,7 +12,9 @@ import PaymentList from '../components/bounty/PaymentList';
 import TreasuryCard from '../components/bounty/TreasuryCard';
 import PlanNotice from '../components/plan/PlanNotice';
 import TransferFeeNotice from '../components/bounty/TransferFeeNotice';
+import VerificationNotice from '../components/bounty/VerificationNotice';
 import StealthPayouts from '../components/bounty/StealthPayouts';
+import PoolPayButton from '../components/bounty/PoolPayButton';
 import useStore from '../state/useStore';
 import useTasks from '../hooks/useTasks';
 import toast from '../state/toast';
@@ -27,6 +29,9 @@ import type Task from '../types/Task';
 import isAdminUser from '../lib/isAdmin';
 import HelpLink from '../components/help/HelpLink';
 
+// the pool tools load only for admins on a server with pool payouts on
+const PoolCard = lazy(() => import('../components/bounty/PoolCard'));
+
 const sum = (tasks: Task[]) => amountsByToken(tasks.map((t) => ({ amount: t.bounty!, token: t.bountyToken })));
 
 export default function BountiesView() {
@@ -34,6 +39,7 @@ export default function BountiesView() {
   const users = useStore((s) => s.users);
   const nox = useStore((s) => s.nox);
   const rewards = useStore((s) => s.rewards);
+  const privacyPools = useStore((s) => s.privacyPools);
   const tasks = useTasks();
   const isAdmin = isAdminUser(me);
   const [data, setData] = useState<BountyOverview | null>(null);
@@ -87,6 +93,7 @@ export default function BountiesView() {
       <div className="page page-narrow">
         <PlanNotice what="New bounties" />
         <TransferFeeNotice />
+        <VerificationNotice />
         <div className="bounty-kpis">
           <StatTile label="Open bounties" value={sum(open)} sub={`${open.length} task${open.length === 1 ? '' : 's'}`} />
           <StatTile label="Ready to pay" value={sum(owed)} sub={owed.length ? `${owed.length} finished` : 'Nothing owed'} />
@@ -108,7 +115,13 @@ export default function BountiesView() {
               {owed.map((t) => {
                 const person = t.assigneeId ? users[t.assigneeId] : undefined;
                 const payable = isAdmin && nox && person?.address && (!t.bountyState || t.bountyState === 'underpaid');
-                return row(t, payable ? <PayButton task={t} name={person!.name} onDone={refresh} /> : t.bountyState === 'pending' ? <span className="pay-status pending">Confirming</span> : null);
+                const pay = payable ? (
+                  <span className="bounty-actions">
+                    <PayButton task={t} name={person!.name} onDone={refresh} />
+                    <PoolPayButton task={t} name={person!.name} onDone={refresh} />
+                  </span>
+                ) : null;
+                return row(t, pay ?? (t.bountyState === 'pending' ? <span className="pay-status pending">Confirming</span> : null));
               })}
             </div>
           </section>
@@ -174,6 +187,12 @@ export default function BountiesView() {
             <p>Every transfer Nil checked on-chain. {isAdmin ? 'Only admins and the person paid can see these, because a transaction reveals the receiving wallet.' : 'Only you and the admins can see your payments.'}</p>
             <PaymentList payments={data.payments} onChange={refresh} />
           </section>
+        )}
+
+        {isAdmin && nox && privacyPools && (
+          <Suspense fallback={null}>
+            <PoolCard onChange={refresh} />
+          </Suspense>
         )}
 
         {isAdmin && data && nox && (

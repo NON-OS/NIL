@@ -15,13 +15,16 @@ const HEADERS = [
   '?Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=(), usb=(), interest-cohort=()"',
 ];
 
-function rpcRelay(config) {
-  const url = new URL(config.app.rpcUrl);
+// One JSON-RPC relay on a port only workspace networks reach, to `target`: the Ethereum node (or
+// the verifier in front of it) on CLOUD_RPC_RELAY_PORT, and in shadow mode the verifier on its
+// own port. Workspaces have no other way out.
+function relay(port, target, name) {
+  const url = new URL(target);
   const rewrite = `${url.pathname}${url.search}`;
-  if (/[\s{}"`\\]/.test(rewrite)) throw new Error('CLOUD_RPC_URL has characters that can’t be written into the Caddy configuration.');
+  if (/[\s{}"`\\]/.test(rewrite)) throw new Error(`${name} has characters that can’t be written into the Caddy configuration.`);
   const upstream = `${url.protocol}//${url.host}`;
   const lines = [
-    `http://:${config.caddy.rpcRelayPort} {`,
+    `http://:${port} {`,
     '\t# Only workspace networks reach this port: it is not published on the host. Workspaces',
     '\t# have no other way out, so this is their only route to the Ethereum node.',
     '\t@rpc method POST',
@@ -75,6 +78,7 @@ export default function caddyfile(config, workspaces, upstream) {
   // a workspace that is starting or has crashed answers 502 for a moment; say so plainly
   out.push('\thandle_errors {', '\t\timport nil_unavailable', '\t}', '}');
 
-  if (config.app.egress === 'rpc-only' && config.app.rpcUrl !== 'off') out.push('', ...rpcRelay(config));
+  if (config.app.egress === 'rpc-only' && config.app.rpcUrl !== 'off') out.push('', ...relay(caddy.rpcRelayPort, config.app.rpcUrl, 'CLOUD_RPC_URL'));
+  if (config.app.egress === 'rpc-only' && config.app.verifierUrl) out.push('', ...relay(caddy.verifierRelayPort, config.app.verifierUrl, 'CLOUD_VERIFIER_URL'));
   return `${out.join('\n')}\n`;
 }

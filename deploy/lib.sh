@@ -110,15 +110,16 @@ wait_healthy() {
 }
 
 # The server's deployment settings: NIL_MODE (hosted or single), image names and versions.
-# The variables are read by the scripts that source this file.
+# The variables are read by the scripts that source this file. The default names start with
+# localhost/, so Docker never resolves them to an account on Docker Hub.
 # shellcheck disable=SC2034
 load_env() {
   [ -f "$NIL_DIR/.env" ] || die "$NIL_DIR/.env is missing. Run deploy/provision.sh on the server first."
   NIL_MODE=$(env_get "$NIL_DIR/.env" NIL_MODE)
   NIL_IMAGE=$(env_get "$NIL_DIR/.env" NIL_IMAGE)
-  NIL_IMAGE=${NIL_IMAGE:-nonos/nil}
+  NIL_IMAGE=${NIL_IMAGE:-localhost/nonos/nil}
   NIL_CLOUD_IMAGE=$(env_get "$NIL_DIR/.env" NIL_CLOUD_IMAGE)
-  NIL_CLOUD_IMAGE=${NIL_CLOUD_IMAGE:-nonos/nil-cloud}
+  NIL_CLOUD_IMAGE=${NIL_CLOUD_IMAGE:-localhost/nonos/nil-cloud}
   NIL_VERSION=$(env_get "$NIL_DIR/.env" NIL_VERSION)
   NIL_PREVIOUS_VERSION=$(env_get "$NIL_DIR/.env" NIL_PREVIOUS_VERSION)
   case $NIL_MODE in
@@ -171,9 +172,10 @@ DISCARD_SCRIPT='rm -rf /data/.nil-checkpoint'
 
 # Runs one of the scripts above against the single-mode data volume, in a throwaway container of
 # the app's own image (it has a shell and the app's user), with no network and nothing else mounted.
+# The image must already be here: it is never pulled.
 data_helper() {
   local image=$1 script=$2
   shift 2
-  run docker run --rm --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user 1000:1000 \
+  run docker run --rm --pull never --network none --read-only --cap-drop ALL --security-opt no-new-privileges --user 1000:1000 \
     --volume nil-data:/data --entrypoint sh "$image" -c "$script" sh "$@"
 }

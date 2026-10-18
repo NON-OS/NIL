@@ -14,6 +14,7 @@
     "build": "vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "check:quality": "node scripts/check-quality.mjs",
+    "formal": "node scripts/formal.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --import ./scripts/test/registerTs.mjs --test server/test/*.test.js client/test/*.test.js client/test/*.test.ts",
     "ceremony:start": "node --disable-warning=DEP0137 scripts/ceremony/start.mjs",
@@ -22,9 +23,13 @@
     "release:manifest": "node scripts/release/manifest.mjs",
     "verify:server": "node scripts/release/verify.mjs",
     "zk:fetch": "node scripts/zk-fetch.mjs",
-    "zk:ballot": "node scripts/zk-ballot.mjs"
+    "zk:ballot": "node scripts/zk-ballot.mjs",
+    "verifier": "node --disable-warning=ExperimentalWarning server/verifier/index.js",
+    "verifier:mainnet-check": "node --disable-warning=ExperimentalWarning scripts/verifier/mainnet-check.mjs",
+    "pools:fetch": "node scripts/pools-fetch.mjs"
   },
   "dependencies": {
+    "@a16z/helios": "0.12.0",
     "@anthropic-ai/sdk": "0.134.0",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
@@ -42,6 +47,8 @@
     "@dnd-kit/utilities": "3.2.2",
     "@fontsource-variable/geist": "5.3.0",
     "@fontsource-variable/jetbrains-mono": "5.1.0",
+    "@scure/bip32": "1.7.0",
+    "@scure/bip39": "1.6.0",
     "@semaphore-protocol/identity": "4.14.3",
     "@types/react": "18.3.12",
     "@types/react-dom": "18.3.1",

@@ -1,11 +1,95 @@
 // Nil service worker. It makes the app installable and open instantly, and it never stores
 // anything from /api: task data lives on your server, not in the browser's cache.
-const SHELL = 'nonos-shell-v4';
-const ASSETS = 'nonos-assets';
+const SHELL = 'nonos-shell-v5';
+const ASSETS = 'nonos-assets-v2';
 const MAX_ASSETS = 120;
+// the SHA-256 this worker computed itself when it stored a response
+const HASH = 'X-Nil-Sha256';
+
+// The build the last page load came from: its id and the SHA-256 of the page and every file
+// under /assets (build.json). Fetched fresh on every page load and kept in memory only, so a
+// list changed once on the way can't stay either. `loading` is the request in flight.
+let build = null;
+let loading = null;
+let pruned = null;
+
+const typeOf = (response) => (response.headers.get('Content-Type') || '').toLowerCase();
+const hex = (buffer) => Array.from(new Uint8Array(buffer), (b) => b.toString(16).padStart(2, '0')).join('');
+const sha256 = async (response) => hex(await crypto.subtle.digest('SHA-256', await response.clone().arrayBuffer()));
+
+// Only a real build file is kept. A server that answers a missing file with the app's page
+// (an older Nil, or a misconfigured proxy) must never have that page stored as a script or a
+// stylesheet, where it would break every later load of that file.
+function isBuildFile(response) {
+  return response.ok && response.type === 'basic' && !typeOf(response).startsWith('text/html');
+}
+
+// Stored files that the current build doesn't list with the same hash go: an older build's,
+// and any that were changed on the way when they were stored.
+async function prune(files) {
+  const key = JSON.stringify(files);
+  if (key === pruned) return;
+  const cache = await caches.open(ASSETS);
+  for (const request of await cache.keys()) {
+    const stored = await cache.match(request);
+    if (!stored || stored.headers.get(HASH) !== files[new URL(request.url).pathname]) await cache.delete(request);
+  }
+  pruned = key;
+}
+
+async function loadBuild() {
+  try {
+    const response = await fetch('/build.json', { cache: 'no-store', credentials: 'same-origin' });
+    const next = response.ok ? await response.json() : null;
+    if (next && typeof next.files === 'object' && next.files) {
+      build = next;
+      await prune(next.files);
+    }
+  } catch {}
+  return build;
+}
+
+async function keepAsset(request, response, hash) {
+  const headers = new Headers(response.headers);
+  headers.set(HASH, hash);
+  const cache = await caches.open(ASSETS);
+  await cache.put(request, new Response(await response.arrayBuffer(), { status: response.status, statusText: response.statusText, headers }));
+  const keys = await cache.keys();
+  for (const old of keys.slice(0, Math.max(0, keys.length - MAX_ASSETS))) await cache.delete(old);
+}
+
+// Build files are named after their contents, so a stored one opens without asking the
+// server, but only while the current build lists it with the hash it was stored under. One
+// that the build lists with other bytes was changed on the way and is refused.
+async function asset(event) {
+  const { request } = event;
+  const path = new URL(request.url).pathname;
+  const files = (await (loading || Promise.resolve(build)))?.files || null;
+  const hit = await caches.match(request, { cacheName: ASSETS });
+  if (hit && (!files || hit.headers.get(HASH) === files[path])) return hit;
+  const response = await fetch(request);
+  if (!isBuildFile(response) || !files || !files[path]) return response;
+  const hash = await sha256(response);
+  if (hash !== files[path]) return Response.error();
+  event.waitUntil(keepAsset(request, response.clone(), hash));
+  return response;
+}
+
+// The page is stored for offline use only if it is the one the build lists.
+async function keepShell(response) {
+  const expected = (await (loading || Promise.resolve(build)))?.files?.['/index.html'];
+  if (!expected || (await sha256(response)) !== expected) return;
+  await (await caches.open(SHELL)).put('/', response);
+}
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL).then((cache) => cache.addAll(['/', '/favicon.svg', '/manifest.webmanifest'])));
+  loading = loadBuild();
+  event.waitUntil(
+    Promise.all([
+      caches.open(SHELL).then((cache) => cache.addAll(['/favicon.svg', '/manifest.webmanifest'])),
+      fetch('/', { cache: 'no-store' }).then((response) => (response.ok ? keepShell(response) : null)).catch(() => {}),
+    ]),
+  );
   self.skipWaiting();
 });
 
@@ -18,37 +102,23 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-const typeOf = (response) => (response.headers.get('Content-Type') || '').toLowerCase();
-
-// Only a real build file is kept. A server that answers a missing file with the app's page
-// (an older Nil, or a misconfigured proxy) must never have that page stored as a script or a
-// stylesheet, where it would break every later load of that file.
-function isBuildFile(response) {
-  return response.ok && response.type === 'basic' && !typeOf(response).startsWith('text/html');
-}
-
-// Hashed build files never change, so the oldest can go once the cache grows past a cap.
-async function keepAsset(request, response) {
-  const cache = await caches.open(ASSETS);
-  await cache.put(request, response);
-  const keys = await cache.keys();
-  for (const old of keys.slice(0, Math.max(0, keys.length - MAX_ASSETS))) await cache.delete(old);
-}
-
 // The newest app from the network, stored for offline use. While the server is unreachable or
-// restarting for a deploy, the stored one opens instead of an error page.
+// restarting for a deploy, the stored one opens instead of an error page. A host's notice that
+// this workspace is paused or being deleted (503 with X-Nil-Notice) is shown as it is, never
+// covered up by the stored app.
 async function page(event) {
+  loading = loadBuild();
   try {
     const response = await fetch(event.request);
     if (response.ok && typeOf(response).startsWith('text/html')) {
-      const copy = response.clone();
-      event.waitUntil(caches.open(SHELL).then((cache) => cache.put('/', copy)));
+      event.waitUntil(keepShell(response.clone()));
       return response;
     }
-    if (response.status >= 500) return (await caches.match('/')) || response;
+    if (response.status === 503 && response.headers.get('X-Nil-Notice')) return response;
+    if (response.status >= 500) return (await caches.match('/', { cacheName: SHELL })) || response;
     return response;
   } catch {
-    return (await caches.match('/')) || Response.error();
+    return (await caches.match('/', { cacheName: SHELL })) || Response.error();
   }
 }
 
@@ -59,16 +129,7 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api/') || url.pathname === '/ws' || url.pathname.startsWith('/.well-known/')) return;
 
   if (url.pathname.startsWith('/assets/')) {
-    event.respondWith(
-      caches.match(request).then(
-        (hit) =>
-          hit ||
-          fetch(request).then((response) => {
-            if (isBuildFile(response)) event.waitUntil(keepAsset(request, response.clone()));
-            return response;
-          }),
-      ),
-    );
+    event.respondWith(asset(event));
     return;
   }
 

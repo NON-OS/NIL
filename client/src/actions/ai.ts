@@ -1,5 +1,6 @@
-import http from '../api/http';
+import askAi from './askAi';
 import dates from '../lib/dates';
+import type LoadedTask from '../types/LoadedTask';
 
 interface DraftTask {
   title: string;
@@ -9,12 +10,18 @@ interface DraftTask {
   assigneeId: string | null;
 }
 
+// private tasks never go to the AI, from this browser or any other
+const shared = (task: LoadedTask) => {
+  if (task.private) throw new Error('Private tasks never go to the AI.');
+  return { taskId: task.id };
+};
+
 // Each call sends only what that feature needs to the AI provider, and only when someone clicks.
 const ai = {
-  breakdown: (taskId: string) => http.post<{ steps: string[] }>('/ai/breakdown', { taskId }),
-  describe: (taskId: string) => http.post<{ description: string }>('/ai/describe', { taskId }),
-  extract: (text: string) => http.post<{ tasks: DraftTask[] }>('/ai/extract', { text, today: dates.today() }),
-  brief: () => http.post<{ text: string }>('/ai/brief', { today: dates.today() }),
+  breakdown: async (task: LoadedTask) => askAi<{ steps: string[] }>('breakdown', shared(task)),
+  describe: async (task: LoadedTask) => askAi<{ description: string }>('describe', shared(task)),
+  extract: (text: string) => askAi<{ tasks: DraftTask[] }>('extract', { text, today: dates.today() }),
+  brief: () => askAi<{ text: string }>('brief', { today: dates.today() }),
 };
 
 export default ai;

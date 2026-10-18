@@ -12,6 +12,8 @@ const TRANSFER_TOPIC = '0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a
 const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
 // keccak256("Announcement(uint256,address,address,bytes,bytes)"), the ERC-5564 event
 const ANNOUNCEMENT_TOPIC = '0x5f0eab8057630ba7676c49b4f21a0231414e79474595be8e4c432fbf6bf0f4e7';
+// the ERC-6538 stealth meta-address registry, at the same address on every chain
+const REGISTRY = '0x6538e6bf4b0ebd30a8ea093027ac2422ce5d6538';
 const ACCEPTED = `0x1626ba7e${'0'.repeat(56)}`;
 const REJECTED = `0xffffffff${'0'.repeat(56)}`;
 const COUNTERFACTUAL = '6492'.repeat(16);
@@ -44,6 +46,8 @@ const PRICE0 = selector('price0CumulativeLast()');
 const PRICE1 = selector('price1CumulativeLast()');
 const FEES = selector('fees()');
 const DECIMALS = selector('decimals()');
+const META_OF = selector('stealthMetaAddressOf(address,uint256)');
+const REGISTER_KEYS = selector('registerKeys(uint256,bytes)');
 const hex = (n) => `0x${n.toString(16)}`;
 
 // A tiny fake Ethereum JSON-RPC node: balances, transaction receipts, blocks with hashes and
@@ -63,7 +67,11 @@ export default function mockChain() {
   const pools = new Map();
   const pairs = new Map();
   const feeds = new Map();
+  // "<schemeId>:<registrant>" -> the bytes registered, as hex
+  const registered = new Map();
   const failing = new Set();
+  // fixed eth_call answers by `${to}:${data}`, for contracts the helpers above don't model
+  const answers = new Map();
   // requests the node refuses outright, as [match(method, params), { status, error }]
   const faults = [];
   // every call the server made, in order, so tests can check what the node got to see and when
@@ -71,8 +79,9 @@ export default function mockChain() {
   const sent = [];
   let callDelayMs = 0;
   let priorityFee = 100_000_000n;
-  // NOX's fees(): null answers nothing, like a token without it
-  let transferFeeBps = null;
+  // NOX's fees() over time, as [first block, bps]; before the first one it answers nothing, like a
+  // token without it
+  const feeHistory = [];
   const genesis = Math.floor(Date.now() / 1000);
   let block = 1000;
   let chainId = 1;
@@ -89,10 +98,11 @@ export default function mockChain() {
     logs: r.logs.map((log, i) => ({ ...log, logIndex: hex(i), blockNumber: hex(r.blockNumber), blockHash: blockHash(r.blockNumber), transactionHash: hash, removed: false })),
   });
 
-  function call(to, data) {
+  function call(to, data, at) {
     const contract = to?.toLowerCase();
     const holder = `0x${data.slice(-40)}`;
     if (failing.has(contract)) throw new Error('reverted');
+    if (answers.has(`${contract}:${data.toLowerCase()}`)) return answers.get(`${contract}:${data.toLowerCase()}`);
     const pool = pools.get(contract);
     if (pool) {
       if (pool.fail) throw new Error('OLD');
@@ -112,6 +122,10 @@ export default function mockChain() {
       if (data === TOKEN0) return `0x${pad(pair.token0)}`;
       if (data === TOKEN1) return `0x${pad(pair.token1)}`;
     }
+    if (contract === REGISTRY && data.startsWith(META_OF)) {
+      const meta = registered.get(`${BigInt(`0x${data.slice(74, 138)}`)}:0x${data.slice(34, 74)}`) ?? '';
+      return `0x${word(32)}${word(meta.length / 2)}${meta.padEnd(Math.ceil(meta.length / 64) * 64, '0')}`;
+    }
     const feed = feeds.get(contract);
     if (feed) {
       if (data === DECIMALS) return `0x${word(feed.decimals)}`;
@@ -124,7 +138,8 @@ export default function mockChain() {
     if (data.startsWith('0xc3453153')) return `0x${pad((stakes.get(holder) ?? 0n).toString(16))}${pad('0').repeat(6)}`;
     if (data === DECIMALS) return `0x${pad('12')}`;
     // fees(): buy, sell, transfer, then how the fee is shared out, as the NOX token answers
-    if (data === FEES && transferFeeBps !== null) return `0x${word(0)}${word(300)}${word(transferFeeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
+    const feeBps = feeHistory.filter(([from]) => from <= (/^0x[0-9a-f]+$/i.test(at ?? '') ? Number(at) : block)).at(-1)?.[1];
+    if (data === FEES && feeBps !== undefined) return `0x${word(0)}${word(300)}${word(feeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
     return '0x';
   }
 
@@ -136,7 +151,8 @@ export default function mockChain() {
       if (r.status !== '0x1' || r.blockNumber < from || r.blockNumber > to || r.blockNumber > block) continue;
       receiptOut(hash, r).logs.forEach((log) => {
         if (address && log.address.toLowerCase() !== address.toLowerCase()) return;
-        if (topics.some((t, i) => t !== null && t !== undefined && log.topics[i]?.toLowerCase() !== t.toLowerCase())) return;
+        const fits = (t, i) => t === null || t === undefined || [t].flat().some((one) => log.topics[i]?.toLowerCase() === one.toLowerCase());
+        if (!topics.every(fits)) return;
         out.push(log);
       });
     }
@@ -187,11 +203,15 @@ export default function mockChain() {
         else if (method === 'eth_getCode') result = smartWallets.get(params[0].toLowerCase())?.deployed ? '0x6080' : '0x';
         else if (method === 'eth_chainId') result = hex(chainId);
         else if (method === 'eth_blockNumber') result = hex(block);
-        else if (method === 'eth_call') result = call(params[0].to, params[0].data);
+        else if (method === 'eth_call') result = call(params[0].to, params[0].data, params[1]);
         else if (method === 'eth_getTransactionReceipt') {
           const r = receipts.get(params[0].toLowerCase());
           result = r && r.blockNumber <= block ? receiptOut(params[0].toLowerCase(), r) : null;
         } else if (method === 'eth_getLogs') result = logs(params[0]);
+        else if (method === 'eth_getBlockReceipts') {
+          const want = String(params[0]).toLowerCase();
+          result = [...receipts].filter(([, r]) => r.blockNumber <= block && blockHash(r.blockNumber) === want).map(([hash, r]) => receiptOut(hash, r));
+        }
         else if (method === 'eth_getBalance') result = hex(ethBalances.get(params[0].toLowerCase()) ?? 0n);
         else if (method === 'eth_getTransactionCount') result = hex(nonces.get(params[0].toLowerCase()) ?? 0);
         else if (method === 'eth_estimateGas') result = params[0].data && params[0].data !== '0x' ? '0xea60' : '0x5208';
@@ -236,7 +256,8 @@ export default function mockChain() {
     // the tip the node suggests for eth_maxPriorityFeePerGas, in wei
     setPriorityFee: (wei) => (priorityFee = BigInt(wei)),
     // the token's fee on transfers between wallets, in basis points, as NOX's fees() reports it
-    setTransferFee: (bps) => (transferFeeBps = bps),
+    // from the current head on
+    setTransferFee: (bps) => feeHistory.push([block, bps]),
     mine: (blocks) => (block += blocks),
     head: () => block,
     // null: the node doesn't know the `finalized` tag
@@ -261,6 +282,17 @@ export default function mockChain() {
     },
     // a Chainlink feed answering `answer` with `decimals`, last updated at `updatedAt` (seconds)
     setFeed: (address, { answer, decimals = 8, updatedAt = Math.floor(Date.now() / 1000) }) => feeds.set(address.toLowerCase(), { answer: BigInt(answer), decimals, updatedAt }),
+    registry: REGISTRY,
+    // What the registry holds for a wallet, as hex: anything at all, so tests can make it malformed.
+    setRegistered: (address, bytes, schemeId = 1) => registered.set(`${schemeId}:${address.toLowerCase()}`, bytes.replace(/^0x/, '').toLowerCase()),
+    // A registerKeys(schemeId, bytes) transaction from `from`, mined: like the contract, the
+    // registry keeps whatever bytes were sent. False for any other call data.
+    registerKeys(from, data) {
+      if (!data.startsWith(REGISTER_KEYS)) return false;
+      const body = data.slice(10);
+      registered.set(`${BigInt(`0x${body.slice(0, 64)}`)}:${from.toLowerCase()}`, bytesAt(body, 1));
+      return true;
+    },
     // every call to this contract reverts
     breakContract: (address) => failing.add(address.toLowerCase()),
     // The node refuses requests that `match(method, params)` picks, the way public nodes do: by
@@ -274,6 +306,12 @@ export default function mockChain() {
     // Records a mined ERC-20 Transfer, `depth` blocks below the current head (1 = the head).
     addTransfer({ hash, token, from, to, value, status = '0x1', depth = 6 }) {
       receipts.set(hash.toLowerCase(), { status, blockNumber: block - depth + 1, logs: [transferLog({ token, from, to, value })] });
+    },
+    // A contract call that always answers `result` (hex), whatever the block.
+    answer: (to, data, result) => answers.set(`${to.toLowerCase()}:${data.toLowerCase()}`, result),
+    // A mined transaction with these raw logs ({ address, topics, data }), `depth` blocks down.
+    addLogs({ hash, logs: raw, status = '0x1', depth = 6 }) {
+      receipts.set(hash.toLowerCase(), { status, blockNumber: block - depth + 1, logs: raw });
     },
     // One transaction with several transfers in it.
     addTransfers({ hash, transfers, status = '0x1', depth = 6 }) {

@@ -15,7 +15,9 @@ The listing shows the task key, the title, the first 600 characters of the descr
 
 A listing comes off the board by itself when the task is assigned, made private, finished, canceled or deleted. You can also switch it off.
 
-The same list is published as JSON at `/.well-known/nonos-bounties.json`, so other sites, bots or Nil servers can index it.
+To keep a bounty listed but stop new applications, switch off **Take new applications** under the bounty in the task's panel. The board then shows "Not taking applications right now" instead of **Apply**. Switch it back on to open it again.
+
+The same list is published as JSON at `/.well-known/nonos-bounties.json`, so other sites, bots or Nil servers can index it. A bounty that isn't taking applications has `"acceptingApplications": false` there and no `apply` link.
 
 ## Apply for a bounty
 
@@ -26,11 +28,15 @@ The same list is published as JSON at `/.well-known/nonos-bounties.json`, so oth
 
 The team sees your name, your pitch and your wallet address. A wallet can apply once for each bounty, and can have up to five applications waiting on one server.
 
+So that nobody can bury a bounty under applications from many wallets, one bounty takes up to 20 new applications an hour and can have up to 100 waiting at once. Only applications still waiting count: once the team declines or deletes some, there's room again. If a bounty is full you see "This bounty has as many applications waiting as it can take" or "This bounty got a lot of applications in the last hour"; try again later. The server's operator can change these limits with `BOUNTY_APPLICATIONS_PER_WALLET`, `BOUNTY_APPLICATIONS_PER_HOUR` and `BOUNTY_MAX_PENDING_APPLICATIONS`.
+
 If the team accepts you, sign in on that server with the same wallet. Until then, signing in shows "Your bounty application is still waiting for the team".
+
+To be paid privately, publish a stealth meta-address for that wallet in the public registry (ERC-6538) before you're paid, with a wallet app that supports stealth addresses. The team's admin then pays you at a fresh one-time address only your keys can open, and that app finds the payout from its announcement. See [Private payouts](private-payouts.md#publish-your-meta-address-in-the-registry).
 
 ## Review applications
 
-Admins get an Inbox notification for each application. Applications appear under the bounty in the task's panel, with the applicant's name, wallet address and pitch.
+Admins get an Inbox notification when someone applies. Until they've read it, further applications for the same bounty add to that one notification ("Lucia and 4 others applied for your public bounty") instead of each sending a new one. Applications appear under the bounty in the task's panel, with the applicant's name, wallet address and pitch.
 
 Click **Accept** to take someone on. Nil then:
 
@@ -38,4 +44,6 @@ Click **Accept** to take someone on. Nil then:
 - assigns them the task,
 - closes the other applications.
 
-The new guest sees only that task, not its project or anything else in the workspace. When the work is done, pay them like any other bounty; see [Bounties and payouts](bounties-and-payouts.md). The × next to an application declines it.
+The new guest sees only that task, not its project or anything else in the workspace. When the work is done, pay them like any other bounty; see [Bounties and payouts](bounties-and-payouts.md). If their wallet has a meta-address in the public stealth registry, the pay button pays them privately, at a fresh one-time address only they can open. If it has none, the bounty goes to their wallet and the bounty panel says why.
+
+The × next to an application declines it. Declined applications stay on file, so that wallet can't apply for the bounty again. The bin deletes an application instead, with the name, pitch and wallet address. Use it for spam.

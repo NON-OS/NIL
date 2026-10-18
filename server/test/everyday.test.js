@@ -39,7 +39,7 @@ test('a private task is invisible to everyone but its creator and assignee, admi
     assert.equal((await outsider('POST', `/api/tasks/${secret.id}/comments`, { body: 'hi' })).status, 404);
     assert.equal((await outsider('GET', '/api/activity')).data.some((a) => a.taskId === secret.id), false);
   }
-  assert.equal((await owner('GET', '/api/export/tasks.csv')).data.includes(`NON-${secret.number},`), false);
+  assert.equal((await owner('GET', '/api/export/tasks.csv')).data.includes(`"NON-${secret.number}",`), false);
   assert.equal(JSON.stringify((await owner('GET', '/api/export/backup.json')).data).includes(secret.id), false);
   assert.equal(JSON.stringify(live.events).includes(secret.id), false);
   live.close();
@@ -90,7 +90,7 @@ test('the timer runs one at a time, stays private to you, and exports as CSV', a
   assert.equal((await ana('GET', '/api/time')).data.entries.length, 3);
 
   const csv = (await ana('GET', '/api/time/export.csv')).data;
-  assert.match(csv, /60,NON-\d+,'=cmd\|calc,Pairing/);
+  assert.match(csv, /"60","NON-\d+","'=cmd\|calc","Pairing/);
   assert.equal((await owner('POST', '/api/time/start', { taskId: (await ana('POST', '/api/tasks', { private: true, sealed: sealed(ids.ana) })).data.task.id })).status, 404);
 });
 

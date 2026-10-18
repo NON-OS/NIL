@@ -12,6 +12,16 @@ const stealthKeys = {
   // st:eth:0x<compressed spending public key><compressed viewing public key>
   meta: (spendingKey, viewingKey) => `st:eth:0x${bytesToHex(secp256k1.getPublicKey(spendingKey, true))}${bytesToHex(secp256k1.getPublicKey(viewingKey, true))}`,
 
+  // What a payer works out for one payout to `meta`: from a fresh ephemeral key, the one-time
+  // address, the ephemeral public key and the view tag. Only those three go to Nil.
+  pay(meta) {
+    const hex = meta.replace(/^st:eth:0x/i, '');
+    const ephemeral = secp256k1.utils.randomPrivateKey();
+    const hashed = keccak_256(secp256k1.getSharedSecret(ephemeral, hexToBytes(hex.slice(66)), true));
+    const point = secp256k1.ProjectivePoint.fromHex(hex.slice(0, 66)).add(secp256k1.ProjectivePoint.BASE.multiply(bytesToNumberBE(hashed) % n));
+    return { address: addressOf(point.toRawBytes(false)), ephemeralPublicKey: `0x${bytesToHex(secp256k1.getPublicKey(ephemeral, true))}`, viewTag: hashed[0] };
+  },
+
   // What the payee computes from an announcement: the view tag to filter on, and the key of the
   // one-time address (spending key + keccak256(viewingKey · ephemeral public key)).
   open(spendingKey, viewingKey, ephemeralPublicKey) {

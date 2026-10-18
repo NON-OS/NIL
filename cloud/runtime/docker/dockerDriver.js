@@ -2,6 +2,7 @@ import { Readable, pipeline } from 'node:stream';
 import dockerClient from './dockerClient.js';
 import containerBody from './containerBody.js';
 import readExecOutput from './readExecOutput.js';
+import ownVolume from './ownVolume.js';
 import dataLayout from '../dataLayout.js';
 import readHealthReport from '../readHealthReport.js';
 import rewriteTar from '../../lib/tar/rewriteTar.js';
@@ -11,7 +12,8 @@ import tarBlocks from '../../lib/tar/tarBlocks.js';
 const { mount, db: DB, snapshotDir, checkpointDir } = dataLayout;
 
 // VACUUM INTO writes a consistent copy of the live database while the app keeps running. It
-// runs inside the workspace, as the workspace's own user, with the node already in the image.
+// runs inside the workspace, as the workspace's own user (an exec runs as the container's user
+// unless told otherwise), with the node already in the image.
 const SNAPSHOT_SCRIPT = [
   "const fs = require('node:fs');",
   `fs.rmSync('${mount}/${snapshotDir}', { recursive: true, force: true });`,
@@ -29,7 +31,6 @@ const containerName = (id) => `nil-${id}`;
 export default function dockerDriver({ config, log, client = dockerClient(config.docker) }) {
   const { app, caddy, docker } = config;
   const settings = {
-    user: app.user,
     appPort: app.port,
     tmpfsMb: app.tmpfsMb,
     logMb: app.logMb,
@@ -41,7 +42,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
   const archive = (id) => `/containers/${containerName(id)}/archive`;
 
   async function exec(id, cmd) {
-    const created = await client.json('POST', `/containers/${containerName(id)}/exec`, { body: { Cmd: cmd, AttachStdout: true, AttachStderr: true, User: app.user } });
+    const created = await client.json('POST', `/containers/${containerName(id)}/exec`, { body: { Cmd: cmd, AttachStdout: true, AttachStderr: true } });
     const output = await readExecOutput(await client.stream('POST', `/exec/${created.Id}/start`, { body: { Detach: false, Tty: false } }));
     const info = await client.json('GET', `/exec/${created.Id}/json`);
     return { exitCode: info.ExitCode, ...output };
@@ -81,10 +82,14 @@ export default function dockerDriver({ config, log, client = dockerClient(config
 
     upstream: (id) => `${containerName(id)}:${app.port}`,
 
+    hasImage: async (image) => Boolean(await client.quiet('GET', `/images/${encodeURIComponent(image)}/json`)),
+
+    // Images arrive with deploy/release.sh, so by default (CLOUD_IMAGE_PULL=never) nothing is
+    // ever pulled: a missing image is an error, never a download from whoever owns that name.
     async ensureImage(image) {
-      const present = Boolean(await client.quiet('GET', `/images/${encodeURIComponent(image)}/json`));
+      const present = await driver.hasImage(image);
       if (present && docker.pull !== 'always') return;
-      if (docker.pull === 'never') throw new Error(`The image ${image} isn’t on this server, and CLOUD_IMAGE_PULL is never.`);
+      if (docker.pull === 'never') throw new Error(`The image ${image} isn’t on this server. Ship it with deploy/release.sh; CLOUD_IMAGE_PULL is never, so it isn’t pulled.`);
       const res = await client.stream('POST', '/images/create', { query: { fromImage: image }, timeout: 900_000 });
       // progress arrives as JSON lines, and a failure can arrive mid-stream with status 200
       let rest = '';
@@ -105,13 +110,16 @@ export default function dockerDriver({ config, log, client = dockerClient(config
       const labels = { 'org.nonos.cloud.workspace': spec.id };
       try {
         // an internal network has no route out of the host; Caddy, attached to every workspace
-        // network, is then the only way in and the only way to the chain
-        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: app.egress === 'rpc-only', Labels: labels } });
+        // network, is then the only way in and the only way to the chain. An isolated one (a
+        // restore drill) doesn't even get Caddy.
+        const internal = spec.isolated || app.egress === 'rpc-only';
+        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: internal, Labels: labels } });
       } catch (err) {
         if (err.status !== 409) throw err;
       }
-      await attachProxy(spec.id);
+      if (!spec.isolated) await attachProxy(spec.id);
       await client.json('POST', '/volumes/create', { body: { Name: spec.volume, Driver: 'local', Labels: labels } });
+      await ownVolume(client, spec);
       await client.json('POST', '/containers/create', { query: { name: containerName(spec.id) }, body: containerBody(spec, settings) });
     },
 
@@ -227,6 +235,27 @@ export default function dockerDriver({ config, log, client = dockerClient(config
     async discardCheckpoint(id) {
       const { exitCode } = await exec(id, ['rm', '-rf', `${mount}/${checkpointDir}`]);
       if (exitCode !== 0) throw new Error('Couldn’t remove the checkpoint.');
+    },
+
+    // When the workspace's data last changed: the newest modification time of its database
+    // files, from the stat header of the archive API (a HEAD request reads nothing inside them),
+    // and when its container started, so writes the app makes as it starts can be told apart.
+    async lastWrite(id) {
+      const info = await client.quiet('GET', `/containers/${containerName(id)}/json`);
+      if (!info) return null;
+      const mtime = async (path) => {
+        try {
+          const res = await client.stream('HEAD', archive(id), { query: { path } });
+          res.resume();
+          const stat = res.headers['x-docker-container-path-stat'];
+          return stat ? Date.parse(JSON.parse(Buffer.from(stat, 'base64').toString('utf8')).mtime) || null : null;
+        } catch (err) {
+          if (err.status === 404) return null;
+          throw err;
+        }
+      };
+      const times = (await Promise.all([`${mount}/${DB}`, `${mount}/${DB}-wal`].map(mtime))).filter(Boolean);
+      return { at: times.length ? Math.max(...times) : null, startedAt: Date.parse(info.State?.StartedAt) || null };
     },
 
     // Disk used by each workspace volume, from Docker's own accounting.

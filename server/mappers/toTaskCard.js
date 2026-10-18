@@ -32,6 +32,8 @@ export default function toTaskCard(row) {
     // on the whole task; null for plain tasks
     sealed: parseJSON(row.sealed, null),
     listedAt: row.listed_at ?? null,
+    // set while a listed bounty takes no new applications
+    applicationsClosedAt: row.applications_closed_at ?? null,
     position: row.position,
     commentCount: row.comment_count,
     attachmentCount: row.attachment_count,

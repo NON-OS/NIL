@@ -12,6 +12,7 @@ import backupAll from '../backups/backupAll.js';
 import createWorkspace from '../provisioning/createWorkspace.js';
 import provisionWorkspace from '../provisioning/provisionWorkspace.js';
 import restoreWorkspace from '../provisioning/restoreWorkspace.js';
+import drillRestore from '../provisioning/drillRestore.js';
 import readTar from './helpers/readTar.js';
 import testContext from './helpers/testContext.js';
 
@@ -80,6 +81,54 @@ test('a backup can rebuild a workspace this control plane has never seen', async
   assert.equal(rebuilt.owner, OWNER);
   assert.equal(rebuilt.plan, 'pro');
   assert.equal(rebuilt.state, 'active');
+});
+
+test('a rebuilt workspace runs an image from its manifest only if it is ours and already here', async () => {
+  const restoreAs = async (ctx, name, image) => {
+    const tar = Readable.from([Buffer.alloc(1024)]);
+    return restoreWorkspace(ctx, { name, tar, manifest: { name, owner: OWNER, plan: 'standard', image } });
+  };
+  const ctx = testContext({ env: { CLOUD_APP_IMAGE: 'localhost/nonos/nil:3.0.1' } });
+  ctx.driver.images.add('localhost/nonos/nil:3.0.0');
+  ctx.driver.images.add('someone/else:latest');
+  assert.equal((await restoreAs(ctx, 'older', 'localhost/nonos/nil:3.0.0')).image, 'localhost/nonos/nil:3.0.0');
+  assert.equal((await restoreAs(ctx, 'foreign', 'someone/else:latest')).image, 'localhost/nonos/nil:3.0.1', 'another repository is never run, even when present');
+  assert.equal((await restoreAs(ctx, 'missing', 'localhost/nonos/nil:9.9.9')).image, 'localhost/nonos/nil:3.0.1', 'an image that isn’t here maps to the current one');
+  assert.equal((await restoreAs(ctx, 'hub', 'nonos/nil:3.0.0')).image, 'localhost/nonos/nil:3.0.1');
+  const asked = ctx.driver.calls.filter(([op]) => op === 'ensureImage').map(([, image]) => image);
+  assert.deepEqual([...new Set(asked)].sort(), ['localhost/nonos/nil:3.0.0', 'localhost/nonos/nil:3.0.1']);
+});
+
+test('a restore drill boots the backup where nobody can reach it, then removes it', async () => {
+  const ctx = testContext({ backups: true });
+  const ws = createWorkspace(ctx, { name: 'customer', owner: OWNER });
+  await provisionWorkspace(ctx, ws.id);
+  ctx.driver.volumes.get(ws.volume).set('uploads/secret', Buffer.from('a customer’s file'));
+  const open = async () => {
+    const { location } = await backupWorkspace(ctx, ctx.store.workspaces.get(ws.id), 'manual');
+    const plain = openStream(backupKeys.parseSecret(ctx.secretKey));
+    pipeline(fs.createReadStream(location), plain).catch(() => {});
+    return readManifest(plain);
+  };
+  const rows = ctx.store.workspaces.list().length;
+  const reloads = ctx.reloads.length;
+  const containers = new Set(ctx.driver.containers.keys());
+
+  const { manifest, rest } = await open();
+  const result = await drillRestore(ctx, { tar: rest, manifest });
+  assert.equal(result.report.ok, true);
+  const [created] = ctx.driver.calls.filter(([op]) => op === 'create').slice(-1);
+  assert.equal(created[1], result.id);
+  assert.equal(ctx.store.workspaces.list().length, rows, 'the drill is never in the control database, so never routed');
+  assert.equal(ctx.reloads.length, reloads, 'Caddy never hears of it');
+  assert.deepEqual(new Set(ctx.driver.containers.keys()), containers, 'and it is gone afterwards');
+  assert.equal([...ctx.driver.volumes.keys()].some((v) => v.includes(result.id)), false);
+
+  // one that doesn't start is removed just the same
+  ctx.driver.unhealthy.add(ctx.config.app.image);
+  const again = await open();
+  await assert.rejects(drillRestore(ctx, { tar: again.rest, manifest: again.manifest }), /didn’t become healthy/);
+  assert.deepEqual(new Set(ctx.driver.containers.keys()), containers);
 });
 
 test('the nightly run backs up every workspace and the control database, and prunes old files', async () => {

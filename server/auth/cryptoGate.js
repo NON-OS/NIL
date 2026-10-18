@@ -2,9 +2,9 @@ import express from 'express';
 import cryptoTools from '../services/cryptoTools.js';
 
 // Routes that belong to the crypto tools. With the tools switched off they answer like routes
-// that don't exist. Two things stay outside on purpose: the Nil Pro subscription (/plan), which
-// is paid in NOX either way, and /proofs/key, which also seeds the keys behind private tasks
-// and docs.
+// that don't exist. Three things stay outside on purpose: the Nil Pro subscription (/plan), which
+// is paid in NOX either way; /proofs/key, which also seeds the keys behind private tasks and
+// docs; and /me/semaphore, the voting key, which also sends built-in AI requests anonymously.
 const PATHS = [
   '/bounties',
   '/payments',
@@ -15,7 +15,6 @@ const PATHS = [
   '/proposals',
   '/vote-power',
   '/anonymous-ballots',
-  '/me/semaphore',
   '/me/stealth',
   '/stealth',
   '/holder-gate',

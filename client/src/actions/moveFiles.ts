@@ -19,7 +19,7 @@ async function move(task: Task, file: Attachment, to: TaskKey | null): Promise<R
     return { id: file.id, key };
   }
   if (to) {
-    const { sealed, body } = await fileSeal.seal(to, await fileBytes(task, file), file.filename, file.mime);
+    const { sealed, body } = await fileSeal.seal(to, task.id, await fileBytes(task, file), file.filename, file.mime);
     await stage(file, body);
     return { id: file.id, sealed };
   }

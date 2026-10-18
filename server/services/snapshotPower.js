@@ -1,8 +1,7 @@
 import crypto from 'node:crypto';
 import sql from '../db/sql.js';
 import config from '../config.js';
-import rpc from '../chain/rpc.js';
-import nodeReady from '../chain/nodeReady.js';
+import finalBlockRef from '../chain/finalBlockRef.js';
 import holdingsAt from '../chain/holdingsAt.js';
 import HttpError from '../lib/HttpError.js';
 import zspPower from './zspPower.js';
@@ -25,13 +24,13 @@ function shuffle(list) {
 // during the snapshot can't count for two people. Power = NOX held + NOX staked + ZSPs × power
 // per ZSP, in NOX's smallest unit. People who join later get no power in this vote.
 //
-// Every read names that block, so the node can tell these wallets were read together. What it
-// can't tell is whose wallets belong to the same person: they go out shuffled across members,
-// a few at a time, rather than person by person.
+// The block is the newest final one, and every read names it by hash (EIP-1898), so a reorg can't
+// leave some wallets read from one version of the block and some from another. The node can tell
+// these wallets were read together. What it can't tell is whose wallets belong to the same
+// person: they go out shuffled across members, a few at a time, rather than person by person.
 export default async function snapshotPower(proposalId) {
-  await nodeReady();
-  const block = Number(await rpc('eth_blockNumber'));
-  const tag = `0x${block.toString(16)}`;
+  const { number: block, hash } = await finalBlockRef();
+  const at = { blockHash: hash, requireCanonical: true };
   const perZsp = BigInt(zspPower.get()) * 10n ** BigInt(config.nox.decimals);
   // votes are for people: agents hold no wallet and never get a row in the snapshot
   const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((m) => m.id);
@@ -43,7 +42,7 @@ export default async function snapshotPower(proposalId) {
   for (let i = 0; i < wallets.length; i += BATCH) {
     if (i) await pause();
     const group = wallets.slice(i, i + BATCH);
-    const held = await Promise.all(group.map((w) => holdingsAt(w.external_id, tag))).catch((err) => {
+    const held = await Promise.all(group.map((w) => holdingsAt(w.external_id, at))).catch((err) => {
       throw new HttpError(502, `Nil couldn’t read everyone’s voting power from its Ethereum node, so the vote wasn’t opened. Try again in a minute. (${err.message})`);
     });
     group.forEach((w, k) => {

@@ -12,6 +12,10 @@ import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
 import feeAt from './feeAt.js';
 import netOfFee from '../billing/netOfFee.js';
+import feeTaken from '../billing/feeTaken.js';
+import relayedTransfers from '../pools/relayedTransfers.js';
+
+const OUT_OF_RANGE = 'This transaction is in a block older than Nil’s verifier can check (about 27 hours), so it can’t be counted automatically.';
 
 // Who may fund a bounty: the wallets of the admin who recorded it, plus treasury addresses.
 function payers(payerId) {
@@ -31,7 +35,7 @@ function refuse(payment, problem) {
 // after the payment was started in Nil, in an amount that carries the suffix Nil asked for, and
 // once that block is final. Until then the block and its hash are kept up to date, so a reorg
 // that moves or drops the transaction is followed rather than missed.
-export default async function verifyPayment(id) {
+async function check(id) {
   const payment = sql.get('SELECT * FROM payments WHERE id = ?', id);
   if (payment?.status !== 'pending' && payment?.status !== 'cancelled') return;
 
@@ -42,7 +46,10 @@ export default async function verifyPayment(id) {
     if (payment.block_hash) {
       sql.run('UPDATE payments SET block_number = NULL, block_hash = NULL, problem = ?, checked_at = ? WHERE id = ?', 'A chain reorganisation took the transaction out of its block. Nil keeps watching for it.', now, id);
     } else if (payment.status === 'pending' && now - payment.created_at > config.nox.missingTxMs) {
-      failPayment(payment, 'The transaction never showed up on-chain.');
+      // a light client can prove a transaction exists, never that it doesn't, so with verified
+      // reads a missing one is only reported: an admin who knows it was never sent cancels it
+      if (config.verification.required) sql.run('UPDATE payments SET problem = ?, checked_at = ? WHERE id = ?', 'The transaction hasn’t shown up on-chain. Nil keeps watching for it; if it was never sent, cancel this payment.', now, id);
+      else failPayment(payment, 'The transaction never showed up on-chain.');
     } else {
       sql.run('UPDATE payments SET checked_at = ? WHERE id = ?', now, id);
     }
@@ -50,8 +57,13 @@ export default async function verifyPayment(id) {
   }
   if (found.state === 'failed') return refuse(payment, `The transaction failed on-chain, so no ${token.symbol} moved.`);
 
-  const toPayee = found.transfers.filter((t) => t.token === token.address && t.to === payment.to_address);
-  const funded = toPayee.filter((t) => payers(payment.payer_id).has(t.from));
+  // A bounty paid from a Privacy Pools pool comes from the entry contract, not a team wallet:
+  // the payer's check is the pool's own accounting, and the one-time address only this payment
+  // was told about.
+  const pooled = payment.via === 'pool' ? relayedTransfers(found.logs, { entrypoint: config.pools.entrypoint, pool: payment.pool_address, token: token.address, to: payment.to_address }) : null;
+  const toPayee = pooled ?? found.transfers.filter((t) => t.token === token.address && t.to === payment.to_address);
+  const funded = pooled ?? toPayee.filter((t) => payers(payment.payer_id).has(t.from));
+  if (pooled && !pooled.length) return refuse(payment, `This transaction isn’t a relayed withdrawal from the ${token.symbol} pool to the contributor’s private address.`);
   if (!toPayee.length) return refuse(payment, `This transaction has no ${token.symbol} transfer to the contributor’s ${payment.stealth_ephemeral ? 'private address' : 'wallet'}.`);
   if (!funded.length) return refuse(payment, `The ${token.symbol} came from a wallet that isn’t yours or a treasury address.`);
   if (payment.start_block !== null && found.blockNumber < payment.start_block) {
@@ -64,11 +76,11 @@ export default async function verifyPayment(id) {
     const expected = BigInt(payment.expected);
     paying = funded.filter((t) => t.value === expected || sameSuffix(t.value, expected, payment.grid));
     // NOX may keep a fee on transfers between wallets: the exact amount, less exactly that fee,
-    // was sent in full
+    // was sent in full, as long as the same transaction shows the token keeping it
     if (!paying.length && token.address === config.nox.token) {
       const bps = await feeAt(found.blockNumber);
       const net = bps > 0 ? netOfFee(expected, bps) : null;
-      paying = funded.filter((t) => t.value === net);
+      paying = funded.filter((t) => t.value === net && feeTaken(found.transfers, { token: token.address, from: t.from, fee: expected - net, except: t.logIndex }));
       if (paying.length) fee = expected - net;
     }
     if (!paying.length) {
@@ -92,6 +104,18 @@ export default async function verifyPayment(id) {
   // the node hasn't settled on that block yet; look again next time
   if (!block || block.hash !== found.blockHash) return;
 
+  if (pooled) sql.run('UPDATE payments SET relay_fee = ? WHERE id = ?', String(paying.reduce((sum, t) => sum + t.relayFee, 0n)), id);
   settlePayment(payment, { from: paying[0].from, blockNumber: found.blockNumber, blockHash: found.blockHash, received: paying.reduce((sum, t) => sum + t.value, 0n), fee });
   if (payment.stealth_ephemeral) await checkAnnouncement(id);
+}
+
+// With verified reads, a transaction in a block older than the verifier can prove waits with a
+// note saying so, rather than being counted or failed on an answer nobody checked.
+export default async function verifyPayment(id) {
+  try {
+    await check(id);
+  } catch (err) {
+    if (err.reason === 'out-of-range') sql.run("UPDATE payments SET problem = ?, checked_at = ? WHERE id = ? AND status IN ('pending', 'cancelled')", OUT_OF_RANGE, Date.now(), id);
+    throw err;
+  }
 }

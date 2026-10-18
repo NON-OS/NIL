@@ -9,6 +9,8 @@ export default interface StealthPayout {
   txHash: string;
   status: 'pending' | 'confirmed';
   announced: boolean;
+  // paid from a team's pool: never announced, since the team's wallet would have to send it
+  via: 'pool' | null;
   createdAt: number;
   // what the one-time address held when last looked up, or null if it hasn't been yet; the
   // server reads these one address at a time, spread out, so they can lag a little

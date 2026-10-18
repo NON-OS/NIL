@@ -4,6 +4,7 @@ import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import taskActions from '../../actions/tasks';
 import ai from '../../actions/ai';
+import AiMode from '../ai/AiMode';
 import toast from '../../state/toast';
 import type LoadedTask from '../../types/LoadedTask';
 import type ChecklistItem from '../../types/ChecklistItem';
@@ -29,7 +30,7 @@ export default function Checklist({ task }: { task: LoadedTask }) {
   const breakdown = async () => {
     setBusy(true);
     try {
-      const { steps } = await ai.breakdown(task.id);
+      const { steps } = await ai.breakdown(task);
       if (!steps.length) toast.show('No new steps suggested.');
       else save([...items, ...steps.map((s) => ({ id: tempId(), text: s, done: false }))]);
     } catch (err) {
@@ -45,11 +46,14 @@ export default function Checklist({ task }: { task: LoadedTask }) {
         <h3>
           Checklist {items.length > 0 && <span className="muted num">{done}/{items.length}</span>}
         </h3>
-        {aiOn && (
-          <button type="button" className="btn btn-ghost btn-sm" onClick={breakdown} disabled={busy}>
-            {busy ? <Spinner size={13} /> : <Sparkles />}
-            Break it down
-          </button>
+        {aiOn && !task.private && (
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
+            <AiMode compact />
+            <button type="button" className="btn btn-ghost btn-sm" onClick={breakdown} disabled={busy}>
+              {busy ? <Spinner size={13} /> : <Sparkles />}
+              Break it down
+            </button>
+          </span>
         )}
       </div>
       {items.length > 0 && (

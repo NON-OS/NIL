@@ -1,9 +1,13 @@
-import sql from '../db/sql.js';
 import holderPower from './holderPower.js';
+import holderWallets from './holderWallets.js';
 
-// What counts toward the holder door across every wallet a person has linked. Each wallet
-// belongs to exactly one account, so the same tokens can't count for two people at once.
-export default function holdings(userId) {
-  const wallets = sql.all("SELECT external_id FROM credentials WHERE user_id = ? AND kind = 'wallet'", userId).map((r) => r.external_id);
-  return holderPower(wallets);
+// What counts toward the holder door across the wallets a person has linked, read at `block`
+// (the newest final block by default, see holderPower). A wallet whose holdings counted for
+// someone else lately is left out (see holderWallets), so the same tokens can't count for two
+// people by moving between accounts. The wallets that did count are noted as counting for this person.
+export default async function holdings(userId, { block = null, now = Date.now() } = {}) {
+  const wallets = holderWallets.eligible(userId, now);
+  const power = await holderPower(wallets, block);
+  holderWallets.record(userId, wallets.filter((_, i) => power.each[i] > 0n), now);
+  return power;
 }

@@ -22,4 +22,7 @@ export default interface Payment {
   announced: boolean;
   ephemeralPublicKey: string | null;
   viewTag: number | null;
+  // 'pool' when paid from the team's Privacy Pools pool, with what the relayer kept on top
+  via: 'pool' | null;
+  relayFee: string | null;
 }

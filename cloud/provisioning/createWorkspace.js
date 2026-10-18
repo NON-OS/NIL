@@ -7,17 +7,18 @@ import nameStatus from '../names/nameStatus.js';
 const ADDRESS = /^0x[0-9a-f]{40}$/;
 
 // The operator may use reserved and blocklisted names (the foundation's own workspace, for
-// example) and reuse a quarantined one, but never a name a live workspace holds.
+// example) and reuse a quarantined one, but never a name a live workspace or a waiting sign-up
+// holds.
 function operatorName(ctx, name) {
   const syntax = nameCheck(name, { ...ctx.config.signup, reserved: new Set(), blocked: [] });
   if (!syntax.ok) return { available: false, name: syntax.name, reason: syntax.reason };
-  if (ctx.store.workspaces.nameStatus(syntax.name, Infinity) === 'live') return { available: false, name: syntax.name, reason: 'That address is taken.' };
+  if (ctx.store.workspaces.nameStatus(syntax.name, Infinity) === 'live' || ctx.store.requests.byName(syntax.name)) return { available: false, name: syntax.name, reason: 'That address is taken.' };
   return { available: true, name: syntax.name };
 }
 
 // Records a new workspace and reserves its name. The workload itself is built by
 // provisionWorkspace, which sign-up runs in the background and the CLI waits for.
-export default function createWorkspace(ctx, { name, owner, plan = ctx.config.defaultPlan, image = ctx.config.app.image, anyName = false }) {
+export default function createWorkspace(ctx, { name, owner, plan = ctx.config.defaultPlan, image = ctx.config.app.image, anyName = false, setupToken = randomToken() }) {
   const { config, store } = ctx;
   const status = anyName ? operatorName(ctx, name) : nameStatus(ctx, name);
   if (!status.available) throw new HttpError(409, status.reason);
@@ -28,7 +29,7 @@ export default function createWorkspace(ctx, { name, owner, plan = ctx.config.de
   const id = newWorkspaceId();
   let workspace;
   try {
-    workspace = store.workspaces.insert({ id, name: status.name, owner: address, state: 'provisioning', image, plan, volume: `nil-${id}-data`, setupToken: randomToken() });
+    workspace = store.workspaces.insert({ id, name: status.name, owner: address, state: 'provisioning', image, plan, volume: `nil-${id}-data`, setupToken });
   } catch (err) {
     // two sign-ups for the same name at the same moment: the unique index decides
     if (/UNIQUE/.test(err.message)) throw new HttpError(409, 'That address is taken.');
@@ -36,5 +37,14 @@ export default function createWorkspace(ctx, { name, owner, plan = ctx.config.de
   }
   store.events.add(id, 'created', `plan=${plan} image=${image}`);
   ctx.log.info('workspace.created', { workspace: id, name: workspace.name, owner: ctx.walletTag(address), plan });
+  const { app } = config;
+  if (app.treasury && app.invoiceKey && workspace.invoiceSlot >= app.invoiceSlots) {
+    // the alerter never rejects; the workspace itself is fine, only its invoices could collide
+    ctx.alert('billing.slots_used_up', {
+      workspace,
+      severity: 'critical',
+      message: `All ${app.invoiceSlots} invoice slots (CLOUD_INVOICE_SLOTS) are taken, so this workspace draws invoice amounts at random and could ask for the same amount as another workspace.`,
+    });
+  }
   return workspace;
 }

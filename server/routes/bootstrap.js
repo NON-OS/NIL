@@ -3,6 +3,7 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import config from '../config.js';
 import transferFee from '../services/transferFee.js';
+import verifyHealth from '../chain/verifyHealth.js';
 import buildId from '../lib/buildId.js';
 import toUser from '../mappers/toUser.js';
 import userRows from '../services/userRows.js';
@@ -22,7 +23,9 @@ import archivedSql from '../services/archivedSql.js';
 import archiveBoundary from '../services/archiveBoundary.js';
 import archiveSummary from '../services/archiveSummary.js';
 import keySite from '../keys/keySite.js';
+import passkeyList from '../keys/passkeyList.js';
 import signingKey from '../proofs/signingKey.js';
+import creditSetting from '../aiCredits/creditSetting.js';
 
 const router = express.Router();
 
@@ -81,17 +84,33 @@ router.get(
       // guests work inside someone else's subscription; they don't need its details
       plan: guestScope.of(req.user.id) ? { unlocked: plan.status().unlocked } : plan.status(),
       ai: config.ai.enabled,
+      // members with a voting key send built-in AI requests anonymously while this is on
+      aiAnonymous: config.ai.enabled && creditSetting.on(),
       nox: config.nox.enabled
-        ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer, transferFeeBps: transferFee.current().bps }
+        ? {
+            token: config.nox.token,
+            chainId: config.nox.chainId,
+            symbol: config.nox.symbol,
+            decimals: config.nox.decimals,
+            explorer: config.nox.explorer,
+            transferFeeBps: transferFee.current().bps,
+            // admins are told when chain reads can't be verified; nobody else needs the plumbing
+            ...(req.user.isAdmin ? { verification: verifyHealth.report() } : {}),
+          }
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
-      stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei } : null,
+      stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei, registry: config.stealth.registry } : null,
+      // admins see the pool tools only when the server has private pool payouts on
+      privacyPools: config.pools.enabled && req.user.isAdmin,
       sourceUrl: config.sourceUrl,
       // the web app this server hands out, so an open tab can notice it's out of date
       build: buildId(),
       // what key messages are bound to: the configured site (APP_URL) and the workspace's signing key
       origin: keySite().origin,
       workspaceKey: signingKey.publicKey(),
+      // your own passkey wraps and when you last saved a recovery kit; nobody else's ever come here
+      passkeys: passkeyList(req.user.id),
+      recoveryKitAt: sql.get('SELECT kit_saved_at FROM encryption_keys WHERE user_id = ?', req.user.id)?.kit_saved_at ?? null,
     };
   }),
 );

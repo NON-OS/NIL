@@ -14,8 +14,11 @@ import voterGroups from '../votes/voterGroups.js';
 import guestScope from '../services/guestScope.js';
 import lostAccess from '../services/lostAccess.js';
 import seatGate from '../services/seatGate.js';
+import adminLeft from '../services/adminLeft.js';
+import revokeInvitesBy from '../services/revokeInvitesBy.js';
 
 const router = express.Router();
+const isAdminRole = (role) => role === 'owner' || role === 'admin';
 
 function target(req) {
   const row = sql.get('SELECT * FROM users WHERE id = ?', req.params.id);
@@ -23,6 +26,8 @@ function target(req) {
   if (row.kind === 'agent') throw HttpError.badRequest('Agents are managed in Settings → Agents.');
   if (row.id === req.user.id) throw HttpError.badRequest('You can’t change your own access. Ask another admin.');
   if (row.role === 'owner' && req.user.role !== 'owner') throw HttpError.forbidden('Only an owner can change another owner.');
+  // otherwise one admin could demote the others and be the only one left to reset an owner
+  if (row.role === 'admin' && req.user.role !== 'owner') throw HttpError.forbidden('Only an owner can change another admin.');
   return row;
 }
 
@@ -37,6 +42,8 @@ router.patch(
       // a guest becoming a member takes a seat, the same as someone new joining
       if (row.role === 'guest' && role !== 'guest' && !row.deactivated) seatGate(role);
       sql.run('UPDATE users SET role = ? WHERE id = ?', role, row.id);
+      if (isAdminRole(row.role) && !isAdminRole(role)) adminLeft(row.id, req.user.id);
+      if (!isAdminRole(row.role) && isAdminRole(role)) sql.run('UPDATE users SET admin_since = ? WHERE id = ?', Date.now(), row.id);
       // guests don't vote: becoming one empties your seat in open anonymous votes, and back again
       if (role === 'guest') voterGroups.leave(row.id);
       else voterGroups.join(row.id);
@@ -62,13 +69,18 @@ router.patch(
     if ('deactivated' in req.body) {
       const off = Boolean(req.body.deactivated);
       // coming back takes a seat again, so access can't be switched off before paying for fewer seats and on after
-      if (!off && row.deactivated) seatGate(sql.get('SELECT role FROM users WHERE id = ?', row.id).role);
+      const role = sql.get('SELECT role FROM users WHERE id = ?', row.id).role;
+      if (!off && row.deactivated) seatGate(role);
       sql.run('UPDATE users SET deactivated = ? WHERE id = ?', off ? 1 : 0, row.id);
+      // an admin let back in starts over as a new admin when it comes to approving owner resets
+      if (!off && row.deactivated && isAdminRole(role)) sql.run('UPDATE users SET admin_since = ? WHERE id = ?', Date.now(), row.id);
       if (off) voterGroups.leave(row.id);
       else voterGroups.join(row.id);
       if (off) {
         sessions.revokeAll(row.id);
         hub.disconnect(row.id);
+        if (isAdminRole(role) && !row.deactivated) adminLeft(row.id, req.user.id);
+        else revokeInvitesBy(row.id);
       }
     }
     return { user: toUser(publishUser(row.id), req.viewer) };

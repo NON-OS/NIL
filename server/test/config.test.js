@@ -35,14 +35,15 @@ test('a clean configuration starts without warnings', () => {
 test('empty values count as unset and get the defaults, never 0', () => {
   const names = ['PORT', 'SESSION_DAYS', 'TRASH_DAYS', 'MAX_UPLOAD_MB', 'MAX_CAPSULE_MB', 'NOX_CHAIN_ID', 'NOX_DECIMALS', 'NOX_CONFIRMATIONS', 'NOX_EXPLORER', 'PLAN_TREASURY', 'PLAN_PRICE', 'PLAN_PERIOD_DAYS', 'PLAN_GRACE_DAYS', 'PLAN_FREE_SEATS', 'PLAN_MAX_PERIODS', 'PLAN_TRIAL_DAYS', 'STEALTH_ANNOUNCE_CHECK_DAYS', 'SEMAPHORE_DEPTH',
     'NOX_TOKEN', 'NOX_STAKING', 'ZSP_CONTRACT', 'STEALTH_ANNOUNCER', 'REWARD_TOKENS', 'NOX_RPC_TIMEOUT_SECONDS', 'NOX_MISSING_TX_HOURS', 'MAX_JSON_KB', 'NOTIFICATION_DAYS', 'USED_INVITE_DAYS',
-    'JOB_PURGE_SECONDS', 'JOB_PAYMENTS_SECONDS', 'JOB_VOTES_SECONDS', 'JOB_REMINDERS_SECONDS', 'JOB_AGENT_DUE_SOON_SECONDS', 'JOB_AGENT_PRUNE_SECONDS', 'JOB_DUE_ALERTS_SECONDS', 'JOB_OPTIMIZE_SECONDS', 'JOB_POOL_PRICE_SECONDS', 'JOB_TRANSFER_FEE_SECONDS', 'AI_TIMEOUT_SECONDS', 'AI_MAX_RETRIES', 'SHUTDOWN_TIMEOUT_SECONDS', 'DB_JOURNAL_LIMIT_MB',
+    'JOB_PURGE_SECONDS', 'JOB_PAYMENTS_SECONDS', 'JOB_VOTES_SECONDS', 'JOB_REMINDERS_SECONDS', 'JOB_AGENT_DUE_SOON_SECONDS', 'JOB_AGENT_PRUNE_SECONDS', 'JOB_DUE_ALERTS_SECONDS', 'JOB_OPTIMIZE_SECONDS', 'JOB_POOL_PRICE_SECONDS', 'JOB_TRANSFER_FEE_SECONDS', 'JOB_BILLING_WATCHDOG_SECONDS', 'PAYMENT_STALL_HOURS', 'PLAN_RECONCILE_MINUTES', 'PLAN_RECONCILE_BLOCKS', 'PLAN_RECONCILE_DAYS', 'NOX_MAX_TRANSFER_FEE_BPS', 'AI_TIMEOUT_SECONDS', 'AI_MAX_RETRIES', 'SHUTDOWN_TIMEOUT_SECONDS', 'DB_JOURNAL_LIMIT_MB',
     'SETUP_TOKEN', 'LOG_FORMAT', 'STRICT_CONFIG'];
   const { config, warnings } = load(Object.fromEntries(names.map((n) => [n, ''])));
   assert.deepEqual(warnings, []);
   assert.deepEqual([config.nox.token, config.power.staking, config.power.zsp, config.stealth.announcer], ['0x0a26c80be4e060e688d7c23addb92cbb5d2c9eca', '0xa94d6009790ba13597a1e1b7cf4e1531ea513613', '0x7b575dd8e8b111c52ab1e872924d4efd4df403df', '0x55649e01b5df198d18d95b5cc5051630cfd45564']);
   assert.deepEqual(config.rewards.map((t) => t.symbol), ['NOX', 'USDC']);
   assert.deepEqual([config.nox.rpcTimeoutMs, config.nox.missingTxMs, config.maxJsonBytes, config.readNotificationDays, config.usedInviteDays], [10_000, 24 * 3_600_000, 1024 * 1024, 90, 30]);
-  assert.deepEqual(config.jobs, { purgeMs: 3_600_000, paymentsMs: 60_000, votesMs: 60_000, remindersMs: 60_000, dueAlertsMs: 60_000, agentDueSoonMs: 300_000, agentPruneMs: 3_600_000, optimizeMs: 3_600_000, poolPriceMs: 60_000, transferFeeMs: 600_000 });
+  assert.deepEqual(config.jobs, { purgeMs: 3_600_000, paymentsMs: 60_000, votesMs: 60_000, remindersMs: 60_000, dueAlertsMs: 60_000, agentDueSoonMs: 300_000, agentPruneMs: 3_600_000, optimizeMs: 3_600_000, poolPriceMs: 60_000, transferFeeMs: 600_000, billingWatchdogMs: 300_000 });
+  assert.deepEqual([config.payments.stallHours, config.billing.reconcileMinutes, config.billing.reconcileBlocks, config.billing.reconcileDays, config.nox.maxTransferFeeBps], [6, 60, 7200, 30, 300]);
   assert.deepEqual([config.ai.timeoutMs, config.ai.maxRetries, config.shutdownTimeoutMs, config.dbJournalLimitBytes, config.setupToken], [120_000, 1, 20_000, 64 * 1024 * 1024, null]);
   assert.deepEqual([config.port, config.sessionDays, config.trashDays, config.maxUploadBytes, config.maxCapsuleBytes], [3000, 30, 30, 25 * 1024 * 1024, 4096 * 1024 * 1024]);
   assert.deepEqual([config.nox.chainId, config.nox.decimals, config.nox.explorer], [1, 18, 'https://etherscan.io']);
@@ -50,6 +51,18 @@ test('empty values count as unset and get the defaults, never 0', () => {
   assert.deepEqual([config.stealth.announceCheckDays, config.semaphore.depth], [7, 16]);
   // a real 0 still means 0
   assert.equal(load({ PLAN_TRIAL_DAYS: '0' }).config.plan.trialDays, 0);
+});
+
+test('upload quotas and bounty board limits have defaults, and 0 turns a quota off', () => {
+  const MB = 1024 * 1024;
+  const names = ['UPLOADS_PER_HOUR', 'UPLOAD_QUOTA_PER_MEMBER_MB', 'UPLOAD_QUOTA_PER_GUEST_MB', 'UPLOAD_QUOTA_MB', 'BOUNTY_MAX_PENDING_APPLICATIONS', 'BOUNTY_APPLICATIONS_PER_WALLET', 'BOUNTY_APPLICATIONS_PER_HOUR'];
+  const { config, warnings } = load(Object.fromEntries(names.map((n) => [n, ''])));
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(config.uploads, { perHour: 120, memberQuotaBytes: 2048 * MB, guestQuotaBytes: 100 * MB, workspaceQuotaBytes: 20480 * MB });
+  assert.deepEqual(config.bountyBoard, { maxPending: 100, perWallet: 5, perHour: 20 });
+  assert.equal(load({ UPLOAD_QUOTA_MB: '0' }).config.uploads.workspaceQuotaBytes, 0);
+  const bad = load({ UPLOADS_PER_HOUR: '0', BOUNTY_APPLICATIONS_PER_HOUR: 'lots' });
+  assert.deepEqual([bad.config.uploads.perHour, bad.config.bountyBoard.perHour, bad.warnings.length], [120, 20, 2]);
 });
 
 test('a treasury that is set but can’t be used is reported at startup', () => {
@@ -125,6 +138,22 @@ test('on a chain other than mainnet every contract has to be named', () => {
 
   // with on-chain features off, nothing is missing
   assert.deepEqual(load({ NOX_CHAIN_ID: '11155111', NOX_RPC_URL: 'off' }).warnings, []);
+});
+
+test('the stealth registry is the ERC-6538 singleton on every chain unless turned off', () => {
+  const REGISTRY = '0x6538e6bf4b0ebd30a8ea093027ac2422ce5d6538';
+  const plain = load({ STEALTH_REGISTRY: '', STEALTH_REGISTRY_CACHE_SECONDS: '' });
+  assert.deepEqual(plain.warnings, []);
+  assert.deepEqual([plain.config.stealth.registry, plain.config.stealth.registryCacheMs], [REGISTRY, 300_000]);
+  assert.equal(load({ STEALTH_REGISTRY: '0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538' }).config.stealth.registry, REGISTRY);
+  assert.equal(load({ STEALTH_REGISTRY: 'off' }).config.stealth.registry, null);
+  const typo = load({ STEALTH_REGISTRY: '0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538'.replace('E6', 'e6'), STEALTH_REGISTRY_CACHE_SECONDS: '0' });
+  assert.equal(typo.config.stealth.registry, REGISTRY);
+  assert.equal(typo.warnings.length, 2);
+  assert.match(typo.warnings[0], /STEALTH_REGISTRY isn’t a valid Ethereum address .*Using the default/);
+  assert.equal(typo.config.stealth.registryCacheMs, 300_000);
+  const sepolia = load({ NOX_CHAIN_ID: '11155111', NOX_TOKEN: '0x1111111111111111111111111111111111111111', NOX_STAKING: 'off', ZSP_CONTRACT: 'off', REWARD_TOKENS: 'none' });
+  assert.equal(sepolia.config.stealth.registry, REGISTRY);
 });
 
 test('settings that no longer do anything say so', () => {

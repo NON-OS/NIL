@@ -21,7 +21,8 @@ const USDC = 10n ** 6n;
 const PEOPLE = {
   owner: { nox: 100_000n * NOX, usdc: 5_000n * USDC },
   member: {},
-  payer: { nox: 60_000n * NOX, usdc: 5_000n * USDC },
+  // enough for the NOX invoices across every flow at today's price, which has fallen since
+  payer: { nox: 200_000n * NOX, usdc: 5_000n * USDC },
   holder: { nox: 120_000n * NOX },
   staker: { nox: 60_000n * NOX, passes: 2 },
   smartOwner: {},

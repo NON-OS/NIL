@@ -1,7 +1,7 @@
 import http from '../api/http';
 import session from './session';
 import ethereum from '../lib/ethereum';
-import assertNotKeyMessage from '../lib/crypto/assertNotKeyMessage';
+import signServerText from '../lib/signServerText';
 import backupNudge from '../state/backupNudge';
 import type JoinDetails from '../types/JoinDetails';
 import type SecurityOverview from '../types/SecurityOverview';
@@ -9,8 +9,7 @@ import type SecurityOverview from '../types/SecurityOverview';
 async function walletCeremony(body: Record<string, unknown>) {
   const { address, chainId } = await ethereum.account();
   const { challengeId, message } = await http.post<{ challengeId: string; message: string }>('/auth/wallet/challenge', { ...body, address, chainId });
-  assertNotKeyMessage(message);
-  const signature = await ethereum.sign(message, address);
+  const signature = await signServerText(message, address);
   return http.post('/auth/wallet/verify', { challengeId, signature });
 }
 
@@ -35,6 +34,10 @@ const identity = {
     await walletCeremony({ mode: 'reset', resetToken });
     location.replace('/settings?tab=security&reset=1');
   },
+
+  // A fresh signature from a wallet already linked here, which linking another wallet or making
+  // an access key needs. It's good for a few minutes, in this session only.
+  confirm: () => walletCeremony({ mode: 'confirm' }) as Promise<{ ok: true; until: number }>,
 
   linkWallet: () => walletCeremony({ mode: 'add' }),
 

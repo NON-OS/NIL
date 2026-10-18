@@ -34,14 +34,15 @@ Root on the server would also let NØNOS send a changed web app that reads what 
 
 **What the control plane itself records**
 
-- Per workspace: its address, the one wallet address that signed up (the owner), its state, app version, resource plan, creation, suspension and deletion dates, disk use, and whether its setup was finished. A member count only if the app reports one in `/healthz`; it currently reports its version and database schema, nothing about people.
+- Per workspace: its address, the one wallet address that signed up (the owner), its state, app version, resource plan, creation, suspension and deletion dates, disk use, whether its setup was finished, and when its data last changed. That last one is the modification time of its database files, read without opening them, and decides when a workspace nobody uses is paused. A member count only if the app reports one in `/healthz`; it currently reports its version and database schema, nothing about people.
+- Sign-ups waiting for approval: the address asked for, the wallet that signed, and the setup code it was given, until the operator approves or rejects it, or for `CLOUD_SIGNUP_REQUEST_DAYS`.
 - At sign-up, the visitor's IP address is kept in memory for rate limiting and is never written to disk. The sign-up page sets no cookies, loads nothing from other sites and has no analytics.
 - Its log names wallets only by a keyed hash, never IP addresses, and rotates by size.
 
 **Network and third parties**
 
 - Caddy sees every request's IP address and the address it asks for, as any web server does. It keeps no access log.
-- With the default settings a workspace has no network route out at all. Its only connection is Caddy's relay to the Ethereum node, which sees the addresses and transactions the workspace looks up (for Nil Pro payments, bounties and votes). Run that node on the same server (see [docker-compose.chain.yml](docker-compose.chain.yml)) and those lookups never reach a third party.
+- With the default settings a workspace has no network route out at all. Its only connections are Caddy's relays to the Ethereum node and to Nil's verifier, which asks the same node again, so that node sees the addresses and transactions the workspace looks up (for Nil Pro payments, bounties and votes). Run that node on the same server (see [docker-compose.chain.yml](docker-compose.chain.yml)) and those lookups never reach a third party.
 - Nil Pro is paid on-chain inside each workspace, to the foundation's treasury. Payments are public on Ethereum like any transaction.
 - Backups are encrypted on the server before they leave it. The storage provider sees only ciphertext, sizes and times, filed under random workspace ids rather than names.
 
@@ -58,19 +59,35 @@ Root on the server would also let NØNOS send a changed web app that reads what 
                   │        │      └─▶ creates, watches, backs up, upgrades ──┐      │
                   │        ├─▶ nil-<id>:3000   workspace (own network, volume)│      │
                   │        ├─▶ nil-<id>:3000   workspace                      │      │
-                  │        └── :8545 relay ──▶ Ethereum node (optional, reth) │      │
+                  │        ├── :8545 relay ──▶ Ethereum node ◀─┐              │      │
+                  │        └── :8546 relay ──▶ verifier ───────┘ checks it    │      │
                   └───────────────────────────────────────────────────────────┼──────┘
                                      encrypted backups (ciphertext only) ◀────┘
                                      Storage Box or S3 bucket, another location
 ```
 
-- One container per workspace, created through the Docker Engine API from the app image. Each has its own data volume, its own bridge network (so its own network namespace and no route to other workspaces), a read-only root filesystem with a small no-exec `/tmp`, no Linux capabilities, `no-new-privileges`, an init process, hard CPU, memory and process limits without swap, rotated logs and a health check on the app's own `/healthz`. The app inside is unmodified: the control plane only sets `APP_URL`, `TRUST_PROXY`, `PLAN_TREASURY` with each workspace's own invoice slot (`PLAN_INVOICE_SLOT`, `PLAN_INVOICE_KEY`), `SOURCE_URL`, `NOX_RPC_URL` and a one-time `SETUP_TOKEN`; every other app setting comes from a shared `workspace.env`.
+- One container per workspace, created through the Docker Engine API from the app image. Each has its own data volume, its own bridge network (so its own network namespace and no route to other workspaces), its own uid and gid (`CLOUD_APP_UID_BASE` plus its slot, 200000 and up, never the control plane's 1000; a short-lived helper hands the volume to that uid before the container starts), a read-only root filesystem with a small no-exec `/tmp`, no Linux capabilities, `no-new-privileges`, an init process, hard CPU, memory and process limits without swap, rotated logs and a health check on the app's own `/healthz`. The app inside is unmodified: the control plane only sets `APP_URL`, `TRUST_PROXY`, `PLAN_TREASURY` with each workspace's own invoice slot (`PLAN_INVOICE_SLOT`, `PLAN_INVOICE_KEY`), `SOURCE_URL`, `NOX_RPC_URL`, `NOX_VERIFIER_MODE` with `NOX_VERIFIER_KEY` and `NOX_VERIFIER_URL`, the plan's disk as the app's upload quota (`UPLOAD_QUOTA_MB`) and a one-time `SETUP_TOKEN`; every other app setting comes from a shared `workspace.env`.
 - Egress: with `CLOUD_EGRESS=rpc-only` (the default) workspace networks are Docker "internal" networks. Caddy is attached to each one, which makes it the only way in and, through its JSON-RPC relay, the only way out.
 - Routing and TLS: the Caddyfile is generated from the control database. Running workspaces are proxied to their container, with WebSocket connections kept open across reloads; paused ones get a short notice; anything else is a 404. Certificates are either issued on demand, only for addresses the control plane confirms through its `ask` endpoint, or one wildcard certificate through a DNS challenge.
-- Sign-up: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace.
+- Sign-up: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace. Limits count per network (an IPv4 address or an IPv6 /56) and per block (/24 or /48), never in one budget shared by everyone, so one network can't close sign-ups for the rest. Wallet challenges are sealed tokens the server doesn't store, so a flood can't push out anyone else's. Past `CLOUD_SIGNUPS_PER_DAY`, or once the server is nearly full, a signed sign-up waits for the operator's approval; the person gets the setup code at once and the address opens when it is approved. A claimed workspace whose data hasn't changed in `CLOUD_IDLE_DAYS` is paused with a notice that gives the date it will be deleted.
 - Upgrades: one workspace at a time. Each is stopped, its database checkpointed inside its own volume, started on the new image (which migrates the database) and health-checked. A failure puts the checkpoint back and starts the old image. The rollout stops after `CLOUD_UPGRADE_MAX_FAILURES` failures. The app also keeps its own `pre-migration-*.db` copies in the data folder; backups leave those out.
-- Backups: nightly, one workspace after another. A consistent snapshot of the database (SQLite `VACUUM INTO`, taken inside the workspace) and its files are streamed straight into encryption (X25519 and AES-256-GCM, the way age does it), then to the target. The server holds public keys only.
+- Backups: nightly, one workspace after another. A consistent snapshot of the database (SQLite `VACUUM INTO`, taken inside the workspace) and its files are streamed straight into encryption (X25519 and AES-256-GCM, the way age does it), then to the target. The server holds public keys only. Backups, upgrades, rollbacks, restores and first starts each hold the workspace's lock in the control database, shared by the server and the CLI, so an upgrade never changes a volume while a backup reads it.
+- Chain reads: Caddy relays workspaces' JSON-RPC to the Ethereum node, and on a second port to Nil's verifier, one per server, which checks what the node says. See [Verified chain reads](#verified-chain-reads).
 - Health: Docker runs `/healthz` in every container; the control plane restarts a workspace that stays unhealthy, alerts the operator, and stops restarting one that keeps failing. It also alerts on a degraded RAID mirror, a nearly full disk, failed backups and failed upgrades.
+
+### Verified chain reads
+
+A workspace credits bounty payments and Nil Pro invoices, counts voting power, opens the holder door and signs in smart wallets on what the Ethereum node says. Nil's verifier ([docker-compose.verifier.yml](docker-compose.verifier.yml)) checks those answers: one Helios light client for the whole server, about 200 MB however many workspaces there are. It follows the beacon chain from a checkpoint, checks each answer against blocks the sync committee signed, and seals what it proved with `VERIFIER_KEY`, which every workspace gets as `NOX_VERIFIER_KEY`.
+
+`CLOUD_VERIFIER_MODE` sets what workspaces do with it, as `NOX_VERIFIER_MODE`:
+
+- In `shadow`, the launch default, workspaces act on `CLOUD_RPC_URL` exactly as before and check each answer through the verifier (`CLOUD_VERIFIER_URL`, reached through Caddy's relay on `CLOUD_VERIFIER_RELAY_PORT`) on the side. An answer it proves false shows that workspace's admins a notice for a day and sends you a critical `workspace.chain_mismatch` alert, which the control plane raises from the workspace's `/healthz`. An answer it can't check is only logged, and nothing ever waits on the verifier.
+- In `enforce`, `CLOUD_RPC_URL` is the verifier itself (`http://verifier:8545`) and workspaces act only on answers it proved. When it can't verify, payments and invoices wait (a Nil Pro transaction only until it's given up on after `NOX_MISSING_TX_HOURS`), new token-weighted votes don't open, the holder door neither admits nor turns anyone away, and admins see why on Settings → Plan, Bounties and Votes.
+- In `off`, nothing is checked.
+
+The plan for launch: shadow mode, with the verifier on a provider's execution node and a public beacon API (`VERIFIER_EXECUTION_RPC`, `VERIFIER_CONSENSUS_RPC`) while the bundled Reth and Lighthouse sync. Once they are synced, point the verifier at them (drop those two settings), and after a week of shadow with no `workspace.chain_mismatch` alert, set `CLOUD_VERIFIER_MODE=enforce` and `CLOUD_RPC_URL=http://verifier:8545`, then `docker compose up -d control` and `docker compose exec control node cli.js refresh --all`. Shadow doesn't hold up billing, so a verifier that stalls or is wrong can't get it stuck; enforce can, by design, which is why it waits for that week. The control plane starts without `VERIFIER_KEY` in shadow and off mode, and says so.
+
+What it doesn't do: shadow mode finds a lie after the workspace acted on it, it doesn't stop it. In enforce mode it proves that what the node says is true, not that the node said everything, so a lying node can hide or hold back a payment but can't fake one, and a bounty payment whose transaction the node says doesn't exist is never failed for it. It can't prove blocks older than about 27 hours (EIP-2935 keeps 8,191 block hashes); in enforce mode an older payment waits until an operator decides (see [docs/deploy.md](../docs/deploy.md#a-payment-says-it-is-older-than-nils-verifier-can-check)). Its root of trust is the checkpoint: take it from two beacon APIs that agree; it refuses one older than two weeks, and Nil does that check itself because Helios's own is off by default. Helios is unaudited (0.12.0, pinned). The method-by-method list and the rest are in [Verified chain reads](../docs/self-hosting.md#verified-chain-reads).
 
 Code layout:
 
@@ -85,11 +102,32 @@ public/       the sign-up page                         test/        node --test 
 
 ## The server
 
-The service is sized for one Hetzner **EX63**: Intel Core Ultra 7 265 (20 cores), DDR5 ECC memory and NVMe drives. Order it with:
+The service runs on one dedicated server. Whatever you order, it needs:
 
-- 128 GB ECC RAM. 64 GB works without the Ethereum node; 128 GB leaves room for the node and plenty of page cache.
-- 2 × 3.84 TB NVMe in RAID 1 (Linux software RAID, mdadm). One failed drive then costs nothing, and the datacenter swaps it while the server runs. About 3.5 TB is usable.
-- Ubuntu 24.04 LTS, with the HWE kernel (`provision.sh --hwe-kernel`): the Core Ultra 200 series is better supported by newer kernels than 24.04's original 6.8.
+- At least 8 cores. Each workspace runs one Node process, so the standard plan's 1 core is its natural ceiling; pro gets 2. Idle workspaces use none.
+- 128 GB of ECC memory. 64 GB works without the Ethereum node; 128 GB leaves room for the node and plenty of page cache. ECC corrects the bit flips that would otherwise end up in a database or a backup without anyone noticing.
+- Two NVMe drives of 3.84 TB in RAID 1 (Linux software RAID, mdadm), so one failed drive costs nothing. About 3.5 TB is usable.
+- One IPv4 address and an IPv6 /64, with reverse DNS you can set.
+- Ubuntu 24.04 LTS, installed without swap (step 1).
+- Backup storage in another location, which the server can write to but can't destroy (step 4).
+
+The two servers below both fit. Everything after this section works on either, and where a step differs, it says what to do on each.
+
+### Hetzner EX63
+
+Intel Core Ultra 7 265 (20 cores), DDR5 ECC memory and NVMe drives. Order it with 128 GB ECC RAM and 2 × 3.84 TB NVMe. The datacenter swaps a failed drive while the server runs. Install Ubuntu 24.04 with the HWE kernel (`provision.sh --hwe-kernel`): the Core Ultra 200 series is better supported by newer kernels than 24.04's original 6.8.
+
+### OVHcloud RISE-2
+
+Intel Xeon-E 2388G (8 cores, 16 threads), DDR4 ECC memory and NVMe drives, from OVHcloud's Rise range. Order it in Frankfurt with:
+
+- 128 GB DDR4 ECC. OVHcloud lists this option at 2933 MHz, the smaller ones at 3200.
+- 2 × 3.84 TB NVMe, the storage option marked Soft RAID. These drives aren't hot-swappable: replacing a failed one takes a short shutdown, which you schedule with OVHcloud through a support ticket ([disk replacement](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/disk-replacement)).
+- The included 1 Gbit/s public bandwidth. Anti-DDoS protection comes with every OVHcloud address.
+
+This Xeon is older than Ubuntu 24.04's 6.8 kernel, so it needs no HWE kernel: leave out `--hwe-kernel`.
+
+### What fits on it
 
 **Memory budget (128 GB)**
 
@@ -100,11 +138,11 @@ The service is sized for one Hetzner **EX63**: Intel Core Ultra 7 265 (20 cores)
 | Page cache for databases and files (keeps them fast) | about 16 GB |
 | Workspaces | about 74 GB |
 
-A workspace's Nil process measured 85 to 120 MB resident, idle to lightly used (setup, sign-in, an encrypted export). Verifying zero-knowledge vote proofs and building large exports take more for a moment. Planning with 200 MB on average, 74 GB holds about **370 workspaces**, or about 500 without the Ethereum node. `CLOUD_MAX_WORKSPACES` defaults to 300 to keep a margin; raise it once `docker stats --no-stream` shows real numbers.
+A workspace's Nil process measured 85 to 120 MB resident, idle to lightly used (setup, sign-in, an encrypted export). Verifying zero-knowledge vote proofs and building large exports take more for a moment. Planning with 200 MB on average, 74 GB holds about **370 workspaces**, or about 500 without the Ethereum node. `CLOUD_MAX_WORKSPACES` defaults to 300 to keep a margin; raise it once `docker stats --no-stream` shows real numbers. Both servers above have 128 GB, so this holds on either.
 
 The per-container limits (768 MB for the standard plan, 1.5 GB for pro) are ceilings, not reservations, so their sum is far above the RAM. That is deliberate: almost all workspaces are idle at any moment. A single workspace can never use more than its limit, and if the whole server ever ran out, the kernel would stop the largest offender, not the host. Watch free memory and the over-disk alerts.
 
-**CPU**: Nil's server is one Node process, so the standard plan's 1 core is its natural ceiling; pro gets 2. Idle workspaces use no CPU. **Disk**: with the node's 1.5 to 2 TB, about 1.4 TB is left for workspaces, images and the swap file. The standard plan's 5 GB soft limit only raises an alert; at 300 workspaces that is room for the worst case. The control plane alerts when less than 15% of the disk is free.
+**CPU**: a busy workspace uses at most its plan's cores, an idle one none. On the EX63's 20 cores, 20 standard workspaces can run flat out at the same moment before they slow each other down. The RISE-2 has 8 cores with 16 threads, so between 8 and 16. Either is enough for the default 300 while almost all of them are idle at any moment, but the Ethereum node shares the same cores: on the RISE-2, watch the load average (`uptime`) in the first weeks. **Disk**: with the node's 1.5 to 2 TB, about 1.4 TB is left for workspaces and images. Docker can't cap a volume, so a plan's disk (5 GB for standard) is enforced twice: the app gets it as its upload quota and refuses uploads past it, and a workspace that still grows past 120% of it (`CLOUD_DISK_SUSPEND_PERCENT`) is suspended with a critical alert and a notice on its address. At 300 workspaces that is room for the worst case. The control plane alerts when less than 15% of the disk is free.
 
 ## Go live, step by step
 
@@ -112,7 +150,44 @@ The examples use `nil.example` for the hosted domain, `203.0.113.10` and `2001:d
 
 ### 1. Install the server
 
-In Hetzner's Robot, boot the server into the rescue system and run `installimage`. Choose Ubuntu 24.04, keep `SWRAID 1` and `SWRAIDLEVEL 1` (RAID 1 over both NVMe drives), keep a `/boot` partition and give the rest to one ext4 root partition `/`; leave swap out, provision.sh creates a swap file. Add your SSH public key when asked, then reboot into the new system and log in as root with your key.
+Install Ubuntu 24.04 with software RAID 1 over both NVMe drives: a `/boot` partition and the rest as one ext4 root partition `/`, with no swap. The server runs without swap, so nothing in memory (setup codes, keys, a backup key brought in for a restore) is ever written to the disk in the clear; with 128 GB and hard limits on every container it doesn't need any. Add your SSH public key during the install.
+
+**Hetzner.** In Robot, boot the server into the rescue system and run `installimage`. Choose Ubuntu 24.04, keep `SWRAID 1` and `SWRAIDLEVEL 1` (RAID 1 over both NVMe drives), keep the `/boot` partition and give the rest to `/`; leave swap out. Add your SSH public key when asked, then reboot into the new system and log in as root with your key.
+
+**OVHcloud.** In the Control Panel, open Bare Metal Cloud, Dedicated servers and your server. On General information, click `...` next to the operating system and choose Install my server (or Reinstall my server). Pick Ubuntu Server 24.04 LTS, tick Customise the partition configuration and click Next. Keep both disks in the installation; with two disks, OVHcloud sets up RAID 1. In the partition table, delete the swap partition if there is one, keep `/boot` and any EFI partition, and let `/` (ext4, RAID 1) take the remaining space. On the summary page, paste your public key into Your Public SSH key, or pick one stored in the Control Panel, and Confirm. The same install through the OVHcloud API is `POST /dedicated/server/{serviceName}/reinstall` with this body, where `size` 0 means the rest of the disks:
+
+```json
+{
+  "operatingSystem": "ubuntu2404-server_64",
+  "customizations": { "sshKey": "<your public key, on one line>" },
+  "storage": [{ "partitioning": { "disks": 2, "layout": [
+    { "fileSystem": "ext4", "mountPoint": "/boot", "size": 1000, "raidLevel": 1 },
+    { "fileSystem": "ext4", "mountPoint": "/", "size": 0, "raidLevel": 1 }
+  ] } }]
+}
+```
+
+The installer creates a user named `ubuntu` with your key and sudo rights, and root can't log in over SSH. Log in as `ubuntu` and check that `cat /proc/mdstat` shows the arrays as `[UU]` (they may still be syncing) and that `swapon --show` prints nothing. Ubuntu 24.04 on OVHcloud gets an EFI partition on each disk and mounts only one of them, so if the disk that holds it fails, the server may need rescue mode to boot again. OVHcloud's [software RAID guide for UEFI](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/raid-soft-uefi) covers keeping both EFI partitions current and rebuilding the arrays after a disk swap; read it before you need it.
+
+When the server doesn't come back, two tools help. The server's IPMI/KVM tab opens its console in the browser ([IPMI](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/ipmi); OVHcloud notes it may be limited on its Eco servers, which include Rise). [Rescue mode](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/rescue-mode) boots a temporary system you reach over SSH as root: on General information, click `...` next to Boot, then Edit, Boot in rescue mode, Customer rescue system, and your SSH key; confirm, and restart the server from `...` next to Status. Set Boot from the hard disk again before the next restart. Once step 3 has run, nobody can log in at the console, because `deploy` has no password: repair a broken system from rescue mode, where the RAID arrays show up and can be mounted.
+
+**IPv6 on OVHcloud.** The server's /64 and its IPv6 gateway are on General information, under Network. OVHcloud's Ubuntu image normally sets up the first address of the block and the gateway already. Check that `ip -6 addr show scope global` lists the address, `ip -6 route show default` the gateway, and that `curl -6 -sI https://ubuntu.com | head -n 1` gets an answer. If the address or the route is missing, add both in a file of their own, `/etc/netplan/51-ipv6.yaml` (mode 600), with your interface (`ip link`), address and gateway, then run `sudo netplan try`:
+
+```yaml
+network:
+  version: 2
+  ethernets:
+    eno1:
+      dhcp6: false
+      addresses:
+        - 2001:db8::10/64
+      routes:
+        - to: default
+          via: 2001:db8:0:ff:ff:ff:ff:ff
+          on-link: true
+```
+
+The gateway OVHcloud gives is usually outside the /64 (or a link-local `fe80::` address), which is why the route needs `on-link: true`. Use the address the server ends up with for the AAAA records in step 2.
 
 ### 2. DNS
 
@@ -121,18 +196,18 @@ Create these records at your DNS provider:
 | Name | Type | Value | For |
 |---|---|---|---|
 | `nil.example` | A | `203.0.113.10` | the sign-up page |
-| `nil.example` | AAAA | `2001:db8::10` | the same over IPv6 (Hetzner assigns a /64 per server) |
+| `nil.example` | AAAA | `2001:db8::10` | the same over IPv6 (Hetzner and OVHcloud assign a /64 per server) |
 | `*.nil.example` | A | `203.0.113.10` | every workspace |
 | `*.nil.example` | AAAA | `2001:db8::10` | every workspace over IPv6 |
 | `nil.example` | CAA | `0 issue "letsencrypt.org"` and `0 issue "sectigo.com"` | only Let's Encrypt and ZeroSSL (Caddy's two CAs) may issue |
 
-Set the server's reverse DNS in Robot to `nil.example` as well. Check from your own machine before going on: `dig +short nil.example` and `dig +short anything.nil.example` must both return the server.
+Set the reverse DNS of both addresses to `nil.example` as well. On Hetzner that is in Robot. On OVHcloud it is under Network, Public IP Addresses: click `⁝` next to the address, choose Configure the reverse DNS and enter the name with a final dot, `nil.example.` ([reverse DNS](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/virtual-private-servers/configuring-reverse-dns)). OVHcloud checks that the A or AAAA record already points at the address, so create the records first. Check from your own machine before going on: `dig +short nil.example` and `dig +short anything.nil.example` must both return the server.
 
-Pick the TLS mode now. **On demand** (default) needs nothing more, but Let's Encrypt issues at most 50 new certificates per registered domain per week, and each new workspace needs one (Caddy can fall back to ZeroSSL, which is why the CAA records allow it too). **Wildcard** gets one certificate for every workspace through a DNS challenge, so it has no such limit, but needs an API token from your DNS provider and a Caddy build with its module. With more than a few dozen sign-ups a week, use wildcard.
+Pick the TLS mode now, and for a public launch pick wildcard. **Wildcard** gets one certificate for every workspace through a DNS challenge. It needs an API token from your DNS provider and a Caddy build with its module (step 5). Hetzner's and Cloudflare's DNS work for it; OVHcloud's doesn't yet, so for a domain registered at OVHcloud, host its DNS at one of the other two. **On demand** (the default) needs nothing more, but each new workspace needs its own certificate and Let's Encrypt issues at most 50 per registered domain per week. Anyone can sign up a few dozen throwaway workspaces and use them up, and real workspaces then have no certificate until the week is over (Caddy can fall back to ZeroSSL, which is why the CAA records allow it too). On demand is fine for a private test server.
 
 ### 3. Provision
 
-From your own machine, in a checkout of this repository:
+From your own machine, in a checkout of this repository. On Hetzner you log in as root:
 
 ```bash
 scp -r deploy root@203.0.113.10:/root/nil-deploy
@@ -140,17 +215,34 @@ ssh root@203.0.113.10 /root/nil-deploy/provision.sh --mode hosted --hwe-kernel \
   --hostname nil-1 --ssh-key-file /root/.ssh/authorized_keys --with-chain
 ```
 
+On OVHcloud you log in as `ubuntu` and use sudo, and the Xeon needs no HWE kernel:
+
+```bash
+scp -r deploy ubuntu@203.0.113.10:nil-deploy
+ssh -t ubuntu@203.0.113.10 sudo /home/ubuntu/nil-deploy/provision.sh --mode hosted \
+  --hostname nil-1 --ssh-key-file /home/ubuntu/.ssh/authorized_keys --with-chain
+```
+
 Leave out `--with-chain` if you won't run the Ethereum node. Add `--auto-reboot 04:30` if kernel updates may reboot the server by themselves at that UTC time. Run it with `--dry-run` first to see every change it would make.
 
-What it does, each step only if needed: checks the RAID arrays and warns about a degraded or syncing one; installs all updates; creates the `deploy` user with your keys and no password; turns SSH into keys only with root logins off (it refuses if `deploy` has no key, so you can't lock yourself out); lets only 22, 80 and 443 through ufw; sets up fail2ban, unattended security upgrades, time sync, Docker Engine from Docker's own repository with a hardened `daemon.json`, kernel and network tuning, an 8 GB swap file, journald and logrotate limits; and creates `/opt/nil`.
+What it does, each step only if needed: checks the RAID arrays and warns about a degraded or syncing one; installs all updates; creates the `deploy` user with your keys and no password, as uid 1500 (`--deploy-uid`), a uid no container uses; turns SSH into keys only with root logins off (it refuses if `deploy` has no key, so you can't lock yourself out); lets only 22, 80 and 443 through ufw; sets up fail2ban, unattended security upgrades (Ubuntu's and Docker's own repository, with `live-restore` keeping containers up while the engine restarts), time sync, Docker Engine from Docker's own repository with a hardened `daemon.json`, kernel and network tuning, journald and logrotate limits; and creates `/opt/nil`. It sets up no swap, and warns about swap that isn't on an encrypted device (`--swap-gb` creates an unencrypted swap file if you want one anyway).
 
-Before closing the root session, check from a second terminal that `ssh deploy@203.0.113.10` works. Reboot if it says so (for the HWE kernel): `sudo reboot`.
+Before closing the root (or `ubuntu`) session, check from a second terminal that `ssh deploy@203.0.113.10` works. Reboot if it says so (for the HWE kernel or updates): `sudo reboot`.
+
+On OVHcloud, then remove the `ubuntu` user. On a fresh install it is normally uid 1000 (check with `id -u ubuntu`), the uid the control plane runs as inside its container, and it has sudo: the kind of account the uid rule in [Security notes](#security-notes) keeps off the host. Log out of the `ubuntu` session, log in as `deploy`, and run `sudo userdel --remove ubuntu` and `sudo rm -f /etc/sudoers.d/90-cloud-init-users`.
+
+On OVHcloud, the firewall that matters is ufw on the server: it keeps everything but 22, 80 and 443 closed, over IPv4 and IPv6 alike. The anti-DDoS protection in front of every OVHcloud address is always on and needs no setting. Leave the [Edge Network Firewall](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/firewall-network) (Network, Public IP Addresses, `⁝` next to the IPv4 address, Configure Edge Network Firewall) switched off and without rules. It is stateless and filters IPv4 only, and rules left there are applied during an attack even while it is off. If you turn it on anyway, give it exactly these rules: priority 0, accept TCP in the established state; 1, 2 and 3, accept TCP to ports 22, 80 and 443; 4, accept UDP from source port 53 (DNS answers); 5, accept UDP from source port 123 (time sync); 6, accept ICMP; 19, deny IPv4. Behind those rules the Ethereum node can't find new peers over UDP, one more reason to leave it off. HTTP/3 doesn't work at OVHcloud either way, since OVHcloud drops QUIC at its edge; browsers then use HTTP/2.
 
 ### 4. Backup storage and keys
 
-Backups go to a different location from the server: a Hetzner **Storage Box** (BX11 or larger) in another datacenter (server in Falkenstein, box in Helsinki, say), or an S3-compatible bucket such as Hetzner Object Storage.
+Backups go to a different location from the server, on storage that the server can write to but someone who took it over can't destroy. Either of these works:
 
-**Storage Box.** In Robot, enable Samba/CIFS for the box and create a sub-account for this server. On the server:
+- A Hetzner Storage Box (BX31 or larger) with automatic snapshots, in another location than the server: a server in Falkenstein and a box in Helsinki, say, or a server at OVHcloud and a box at Hetzner.
+- An S3-compatible bucket in another region, with versioning and Object Lock in compliance mode. Hetzner Object Storage, OVHcloud Object Storage, Backblaze B2, Scaleway and Wasabi all offer that. For a RISE-2 in Frankfurt, an OVHcloud bucket in Gravelines, Strasbourg or the three-zone Paris region keeps everything with one provider, in another place.
+
+The backup storage OVHcloud includes with dedicated servers (FTP, NFS or CIFS) isn't enough on its own: its [guide](https://docs.ovhcloud.com/en/guides/bare-metal-cloud/dedicated-servers/services-backup-storage) describes no snapshots, so the server could delete whatever it wrote there.
+
+**Storage Box.** In Hetzner Console, turn on SMB support for the box, plus External Reachability if the server isn't in Hetzner's network (at OVHcloud, say), and create a sub-account for this server with the same settings. On the server:
 
 ```bash
 sudo install -m 600 /dev/null /etc/nil-storagebox.cred
@@ -163,9 +255,56 @@ sudo mount /mnt/nil-backups
 touch /mnt/nil-backups/.nil-backup-target
 ```
 
-`uid=1000` is the control plane's user inside its container. `seal` encrypts the SMB traffic as well; the backups are encrypted either way. The `.nil-backup-target` file tells the control plane the share is mounted: if the mount ever drops, the folder underneath is empty, and backups stop with an alert instead of filling the server's own disk. In `cloud.env` use `CLOUD_BACKUP_TARGET=file:///backups`. Old backups are pruned after `CLOUD_BACKUP_KEEP_DAYS`.
+`uid=1000` is the control plane's user inside its container. `seal` encrypts the SMB traffic as well; the backups are encrypted either way. The `.nil-backup-target` file tells the control plane the share is mounted: if the mount ever drops, the folder underneath is empty, and backups stop with an alert instead of filling the server's own disk. At boot Docker waits for the share (provision.sh adds `Wants=` and `After=` for its mount unit to `docker.service`, without making Docker depend on it), and the control plane mounts the folder with `rslave` propagation, so a share that mounts late, or again after a drop, still reaches it. In `cloud.env` use `CLOUD_BACKUP_TARGET=file:///backups`. Old backups are pruned after `CLOUD_BACKUP_KEEP_DAYS`. From outside Hetzner, SMB goes over the internet to port 445 of the box; if the mount hangs, something on the way blocks that port.
 
-**S3 instead.** Create a bucket and a key in another location, add a lifecycle rule that expires objects after 30 days, and set in `cloud.env`: `CLOUD_BACKUP_TARGET=s3://nil-backups/hosted`, `CLOUD_S3_ENDPOINT=https://hel1.your-objectstorage.com`, `CLOUD_S3_REGION=hel1` and the key pair. The control plane never deletes from a bucket, so the key can be limited to writing (and reading, for restores).
+The server can delete whatever it can write on the share, so someone who took it over could delete every backup. Turn on automatic snapshots for the box in Hetzner Console, daily, keeping 30. That takes a BX31 or larger: a BX11 keeps at most 10 snapshots and a BX21 at most 20 ([Storage Box limits](https://docs.hetzner.com/storage/storage-box/general/)). Hetzner takes the snapshots, and the server can't change or delete them; only the main account can, in Hetzner Console or through its API. Keep that login and its API tokens off the server.
+
+**S3 instead.** Create a bucket in another location with versioning and Object Lock turned on (most providers only allow Object Lock when the bucket is created), and give it a default retention in compliance mode of at least 30 days (`CLOUD_BACKUP_KEEP_DAYS`). Add a lifecycle rule that expires current objects after 30 days and noncurrent versions after one day; locked versions stay until their retention ends either way. Then set in `cloud.env`:
+
+```bash
+CLOUD_BACKUP_TARGET=s3://nil-backups/hosted
+CLOUD_S3_ENDPOINT=https://hel1.your-objectstorage.com
+CLOUD_S3_REGION=hel1
+CLOUD_S3_ACCESS_KEY_ID=<the server's access key>
+CLOUD_S3_SECRET_ACCESS_KEY=<its secret key>
+```
+
+with the endpoint and region of your bucket:
+
+| Provider | `CLOUD_S3_ENDPOINT` | `CLOUD_S3_REGION` | Good to know |
+|---|---|---|---|
+| Hetzner Object Storage | `https://hel1.your-objectstorage.com` | `hel1` | also `fsn1` and `nbg1` |
+| OVHcloud Object Storage | `https://s3.gra.io.cloud.ovh.net` | `gra` | also `sbg`, `rbx`, `waw` and `eu-west-par` (Paris, three zones); set up as below |
+| Backblaze B2 | `https://s3.eu-central-003.backblazeb2.com` | `eu-central-003` | every bucket keeps all versions; the lifecycle rule is B2's own (hide files 30 days after upload, delete them 1 day after hiding); restrict the application key to this bucket |
+| Scaleway | `https://s3.nl-ams.scw.cloud` | `nl-ams` | also `fr-par` and `pl-waw`; the default retention is set with an S3 tool such as the AWS CLI, not in the console |
+| Wasabi | `https://s3.eu-central-1.wasabisys.com` | `eu-central-1` | Object Lock only at bucket creation; Wasabi bills a minimum storage duration, so backups kept 30 days are billed for longer |
+
+The control plane never deletes from a bucket, but a key that can write can also overwrite, and a stolen key can do whatever the provider lets it. Versioning keeps the old copy of anything overwritten, and compliance mode means no key, the server's included, can delete a version before its retention ends. Where the provider allows narrower keys, the server's key needs to put objects, abort its own uploads, read objects (for restores) and read the bucket's versioning and Object Lock settings, and nothing else. At startup the control plane reads those settings and alerts when versioning is off or the retention is shorter or not in compliance mode.
+
+**OVHcloud Object Storage.** It belongs to a Public Cloud project: Public Cloud, your project, Object Storage. Create two Object Storage users there, one that owns the bucket and one for the server, because OVHcloud gives a bucket's owner full control whatever its policy says ([access management](https://docs.ovhcloud.com/en/guides/storage-and-backup/object-storage/s3-identity-and-access-management)). On your own machine, with the owner's keys in an AWS CLI profile (never on the server), create the bucket with Object Lock, which also turns on versioning and can't be added later, then the retention and the lifecycle rule ([Object Lock](https://docs.ovhcloud.com/en/guides/storage-and-backup/object-storage/s3-managing-object-lock), [lifecycle](https://docs.ovhcloud.com/en/guides/storage-and-backup/object-storage/s3-bucket-lifecycle)):
+
+```bash
+s3="aws --profile nil-owner --region gra --endpoint-url https://s3.gra.io.cloud.ovh.net s3api"
+$s3 create-bucket --bucket nil-backups --object-lock-enabled-for-bucket
+$s3 put-object-lock-configuration --bucket nil-backups --object-lock-configuration \
+  '{"ObjectLockEnabled":"Enabled","Rule":{"DefaultRetention":{"Mode":"COMPLIANCE","Days":30}}}'
+$s3 put-bucket-lifecycle-configuration --bucket nil-backups --lifecycle-configuration \
+  '{"Rules":[{"ID":"expire","Status":"Enabled","Filter":{},"Expiration":{"Days":30},"NoncurrentVersionExpiration":{"NoncurrentDays":1}}]}'
+$s3 get-object-lock-configuration --bucket nil-backups
+```
+
+Then give the server's user only what it needs: on the Object Storage Policy Users tab, `...` next to the user, Import JSON file, with this policy. Its access key and secret key go in `cloud.env`.
+
+```json
+{
+  "Statement": [{
+    "Sid": "NilBackups",
+    "Effect": "Allow",
+    "Action": ["s3:PutObject", "s3:AbortMultipartUpload", "s3:GetObject", "s3:GetBucketVersioning", "s3:GetBucketObjectLockConfiguration"],
+    "Resource": ["arn:aws:s3:::nil-backups", "arn:aws:s3:::nil-backups/*"]
+  }]
+}
+```
 
 **Keys.** On your own machine, not the server, with Node 22 and this repository:
 
@@ -184,15 +323,26 @@ On your own machine, from a clean checkout of the release you want to run:
 deploy/release.sh --host deploy@203.0.113.10
 ```
 
-It builds the app and control plane images, writes their SBOMs and a `SHA256SUMS` file, copies everything to `/opt/nil/releases/<version>`, checks the checksums on the server, loads the images and installs the scripts and compose files. Nothing starts yet. For wildcard TLS add `--caddy-dns-module github.com/caddy-dns/hetzner` (or your provider's module) and set `CADDY_IMAGE=nil-caddy:2.10.2-dns` in `/opt/nil/.env`. To use your own registry instead of SSH, pass `--registry`.
+It builds the app and control plane images, writes their SBOMs and a `SHA256SUMS` file, copies everything to `/opt/nil/releases/<version>`, checks the checksums on the server, loads the images and installs the scripts and compose files. Nothing starts yet. It builds from the committed tree (`git archive` of `HEAD`), so a file you haven't committed never ships and the web app is exactly the release anyone can rebuild. For wildcard TLS add `--caddy-dns-module` with your DNS provider's module, always with a version, and set `CADDY_IMAGE=localhost/nonos/nil-caddy:2.10.2-dns` in `/opt/nil/.env`. These versions build with Caddy 2.10.2, which the images pin, and read the one token the control plane gives Caddy as `DNS_API_TOKEN`:
+
+| DNS provider | `--caddy-dns-module` | `CLOUD_DNS_PROVIDER` | `DNS_API_TOKEN` |
+|---|---|---|---|
+| Hetzner (Hetzner Console) | `github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3` | `hetzner` | an API token with Read & Write, from a project that holds this DNS zone and nothing else: tokens are scoped per project |
+| Cloudflare | `github.com/caddy-dns/cloudflare@v0.2.4` | `cloudflare` | an API token, never the global API key, with Zone / Zone / Read and Zone / DNS / Edit. The module asks for them on all zones, so keep the domain in a Cloudflare account of its own |
+
+Hetzner's v1 module, `github.com/caddy-dns/hetzner@v1.0.0`, talks to the old DNS Console API, which Hetzner shut down in May 2026; zones moved to Hetzner Console, and tokens from the old console don't work with the new API ([Hetzner's notes](https://docs.hetzner.com/networking/dns/migration-to-hetzner-console/features-and-differences/)). The later v2 releases, from `v2.0.0`, need Caddy 2.11, and the build quietly raises Caddy to it. The module's `go.mod` names the Caddy it needs: pick a version made for Caddy 2.10, or move the Caddy images in `cloud/caddy/Dockerfile` to a newer Caddy along with it.
+
+OVHcloud's DNS doesn't work yet. Its module, `github.com/caddy-dns/ovh@v1.1.0`, builds with Caddy 2.10.2 but takes four values in a block (an endpoint, an application key and secret, and a consumer key), and Caddy refuses the one-token line the control plane writes. For a domain registered at OVHcloud, move its DNS to Hetzner or Cloudflare by changing its name servers; the registration can stay at OVHcloud.
+
+The images are named `localhost/nonos/nil` and `localhost/nonos/nil-cloud`. The `localhost/` prefix means Docker never looks for them on Docker Hub, where `nonos/nil` would be whatever the owner of the `nonos` account put there. Nothing on the server pulls them: the compose files say `pull_policy: never`, the control plane's `CLOUD_IMAGE_PULL` is `never`, and the deploy scripts check that the version they would fall back to is still on the server before they change anything. A restore onto a new server runs the image named in the backup only if it is ours and already there, and otherwise the current one. To ship through a registry instead, pass `--registry` with a registry the foundation controls, set `NIL_IMAGE` and `NIL_CLOUD_IMAGE` in `/opt/nil/.env` to the names there, and set `CLOUD_IMAGE_PULL=missing` only if workspaces should pull from it. A server set up before this change gets the new names from `install.sh`, which also gives the images already there the new names.
 
 ### 6. Configure
 
 On the server, in `/opt/nil`:
 
-- `cloud.env` (created from [.env.example](.env.example), every setting explained there). At least: `CLOUD_DOMAIN`, `CLOUD_ACME_EMAIL`, `CLOUD_CONTACT`, `CLOUD_TERMS_URL`, `CLOUD_PRIVACY_URL`, `CLOUD_IMPRINT_URL` (a service run from Germany or Finland needs an imprint and a privacy policy), `CLOUD_SOURCE_URL` (the AGPL asks a hosted service to offer its source), `CLOUD_PLAN_TREASURY` (the foundation's treasury, for Nil Pro) with `CLOUD_INVOICE_KEY` (a long random secret, so no two workspaces ask for the same amount), `CLOUD_RPC_URL` (`http://reth:8545` with the node), `CLOUD_BACKUP_RECIPIENTS`, `CLOUD_BACKUP_TARGET` and `CLOUD_ALERT_WEBHOOK`. For wildcard TLS: `CLOUD_TLS=wildcard` and `CLOUD_DNS_PROVIDER`.
+- `cloud.env` (created from [.env.example](.env.example), every setting explained there). At least: `CLOUD_DOMAIN`, `CLOUD_ACME_EMAIL`, `CLOUD_CONTACT`, `CLOUD_TERMS_URL`, `CLOUD_PRIVACY_URL`, `CLOUD_IMPRINT_URL` (a service run from Germany or Finland needs an imprint and a privacy policy), `CLOUD_SOURCE_URL` (the AGPL asks a hosted service to offer its source), `CLOUD_PLAN_TREASURY` (the foundation's treasury, for Nil Pro) with `CLOUD_INVOICE_KEY` (a long random secret, so no two workspaces ask for the same amount), `CLOUD_RPC_URL` (your node or provider; `http://reth:8545` with the bundled node once it is synced), `CLOUD_VERIFIER_URL` (`http://verifier:8545`, for shadow mode), `CLOUD_BACKUP_RECIPIENTS`, `CLOUD_BACKUP_TARGET` and `CLOUD_ALERT_WEBHOOK`. For wildcard TLS: `CLOUD_TLS=wildcard` and `CLOUD_DNS_PROVIDER`.
 - `workspace.env` (from [workspace.env.example](workspace.env.example)): the app settings every workspace shares, such as the Nil Pro price and trial. See the root [.env.example](../.env.example) for all of them.
-- `.env`: `NIL_VERSION` is already set. For wildcard TLS add `DNS_API_TOKEN`. For the Ethereum node uncomment `COMPOSE_FILE` and set `RETH_IMAGE` and `LIGHTHOUSE_IMAGE` to the clients' current stable tags.
+- `.env`: `NIL_VERSION` is already set. For wildcard TLS add `DNS_API_TOKEN`. Uncomment `COMPOSE_FILE` with `docker-compose.verifier.yml`, set `VERIFIER_KEY` (`openssl rand -hex 32`; the control plane hands it to the workspaces) and `VERIFIER_CHECKPOINT` (the root of a recent finalized beacon block from two beacon APIs that agree; [deploy/hosted.env.example](../deploy/hosted.env.example) shows how). For the Ethereum node, add `docker-compose.chain.yml` to `COMPOSE_FILE` and set `RETH_IMAGE` and `LIGHTHOUSE_IMAGE` to the clients' current stable tags. Until it is synced, and without it, set `VERIFIER_EXECUTION_RPC` (a node that answers `eth_getProof` for recent blocks) and `VERIFIER_CONSENSUS_RPC`.
 
 ### 7. Start
 
@@ -236,56 +386,65 @@ scp deploy@203.0.113.10:/mnt/nil-backups/workspaces/<id>/<file>.nilbackup .
 node cloud/cli.js verify-backup <file>.nilbackup --identity ~/nil-backup-alice.key
 ```
 
-It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a real restore into a scratch workspace on the server. This is the one time the secret key goes there, so remove it afterwards:
+It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a restore drill on the server: the backup goes into a throwaway workspace that is never routed, has no network at all and is removed afterwards, and has to start and pass its health check. This is the one time the secret key goes there. Stream it from your machine over SSH into the control plane's `/tmp`, which lives in memory and is never swapped out, so the key never touches the server's disk, and remove it afterwards:
 
 ```bash
-scp ~/nil-backup-alice.key deploy@203.0.113.10:/tmp/k
-cd /opt/nil
-docker compose exec -T control sh -c 'cat > /tmp/k' < /tmp/k && shred -u /tmp/k
-docker compose exec control node cli.js restore restore-drill /backups/workspaces/<id>/<file>.nilbackup --identity /tmp/k --owner 0xYourWallet
+# on your machine
+ssh deploy@203.0.113.10 'cd /opt/nil && docker compose exec -T control sh -c "umask 077 && cat > /tmp/k"' < ~/nil-backup-alice.key
+# then on the server, in /opt/nil
+docker compose exec control node cli.js restore-drill /backups/workspaces/<id>/<file>.nilbackup --identity /tmp/k
 docker compose exec control rm /tmp/k
-docker compose exec control node cli.js delete restore-drill --now --no-export --yes
 ```
+
+With an S3 target, `docker compose exec control node cli.js info nonos` lists each backup's `s3://` location. Download one to your machine with your provider's tools and a key that can read the bucket (for example `aws s3 cp <location> . --endpoint-url <CLOUD_S3_ENDPOINT>`) and check it there the same way, then give `restore-drill` the location instead of a path.
+
+Don't drill with `restore` into a new name: that creates a real workspace, and the copy of a customer's data would be online at its address.
 
 ### 10. Monitoring and alerts
 
-- `CLOUD_ALERT_WEBHOOK` receives every alert (restarts, failed upgrades and backups, a degraded RAID, a full disk). Test it: `docker compose exec control node cli.js alert-test`.
-- The control plane can't report its own server being down. Add an outside check of `https://nil.example` and of one workspace's `https://nonos.nil.example/healthz`, from another machine or an uptime service, and turn on Robot's server monitoring.
+- `CLOUD_ALERT_WEBHOOK` receives every alert (restarts, failed upgrades and backups, a degraded RAID, a full disk, and a workspace whose billing watchdog reports a stalled payment or check, usually a sign that its Ethereum node is down or behind). Test it: `docker compose exec control node cli.js alert-test`.
+- The control plane can't report its own server being down. Add an outside check of `https://nil.example` and of one workspace's `https://nonos.nil.example/healthz`, from another machine or an uptime service. Turn on the provider's monitoring as well: server monitoring in Robot on Hetzner, OVHcloud Monitoring on OVHcloud (General information, Service status). OVHcloud's pings the server, and ufw lets pings through.
 - `smartd` watches the NVMe drives and logs to the journal; the control plane watches the RAID arrays.
 
 ### 11. Go-live checklist
 
-- [ ] `dig` returns the server for `nil.example` and `*.nil.example`, IPv4 and IPv6; CAA records set.
+- [ ] `dig` returns the server for `nil.example` and `*.nil.example`, IPv4 and IPv6; CAA records set; `dig +short -x 203.0.113.10` returns `nil.example.`, and the same for the IPv6 address.
 - [ ] `https://nil.example` loads with a valid certificate; `http://` redirects to it.
-- [ ] From outside, only 22, 80 and 443 answer: `nmap -Pn 203.0.113.10`.
-- [ ] SSH works for `deploy` with a key and refuses passwords and root.
-- [ ] `/proc/mdstat` shows `[UU]` for every array.
+- [ ] From a machine with IPv6, `curl -6 -sI https://nil.example` answers as it does over IPv4. If it doesn't, remove the AAAA records until it does, or visitors on IPv6-only networks can't reach anything.
+- [ ] `CLOUD_TLS=wildcard`, and a new workspace's address gets the wildcard certificate.
+- [ ] The terms say that sign-ups may wait for approval, and that unused workspaces are paused and later deleted (`CLOUD_UNCLAIMED_DAYS`, `CLOUD_IDLE_DAYS`, `CLOUD_IDLE_NOTICE_DAYS`).
+- [ ] From outside, only 22, 80 and 443 answer: `nmap -Pn 203.0.113.10` and `nmap -6 -Pn 2001:db8::10`.
+- [ ] SSH works for `deploy` with a key and refuses passwords and root. `id -u deploy` isn't 1000, and `getent passwd 1000` prints nothing (on OVHcloud, the `ubuntu` user is gone).
+- [ ] `/proc/mdstat` shows `[UU]` for every array, and `swapon --show` prints nothing.
 - [ ] `cloud.env` has the domain, contact, terms, privacy and imprint links, source URL, treasury and invoice key, RPC URL, backup recipients and target, and alert webhook; `docker compose logs control` shows no `[config]` warning you didn't expect.
 - [ ] The foundation's workspace exists, has a second wallet and a second admin.
 - [ ] A test sign-up from a phone wallet worked end to end, and the setup code was accepted.
 - [ ] `backup --all` succeeded, `verify-backup` passed on your machine, and a restore drill worked.
 - [ ] Both backup secret keys are stored offline by two people.
-- [ ] `alert-test` arrived; outside uptime checks are on.
+- [ ] The backups survive a compromised server: the Storage Box takes daily snapshots and keeps 30, or the bucket has versioning and compliance-mode Object Lock (no `backup.target_unprotected` alert at startup).
+- [ ] `alert-test` arrived; outside uptime checks and the provider's monitoring are on.
 - [ ] With the Ethereum node: it is synced (`docker compose logs reth` shows new blocks), and a workspace's Settings → Plan shows no node error.
+- [ ] The verifier is healthy: `docker compose ps verifier` says healthy, its `/healthz` shows `"ok":true` and a checkpoint age under 14 days, and a workspace's `/healthz` shows `"verification"` with `"mode": "shadow"` and `"ok": true`.
+- [ ] Someone owns the switch to enforce: a week of shadow without a `workspace.chain_mismatch` alert, on a synced node.
 - [ ] Unattended upgrades are on (`systemctl status unattended-upgrades`), and someone owns the monthly reboot.
 
 ## Day two
 
-**Upgrading Nil.** Read the changelog. On your machine: `deploy/release.sh --host deploy@203.0.113.10`. On the server: `/opt/nil/deploy/upgrade.sh <version>`. It smoke-tests the new image, moves the control plane (new sign-ups get the new version from then on), then upgrades every running workspace one at a time and rolls back any that fail their health check; the log is in `/var/log/nil/upgrade.log`. Stopped and suspended workspaces keep their version until resumed; `cli.js upgrade <name> --image …` moves them then. To go back afterwards, `/opt/nil/deploy/rollback.sh` restores each workspace's pre-upgrade checkpoint (kept 7 days) and the previous control plane. Everything written since the upgrade is lost, which is why it asks.
+**Upgrading Nil.** Read the changelog. On your machine: `deploy/release.sh --host deploy@203.0.113.10`. On the server: `/opt/nil/deploy/upgrade.sh <version>`. It smoke-tests the new image, moves the control plane (new sign-ups get the new version from then on), then upgrades every running workspace one at a time and rolls back any that fail their health check; the log is in `/var/log/nil/upgrade.log`. Stopped and suspended workspaces keep their version until resumed; `cli.js upgrade <name> --image …` moves them then. To go back afterwards, `/opt/nil/deploy/rollback.sh` restores each workspace's pre-upgrade checkpoint (kept 7 days) and the previous control plane. Everything written since the upgrade is lost, which is why it asks. Going back to 3.0.0 or older, from before each workspace had its own uid, takes one step first, because those releases run workspaces as uid 1000: set `CLOUD_APP_UID_BASE=0` in `cloud.env`, `docker compose up -d control`, and `cli.js refresh --all`, which hands every volume back to uid 1000. Remove the setting again when you upgrade.
 
 **Changing settings.** After editing `cloud.env`: `docker compose up -d control`. If the change affects workspaces (treasury, RPC URL, anything in `workspace.env`): `docker compose exec control node cli.js refresh --all`, which recreates them one at a time.
 
 **Every week.** `cli.js list` (state, disk, last backup of every workspace), `df -h`, `cat /proc/mdstat`, and a look at the alert channel.
 
-**Every month.** Reboot in a quiet hour if `/var/run/reboot-required` exists (workspaces are down for a minute or two; they all come back by themselves). Update Docker: `sudo apt-get install --only-upgrade docker-ce docker-ce-cli containerd.io docker-compose-plugin` (live-restore keeps containers running while the daemon restarts). Update Caddy: set a newer `CADDY_IMAGE`, then `docker compose up -d caddy` and `docker compose exec control node cli.js routes` to reconnect it to the workspace networks. Do a restore drill.
+**Every month.** Reboot in a quiet hour if `/var/run/reboot-required` exists (workspaces are down for a minute or two; they all come back by themselves). Docker updates itself with the security updates; check `/var/log/unattended-upgrades/unattended-upgrades.log` that it did. Update Caddy: set a newer `CADDY_IMAGE`, with its digest (`docker buildx imagetools inspect caddy:<version>` shows it), then `docker compose up -d caddy` and `docker compose exec control node cli.js routes` to reconnect it to the workspace networks. Do a restore drill (`restore-drill`, step 9).
 
-**Abuse.** `cli.js suspend <name> --reason "<ticket>"` takes a workspace offline with a notice and keeps its data; `resume` brings it back. For illegal content, `cli.js delete <name> --now` (it still takes a final encrypted backup unless `--no-export`). Add recurring bad words to a `CLOUD_BLOCKLIST_FILE`.
+**Abuse.** `cli.js suspend <name> --reason "<ticket>"` takes a workspace offline with a notice and keeps its data; `resume` brings it back. For illegal content, `cli.js delete <name> --now` (it still takes a final encrypted backup unless `--no-export`). Add recurring bad words to a `CLOUD_BLOCKLIST_FILE`. Sign-ups are limited per network and per block (see `.env.example`), so a flood from one provider stops at its own share.
 
-**Capacity.** Sign-ups close by themselves at `CLOUD_MAX_WORKSPACES`. When memory or disk runs short, raise plans for the busy few (`cli.js resize <name> pro`) or plan a second server; workspaces move between servers with `backup` and `restore`.
+**Capacity.** Past `CLOUD_SIGNUPS_PER_DAY` new workspaces in a day, or once `CLOUD_APPROVAL_ABOVE_PERCENT` of `CLOUD_MAX_WORKSPACES` is in use, sign-ups wait for approval and an alert says so: `cli.js requests` lists them, `cli.js approve <name>` creates and starts one (its owner already has the setup code), `cli.js reject <name>` frees the address. Sign-ups close by themselves at `CLOUD_MAX_WORKSPACES`. A workspace nobody set up is removed after `CLOUD_UNCLAIMED_DAYS`; a claimed one whose data hasn't changed in `CLOUD_IDLE_DAYS` is paused with a notice and deleted `CLOUD_IDLE_NOTICE_DAYS` later unless its owner asks for it back (`resume`), so put both in the terms. When memory or disk runs short, raise plans for the busy few (`cli.js resize <name> pro`) or plan a second server; workspaces move between servers with `backup` and `restore`.
 
 **Backup keys.** To rotate, add the new public key to `CLOUD_BACKUP_RECIPIENTS`, restart the control plane, and keep the old secret key until the last backup made for it has expired.
 
-**Disaster recovery.** On a new server: provision, release, configure with the same `cloud.env`, start. Then restore each workspace from its latest backup: `cli.js restore <name> <file> --identity <key>` recreates a workspace this control plane has never seen from the manifest inside the backup (owner, plan, image). The encrypted control database backups (`control/` in the target) hold the history as well; `cli.js decrypt` turns one back into a database file.
+**Disaster recovery.** On a new server: provision, release, configure with the same `cloud.env`, start. Then restore each workspace from its latest backup: bring a secret key into the control plane's `/tmp` as in step 9, and `cli.js restore <name> <file> --identity /tmp/k` recreates a workspace this control plane has never seen from the manifest inside the backup (owner and plan; the image only if it is ours and already on the server, otherwise the current one). Remove the key when you are done. The encrypted control database backups (`control/` in the target) hold the history as well; `cli.js decrypt` turns one back into a database file.
 
 ## Operator CLI
 
@@ -302,8 +461,10 @@ Run it in the control plane's container: `docker compose exec control node cli.j
 | `upgrade <name…>\|--all --image i [--max-failures n]` | rolling upgrade with checkpoints and automatic rollback |
 | `rollback <name…>\|--all [--yes]` | back to the pre-upgrade checkpoint |
 | `delete <name> [--now] [--no-export] [--yes]` | final encrypted export, then deletion after the grace period |
+| `requests`, `approve <name>`, `reject <name>` | sign-ups waiting for approval; create one, or free its address |
 | `backup <name…>\|--all` | encrypted backup now; `--all` is the nightly job |
 | `restore <name> <file> --identity k [--owner 0x…]` | replace a workspace's data, or recreate it, from a backup |
+| `restore-drill <file> --identity k` | restore into a throwaway workspace nobody can reach, check it starts, remove it |
 | `verify-backup <file> --identity k` | decrypt and check a backup without writing anything |
 | `decrypt <file> --identity k --out f` | write a backup's plaintext to a new private file |
 | `keygen --out f` | a new backup key pair |
@@ -329,10 +490,11 @@ On the server, fill in `/opt/nil/.env` (`NIL_DOMAIN`, `ACME_EMAIL`) and `/opt/ni
 ## Security notes
 
 - The control plane is as powerful as root. It holds the Docker socket because creating containers needs it. Its own container is read-only, without capabilities, and publishes no port; its sign-up site is reached only through Caddy, and the TLS `ask` endpoint is on a separate port that is never published or proxied. Treat the `deploy` user's SSH key the same way: the docker group is root-equivalent.
-- Isolation between workspaces comes from separate network namespaces and networks, per-container limits, a read-only root, no capabilities and `no-new-privileges`, plus Docker's default seccomp and AppArmor profiles. What a compromised workspace can reach: Caddy (as anyone on the internet can) and the RPC relay. Not other workspaces, not the control plane, not the internet.
+- No uid is shared between a container and an account on the host. The control plane runs as 1000 (the image's `node` user), each workspace as its own uid from 200000 up, and `deploy` as 1500, so someone who broke out of a container would not be `deploy`, with its sudo and docker group. A server provisioned before this has `deploy` at 1000: `provision.sh` warns, and `--move-deploy-uid`, run as root from a session that isn't `deploy`'s, moves it (Nil stops for about a minute). To get a root session, run `provision.sh --keep-root-login` first, or on Hetzner use Robot's console, then run it once more without that option.
+- Isolation between workspaces comes from separate network namespaces and networks, per-container limits, a read-only root, no capabilities and `no-new-privileges`, plus Docker's default seccomp and AppArmor profiles. What a compromised workspace can reach: Caddy (as anyone on the internet can) and the relays to the Ethereum node and the verifier. Not other workspaces, not the control plane, not the internet.
 - Not done, on purpose. Docker user namespaces (`userns-remap`) would add a layer but complicate volume ownership for the app and its backups; gVisor or Kata would add more at a performance cost. Both can be layered on later through the driver interface.
-- Secrets on the server: `cloud.env` (S3 keys, the alert token), the generated Caddyfile (the RPC node's credentials, if its URL carries any), setup codes until a workspace is claimed, and each workspace's data. The backup secret keys are not on the server.
-- Supply chain: the control plane has four dependencies (two fonts and `@noble/curves` and `@noble/hashes`, which the app already uses), pinned in `package-lock.json`. The Docker and S3 clients, the backup encryption and the tar handling use only Node's standard library.
+- Secrets on the server: `cloud.env` (S3 keys, the alert token, and `CLOUD_INVOICE_KEY`, which every workspace also gets in its environment), `/opt/nil/.env` (the DNS token for wildcard TLS, and the verifier's key, which every workspace also holds; with it a workspace could only seal answers to itself), `/etc/nil-storagebox.cred`, the generated Caddyfile (the RPC node's credentials, if its URL carries any), the Ethereum node's engine API secret in `chain/jwt.hex`, the key that hashes wallet addresses in the control plane's log, setup codes until a workspace is claimed (in the control database, and in the workspace's environment, which `docker inspect` shows), the setup codes of sign-ups waiting for approval, and each workspace's data, its receipt signing key included. The backup secret keys are not kept there: a restore brings one in over SSH into the control plane's memory-only `/tmp` and removes it afterwards. Nothing is swapped to disk: the server has no swap, and the control plane, Caddy and every workspace have memory limits that leave swap out.
+- Supply chain: the control plane has four dependencies (two fonts and `@noble/curves` and `@noble/hashes`, which the app already uses), pinned in `package-lock.json`. The Docker and S3 clients, the backup encryption and the tar handling use only Node's standard library. Every base image is pinned by digest (Node in both Dockerfiles, Caddy and its builder, Debian for Tor, and the Dockerfile frontend), the Caddy DNS module by version, and `release.sh` builds from the committed tree only. The Ethereum clients are the exception: their tags are set in `.env` and have to follow the clients' releases.
 
 ## Development
 
@@ -344,7 +506,7 @@ node --test cloud/test/          # from the repository root; about 3 seconds
 The tests run every operation against an in-memory fake runtime and a fake Docker Engine on a unix socket, so no Docker is needed. To try the sign-up page locally:
 
 ```bash
-CLOUD_DOMAIN=nil.localhost CLOUD_APP_IMAGE=nonos/nil:dev CLOUD_RPC_URL=off CLOUD_EGRESS=open \
+CLOUD_DOMAIN=nil.localhost CLOUD_APP_IMAGE=localhost/nonos/nil:dev CLOUD_RPC_URL=off CLOUD_EGRESS=open \
 CLOUD_DATA_DIR=/tmp/nil-cloud node cloud/index.js      # then open http://localhost:8080
 ```
 

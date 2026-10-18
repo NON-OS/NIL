@@ -73,6 +73,20 @@ test('comments on a sealed task are encrypted, never parsed and never quoted', a
   assert.equal((await owner('POST', `/api/tasks/${open.id}/comments`, { body: cipher(60), sealed: true })).status, 400);
 });
 
+test('an encrypted comment keeps the id the browser signed it under, and that id has to be fresh', async () => {
+  const id = 'Zm9yLXRoZS1jb21tZW50';
+  const posted = await ana('POST', `/api/tasks/${ids.task}/comments`, { body: cipher(60), sealed: true, id });
+  assert.equal(posted.status, 200);
+  assert.equal(posted.data.comment.id, id);
+  for (const taken of [id, 'short', '../../../etc/passwd-x', 42]) {
+    assert.equal((await ana('POST', `/api/tasks/${ids.task}/comments`, { body: cipher(60), sealed: true, id: taken })).status, 400, String(taken));
+  }
+  // a plain comment's id is always the server's own
+  const open = (await owner('POST', '/api/tasks', { title: 'Another team task' })).data.task;
+  const plain = await owner('POST', `/api/tasks/${open.id}/comments`, { body: 'Hello', id: 'cGxhaW4tY29tbWVudC1pZA' });
+  assert.notEqual(plain.data.comment.id, 'cGxhaW4tY29tbWVudC1pZA');
+});
+
 test('a new assignee means a fresh key, and every comment moves to it', async () => {
   const comments = (await detail(ana, ids.task)).comments;
   assert.equal((await ana('PATCH', `/api/tasks/${ids.task}`, { assigneeId: ids.ben })).status, 400);
@@ -132,5 +146,5 @@ test('plain files, assistants and proofs stay away from what they can’t read',
   assert.equal(JSON.parse(receipt.body).task.commit, null);
 
   const csv = (await ana('GET', '/api/export/tasks.csv')).data;
-  assert.ok(csv.includes(`NON-${task.number},Private task (encrypted)`));
+  assert.ok(csv.includes(`"NON-${task.number}","Private task (encrypted)"`));
 });

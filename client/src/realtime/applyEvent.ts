@@ -1,6 +1,7 @@
 import store from '../state/store';
 import records from '../state/records';
 import putTask from '../state/putTask';
+import commentVersions from '../state/commentVersions';
 import type TaskDetail from '../types/TaskDetail';
 import type Comment from '../types/Comment';
 import type Attachment from '../types/Attachment';
@@ -88,6 +89,12 @@ export default function applyEvent(event: any): void {
     case 'plan':
       store.set({ plan: event.plan });
       break;
+    case 'ai-credits':
+      store.set({ aiAnonymous: s.ai && Boolean(event.on) });
+      break;
+    case 'verification':
+      if (s.nox) store.set({ nox: { ...s.nox, verification: event.verification } });
+      break;
     case 'docs':
       store.set({ docsRev: s.docsRev + 1 });
       break;
@@ -117,6 +124,8 @@ export default function applyEvent(event: any): void {
       );
       break;
     case 'comment.delete':
+      // so a server that later brings an encrypted comment back is caught
+      if (s.tasks[event.taskId]?.sealed) commentVersions.drop(event.id);
       patchDetail(event.taskId, (d) => ({ comments: d.comments.filter((c) => c.id !== event.id) }));
       break;
     case 'attachment':

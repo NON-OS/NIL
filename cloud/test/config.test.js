@@ -2,7 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import loadConfig from '../config/loadConfig.js';
 import backupKeys from '../backups/backupKeys.js';
+import workspaceSpec from '../runtime/workspaceSpec.js';
 import baseEnv from './helpers/baseEnv.js';
+
+test('each workspace has its own uid, never 1000, unless set back for a rollback', () => {
+  const at = (env, slot) => workspaceSpec(loadConfig({ ...baseEnv, ...env }).config, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard', invoiceSlot: slot }).user;
+  assert.equal(at({}, 0), '200000:200000');
+  assert.equal(at({}, 41), '200041:200041');
+  assert.equal(at({ CLOUD_APP_UID_BASE: '500000' }, 3), '500003:500003');
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_UID_BASE: '0' }).warnings.some((w) => /uid 1000/.test(w)));
+  assert.equal(at({ CLOUD_APP_UID_BASE: '0' }, 41), '1000:1000');
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_UID_BASE: '1000' }).errors.some((e) => /10000 or more/.test(e)));
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_USER: '1000:1000' }).warnings.some((w) => /no longer used/.test(w)));
+});
 
 test('missing required settings are all reported at once', () => {
   const { errors } = loadConfig({});
@@ -47,11 +59,38 @@ test('settings that would make the deployment unsafe or broken are errors', () =
     [{ CLOUD_BACKUP_RECIPIENTS: 'nilbk-pub-nope' }, /entry 1/],
     [{ CLOUD_BACKUP_TARGET: 'ftp://host/x', CLOUD_BACKUP_RECIPIENTS: backupKeys.generate().publicKey }, /file:\/\/ or s3:\/\//],
     [{ CLOUD_BACKUP_TIME: '25:00' }, /CLOUD_BACKUP_TIME/],
+    // acting only on proven reads needs the verifier's key
+    [{ CLOUD_VERIFIER_MODE: 'enforce', CLOUD_VERIFIER_KEY: '' }, /CLOUD_VERIFIER_MODE=enforce needs the verifier’s key/],
+    [{ CLOUD_VERIFIER_KEY: 'short' }, /CLOUD_VERIFIER_KEY must be at least 32/],
   ];
   for (const [env, pattern] of cases) {
     const { errors } = loadConfig({ ...baseEnv, ...env });
     assert.ok(errors.some((e) => pattern.test(e)), `${JSON.stringify(env)} → ${errors.join(' | ')}`);
   }
+});
+
+test('the verifier runs in shadow by default; without its key or address the control plane still starts, says so, and it is off', async () => {
+  const { default: workspaceSpec } = await import('../runtime/workspaceSpec.js');
+  const env = (cfg) => workspaceSpec(cfg, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard' }).env;
+  assert.equal(loadConfig(baseEnv).config.app.verifierMode, 'shadow');
+  for (const missing of [{ CLOUD_VERIFIER_KEY: '' }, { CLOUD_VERIFIER_URL: '' }]) {
+    const { config, errors, warnings } = loadConfig({ ...baseEnv, ...missing });
+    assert.deepEqual(errors, []);
+    assert.equal(config.app.verifierMode, 'off');
+    assert.ok(warnings.some((w) => /CLOUD_VERIFIER_MODE=shadow, but .* is not set/.test(w)), warnings.join(' | '));
+    assert.equal(env(config).NOX_VERIFIER_MODE, undefined);
+    assert.equal(env(config).NOX_VERIFIER_KEY, undefined);
+  }
+  const off = loadConfig({ ...baseEnv, CLOUD_VERIFIER_MODE: 'off' });
+  assert.deepEqual(off.errors, []);
+  assert.equal(env(off.config).NOX_VERIFIER_KEY, undefined);
+  assert.equal(env(loadConfig({ ...baseEnv, CLOUD_RPC_URL: 'off', CLOUD_VERIFIER_KEY: '' }).config).NOX_VERIFIER_MODE, undefined);
+
+  // enforce: the workspaces' one address is the verifier, and no second one is handed out
+  const enforce = env(loadConfig({ ...baseEnv, CLOUD_VERIFIER_MODE: 'enforce', CLOUD_RPC_URL: 'http://verifier:8545' }).config);
+  assert.equal(enforce.NOX_VERIFIER_MODE, 'enforce');
+  assert.equal(enforce.NOX_VERIFIER_KEY, 'v'.repeat(64));
+  assert.equal(enforce.NOX_VERIFIER_URL, undefined);
 });
 
 test('open egress needs no Caddy container, and an S3 target reads its credentials', () => {

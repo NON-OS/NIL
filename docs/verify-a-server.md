@@ -43,7 +43,7 @@ If the hash you built matches the published one, the published manifest is an ho
 
 - What other people were sent. The check proves what the server sent to the check, at the moment it ran. A server set on harm could send the real app to the check and a changed one to a particular person, or only for an hour. Running the check often, from different networks and over Tor (prefix the command with `torsocks`), makes that harder to hide. Catching it for certain takes a check on every page load inside the browser itself, which Nil doesn't have yet.
 - What the server program does. The check covers the web app because that's the part that holds your keys. The server never gets them, and what it can still see is listed in the [privacy model](privacy-model.md).
-- What an open tab is running. A page keeps the code it loaded until you reload it.
+- What your browser runs from its own storage. A page keeps the code it loaded until you reload it, and the service worker also keeps the app's files so it opens offline. It keeps a file only if its SHA-256 matches the build's own list (`build.json`, which the check above covers too), fetches that list fresh on every page load, and drops what no longer matches, so a file changed once on the way doesn't stay. A server that sends a changed list together with changed files is believed, though: catching that is what the check is for.
 
 ## For maintainers: publishing a release
 
@@ -57,10 +57,10 @@ npm run release:manifest -- --out release/web-$(node -p "require('./package.json
 
 Commit the manifest, tag the release, and put the printed hash in the release notes and on nonos.software. The manifest isn't part of the build, so committing it doesn't change the hash.
 
-The Docker image builds the web app the same way, from the pinned base image and the lockfile. To confirm an image carries the release, copy its build out and hash it:
+The Docker image builds the web app the same way, from the pinned base image and the lockfile. `deploy/release.sh` builds it from the committed tree only (`git archive` of the tagged commit), so a stray file in `client/public` or `docs` on the release machine can't end up in it. To confirm an image carries the release, copy its build out and hash it:
 
 ```bash
-docker create --name nil-image nil:3.0.0
+docker create --name nil-image localhost/nonos/nil:3.0.0
 docker cp nil-image:/app/dist image-dist
 docker rm nil-image
 npm run release:manifest -- --dist image-dist

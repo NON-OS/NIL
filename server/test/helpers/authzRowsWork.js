@@ -1,9 +1,12 @@
 import crypto from 'node:crypto';
 import actors from './authzActors.js';
+import passkeyBody from './passkeyBody.js';
 
 const { PEOPLE, MEMBERS, ADMINS } = actors;
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 const FILE = { raw: 'hello', headers: { 'Content-Type': 'text/plain', 'X-Filename': 'note.txt' } };
+// the caller's own published key, which a recovery kit note has to name
+const myPublicKey = async ({ world }, who) => ({ publicKey: (await world.people.member('GET', '/api/encryption-keys')).data.find((k) => k.userId === world.ids[who])?.publicKey ?? 'none' });
 const docVersion = async ({ world, t }) => (await world.people.member('GET', `/api/docs/${t.doc}`)).data.doc.version;
 
 // Rows of the authorization matrix for tasks, projects, docs, time and the rest of everyday
@@ -79,6 +82,11 @@ export default {
   'PUT /api/me/encryption-key': { allow: MEMBERS, ok: [400] },
   'GET /api/me/identity-wraps': { allow: MEMBERS },
   'PUT /api/me/identity-wraps': { allow: MEMBERS, ok: [400, 409] },
+  'PUT /api/me/recovery-kit': { allow: MEMBERS, body: myPublicKey },
+  'POST /api/me/passkeys': { allow: MEMBERS, body: () => passkeyBody() },
+  'PATCH /api/me/passkeys/:id': { allow: MEMBERS, id: 'own.passkey', body: { label: 'Phone' } },
+  'DELETE /api/me/passkeys/:id': { allow: MEMBERS, id: 'own.passkey' },
+  'POST /api/me/passkeys/:id/used': { allow: MEMBERS, id: 'own.passkey' },
   'GET /api/share-links': { allow: MEMBERS, query: ({ world }) => `kind=project&targetId=${world.ids.shared}` },
   'POST /api/share-links': { allow: MEMBERS, body: ({ world }) => ({ kind: 'project', targetId: world.ids.shared }) },
   'DELETE /api/share-links/:id': { allow: MEMBERS, id: 'fresh.shareLink' },
@@ -88,4 +96,7 @@ export default {
   'POST /api/ai/deck': { allow: PEOPLE, ok: [503] },
   'POST /api/ai/draft': { allow: PEOPLE, ok: [503] },
   'POST /api/ai/brief': { allow: MEMBERS, ok: [503] },
+  'GET /api/ai-credits': { allow: MEMBERS },
+  'GET /api/ai-credits/usage': { allow: ADMINS },
+  'PUT /api/ai-credits': { allow: ADMINS, body: { anonymous: true } },
 };

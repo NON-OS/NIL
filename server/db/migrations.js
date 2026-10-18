@@ -26,11 +26,16 @@ import billing from './migrations/020-billing.js';
 import agents from './migrations/026-agents.js';
 import smartWalletBallots from './migrations/027-smart-wallet-ballots.js';
 import tokenFees from './migrations/028-token-fees.js';
-import voteReview from './migrations/029-vote-review.js';
+import passkeyWraps from './migrations/029-passkey-wraps.js';
+import aiCredits from './migrations/030-ai-credits.js';
+import tracesAndLimits from './migrations/031-traces-and-limits.js';
+import privacyPools from './migrations/032-privacy-pools.js';
+import signInHardening from './migrations/033-sign-in-hardening.js';
+import voteReview from './migrations/035-vote-review.js';
 
 // Append new migrations to the end. Never edit one that has shipped.
 // An object entry with `rebuild: true` runs with foreign keys off, which SQLite
 // needs for table rebuilds; foreign keys are re-checked before committing.
-const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, voteReview];
+const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, passkeyWraps, aiCredits, tracesAndLimits, privacyPools, signInHardening, voteReview];
 
 export default migrations;

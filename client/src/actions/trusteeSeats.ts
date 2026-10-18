@@ -12,11 +12,12 @@ const trusteeSeats = {
   ids: (proposal: Proposal) => proposal.encrypted!.trustees.map((t) => t.userId).filter((id): id is string => Boolean(id)),
 
   // The signing key this browser pinned for the trustee in each seat, which their signatures are
-  // checked against. The server says who sits where; the pins say whose key is whose.
+  // checked against: their current one, as the key directory trusts it for anything signed now.
+  // The server says who sits where; the pins say whose key is whose.
   signers: (trustees: { userId: string | null }[]): Promise<Signer[]> =>
     Promise.all(
       trustees.map(async (t) => {
-        const signingKey = t.userId ? await keyDirectory.signingKeyOf(t.userId) : null;
+        const signingKey = t.userId ? (await keyDirectory.signers(t.userId, null))[0]?.key : undefined;
         return t.userId && signingKey ? { userId: t.userId, signingKey } : null;
       }),
     ),

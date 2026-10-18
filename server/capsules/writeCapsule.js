@@ -51,7 +51,8 @@ export default async function writeCapsule(passphrase, out, { signal } = {}) {
       { name: 'keys/receipts-ed25519.pem', file: signingKey.file },
       // agents' webhook secrets and model API keys are sealed under this one; skipped if never made
       { name: 'keys/agents-secrets.key', file: secretBox.file },
-      ...fs.readdirSync(uploadDir).map((id) => ({ name: `uploads/${id}`, file: path.join(uploadDir, id) })),
+      // stored files only: not staged copies or uploads still on their way
+      ...fs.readdirSync(uploadDir).filter((id) => /^[\w-]+$/.test(id)).map((id) => ({ name: `uploads/${id}`, file: path.join(uploadDir, id) })),
     ];
 
     const salt = crypto.randomBytes(16);

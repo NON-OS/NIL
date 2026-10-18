@@ -1,3 +1,5 @@
+import type ChainVerification from './ChainVerification';
+
 export default interface NoxInfo {
   token: string;
   chainId: number;
@@ -6,4 +8,6 @@ export default interface NoxInfo {
   explorer: string;
   // what NOX keeps of a transfer between wallets, in basis points; 0 when it keeps nothing
   transferFeeBps?: number;
+  // admins only: whether what the Ethereum node says can be verified right now
+  verification?: ChainVerification;
 }

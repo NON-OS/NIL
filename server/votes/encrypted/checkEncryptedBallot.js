@@ -17,13 +17,13 @@ export default async function checkEncryptedBallot(proposal, options, body) {
   const signals = body?.publicSignals;
   const proof = body?.proof;
   if (!Array.isArray(signals) || signals.length !== 2 + 4 * OPTIONS + 4 || !canonical.all(signals)) throw refuse('malformed public values');
-  if (!proof || !point(proof.pi_a, 1) || !point(proof.pi_b, 2) || !point(proof.pi_c, 1) || !canonical.all([proof.pi_a, proof.pi_b, proof.pi_c], canonical.base)) throw refuse('malformed proof');
   const publicKey = JSON.parse(proposal.public_key);
   const [scope, optionCount, pkX, pkY] = signals.slice(2 + 4 * OPTIONS);
   if (scope !== fieldHash(voteScope(proposal.id))) throw refuse('it was made for a different vote');
   if (Number(optionCount) !== options.length) throw refuse('it was made for a different set of options');
   if (pkX !== publicKey[0] || pkY !== publicKey[1]) throw refuse('it was encrypted to a different key');
   if (!voterGroups.acceptedRoots(proposal.id).has(signals[0])) throw refuse('the voter list changed since it was made; vote again');
+  if (!proof || !point(proof.pi_a, 1) || !point(proof.pi_b, 2) || !point(proof.pi_c, 1) || !canonical.all([proof.pi_a, proof.pi_b, proof.pi_c], canonical.base)) throw refuse('malformed proof');
 
   // only the parts the check reads are kept, so what's stored is exactly what was verified
   const checked = { pi_a: proof.pi_a, pi_b: proof.pi_b, pi_c: proof.pi_c, protocol: 'groth16', curve: 'bn128' };

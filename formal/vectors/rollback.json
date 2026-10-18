@@ -1,0 +1,1716 @@
+{
+  "sequences": [
+    {
+      "name": "honest server, revisions go up",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "5",
+            "5",
+            "5"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "same revision opened again",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "3",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false
+      ]
+    },
+    {
+      "name": "older revision after a newer one",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "4",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "pieces from different revisions",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "2",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        true
+      ]
+    },
+    {
+      "name": "description newer than title",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1",
+            "2"
+          ]
+        }
+      ],
+      "warnings": [
+        true
+      ]
+    },
+    {
+      "name": "own save held, then an older open",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "opened": [
+            "1",
+            "1",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "own save held, then that revision",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "opened": [
+            "2",
+            "2",
+            "2"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "first open at revision zero",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        false
+      ]
+    },
+    {
+      "name": "a held revision never warns",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        },
+        {
+          "held": "1"
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "rollback to zero",
+      "events": [
+        {
+          "opened": [
+            "7",
+            "7",
+            "7"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "0",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 0",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false
+      ]
+    },
+    {
+      "name": "generated 1",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "4",
+            "4"
+          ]
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "3",
+            "0",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 2",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "2"
+          ]
+        },
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 3",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "3",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "4",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "4",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 4",
+      "events": [
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "held": "0"
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "generated 5",
+      "events": [
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "0",
+            "0",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "3",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "2",
+            "1"
+          ]
+        },
+        {
+          "held": "3"
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 6",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 7",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "3",
+            "0"
+          ]
+        },
+        {
+          "held": "1"
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 8",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        },
+        {
+          "held": "3"
+        },
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "2",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 9",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "3",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "2",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 10",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "2"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 11",
+      "events": [
+        {
+          "held": "2"
+        },
+        {
+          "opened": [
+            "1",
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3",
+            "1"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "held": "2"
+        },
+        {
+          "opened": [
+            "2",
+            "2",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        true,
+        false,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 12",
+      "events": [
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "3",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 13",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "1",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "0",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "3",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 14",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "2"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "opened": [
+            "4",
+            "4"
+          ]
+        },
+        {
+          "held": "4"
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        false,
+        false
+      ]
+    },
+    {
+      "name": "generated 15",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "0",
+            "1"
+          ]
+        },
+        {
+          "held": "1"
+        },
+        {
+          "opened": [
+            "2",
+            "2",
+            "4"
+          ]
+        },
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "3",
+            "3",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 16",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "4"
+          ]
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "2",
+            "4"
+          ]
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "3",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        false,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 17",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "4",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "0",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 18",
+      "events": [
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 19",
+      "events": [
+        {
+          "held": "1"
+        },
+        {
+          "opened": [
+            "4",
+            "0",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "3",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 20",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 21",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "0",
+            "3"
+          ]
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "2",
+            "0",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "2",
+            "1"
+          ]
+        },
+        {
+          "held": "1"
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 22",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        false,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 23",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "4",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "1",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "4",
+            "4"
+          ]
+        },
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "0",
+            "4",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "2",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "3",
+            "2"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        false,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 24",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 25",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "3",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "2",
+            "1"
+          ]
+        },
+        {
+          "held": "4"
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 26",
+      "events": [
+        {
+          "held": "3"
+        },
+        {
+          "opened": [
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "0"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 27",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "0",
+            "0"
+          ]
+        },
+        {
+          "held": "4"
+        },
+        {
+          "opened": [
+            "2",
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "0",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "2",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        false,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 28",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "3"
+          ]
+        },
+        {
+          "held": "3"
+        },
+        {
+          "opened": [
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 29",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "4",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "2",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "4",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "1",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "0",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "3",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 30",
+      "events": [
+        {
+          "opened": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        false,
+        true
+      ]
+    },
+    {
+      "name": "generated 31",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "3",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "1",
+            "3"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 32",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "2"
+          ]
+        },
+        {
+          "held": "2"
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 33",
+      "events": [
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "0",
+            "2",
+            "1"
+          ]
+        },
+        {
+          "held": "0"
+        },
+        {
+          "opened": [
+            "2",
+            "0",
+            "2"
+          ]
+        },
+        {
+          "held": "4"
+        }
+      ],
+      "warnings": [
+        false,
+        true,
+        false,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 34",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "3"
+          ]
+        },
+        {
+          "held": "2"
+        },
+        {
+          "held": "3"
+        },
+        {
+          "opened": [
+            "0",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "2"
+          ]
+        },
+        {
+          "held": "3"
+        }
+      ],
+      "warnings": [
+        true,
+        false,
+        false,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 35",
+      "events": [
+        {
+          "opened": [
+            "1",
+            "4",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "3",
+            "2",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "3",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "1",
+            "3"
+          ]
+        },
+        {
+          "held": "3"
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 36",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "1",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 37",
+      "events": [
+        {
+          "opened": [
+            "2",
+            "3",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "1",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "4",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        false
+      ]
+    },
+    {
+      "name": "generated 38",
+      "events": [
+        {
+          "opened": [
+            "4",
+            "1"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "4"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "1"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true
+      ]
+    },
+    {
+      "name": "generated 39",
+      "events": [
+        {
+          "opened": [
+            "3",
+            "2",
+            "3"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "2",
+            "0"
+          ]
+        },
+        {
+          "opened": [
+            "0",
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "4",
+            "3",
+            "2"
+          ]
+        },
+        {
+          "opened": [
+            "2",
+            "1",
+            "4"
+          ]
+        }
+      ],
+      "warnings": [
+        true,
+        true,
+        true,
+        true,
+        true
+      ]
+    }
+  ]
+}

@@ -11,6 +11,8 @@ import isAdminUser from '../../lib/isAdmin';
 export default function CommentItem({ comment }: { comment: Comment }) {
   const author = useStore((s) => (comment.authorId ? s.users[comment.authorId] : undefined));
   const me = useStore((s) => s.me);
+  const unlocked = useStore((s) => s.docsUnlocked);
+  const users = useStore((s) => s.users);
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(comment.body);
   const mine = comment.authorId === me?.id;
@@ -63,9 +65,19 @@ export default function CommentItem({ comment }: { comment: Comment }) {
             </div>
           </div>
         ) : comment.locked ? (
-          <p className="comment-locked">Encrypted comment. Unlock to read it.</p>
+          <p className="comment-locked">{comment.stale === 'deleted' ? 'This comment was deleted, but the server sent it again.' : unlocked ? 'Nil can’t confirm who wrote this comment.' : 'Encrypted comment. Unlock to read it.'}</p>
         ) : (
-          <Markdown text={comment.body} />
+          <>
+            <Markdown text={comment.body} />
+            {comment.stale === 'older' && <p className="comment-note warn">This is an older version of this comment than one you’ve already seen here.</p>}
+            {comment.sealedBy && <p className="comment-note">Signed by {users[comment.sealedBy]?.name ?? 'a former member'}, not its author, as happens when a task turns private.</p>}
+            {comment.olderFormat && <p className="comment-note">Saved in an older format, so Nil can’t tell whether this is its latest edit.</p>}
+            {comment.oldKey && (
+              <p className="comment-note">
+                Signed with an earlier key, <span className="mono">{comment.oldKey}</span>.
+              </p>
+            )}
+          </>
         )}
       </div>
     </li>

@@ -13,7 +13,8 @@ export default async function resumeWorkspace(ctx, id) {
     return provisionWorkspace(ctx, id);
   }
   const from = ['stopped', 'suspended', 'deleting', 'failed'];
-  if (!ctx.store.workspaces.transition(id, from, 'starting', { suspendedAt: null, suspendReason: null, deleteAfter: null })) {
+  // bringing it back counts as use, so an unused workspace isn't paused again straight away
+  if (!ctx.store.workspaces.transition(id, from, 'starting', { suspendedAt: null, suspendReason: null, deleteAfter: null, activeAt: ctx.store.now() })) {
     throw new HttpError(409, `The workspace is ${workspace.state}, so it can’t be resumed.`);
   }
   try {

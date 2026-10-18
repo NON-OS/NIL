@@ -3,8 +3,10 @@ import parseBytes from '../lib/parseBytes.js';
 const NAME = /^[a-z][a-z0-9-]{0,23}$/;
 
 // Resource plans as "name:cpus=1,memory=768m,pids=256,disk=5g;name2:...". cpus, memory and pids
-// are hard limits enforced by the runtime. disk is a soft limit: local Docker volumes can't be
-// capped, so going over it raises an operator alert instead of failing writes.
+// are hard limits enforced by the runtime. Local Docker volumes can't be capped, so disk is
+// enforced in two other ways: the app gets it as its upload quota (UPLOAD_QUOTA_MB) and
+// refuses uploads past it, and a workspace that still grows past CLOUD_DISK_SUSPEND_PERCENT of
+// it is suspended (ops/collectUsage.js).
 export default function parsePlans(value) {
   const plans = {};
   const problems = [];

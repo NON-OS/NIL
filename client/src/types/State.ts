@@ -21,6 +21,7 @@ import type StealthInfo from './StealthInfo';
 import type TaskArchive from './TaskArchive';
 import type FirstRun from './FirstRun';
 import type AgentActivity from './AgentActivity';
+import type Passkey from './Passkey';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -39,6 +40,10 @@ export default interface State {
   inbox: InboxItem[] | null;
   feed: Activity[] | null;
   ai: boolean;
+  // members with a voting key send built-in AI requests anonymously while this is on
+  aiAnonymous: boolean;
+  // why this browser sends AI requests signed in although you have a voting key, or null
+  aiSignedReason: string | null;
   nox: NoxInfo | null;
   rewards: RewardToken[];
   // true when you're a guest who can see only the projects shared with you
@@ -46,6 +51,8 @@ export default interface State {
   sharing: SharingPolicy;
   plan: Plan;
   stealth: StealthInfo | null;
+  // admins on a server with private pool payouts on get the pool tools
+  privacyPools: boolean;
   // the getting-started card; null until My work asks for it
   firstRun: FirstRun | null;
   proposalsRev: number;
@@ -55,6 +62,9 @@ export default interface State {
   // the site and workspace key every key message is bound to (from bootstrap, set by APP_URL)
   origin: string;
   workspaceKey: string;
+  // your own passkey wraps, and when you last downloaded a recovery kit for your current keys
+  passkeys: Passkey[];
+  recoveryKitAt: number | null;
   // bumped when anyone publishes keys or this browser confirms one
   keysRev: number;
   // teammates whose new or changed keys are waiting for this person to confirm them

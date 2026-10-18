@@ -12,10 +12,12 @@ import refresh from './commands/refresh.js';
 import remove from './commands/remove.js';
 import backup from './commands/backup.js';
 import restore from './commands/restore.js';
+import restoreDrill from './commands/restoreDrill.js';
 import verifyBackup from './commands/verifyBackup.js';
 import decrypt from './commands/decrypt.js';
 import keygen from './commands/keygen.js';
 import maintenance from './commands/maintenance.js';
+import requests from './commands/requests.js';
 
 const HELP = `Nil control plane
 
@@ -37,9 +39,16 @@ Workspaces
   delete <name> [--now] [--no-export] [--yes]
                                          final encrypted export, then deletion after the grace period
 
+Sign-ups waiting for approval
+  requests                               sign-ups past the daily cap or near capacity
+  approve <name> | reject <name>         create and start it, or release the address
+
 Backups
   backup <name…>|--all                   encrypted backup now (--all: the nightly job)
   restore <name> <file|location> --identity <key file> [--owner <0x…>] [--yes]
+  restore-drill <file|location> --identity <key file>
+                                         restore into a throwaway workspace nobody can reach,
+                                         check that it starts, and remove it
   verify-backup <file|location> --identity <key file>
                                          decrypt and check a backup without writing anything
   decrypt <file> --identity <key file> --out <file>
@@ -71,6 +80,7 @@ const COMMANDS = {
   delete: remove,
   backup,
   restore,
+  'restore-drill': restoreDrill,
   'verify-backup': verifyBackup,
   decrypt,
   keygen,
@@ -78,6 +88,9 @@ const COMMANDS = {
   check: maintenance,
   'setup-token': maintenance,
   'alert-test': maintenance,
+  requests,
+  approve: requests,
+  reject: requests,
 };
 
 // Commands that don't need Docker, the database or even a configuration, so they also run on a

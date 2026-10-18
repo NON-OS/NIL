@@ -15,4 +15,5 @@ export default Object.freeze({
   optimizeMs: every('JOB_OPTIMIZE_SECONDS', 3600),
   poolPriceMs: every('JOB_POOL_PRICE_SECONDS', 60),
   transferFeeMs: every('JOB_TRANSFER_FEE_SECONDS', 600),
+  billingWatchdogMs: every('JOB_BILLING_WATCHDOG_SECONDS', 300),
 });

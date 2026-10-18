@@ -4,6 +4,7 @@ import Markdown from '../ui/Markdown';
 import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import ai from '../../actions/ai';
+import AiMode from '../ai/AiMode';
 
 // The weekly brief is generated on demand and kept only in this tab.
 export default function BriefPanel() {
@@ -47,7 +48,7 @@ export default function BriefPanel() {
           </button>
         </div>
       </div>
-      <div className="panel-body">
+      <div className="panel-body" style={{ display: 'grid', gap: 10 }}>
         {text ? (
           <Markdown text={text} />
         ) : (
@@ -55,6 +56,7 @@ export default function BriefPanel() {
             {busy ? 'Reading this week’s work…' : 'Get a short summary of wins, risks and next week’s focus, ready to share with the team.'}
           </p>
         )}
+        <AiMode />
       </div>
     </section>
   );

@@ -1,0 +1,61 @@
+# Nil's verifier: one Helios light client for the whole server, next to every workspace's
+# Ethereum node. It checks the answers the workspaces act on (payments, invoices, balances,
+# stakes, passes, smart-wallet signatures) against the chain the beacon sync committee signed,
+# and seals what it proved. In shadow mode (CLOUD_VERIFIER_MODE, the launch default) it catches
+# a lying node after the fact; in enforce mode a lying node can't make a workspace credit a
+# payment that never happened, though it can still hide one. See "Verified chain reads" in
+# README.md.
+#
+# Turn it on in /opt/nil/.env: add this file to COMPOSE_FILE, set VERIFIER_KEY (openssl rand
+# -hex 32) and VERIFIER_CHECKPOINT (a finalized beacon block root less than two weeks old),
+# and, without a synced bundled node, VERIFIER_EXECUTION_RPC and VERIFIER_CONSENSUS_RPC. Then set
+# CLOUD_VERIFIER_URL=http://verifier:8545 in cloud.env for shadow mode, or, for enforce,
+# CLOUD_RPC_URL=http://verifier:8545, so Caddy's relay sends workspaces here.
+services:
+  verifier:
+    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    container_name: nil-verifier
+    restart: unless-stopped
+    command: ["node", "server/verifier/index.js"]
+    environment:
+      VERIFIER_KEY: ${VERIFIER_KEY:?set VERIFIER_KEY in .env (openssl rand -hex 32)}
+      VERIFIER_CHECKPOINT: ${VERIFIER_CHECKPOINT:-}
+      # the bundled node (docker-compose.chain.yml) by default
+      VERIFIER_EXECUTION_RPC: ${VERIFIER_EXECUTION_RPC:-http://reth:8545}
+      VERIFIER_CONSENSUS_RPC: ${VERIFIER_CONSENSUS_RPC:-http://lighthouse:5052}
+      VERIFIER_DATA_DIR: /data
+      VERIFIER_PORT: "8545"
+    volumes:
+      - verifier-data:/data
+    # chain: Caddy's relay reaches it there, and it reaches the bundled node. egress: only for an
+    # execution or consensus node outside this server.
+    networks:
+      - chain
+      - verifier-egress
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    # one light client for every workspace: about 200 MB in use, the rest is headroom
+    mem_limit: ${VERIFIER_MEMORY:-1g}
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8545/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 2m
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
+networks:
+  verifier-egress: {}
+
+volumes:
+  verifier-data:

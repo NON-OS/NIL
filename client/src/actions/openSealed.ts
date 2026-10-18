@@ -3,6 +3,7 @@ import records from '../state/records';
 import keyring from '../state/keyring';
 import needsOpening from '../state/needsOpening';
 import countSteps from '../lib/countSteps';
+import readersCover from '../lib/readersCover';
 import taskSeal from './taskSeal';
 
 // Opens the sealed tasks still showing as locked, and the notes of open ones once their whole
@@ -13,17 +14,18 @@ export default async function openSealed(ids?: string[]) {
   const waiting = Object.values(store.get().tasks).filter((t) => needsOpening(t) && (!ids || ids.includes(t.id)));
   for (const task of waiting) {
     try {
-      const words = await taskSeal.open(task.sealed!, task.id);
+      const words = await taskSeal.open({ ...task, sealed: task.sealed! });
       store.set((s) => {
         const now = s.tasks[task.id];
-        if (now?.sealed?.title !== task.sealed!.title) return {};
+        if (now?.sealed?.title !== task.sealed!.title || !readersCover(words, now)) return {};
         // a task that's already open only gains its notes, so an edit in progress stays put
         const notes = words.description === undefined ? {} : { description: words.description };
         const opened = now.locked ? { title: words.title, checklist: words.checklist, ...notes, steps: countSteps(words.checklist) } : notes;
-        return { tasks: records.put(s.tasks, { ...now, ...opened, rolledBack: words.rollback, locked: false }) };
+        const signed = { signedBy: words.by, olderFormat: !words.readers, handedOnBy: words.from, oldKey: words.oldKey };
+        return { tasks: records.put(s.tasks, { ...now, ...opened, ...signed, rolledBack: words.rollback, locked: false }) };
       });
     } catch {
-      // not shared with this person's key yet; it stays locked
+      // not shared with this person's key yet, or not for the people it shows; it stays locked
     }
   }
 }

@@ -21,7 +21,7 @@ export default function KeyNotice({ reason }: { reason: string }) {
   if (!pending.length) return null;
   const changed = pending.filter((k) => k.state === 'changed');
   const names = (list: MemberKey[]) => {
-    const all = list.map((k) => users[k.userId]?.name ?? 'a teammate');
+    const all = list.map((k) => users[k.userId]?.name ?? 'someone not in this workspace');
     return all.length > 3 ? `${all.slice(0, 3).join(', ')} and ${all.length - 3} more` : all.join(', ');
   };
 

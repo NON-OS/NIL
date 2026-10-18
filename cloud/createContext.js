@@ -2,6 +2,7 @@ import path from 'node:path';
 import createLog from './lib/createLog.js';
 import walletTagger from './lib/walletTagger.js';
 import sleep from './lib/sleep.js';
+import randomToken from './lib/randomToken.js';
 import openDatabase from './db/openDatabase.js';
 import createStore from './store/createStore.js';
 import createDriver from './runtime/createDriver.js';
@@ -26,6 +27,8 @@ export default function createContext(config, overrides = {}) {
     clock: overrides.clock ?? { now: () => Date.now(), sleep },
     pollMs: overrides.pollMs ?? 1000,
     backupTarget: overrides.backupTarget ?? (config.backup.enabled ? createTarget(config.backup.target) : null),
+    // who holds a workspace lock: the server or a CLI run, and which one
+    lockHolder: `${overrides.role ?? 'cli'}:${randomToken(6)}`,
   };
   ctx.backups = ctx.backupTarget ? { workspace: (workspace, kind) => backupWorkspace(ctx, workspace, kind) } : null;
   ctx.routes = overrides.routes ?? createRoutes(ctx, overrides.reloadProxy ?? caddyReloader(config));

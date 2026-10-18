@@ -19,11 +19,18 @@ router.put(
     const commitment = canonical.number(req.body?.commitment);
     if (!commitment || commitment === '0') throw HttpError.badRequest('That isn’t a voting key.');
     const current = sql.get('SELECT semaphore_commitment AS c FROM users WHERE id = ?', req.user.id).c;
-    if (current === commitment) return { user: toUser(publishUser(req.user.id), req.viewer) };
-    // a new key mid-vote would be a second identity, and a second ballot
-    if (current && voterGroups.inOpenVote(current)) throw new HttpError(409, 'You can switch voting keys once the open anonymous votes close.');
+    if (current === commitment) {
+      sql.run('UPDATE users SET semaphore_pending = NULL WHERE id = ?', req.user.id);
+      return { user: toUser(publishUser(req.user.id), req.viewer) };
+    }
+    // a new key mid-vote would be a second identity, and a second ballot. Noted, so this person's
+    // AI requests go signed in until it can be registered: they can't prove membership meanwhile
+    if (current && voterGroups.inOpenVote(current)) {
+      sql.run('UPDATE users SET semaphore_pending = ? WHERE id = ?', commitment, req.user.id);
+      throw new HttpError(409, 'You can switch voting keys once the open anonymous votes close.');
+    }
     if (sql.get('SELECT 1 FROM users WHERE semaphore_commitment = ? AND id != ?', commitment, req.user.id)) throw new HttpError(409, 'That voting key belongs to someone else.');
-    sql.run('UPDATE users SET semaphore_commitment = ? WHERE id = ?', commitment, req.user.id);
+    sql.run('UPDATE users SET semaphore_commitment = ?, semaphore_pending = NULL WHERE id = ?', commitment, req.user.id);
     voterGroups.join(req.user.id);
     hub.broadcast({ type: 'proposals' });
     return { user: toUser(publishUser(req.user.id), req.viewer) };

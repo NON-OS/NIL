@@ -13,14 +13,19 @@ let srv;
 const base = () => srv.base;
 const owner = client(base);
 const ana = client(base);
+const ownerWallet = wallet();
+const anaWallet = wallet();
 const keys = {};
 let nextId = 1;
 
 before(async () => {
   srv = await startServer();
-  await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NØNOS' });
+  await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NØNOS' });
   const inv = await owner('POST', '/api/invites', { role: 'member' });
-  await ana.wallet(wallet(), 'invite', { name: 'Ana', inviteToken: inv.data.token });
+  await ana.wallet(anaWallet, 'invite', { name: 'Ana', inviteToken: inv.data.token });
+  // making a key needs a linked wallet's say-so, not just the session
+  await owner.wallet(ownerWallet, 'confirm');
+  await ana.wallet(anaWallet, 'confirm');
 });
 after(() => srv.close());
 
