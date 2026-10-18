@@ -2,7 +2,7 @@
 
 # Caddy with a DNS provider module, needed only for CLOUD_TLS=wildcard (one *.domain
 # certificate through the DNS challenge). The stock image is enough for on-demand TLS.
-#   docker build --build-arg DNS_MODULE=github.com/caddy-dns/hetzner@v1.0.0 -t localhost/nonos/nil-caddy:2.10.2-dns cloud/caddy
+#   docker build --build-arg DNS_MODULE=github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3 -t localhost/nonos/nil-caddy:2.10.2-dns cloud/caddy
 # then set CADDY_IMAGE=localhost/nonos/nil-caddy:2.10.2-dns in /opt/nil/.env and
 # CLOUD_DNS_PROVIDER to the module's name in cloud.env (hetzner for the example above).
 #
