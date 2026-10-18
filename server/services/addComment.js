@@ -13,16 +13,22 @@ import canSeeTask from './canSeeTask.js';
 import cipherText from '../lib/cipherText.js';
 import HttpError from '../lib/HttpError.js';
 
+// An encrypted comment's signature names its id, so the browser picks the id before it signs.
+function chosenId(value) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{16,32}$/.test(value) || sql.get('SELECT 1 FROM comments WHERE id = ?', value)) throw HttpError.badRequest('Pick a fresh comment id.');
+  return value;
+}
+
 // Posts a comment as `actor`: from the app or from a connected AI assistant, same rules.
 // On an encrypted private task the comment arrives encrypted too, and the server never
 // learns what it says, so it can't look for mentions or quote it in a notification.
-export default function addComment(actor, taskId, text, { sealed = false } = {}) {
+export default function addComment(actor, taskId, text, { sealed = false, id: wanted } = {}) {
   const task = visibleTask(taskId, actor);
   if (Boolean(task.sealed) !== Boolean(sealed)) {
     throw HttpError.badRequest(task.sealed ? 'This task is encrypted, so comments on it are encrypted too. Comment in Nil.' : 'Only comments on private tasks are encrypted.');
   }
   const body = sealed ? cipherText(text, 'Encrypted comment', { max: 60_000 }) : check.text(text, 'Comment', { min: 1, max: 10_000 });
-  const id = newId();
+  const id = sealed && wanted !== undefined ? chosenId(wanted) : newId();
   sql.run('INSERT INTO comments (id, task_id, author_id, body, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, task.id, actor.id, body, sealed ? 1 : 0, Date.now());
   const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', id));
   toTaskViewers(task.id, { type: 'comment', comment });
