@@ -2,6 +2,7 @@ import type State from '../types/State';
 
 const initialState: State = {
   phase: 'loading',
+  offlineRetryAt: null,
   needsSetup: false,
   holderGate: null,
   me: null,

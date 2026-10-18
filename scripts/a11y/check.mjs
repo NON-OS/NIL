@@ -92,6 +92,7 @@ try {
         if (screen.then) await screen.then(page);
         await settle(page);
       });
+      if (screen.after) await screen.after(page);
     }
     await page.context().close();
   }

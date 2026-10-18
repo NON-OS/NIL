@@ -1,6 +1,7 @@
 // The screens the accessibility check opens. Each is loaded cold, straight from its address, the
 // way a bookmark or a shared link opens it, so a screen that leans on another screen's styles
-// shows up too. `then` does what's needed after the load to reach a state worth checking.
+// shows up too. `then` does what's needed after the load to reach a state worth checking, and
+// `after` puts back anything it changed.
 
 const openMenu = async (page) => {
   await page.getByRole('button', { name: 'Open menu' }).click();
@@ -15,6 +16,18 @@ const unlockDocs = async (page) => {
   else await page.getByRole('button', { name: 'New doc' }).click();
   await page.locator('.doc-editor').waitFor();
 };
+
+// the network goes while the page is open, and the app is reloaded while it's gone
+const loseNetwork = async (page) => {
+  await page.context().setOffline(true);
+  await page.locator('.offline-banner').waitFor();
+};
+const startOffline = async (page) => {
+  await page.context().setOffline(true);
+  await page.reload().catch(() => {});
+  await page.getByRole('button', { name: 'Try now' }).waitFor();
+};
+const comeBack = (page) => page.context().setOffline(false);
 
 // signed out: `ready` is something on the screen once it has loaded
 const signedOut = [
@@ -45,6 +58,8 @@ const signedIn = [
   { name: 'help', path: '/help' },
   { name: 'task', path: '/board?task=1' },
   { name: 'menu', path: '/board', then: openMenu, phoneOnly: true },
+  { name: 'offline-banner', path: '/board', then: loseNetwork, after: comeBack },
+  { name: 'offline-start', path: '/board', then: startOffline, after: comeBack },
 ];
 
 export default { signedOut, signedIn };

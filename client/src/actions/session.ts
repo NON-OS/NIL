@@ -28,6 +28,8 @@ import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
 import type Passkey from '../types/Passkey';
 import vault from './vault';
+import offline from './offline';
+import unreachable from '../lib/unreachable';
 
 interface Bootstrap {
   me: User;
@@ -142,10 +144,13 @@ const session = {
   async boot() {
     try {
       const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null; holderGate: HolderGate | null }>('/auth/state');
+      offline.answered();
       if (s.workspace) store.set({ workspace: s.workspace });
       if (s.user) await load();
       else store.set({ phase: 'auth', needsSetup: s.needsSetup, holderGate: s.holderGate });
     } catch (err) {
+      // no answer at all means offline, not signed out: stay on this page and try again
+      if (unreachable(err)) return offline.wait(() => void session.boot());
       store.set({ phase: 'auth' });
       toast.error(err);
     }

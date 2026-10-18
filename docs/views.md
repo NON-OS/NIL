@@ -86,4 +86,6 @@ Use the arrow keys to move through the results, `Enter` to open one and `Esc` to
 
 Changes appear for everyone at once, without reloading. The dot next to the Nil logo shows if you're connected; hover over it to see "Live" or "Reconnecting…". Teammates who are online appear under **Online now** in the sidebar. In a task panel you can see who else is looking at the same task and who is typing a comment.
 
+If your network drops, or Nil's server stops answering, a strip across the top of the page says so and that changes won't save until it's back. The page stays as it is, Nil reconnects by itself and says "Back online." when it has. If you open Nil while it can't reach the server, it shows that it's offline instead of the sign-in page, counts down to its next try (or click **Try now**), and opens the page you asked for once the server answers.
+
 Private tasks never show up in anyone else's live updates, and looking at one doesn't show you as viewing anything.

@@ -17,6 +17,8 @@ import BoardView from './views/BoardView';
 import ListView from './views/ListView';
 import ProjectView from './views/ProjectView';
 import NotFoundView from './views/NotFoundView';
+import OfflineView from './views/OfflineView';
+import OfflineBanner from './components/shell/OfflineBanner';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 import useCryptoTools from './hooks/useCryptoTools';
@@ -134,6 +136,7 @@ export default function App() {
   }
 
   if (phase === 'loading') return <LoadingScreen />;
+  if (phase === 'offline') return <OfflineView />;
 
   // a sign-in reset link signs in as the person it was made for, even over another session
   if (phase === 'auth' || (segments[0] === 'reset' && segments[1])) {
@@ -153,6 +156,7 @@ export default function App() {
       <AppEffects />
       <Sidebar onNewProject={() => setNewProject(true)} />
       <MainContent>
+        <OfflineBanner />
         <Suspense fallback={<ViewLoading />}>
           <Screen segments={segments} />
         </Suspense>

@@ -1,0 +1,20 @@
+/* a strip across the top of the page, above its header, so it never covers what you're using */
+.offline-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px max(20px, env(safe-area-inset-right)) 8px max(20px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--warning);
+  background: var(--warning-soft);
+  color: var(--ink);
+  font-size: var(--text-sm);
+}
+
+.offline-banner svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--warning);
+}
