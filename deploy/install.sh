@@ -43,7 +43,7 @@ load_env
 
 step "Scripts and compose files"
 run install -d -m 750 "$NIL_DIR/deploy/host" "$NIL_DIR/deploy/single" "$NIL_DIR/examples"
-for script in lib.sh provision.sh install.sh upgrade.sh rollback.sh smoke.sh; do run install -m 755 "$RELEASE/deploy/$script" "$NIL_DIR/deploy/$script"; done
+for script in lib.sh provision.sh install.sh upgrade.sh rollback.sh backup.sh smoke.sh; do run install -m 755 "$RELEASE/deploy/$script" "$NIL_DIR/deploy/$script"; done
 run install -m 644 "$RELEASE/deploy/smoke-check.mjs" "$RELEASE/deploy/hosted.env.example" "$NIL_DIR/deploy/"
 run cp -r "$RELEASE/deploy/host/." "$NIL_DIR/deploy/host/"
 run cp -r "$RELEASE/deploy/single/." "$NIL_DIR/deploy/single/"

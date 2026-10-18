@@ -8,21 +8,9 @@ import readHealthReport from '../readHealthReport.js';
 import rewriteTar from '../../lib/tar/rewriteTar.js';
 import tarEntry from '../../lib/tar/tarEntry.js';
 import tarBlocks from '../../lib/tar/tarBlocks.js';
+import SNAPSHOT_SCRIPT from './snapshotScript.js';
 
 const { mount, db: DB, snapshotDir, checkpointDir } = dataLayout;
-
-// VACUUM INTO writes a consistent copy of the live database while the app keeps running. It
-// runs inside the workspace, as the workspace's own user (an exec runs as the container's user
-// unless told otherwise), with the node already in the image.
-const SNAPSHOT_SCRIPT = [
-  "const fs = require('node:fs');",
-  `fs.rmSync('${mount}/${snapshotDir}', { recursive: true, force: true });`,
-  `fs.mkdirSync('${mount}/${snapshotDir}', { mode: 0o700 });`,
-  `const db = new (require('node:sqlite').DatabaseSync)('${mount}/${DB}');`,
-  "db.exec('PRAGMA busy_timeout = 15000');",
-  `db.exec("VACUUM INTO '${mount}/${snapshotDir}/${DB}'");`,
-  'db.close();',
-].join(' ');
 
 const containerName = (id) => `nil-${id}`;
 

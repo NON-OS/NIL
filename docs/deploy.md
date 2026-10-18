@@ -293,47 +293,30 @@ Backups hold most of the workspace in readable form: team tasks, comments, files
 
 ### Nightly backup while running
 
-This script takes a consistent database snapshot with SQLite's `VACUUM INTO`, copies the key and uploads, and keeps 14 days. It assumes the default database location (if you set `DB_FILE`, adjust it). Save it as `/opt/nonos-backup.sh`:
+`deploy/backup.sh` backs Nil up while it runs. Inside Nil's own container, SQLite's `VACUUM INTO` writes a consistent copy of the database however busy it is, and that copy is opened on its own and checked with `PRAGMA integrity_check` and `PRAGMA foreign_key_check`. A copy that fails either check is deleted and the backup stops with the reason, so you never keep an archive of a broken database. The copy then goes into one archive with `keys/` and `uploads/`, and the database in the archive must hash the same as the copy that was checked. The live database files, the setup token, the copies taken before upgrades and any scratch folders stay out. The archive is written with mode 600, and archives older than `--keep-days` (14) are deleted.
 
-```sh
-#!/bin/sh
-# Backs up Nil while it runs: a consistent database snapshot, the signing key and the uploads.
-set -eu
+Run it once by hand to see it work:
+
+```bash
 cd /opt/nonos
-STAMP=$(date +%F-%H%M)
-DEST=/var/backups/nonos
-WORK="$DEST/$STAMP"
-mkdir -p "$WORK"
-chmod 700 "$DEST"
+sudo deploy/backup.sh --container "$(sudo docker compose ps -q nonos)" --dest /var/backups/nonos
+```
 
-# 1. a consistent snapshot of the database, written next to it
-docker compose exec -T nonos rm -f /data/backup.db
-docker compose exec -T nonos node --disable-warning=ExperimentalWarning -e \
-  "new (require('node:sqlite').DatabaseSync)('/data/nonos.db').exec(\"VACUUM INTO '/data/backup.db'\")"
+It prints the schema and size of the copy it checked, then the path of the archive, named like `nil-20261015-031500.tar.gz`. A server set up with `deploy/provision.sh --mode single` has the script in `/opt/nil/deploy/backup.sh`, and its defaults (`--container nil-app --dest /var/backups/nil`) already fit, so it needs no options.
 
-# 2. everything in /data: the snapshot, keys/ and uploads/
-docker compose cp nonos:/data/. "$WORK/"
-docker compose exec -T nonos rm -f /data/backup.db
+Give it a key to encrypt the archive with [age](https://age-encryption.org) and no plaintext copy stays on the server:
 
-# 3. keep the snapshot, not the live database files copied while the server ran
-rm -f "$WORK/nonos.db" "$WORK/nonos.db-wal" "$WORK/nonos.db-shm"
-mv "$WORK/backup.db" "$WORK/nonos.db"
-rm -rf "$WORK"/restore-* "$WORK"/capsule-* "$WORK"/pre-migration-*.db "$WORK"/setup-token
-
-tar -C "$DEST" -czf "$DEST/nonos-$STAMP.tar.gz" "$STAMP"
-rm -rf "$WORK"
-chmod 600 "$DEST/nonos-$STAMP.tar.gz"
-find "$DEST" -name 'nonos-*.tar.gz' -mtime +14 -delete
+```bash
+sudo deploy/backup.sh --container "$(sudo docker compose ps -q nonos)" --dest /var/backups/nonos --age-recipient age1...
 ```
 
 Run it every night at 03:15:
 
 ```bash
-sudo chmod 700 /opt/nonos-backup.sh
-echo '15 3 * * * root /opt/nonos-backup.sh >> /var/log/nonos-backup.log 2>&1' | sudo tee /etc/cron.d/nonos-backup
+echo '15 3 * * * root cd /opt/nonos && deploy/backup.sh --container "$(docker compose ps -q nonos)" --dest /var/backups/nonos >> /var/log/nonos-backup.log 2>&1' | sudo tee /etc/cron.d/nonos-backup
 ```
 
-Then copy the archives off the server, encrypted.
+Then copy the archives off the server. Without `--age-recipient`, encrypt them first.
 
 ### Cold backup
 
@@ -353,23 +336,33 @@ An admin can download an encrypted capsule from **Settings → Data & privacy**:
 
 ### Restore from a backup archive
 
-On this server or a new one, with the code and config in `/opt/nonos`:
+An archive holds `nonos.db`, `keys/` and `uploads/` at its top, the layout of `/data`. Check it before you rely on it, on any machine with Docker and the Nil image:
+
+```bash
+mkdir -m 700 /tmp/nonos-check
+age -d -i ~/backup.key nil-20261015-031500.tar.gz.age | tar -xzf - -C /tmp/nonos-check   # or: tar -xzf nil-20261015-031500.tar.gz -C /tmp/nonos-check
+sudo docker run --rm --network none -v /tmp/nonos-check:/check:ro --entrypoint node nonos:latest -e \
+  "const db = new (require('node:sqlite').DatabaseSync)('/check/nonos.db', { readOnly: true }); console.log(db.prepare('PRAGMA integrity_check').get().integrity_check, 'schema', db.prepare('PRAGMA user_version').get().user_version)"
+ls /tmp/nonos-check/keys    # receipts-ed25519.pem must be there
+```
+
+It should print `ok` and a schema number no higher than the release you restore onto runs. To put it back, on this server or a new one, with the code and config in `/opt/nonos`:
 
 ```bash
 cd /opt/nonos
 sudo docker compose down                       # stops containers, keeps volumes
 sudo docker compose create                     # makes sure the volume exists on a new server
-sudo mkdir -p /tmp/nonos-restore
-sudo tar -xzf /var/backups/nonos/nonos-2026-10-15-0315.tar.gz -C /tmp/nonos-restore
-sudo docker run --rm \
+sudo docker run --rm --network none \
   -v nonos_nonos-data:/data \
-  -v /tmp/nonos-restore/2026-10-15-0315:/restore:ro \
-  alpine sh -c 'rm -rf /data/* && cp -a /restore/. /data/ && chown -R 1000:1000 /data && chmod -R go-rwx /data'
-sudo rm -rf /tmp/nonos-restore
+  -v /tmp/nonos-check:/restore:ro \
+  alpine sh -c 'rm -rf /data/* /data/.nil-* && cp -a /restore/. /data/ && chown -R 1000:1000 /data && chmod -R go-rwx /data'
+sudo rm -rf /tmp/nonos-check
 sudo docker compose up -d
 ```
 
-The `rm -rf /data/*` step also removes old `-wal` and `-shm` files. Never leave those next to a restored `nonos.db`: SQLite would apply them to the wrong database.
+The `rm -rf` step also removes old `-wal` and `-shm` files. Never leave those next to a restored `nonos.db`: SQLite would apply them to the wrong database. A database from an older release is upgraded when Nil starts, with a copy taken first.
+
+On a single-mode server the volume is `nil-data` and the stack is in `/opt/nil`: `cd /opt/nil && sudo docker compose stop nil`, run the same `docker run` with `-v nil-data:/data`, then `sudo docker compose up -d`.
 
 For a cold backup, extract the archive and copy it into the volume the same way (it already has the layout of `/data`).
 
@@ -391,7 +384,7 @@ Read [CHANGELOG.md](../CHANGELOG.md) first. Then:
 
 ```bash
 cd /opt/nonos
-sudo /opt/nonos-backup.sh                  # always back up first
+sudo deploy/backup.sh --container "$(sudo docker compose ps -q nonos)" --dest /var/backups/nonos   # always back up first
 sudo git fetch --tags
 sudo git checkout <new release>            # or: sudo git pull, if you follow a branch
 sudo docker compose build --pull           # --pull also picks up base image security fixes
