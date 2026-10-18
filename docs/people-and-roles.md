@@ -48,6 +48,8 @@ Holding enough again only counts once the regular checks have seen it, never jus
 
 Each wallet's NOX counts for one person at a time. Nil remembers whom a wallet's NOX last counted for, even after the wallet is unlinked, and for a grace period after that it counts for nobody else and can't be used to join through the door. So a stack that never moves can't be linked to account after account.
 
+If the staking or pass contract refuses to answer (it's paused, say), stakes or passes count as nothing until it answers again, the same as when a vote opens. If Nil can't reach its Ethereum node at all, nobody is let in through the door and nobody loses their place.
+
 None of this touches members who keep their NOX in a linked wallet. Moving NOX between your own linked wallets isn't falling below; to move it to a new wallet, link that wallet first. What the door can't do is follow tokens from wallet to wallet: someone who moves the same NOX to fresh wallets can still join as new people one after another, but each of those accounts is signed out once its grace period runs out, and every join shows under **Members**.
 
 To stop checking someone, click **Keep without NOX** next to their name under **Members**. Turn the **Let NOX holders join without an invite** switch off to make the workspace invite-only again.
