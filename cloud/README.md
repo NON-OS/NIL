@@ -239,16 +239,17 @@ scp deploy@203.0.113.10:/mnt/nil-backups/workspaces/<id>/<file>.nilbackup .
 node cloud/cli.js verify-backup <file>.nilbackup --identity ~/nil-backup-alice.key
 ```
 
-It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a real restore into a scratch workspace on the server. This is the one time the secret key goes there. Stream it from your machine over SSH into the control plane's `/tmp`, which lives in memory and is never swapped out, so the key never touches the server's disk, and remove it afterwards:
+It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a restore drill on the server: the backup goes into a throwaway workspace that is never routed, has no network at all and is removed afterwards, and has to start and pass its health check. This is the one time the secret key goes there. Stream it from your machine over SSH into the control plane's `/tmp`, which lives in memory and is never swapped out, so the key never touches the server's disk, and remove it afterwards:
 
 ```bash
 # on your machine
 ssh deploy@203.0.113.10 'cd /opt/nil && docker compose exec -T control sh -c "umask 077 && cat > /tmp/k"' < ~/nil-backup-alice.key
 # then on the server, in /opt/nil
-docker compose exec control node cli.js restore restore-drill /backups/workspaces/<id>/<file>.nilbackup --identity /tmp/k --owner 0xYourWallet
+docker compose exec control node cli.js restore-drill /backups/workspaces/<id>/<file>.nilbackup --identity /tmp/k
 docker compose exec control rm /tmp/k
-docker compose exec control node cli.js delete restore-drill --now --no-export --yes
 ```
+
+Don't drill with `restore` into a new name: that creates a real workspace, and the copy of a customer's data would be online at its address.
 
 ### 10. Monitoring and alerts
 
@@ -282,7 +283,7 @@ docker compose exec control node cli.js delete restore-drill --now --no-export -
 
 **Every week.** `cli.js list` (state, disk, last backup of every workspace), `df -h`, `cat /proc/mdstat`, and a look at the alert channel.
 
-**Every month.** Reboot in a quiet hour if `/var/run/reboot-required` exists (workspaces are down for a minute or two; they all come back by themselves). Docker updates itself with the security updates; check `/var/log/unattended-upgrades/unattended-upgrades.log` that it did. Update Caddy: set a newer `CADDY_IMAGE`, then `docker compose up -d caddy` and `docker compose exec control node cli.js routes` to reconnect it to the workspace networks. Do a restore drill.
+**Every month.** Reboot in a quiet hour if `/var/run/reboot-required` exists (workspaces are down for a minute or two; they all come back by themselves). Docker updates itself with the security updates; check `/var/log/unattended-upgrades/unattended-upgrades.log` that it did. Update Caddy: set a newer `CADDY_IMAGE`, then `docker compose up -d caddy` and `docker compose exec control node cli.js routes` to reconnect it to the workspace networks. Do a restore drill (`restore-drill`, step 9).
 
 **Abuse.** `cli.js suspend <name> --reason "<ticket>"` takes a workspace offline with a notice and keeps its data; `resume` brings it back. For illegal content, `cli.js delete <name> --now` (it still takes a final encrypted backup unless `--no-export`). Add recurring bad words to a `CLOUD_BLOCKLIST_FILE`. Sign-ups are limited per network and per block (see `.env.example`), so a flood from one provider stops at its own share.
 
@@ -310,6 +311,7 @@ Run it in the control plane's container: `docker compose exec control node cli.j
 | `requests`, `approve <name>`, `reject <name>` | sign-ups waiting for approval; create one, or free its address |
 | `backup <name…>\|--all` | encrypted backup now; `--all` is the nightly job |
 | `restore <name> <file> --identity k [--owner 0x…]` | replace a workspace's data, or recreate it, from a backup |
+| `restore-drill <file> --identity k` | restore into a throwaway workspace nobody can reach, check it starts, remove it |
 | `verify-backup <file> --identity k` | decrypt and check a backup without writing anything |
 | `decrypt <file> --identity k --out f` | write a backup's plaintext to a new private file |
 | `keygen --out f` | a new backup key pair |

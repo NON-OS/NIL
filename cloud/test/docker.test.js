@@ -251,6 +251,15 @@ test('a helper that can’t hand over the volume stops the create; last writes c
   assert.deepEqual(heads.map((r) => r.query.path).sort(), ['/data/nonos.db', '/data/nonos.db-wal']);
 });
 
+test('an isolated workspace (a restore drill) gets an internal network without Caddy', async (t) => {
+  const { state, config, seen } = await fakeEngine(t);
+  const { config: open } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: config.docker.socket, CLOUD_EGRESS: 'open' });
+  const spec = workspaceSpec(open, { id: ID, name: 'restore-drill', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-drill`, plan: 'standard' });
+  await dockerDriver({ config: open, log: { info() {}, warn() {}, error() {} } }).create({ ...spec, isolated: true });
+  assert.equal(JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body).Internal, true, 'even with open egress');
+  assert.equal(state.connected.size, 0, 'Caddy is never attached');
+});
+
 test('by default a missing image is an error and nothing is pulled', async (t) => {
   const { seen, config } = await fakeEngine(t);
   const { config: defaults } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: config.docker.socket });

@@ -7,7 +7,8 @@ import dockerDriver from './docker/dockerDriver.js';
 //   hasImage(image)             whether the image is on this server already
 //   ensureImage(image)          make the app image available locally
 //   create(spec)                isolated network, data volume and stopped workload for a spec
-//                               (see workspaceSpec.js); safe to call when parts already exist
+//                               (see workspaceSpec.js); safe to call when parts already exist.
+//                               With spec.isolated, the reverse proxy isn't attached either
 //   start(id) stop(id) restart(id)
 //   remove(id)                  remove the workload, keep its volume
 //   destroy(id, volumes)        remove the workload, its network and the given volumes

@@ -110,12 +110,14 @@ export default function dockerDriver({ config, log, client = dockerClient(config
       const labels = { 'org.nonos.cloud.workspace': spec.id };
       try {
         // an internal network has no route out of the host; Caddy, attached to every workspace
-        // network, is then the only way in and the only way to the chain
-        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: app.egress === 'rpc-only', Labels: labels } });
+        // network, is then the only way in and the only way to the chain. An isolated one (a
+        // restore drill) doesn't even get Caddy.
+        const internal = spec.isolated || app.egress === 'rpc-only';
+        await client.json('POST', '/networks/create', { body: { Name: containerName(spec.id), Driver: 'bridge', Internal: internal, Labels: labels } });
       } catch (err) {
         if (err.status !== 409) throw err;
       }
-      await attachProxy(spec.id);
+      if (!spec.isolated) await attachProxy(spec.id);
       await client.json('POST', '/volumes/create', { body: { Name: spec.volume, Driver: 'local', Labels: labels } });
       await ownVolume(client, spec);
       await client.json('POST', '/containers/create', { query: { name: containerName(spec.id) }, body: containerBody(spec, settings) });
