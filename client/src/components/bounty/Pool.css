@@ -57,3 +57,14 @@
   margin: 6px 0;
   overflow-wrap: anywhere;
 }
+
+.pool-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+}
+
+.pool-row.end {
+  justify-content: flex-end;
+}

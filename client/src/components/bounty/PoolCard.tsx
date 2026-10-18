@@ -114,7 +114,7 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
       </p>
       <div className="settings-card" style={{ padding: 0 }}>
         {!pool && (
-          <div className="settings-row" style={{ padding: 14 }}>
+          <div className="pool-row" style={{ padding: 14 }}>
             <button type="button" className="btn btn-primary" onClick={open} disabled={Boolean(busy) || !info}>
               {busy && <Spinner size={14} />} Open the team pool
             </button>
@@ -126,7 +126,7 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
           <div style={{ display: 'grid', gap: 10, padding: 14 }}>
             <span>The team has no pool account yet. Setting one up makes a new pool key and seals it to you; it reaches the other admins as each of them opens this page, once you’ve confirmed their keys.</span>
             {restoring && <input className="input mono" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder="twelve recovery words" aria-label="Recovery phrase" spellCheck={false} autoComplete="off" />}
-            <div className="settings-row">
+            <div className="pool-row">
               <button type="button" className="btn btn-primary" onClick={create} disabled={Boolean(busy) || (restoring && typed.trim().split(/\s+/).length !== 12)}>
                 {busy && <Spinner size={14} />} {restoring ? 'Restore the pool' : 'Set up the team pool'}
               </button>
@@ -189,14 +189,14 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
               </div>
             )}
             {book.notes.some((n) => n.state === 'open' && n.label && !reviews.has(n.label)) && (
-              <div className="settings-row" style={{ padding: '0 14px' }}>
+              <div className="pool-row" style={{ padding: '0 14px' }}>
                 <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>A deposit not approved yet may still be under review, or declined.</span>
                 <ConfirmButton className="btn btn-sm" confirmLabel="This tells the provider these deposits are this server’s. Ask?" onConfirm={askProvider}>
                   Ask the provider
                 </ConfirmButton>
               </div>
             )}
-            <div className="settings-row" style={{ padding: 14 }}>
+            <div className="pool-row" style={{ padding: 14 }}>
               <button type="button" className="btn btn-primary" onClick={() => setDepositing(true)} disabled={Boolean(busy) || !usable.length}>
                 <ArrowDownToLine /> Deposit
               </button>

@@ -1,3 +1,4 @@
+import './Pool.css';
 import { useEffect, useState } from 'react';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
@@ -73,7 +74,7 @@ export default function PoolPayModal({ task, name, onClose, onDone }: { task: Ta
             </p>
           </>
         )}
-        <div className="settings-row" style={{ justifyContent: 'flex-end' }}>
+        <div className="pool-row end">
           <button type="button" className="btn" onClick={onClose} disabled={Boolean(step)}>
             Cancel
           </button>

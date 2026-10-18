@@ -1,3 +1,4 @@
+import './Pool.css';
 import { useState, type FormEvent } from 'react';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
@@ -38,7 +39,7 @@ export default function PoolDepositModal({ info, onClose, onDone }: { info: Pool
   return (
     <Modal title="Deposit into the team pool" onClose={onClose} width={520}>
       <form className="modal-body" style={{ display: 'grid', gap: 14 }} onSubmit={submit}>
-        <div className="settings-row">
+        <div className="pool-row">
           <select className="input" value={symbol} onChange={(e) => setSymbol(e.target.value)} aria-label="Token">
             {usable.map((a) => (
               <option key={a.symbol} value={a.symbol}>
@@ -65,7 +66,7 @@ export default function PoolDepositModal({ info, onClose, onDone }: { info: Pool
           Deposit well before you pay, and more than one bounty’s worth. A payout that leaves soon after a deposit of a similar size can be matched to it by timing and amount.
         </div>
         {tooSmall && <div className="muted" style={{ color: 'var(--danger)' }}>That’s below the pool’s smallest deposit.</div>}
-        <div className="settings-row" style={{ justifyContent: 'flex-end' }}>
+        <div className="pool-row end">
           <button type="button" className="btn" onClick={onClose} disabled={Boolean(step)}>
             Cancel
           </button>
