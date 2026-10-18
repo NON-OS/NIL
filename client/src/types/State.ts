@@ -24,7 +24,10 @@ import type AgentActivity from './AgentActivity';
 import type Passkey from './Passkey';
 
 export default interface State {
-  phase: 'loading' | 'auth' | 'ready';
+  // offline: the server couldn't be reached while starting, which isn't the same as signed out
+  phase: 'loading' | 'auth' | 'ready' | 'offline';
+  // when the app tries the server again while offline, or null while it's trying
+  offlineRetryAt: number | null;
   needsSetup: boolean;
   holderGate: HolderGate | null;
   me: User | null;

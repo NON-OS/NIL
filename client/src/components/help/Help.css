@@ -110,14 +110,14 @@
   line-height: 1.65;
 }
 
-.help-article .md h3,
-.help-article .md h4,
-.help-article .md h5 {
+.help-article .md-h1,
+.help-article .md-h2,
+.help-article .md-h3 {
   color: var(--ink);
   scroll-margin-top: calc(var(--topbar-h) + 16px);
 }
 
-.help-article .md h3 {
+.help-article .md-h1 {
   margin-bottom: 0.4em;
   font-family: var(--font-display);
   font-size: var(--text-2xl);
@@ -125,7 +125,7 @@
   letter-spacing: -0.02em;
 }
 
-.help-article .md h4 {
+.help-article .md-h2 {
   margin-top: 1.8em;
   font-family: var(--font-display);
   font-size: var(--text-xl);
@@ -133,7 +133,7 @@
   letter-spacing: -0.01em;
 }
 
-.help-article .md h5 {
+.help-article .md-h3 {
   margin-top: 1.4em;
   font-size: var(--text-lg);
 }

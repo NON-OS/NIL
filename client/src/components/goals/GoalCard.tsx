@@ -22,7 +22,7 @@ export default function GoalCard({ goal, tasks, onOpen }: { goal: Goal; tasks: T
         <GoalStatusPill status={goal.status} />
         <Avatar user={owner} size={22} />
       </div>
-      <h3>{goal.title}</h3>
+      <h2>{goal.title}</h2>
       <div>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', marginBottom: 6 }}>
           <span className="goal-pct">{p.pct}%</span>

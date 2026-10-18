@@ -42,88 +42,6 @@
   color: var(--muted);
 }
 
-.settings-section {
-  display: grid;
-  gap: 16px;
-  margin-bottom: 28px;
-}
-
-.settings-section > h2 {
-  font-size: var(--text-lg);
-}
-
-.settings-section > p {
-  margin-top: -10px;
-  color: var(--muted);
-}
-
-.settings-card {
-  display: grid;
-  gap: 14px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-lg);
-  background: var(--surface);
-}
-
-.settings-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px;
-}
-
-/* switch rows borrow .filter-toggle from the filter bar, but their descriptions must wrap */
-.settings-card .filter-toggle {
-  white-space: normal;
-}
-
-.member {
-  display: grid;
-  grid-template-columns: 32px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 12px;
-  padding: 10px 0;
-  border-bottom: 1px solid var(--line);
-}
-
-.member:last-child {
-  border-bottom: 0;
-}
-
-.member-name {
-  font-weight: 600;
-}
-
-.member-sub {
-  overflow: hidden;
-  color: var(--muted);
-  font-size: var(--text-sm);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.member.off {
-  opacity: 0.6;
-}
-
-.member-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 6px;
-}
-
-.invite-link {
-  display: flex;
-  gap: 8px;
-}
-
-.invite-link input {
-  font-family: var(--font-mono);
-  font-size: var(--field-text-sm);
-}
-
 .privacy-list {
   display: grid;
   gap: 10px;
@@ -161,15 +79,6 @@
   .settings-tabs button {
     flex: none;
   }
-
-  .member {
-    grid-template-columns: 32px minmax(0, 1fr);
-  }
-
-  .member-actions {
-    grid-column: 1 / -1;
-    justify-content: flex-start;
-  }
 }
 
 @media (pointer: coarse) {
@@ -202,23 +111,6 @@
   line-height: 1.6;
 }
 
-.key-once {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: 10px;
-  padding: 12px;
-  border: 1px solid var(--accent-line);
-  border-radius: var(--r-md);
-  background: var(--accent-soft);
-}
-
-.key-once code {
-  display: block;
-  margin-top: 4px;
-  overflow-wrap: anywhere;
-  font-size: 12px;
-}
 
 .feed-warning {
   display: flex;
@@ -237,18 +129,6 @@
   color: var(--warning);
 }
 
-/* switches with a sentence of explanation: the words wrap, the switch keeps its size */
-.settings-card .filter-toggle {
-  white-space: normal;
-}
-
-.settings-card .filter-toggle > span {
-  min-width: 0;
-}
-
-.settings-card .filter-toggle > .toggle {
-  flex: none;
-}
 
 .wallet-reveal {
   padding: 0;

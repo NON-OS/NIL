@@ -8,7 +8,7 @@ Docs are for members. Guests don't get them.
 
 Open **Docs** and click **Unlock with your wallet**. Your wallet shows a message that names your workspace's address and starts with "Unlock my Nil encryption keys". Nothing is sent on-chain and it costs nothing.
 
-The first time, your browser makes your personal keys and your wallet signs three times: the unlock message twice, then a message that publishes your public keys so teammates can check them. After that, one signature unlocks your keys. They stay in that browser tab's memory, so you unlock again after closing or reloading the tab. The same keys open [private tasks](private-tasks.md).
+The first time, your browser makes your personal keys and your wallet signs three times: the unlock message twice, then a message that publishes your public keys so teammates can check them. A panel says what each signature is for while your wallet asks. After that, one signature unlocks your keys. They stay in that browser tab's memory, so you unlock again after closing or reloading the tab. The same keys open [private tasks](private-tasks.md).
 
 Your keys aren't tied to one wallet. Every wallet you add to them unlocks the same keys. [Signing in](signing-in.md#the-signatures-for-encryption-keys) explains how to add a wallet and how to keep a recovery kit.
 

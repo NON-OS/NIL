@@ -14,6 +14,7 @@
     "build": "vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "check:quality": "node scripts/check-quality.mjs",
+    "check:a11y": "node scripts/a11y/check.mjs",
     "formal": "node scripts/formal.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --import ./scripts/test/registerTs.mjs --test server/test/*.test.js client/test/*.test.js client/test/*.test.ts",
@@ -42,6 +43,7 @@
     "ws": "8.22.0"
   },
   "devDependencies": {
+    "@axe-core/playwright": "4.13.0",
     "@dnd-kit/core": "6.3.1",
     "@dnd-kit/sortable": "10.0.0",
     "@dnd-kit/utilities": "3.2.2",
@@ -59,6 +61,7 @@
     "circomlib": "2.0.5",
     "concurrently": "9.1.0",
     "lucide-react": "0.460.0",
+    "playwright-core": "1.56.1",
     "pptxgenjs": "4.0.1",
     "react": "18.3.1",
     "react-dom": "18.3.1",

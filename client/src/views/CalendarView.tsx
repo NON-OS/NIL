@@ -55,6 +55,7 @@ function Day({ day, month, tasks }: { day: string; month: string; tasks: Task[] 
     <div
       ref={setNodeRef}
       className={cx('cal-day', day.slice(0, 7) !== month.slice(0, 7) && 'out', (weekday === 0 || weekday === 6) && 'weekend', day === dates.today() && 'today', isOver && 'over')}
+      role="group"
       aria-label={dates.long(day)}
     >
       <div className="cal-num">
@@ -147,8 +148,9 @@ export default function CalendarView() {
       <FilterBar filter={filter} onChange={setFilter} />
       <DndContext sensors={sensors} onDragStart={({ active }) => setDragging(all.find((t) => t.id === active.id) ?? null)} onDragEnd={onDragEnd} onDragCancel={() => setDragging(null)}>
         <div className="cal-wrap">
-          <div className="cal" role="grid" aria-label="Month">
-            <div className="cal-dow">
+          <div className="cal">
+            {/* each day's group already says its weekday */}
+            <div className="cal-dow" aria-hidden="true">
               {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((d) => (
                 <span key={d}>{d}</span>
               ))}

@@ -45,6 +45,11 @@ document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'visible' && wanted && !ws) open();
 });
 
+// back on a network: reconnect now rather than at the end of the current pause
+window.addEventListener('online', () => {
+  if (wanted && !ws) open();
+});
+
 const socket = {
   connect(reconnectHandler: () => void) {
     onReconnect = reconnectHandler;

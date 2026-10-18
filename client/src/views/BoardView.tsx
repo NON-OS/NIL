@@ -9,6 +9,7 @@ import useTasks from '../hooks/useTasks';
 import useFilter from '../hooks/useFilter';
 import ui from '../actions/ui';
 import filterTasks from '../lib/filterTasks';
+import countOf from '../lib/countOf';
 
 export default function BoardView() {
   const all = useTasks();
@@ -22,7 +23,7 @@ export default function BoardView() {
       <ViewHeader
         title="Board"
         icon={<Kanban size={17} />}
-        subtitle={`${tasks.length} tasks`}
+        subtitle={countOf(tasks.length, 'task')}
         actions={
           <button type="button" className="btn btn-primary" onClick={() => ui.quickAdd()}>
             <Plus /> New task

@@ -1,6 +1,6 @@
 import './Bounty.css';
 import { useState } from 'react';
-import { CheckCircle2, Coins } from 'lucide-react';
+import { CheckCircle2, Coins, Globe2 } from 'lucide-react';
 import PayButton from './PayButton';
 import PastePayment from './PastePayment';
 import Applications from './Applications';
@@ -43,15 +43,21 @@ export default function BountyPanel({ task }: { task: Task }) {
       <>
         <p>Assign someone to pay this bounty to their wallet, or list it publicly so anyone can apply with a wallet.</p>
         {!task.private && (
-          <label className="filter-toggle">
-            <button type="button" className="toggle" role="switch" aria-checked={!!task.listedAt} onClick={() => taskActions.update(task.id, { listed: !task.listedAt })} aria-label="List on the public bounty board" />
-            List on the public bounty board
-            {task.listedAt && (
-              <a href={`/open#${task.id}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6 }}>
-                View
-              </a>
-            )}
-          </label>
+          <>
+            <label className="filter-toggle">
+              <button type="button" className="toggle" role="switch" aria-checked={!!task.listedAt} onClick={() => taskActions.update(task.id, { listed: !task.listedAt })} aria-label="List on the public bounty board" aria-describedby={`public-${task.id}`} />
+              List on the public bounty board
+              {task.listedAt && (
+                <a href={`/open#${task.id}`} target="_blank" rel="noopener noreferrer" style={{ marginLeft: 6 }}>
+                  View
+                </a>
+              )}
+            </label>
+            <p className="bounty-public" id={`public-${task.id}`}>
+              <Globe2 aria-hidden="true" />
+              {task.listedAt ? 'Public now. ' : ''}Anyone on the internet can see a listed bounty’s title, reward, due date and the start of its description. People, comments and files stay private.
+            </p>
+          </>
         )}
         {task.listedAt && <Applications task={task} />}
       </>

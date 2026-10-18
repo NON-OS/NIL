@@ -1,4 +1,5 @@
 import type ImportProgress from '../../types/ImportProgress';
+import countOf from '../../lib/countOf';
 
 // How far an import has got, and how it ended.
 export default function ImportRun({ progress, onStop, onAgain }: { progress: ImportProgress; onStop: () => void; onAgain: () => void }) {
@@ -12,7 +13,7 @@ export default function ImportRun({ progress, onStop, onAgain }: { progress: Imp
       </div>
       <p aria-live="polite">
         {progress.finished
-          ? `${progress.stopped ? 'Stopped. ' : 'Done. '}${progress.done.toLocaleString()} of ${progress.total.toLocaleString()} tasks imported.`
+          ? `${progress.stopped ? 'Stopped. ' : 'Done. '}${progress.done.toLocaleString()} of ${countOf(progress.total, 'task')} imported.`
           : `Importing ${handled.toLocaleString()} of ${progress.total.toLocaleString()}…`}
         {progress.failed > 0 && ` ${progress.failed.toLocaleString()} couldn’t be imported.`}
       </p>

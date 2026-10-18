@@ -18,6 +18,7 @@ import planSummary from '../../lib/planSummary';
 import usd from '../../lib/usd';
 import isAdminUser from '../../lib/isAdmin';
 import type Invoice from '../../types/Invoice';
+import countOf from '../../lib/countOf';
 
 export default function PlanSettings() {
   const status = useStore((s) => s.plan);
@@ -55,7 +56,7 @@ export default function PlanSettings() {
     `Bounties paid in ${rewards.map((r) => r.symbol).join(' or ') || 'tokens'}, and a public bounty board`,
     'Wallet-signed votes and the token-holder door',
     'Claude inside tasks, docs and decks, and the AI connection for your own assistant',
-    `Teams bigger than ${free} people (guests never count)`,
+    `Teams bigger than ${countOf(free, 'person', 'people')} (guests never count)`,
   ];
 
   return (
@@ -72,9 +73,9 @@ export default function PlanSettings() {
           <VerificationNotice />
           {status.enforced && (
             <div className="plan-facts">
-              <StatTile label="Price" value={usd(status.priceUsd ?? 0)} sub={`per ${status.periodDays} days, plus ${usd(status.seatUsd ?? 0)} a seat above ${free}`} />
+              <StatTile label="Price" value={usd(status.priceUsd ?? 0)} sub={`per ${countOf(status.periodDays ?? 0, 'day')}, plus ${usd(status.seatUsd ?? 0)} a seat above ${free}`} />
               <StatTile label="People" value={status.seatLimit === null ? `${used}` : `${used} / ${status.seatLimit}`} sub={status.seatLimit === null ? 'No seat limit right now' : 'Covered right now'} />
-              <StatTile label="Grace" value={`${status.graceDays} days`} sub="Before tools pause" />
+              <StatTile label="Grace" value={countOf(status.graceDays ?? 0, 'day')} sub="Before tools pause" />
             </div>
           )}
           <ul className="privacy-list">

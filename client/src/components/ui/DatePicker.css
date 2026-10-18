@@ -60,8 +60,9 @@
   font-variant-numeric: tabular-nums;
 }
 
+/* the lighter grey, so today's teal and the faint days around the month still read on hover */
 .datepicker-grid button:hover {
-  background: var(--surface-3);
+  background: var(--surface-2);
 }
 
 .datepicker-grid button.out {

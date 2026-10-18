@@ -35,7 +35,9 @@ If you lose every wallet linked to your account, you can't sign in until an admi
 
 The first signature proves the request comes from you and not just from someone using your signed-in browser. It's good for 5 minutes in that browser (the server can change this). Any linked wallet can sign you in. You can rename each one by clicking its name, and remove any of them as long as one is left. The first wallet in the list is marked "receives bounties": bounties are paid there unless you turn on [private payouts](private-payouts.md).
 
-If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
+If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. So unlock your keys before you switch wallets: once your wallet is on the new account, it can't open them. The same page lists these steps and marks the one you're on, and offers **Unlock your keys** while they're locked. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
+
+If you click **Link the new wallet** while your wallet is still on an account that's already linked, Nil says so before asking for a signature.
 
 ## If you lose every wallet
 
@@ -65,6 +67,8 @@ Click your name at the bottom of the sidebar, then **Sign out**. To end your ses
 - The first time, your wallet signs three times: the unlock message twice, then a message that starts with "Publish my Nil encryption keys". The second kind lets teammates check that your public keys are really yours.
 - Each wallet you add to your keys later signs its own unlock message twice.
 - After that, one signature per browser tab unlocks your keys.
+
+Whenever Nil asks for several signatures in a row, a panel in the corner says how many, what each one is for and which one your wallet is asking for now. None of them is a transaction or costs anything.
 
 The unlock message is signed twice because the signature is what opens your keys. A wallet that signs the same message differently each time could never open them again, so Nil compares the two and stops with "Your wallet signs the same message differently each time, so it can't hold your keys." That wallet can still sign you in, and another of your wallets can hold your keys. MetaMask, Rabby, Ledger and Trezor work. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet. Once a regular wallet has set up your keys, though, a passkey can unlock them (see [Unlock with a passkey](#unlock-with-a-passkey)).
 

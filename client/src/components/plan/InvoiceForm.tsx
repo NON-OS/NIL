@@ -8,6 +8,7 @@ import formatUnits from '../../lib/formatUnits';
 import usd from '../../lib/usd';
 import type Invoice from '../../types/Invoice';
 import type Quote from '../../types/Quote';
+import countOf from '../../lib/countOf';
 
 const CHOICES = [1, 3, 6, 12];
 
@@ -72,7 +73,7 @@ export default function InvoiceForm({ onCreated }: { onCreated: (invoice: Invoic
         <div className="settings-row" role="radiogroup" aria-label="How long to pay for">
           {choices.map((n) => (
             <button key={n} type="button" role="radio" aria-checked={periods === n} className={`btn btn-sm plan-choice${periods === n ? ' on' : ''}`} onClick={() => setPeriods(n)}>
-              {n * periodDays} days
+              {countOf(n * periodDays, 'day')}
             </button>
           ))}
         </div>
@@ -82,7 +83,7 @@ export default function InvoiceForm({ onCreated }: { onCreated: (invoice: Invoic
         <input className="input" type="number" min={kind === 'seats' ? covered + 1 : status.seatsUsed ?? 1} max={100000} value={people} onChange={(e) => setPeople(Math.max(1, Math.floor(Number(e.target.value) || 0)))} aria-label="People covered" />
       </label>
       <p className="muted plan-fine">
-        {status.freeSeats} people are free; each one above that is {usd(status.seatUsd ?? 0)} per period. You have {status.seatsUsed} now. Guests never count.
+        Free for up to {countOf(status.freeSeats ?? 0, 'person', 'people')}; each one above that is {usd(status.seatUsd ?? 0)} per period. You have {status.seatsUsed} now. Guests never count.
       </p>
 
       {problem && <p className="plan-callout warn">{problem}</p>}
@@ -106,7 +107,7 @@ export default function InvoiceForm({ onCreated }: { onCreated: (invoice: Invoic
             <button type="button" className="btn btn-primary" disabled={busy} onClick={create}>
               {busy && <Spinner size={14} />} Make the invoice
             </button>
-            <span className="muted plan-fine">The NOX rate and discounts are locked for {status.invoiceHours ?? 24} hours. The exact amount gets a few extra digits at the end that identify your payment.</span>
+            <span className="muted plan-fine">The NOX rate and discounts are locked for {countOf(status.invoiceHours ?? 24, 'hour')}. The exact amount gets a few extra digits at the end that identify your payment.</span>
           </div>
         </>
       )}

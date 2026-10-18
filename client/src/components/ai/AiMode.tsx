@@ -31,7 +31,7 @@ export default function AiMode({ compact = false, pointer = true }: { compact?: 
     };
   }, [could, me?.semaphoreCommitment]);
 
-  const among = members === null ? 'one of the members with a voting key' : `one of the ${members} members with a voting key`;
+  const among = members === null ? 'one of the members with a voting key' : members === 1 ? 'the only member with a voting key' : `one of the ${members} members with a voting key`;
   const text = mode.anonymous
     ? `Sent anonymously: the server learns that ${among} asked, not which one.${members !== null && members < 3 ? ' With so few, that’s easy to guess.' : ''} This server and Anthropic still read the request, and its words, its timing and your IP address (unless you use Tor) can still point to you.`
     : `Sent signed in: the server knows this request is yours. ${mode.why}${mode.setUp && pointer ? ' Set them up in Settings, under Connect AI.' : ''}`;

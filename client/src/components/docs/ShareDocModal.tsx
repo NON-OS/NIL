@@ -1,3 +1,4 @@
+import '../ui/SharePeople.css';
 import { useEffect, useMemo, useState } from 'react';
 import Modal from '../ui/Modal';
 import Avatar from '../ui/Avatar';

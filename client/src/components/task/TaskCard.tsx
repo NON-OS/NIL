@@ -17,6 +17,7 @@ import taskKey from '../../lib/taskKey';
 import meta from '../../lib/meta';
 import cx from '../../lib/cx';
 import type Task from '../../types/Task';
+import countOf from '../../lib/countOf';
 
 interface Props {
   task: Task;
@@ -88,7 +89,7 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
         <BountyChip task={task} />
         <LabelChips ids={task.labels} max={2} />
         {steps && steps.total > 0 && (
-          <span className="progress-mini num" title={`${steps.done} of ${steps.total} steps done`}>
+          <span className="progress-mini num" title={`${steps.done} of ${countOf(steps.total, 'step')} done`}>
             <b>
               <i style={{ width: `${(steps.done / steps.total) * 100}%` }} />
             </b>

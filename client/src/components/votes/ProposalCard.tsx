@@ -1,6 +1,6 @@
 import './Votes.css';
 import { useState } from 'react';
-import { Clock, Coins, Download, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
+import { Clock, Coins, Download, Eye, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
 import Meter from '../charts/Meter';
 import ConfirmButton from '../ui/ConfirmButton';
 import Spinner from '../ui/Spinner';
@@ -45,7 +45,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
   return (
     <article className={cx('proposal', !open && 'closed')}>
       <div className="proposal-head">
-        <h3>{proposal.title}</h3>
+        <h2>{proposal.title}</h2>
         <div className="proposal-meta">
           <span>
             <Clock /> {open ? timeLeft(proposal.closesAt) : `closed ${dates.ago(proposal.closedAt ?? proposal.closesAt)}`}
@@ -60,6 +60,11 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
 
       {proposal.encrypted ? <EncryptedBallot proposal={proposal} open={open} onChange={onChange} /> : proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
 
+      {open && !proposal.anonymous && (
+        <p className="proposal-notice" role="note">
+          <Eye aria-hidden="true" /> Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.
+        </p>
+      )}
       {open && !proposal.anonymous && (
         <div className="proposal-options" role="group" aria-label="Your vote">
           {proposal.options.map((option, i) => (

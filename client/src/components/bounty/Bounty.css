@@ -74,6 +74,22 @@
   font-size: var(--text-sm);
 }
 
+/* what listing a bounty makes public, said before and while it's listed */
+.bounty-panel p.bounty-public {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  color: var(--ink-2);
+}
+
+.bounty-public svg {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin-top: 3px;
+  color: var(--muted);
+}
+
 .bounty-actions {
   display: flex;
   flex-wrap: wrap;
@@ -127,6 +143,11 @@
   align-items: center;
   gap: 8px;
   min-width: 0;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: none;
+  text-align: left;
 }
 
 .bounty-item-title .mono {

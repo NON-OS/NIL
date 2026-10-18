@@ -16,6 +16,7 @@ import shortAddress from '../../lib/shortAddress';
 import timeLeft from '../../lib/timeLeft';
 import usd from '../../lib/usd';
 import type Invoice from '../../types/Invoice';
+import countOf from '../../lib/countOf';
 
 const LIVE = ['waiting', 'seen', 'confirming', 'underpaid'];
 const POLL_MS = 8000;
@@ -116,7 +117,7 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
         </>
       )}
 
-      {invoice.state === 'overpaid' && <p className="plan-callout">{usd(invoice.overpaidUsd)} more arrived than was due. It was added as extra time: {invoice.grantedDays} days in all.</p>}
+      {invoice.state === 'overpaid' && <p className="plan-callout">{usd(invoice.overpaidUsd)} more arrived than was due. It was added as extra time: {countOf(invoice.grantedDays, 'day')} in all.</p>}
       {(invoice.state === 'paid' || invoice.state === 'overpaid') && <p className="plan-fine">Counted. Nil Pro now runs until the date at the top of this page.</p>}
 
       <InvoicePayments payments={invoice.payments} decimals={decimals} />

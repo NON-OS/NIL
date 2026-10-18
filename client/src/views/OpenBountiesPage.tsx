@@ -30,7 +30,7 @@ export default function OpenBountiesPage() {
           Sign in
         </a>
       </header>
-      <div className="page page-narrow">
+      <main className="page page-narrow">
         <span className="eyebrow">{data?.workspace ? `${data.workspace} · open bounties` : 'Open bounties'}</span>
         <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 500, margin: '6px 0 6px' }}>Get paid for work, wallet to wallet</h1>
         <p className="muted" style={{ marginBottom: 20, maxWidth: '62ch' }}>
@@ -76,7 +76,7 @@ export default function OpenBountiesPage() {
             ))}
           </div>
         )}
-      </div>
+      </main>
     </div>
   );
 }

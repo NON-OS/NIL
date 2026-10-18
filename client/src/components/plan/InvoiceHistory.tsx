@@ -7,6 +7,7 @@ import plan from '../../actions/plan';
 import dates from '../../lib/dates';
 import usd from '../../lib/usd';
 import type Invoice from '../../types/Invoice';
+import countOf from '../../lib/countOf';
 
 // Every invoice so far, newest first, with its transactions. One that expired or was
 // cancelled can be made again at today's price, with what it received taken off as credit.
@@ -29,7 +30,7 @@ export default function InvoiceHistory({ invoices, onChange }: { invoices: Invoi
           <div className="invoice-row-head">
             <span>
               <strong>Invoice {inv.number}</strong>
-              <span className="muted"> · {inv.kind === 'seats' ? `${inv.seats} more seats` : `${inv.periods} ${inv.periods === 1 ? 'period' : 'periods'}, ${inv.people} people`} · {usd(inv.price.totalUsd)}</span>
+              <span className="muted"> · {inv.kind === 'seats' ? countOf(inv.seats, 'more seat') : `${countOf(inv.periods, 'period')}, ${countOf(inv.people, 'person', 'people')}`} · {usd(inv.price.totalUsd)}</span>
             </span>
             <InvoiceStateBadge state={inv.state} />
             <span className="muted">{dates.ago(inv.paidAt ?? inv.closedAt ?? inv.createdAt)}</span>

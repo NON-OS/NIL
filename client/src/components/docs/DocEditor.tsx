@@ -173,7 +173,7 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
       <div className="doc-body">
         <div>
           <input className="doc-title" value={title} onChange={(e) => edit(e.target.value, body)} placeholder="Untitled" aria-label="Title" maxLength={200} readOnly={readOnly} />
-          {preview ? <Markdown text={body || '_Nothing written yet._'} /> : <textarea className="doc-text" value={body} onChange={(e) => edit(title, e.target.value)} placeholder="Start writing. Markdown works: # headings, **bold**, - lists, [links](https://…)" aria-label="Doc text" readOnly={readOnly} />}
+          {preview ? <Markdown text={body || '_Nothing written yet._'} headingLevel={2} /> : <textarea className="doc-text" value={body} onChange={(e) => edit(title, e.target.value)} placeholder="Start writing. Markdown works: # headings, **bold**, - lists, [links](https://…)" aria-label="Doc text" readOnly={readOnly} />}
         </div>
       </div>
       {sharing && <ShareDocModal doc={doc} canManage={canManage} onClose={() => setSharing(false)} onDone={onReload} />}

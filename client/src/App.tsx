@@ -8,6 +8,7 @@ import CommandPalette from './components/overlays/CommandPalette';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
 import KeyCheckModal from './components/keys/KeyCheckModal';
+import SigningGuide from './components/keys/SigningGuide';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import MyWorkView from './views/MyWorkView';
@@ -16,11 +17,15 @@ import BoardView from './views/BoardView';
 import ListView from './views/ListView';
 import ProjectView from './views/ProjectView';
 import NotFoundView from './views/NotFoundView';
+import OfflineView from './views/OfflineView';
+import OfflineBanner from './components/shell/OfflineBanner';
 import useStore from './state/useStore';
 import useRoute from './hooks/useRoute';
 import useCryptoTools from './hooks/useCryptoTools';
 import cryptoOnly from './lib/cryptoOnly';
 import BackupWalletNudge from './components/shell/BackupWalletNudge';
+import SkipLink from './components/shell/SkipLink';
+import MainContent from './components/shell/MainContent';
 
 // The everyday screens above load with the app. The rest arrive when first opened, so the
 // first paint of My work and the board doesn't wait on settings, charts, crypto or exports.
@@ -131,6 +136,7 @@ export default function App() {
   }
 
   if (phase === 'loading') return <LoadingScreen />;
+  if (phase === 'offline') return <OfflineView />;
 
   // a sign-in reset link signs in as the person it was made for, even over another session
   if (phase === 'auth' || (segments[0] === 'reset' && segments[1])) {
@@ -146,11 +152,15 @@ export default function App() {
 
   return (
     <div className="app">
+      <SkipLink />
       <AppEffects />
       <Sidebar onNewProject={() => setNewProject(true)} />
-      <Suspense fallback={<ViewLoading />}>
-        <Screen segments={segments} />
-      </Suspense>
+      <MainContent>
+        <OfflineBanner />
+        <Suspense fallback={<ViewLoading />}>
+          <Screen segments={segments} />
+        </Suspense>
+      </MainContent>
       {taskNumber > 0 && <TaskDrawer key={taskNumber} number={taskNumber} />}
       {quickAdd && <QuickAdd />}
       {palette && <CommandPalette />}
@@ -162,6 +172,7 @@ export default function App() {
       </Suspense>
       <UpdatePrompt />
       {keyCheck && <KeyCheckModal />}
+      <SigningGuide />
       <BackupWalletNudge />
       <Toasts />
     </div>

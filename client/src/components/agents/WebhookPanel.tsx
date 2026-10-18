@@ -8,6 +8,7 @@ import agents from '../../actions/agents';
 import dates from '../../lib/dates';
 import type Agent from '../../types/Agent';
 import type AgentOptions from '../../types/AgentOptions';
+import countOf from '../../lib/countOf';
 
 interface Props {
   agent: Agent;
@@ -67,7 +68,7 @@ export default function WebhookPanel({ agent, options, onChange }: Props) {
       </div>
       {secret && <SecretOnce label="This is the webhook’s signing secret." value={secret} />}
       <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-        Each delivery carries <code>Nil-Signature: t=…,v1=…</code>: an HMAC-SHA256 of <code>timestamp.body</code> with the secret. Reject a signature that doesn’t match, or a timestamp more than {Math.round(options.webhookToleranceSeconds / 60)} minutes old. Payloads hold ids and task keys only; read the details through the API.
+        Each delivery carries <code>Nil-Signature: t=…,v1=…</code>: an HMAC-SHA256 of <code>timestamp.body</code> with the secret. Reject a signature that doesn’t match, or a timestamp more than {countOf(Math.round(options.webhookToleranceSeconds / 60), 'minute')} old. Payloads hold ids and task keys only; read the details through the API.
       </p>
       {hook && (
         <>

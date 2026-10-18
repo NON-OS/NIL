@@ -21,13 +21,13 @@ export default function VerifyView({ standalone = false }: { standalone?: boolea
             Sign in
           </a>
         </header>
-        <div className="page page-narrow">
+        <main className="page page-narrow">
           <h1 style={{ display: 'flex', alignItems: 'center', gap: 10, fontFamily: 'var(--font-display)', fontSize: 'var(--text-2xl)', marginBottom: 8 }}>
             <BadgeCheck /> Verify a proof of work
           </h1>
           {intro}
           <VerifyPanel />
-        </div>
+        </main>
       </div>
     );
   }

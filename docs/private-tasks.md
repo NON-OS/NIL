@@ -6,7 +6,7 @@ A private task can be seen by two people only: whoever created it and whoever it
 
 When you create it, click **Private** in the new task box before you save. The button changes to **Private · encrypted**, and the task is encrypted from its first save.
 
-For a task that already exists, open it, click the **Visible to** field and choose **Only the creator and assignee**. Only the creator or the assignee can change this field.
+For a task that already exists, open it, click the **Visible to** field and choose the option that starts with **Only**. It names the two people who will see the task, such as **Only you and Sam**. **Everyone in the workspace** says who sees a team task: every member, and guests too when the task is in a project shared with them. Only the creator or the assignee can change this field.
 
 When a task that was visible to the team turns private, the server also deletes the plain copies of its words it kept: old titles and checklist items in the task's history, previews in notifications, the title stored for proof of work, and what [agents](ai-agents.md#history-and-audit) kept of it. That means the logs and summaries of agent runs on the task, its approval cards, the details of agents' calls about it in their audit trails and the replies stored for their repeated requests. Agent runs still going on it stop. Words someone already copied elsewhere, such as an agent's reply on another task, stay there.
 
