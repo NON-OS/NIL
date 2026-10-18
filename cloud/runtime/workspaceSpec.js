@@ -25,9 +25,14 @@ export default function workspaceSpec(config, workspace) {
   if (config.links.source) env.SOURCE_URL = config.links.source;
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 
+  // its own uid and gid: files in one workspace's volume belong to nobody else on the host, and a
+  // process that broke out of its container would be no user the host knows
+  const uid = app.uidBase + (workspace.invoiceSlot ?? 0);
+
   return Object.freeze({
     id: workspace.id,
     name: workspace.name,
+    user: `${uid}:${uid}`,
     image: workspace.image,
     volume: workspace.volume,
     env: Object.freeze(env),

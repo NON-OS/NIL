@@ -1,5 +1,10 @@
-// Written by deploy/provision.sh. Ubuntu's 50unattended-upgrades already limits automatic
-// updates to security fixes; Docker comes from its own repository and is upgraded by hand.
+// Written by deploy/provision.sh. Ubuntu's 50unattended-upgrades already takes Ubuntu's security
+// fixes; this adds Docker's own repository, so a fix to the engine or containerd that keeps the
+// workspaces apart arrives the same day. live-restore in /etc/docker/daemon.json keeps every
+// container running while the daemon restarts for it.
+Unattended-Upgrade::Origins-Pattern {
+	"origin=Docker,label=Docker CE,archive=${distro_codename}";
+};
 Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
 Unattended-Upgrade::Remove-Unused-Dependencies "true";
 // A kernel fix needs a reboot, which takes every workspace offline for a minute or two.

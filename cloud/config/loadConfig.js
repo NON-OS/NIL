@@ -33,8 +33,9 @@ export default function loadConfig(env = process.env) {
   const dataDir = path.resolve(read.text('CLOUD_DATA_DIR', 'data'));
 
   const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example localhost/nonos/nil:3.0.0.');
-  const user = read.text('CLOUD_APP_USER', '1000:1000');
-  if (!/^\d+:\d+$/.test(user)) read.fail('CLOUD_APP_USER must be uid:gid, for example 1000:1000.');
+  // each workspace runs as its own uid, this plus its number, never 1000 like the control plane
+  const uidBase = read.number('CLOUD_APP_UID_BASE', 200_000, { min: 10_000, max: 2_000_000_000 });
+  if (read.raw('CLOUD_APP_USER')) read.warn('CLOUD_APP_USER is no longer used: each workspace runs as its own uid from CLOUD_APP_UID_BASE.');
 
   const treasury = read.text('CLOUD_PLAN_TREASURY');
   if (treasury && !ADDRESS.test(treasury)) read.fail('CLOUD_PLAN_TREASURY must be an Ethereum address (0x and 40 hex characters).');
@@ -115,7 +116,7 @@ export default function loadConfig(env = process.env) {
     }),
     app: Object.freeze({
       image,
-      user,
+      uidBase,
       port: read.number('CLOUD_APP_PORT', 3000, { min: 1, max: 65535 }),
       treasury: treasury ? treasury.toLowerCase() : null,
       invoiceSlots,

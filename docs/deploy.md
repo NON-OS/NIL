@@ -36,6 +36,8 @@ sudo apt-get update && sudo apt-get install -y docker-ce docker-ce-cli container
 docker compose version
 ```
 
+Nil runs as uid 1000 inside its container, and on many cloud images the first login user (such as `ubuntu`) is uid 1000 too, with sudo. Someone who broke out of the container would then be that user. Check with `id -u`; if it prints 1000, run the server from another login user, or move this one to another uid with `sudo usermod -u 1500 <user>` while it has nothing running. Don't add your user to the `docker` group, which is as powerful as root.
+
 ## 2. Point DNS at the server
 
 Create an `A` record for `nonos.example.com` with the server's IPv4 address, and an `AAAA` record if it has IPv6. Wait until it resolves:

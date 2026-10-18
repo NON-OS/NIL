@@ -31,7 +31,7 @@ const frame = (stream, text) => {
 async function fakeEngine(t) {
   const socket = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-docker-')), 'docker.sock');
   const seen = [];
-  const state = { networks: new Set(), connected: new Set(), containers: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
+  const state = { networks: new Set(), connected: new Set(), containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
   const json = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json' });
     res.end(body === undefined ? '' : JSON.stringify(body));
@@ -62,7 +62,17 @@ async function fakeEngine(t) {
       if (m[1] === 'nil-caddy') return json(res, 200, { NetworkSettings: { Networks: Object.fromEntries([...state.connected].map((n) => [n, {}])) } });
       const c = state.containers.get(m[1]);
       if (!c) return json(res, 404, { message: `No such container: ${m[1]}` });
-      return json(res, 200, { Config: { Image: c.body.Image }, State: { Running: c.running, ExitCode: 0, Health: { Status: c.running ? 'healthy' : 'unhealthy', Log: [{ Output: '{"ok":true,"version":"3.1.0","schema":19,"members":7,"secret":"x","jobs":{"purge":1}}' }] } } });
+      return json(res, 200, { Config: { Image: c.body.Image }, State: { Running: c.running, ExitCode: 0, StartedAt: '2026-10-21T08:00:00.000000000Z', Health: { Status: c.running ? 'healthy' : 'unhealthy', Log: [{ Output: '{"ok":true,"version":"3.1.0","schema":19,"members":7,"secret":"x","jobs":{"purge":1}}' }] } } });
+    }
+    if ((m = /^POST \/containers\/([^/]+)\/wait$/.exec(route))) {
+      state.waited.push(m[1]);
+      return json(res, 200, { StatusCode: state.helperExit, Error: null });
+    }
+    if ((m = /^HEAD \/containers\/([^/]+)\/archive$/.exec(route))) {
+      const name = path.basename(url.searchParams.get('path'));
+      if (!state.mtimes.has(name)) return json(res, 404, { message: 'Could not find the file' });
+      res.writeHead(200, { 'x-docker-container-path-stat': Buffer.from(JSON.stringify({ name, size: 1, mode: 384, mtime: state.mtimes.get(name) })).toString('base64') });
+      return res.end();
     }
     if ((m = /^POST \/containers\/([^/]+)\/start$/.exec(route))) {
       const c = state.containers.get(m[1]);
@@ -76,7 +86,11 @@ async function fakeEngine(t) {
       c.running = false;
       return json(res, 204);
     }
-    if ((m = /^DELETE \/containers\/([^/]+)$/.exec(route))) return state.containers.delete(m[1]) ? json(res, 204) : json(res, 404, { message: 'No such container' });
+    if ((m = /^DELETE \/containers\/([^/]+)$/.exec(route))) {
+      if (!state.containers.delete(m[1])) return json(res, 404, { message: 'No such container' });
+      state.removed.push(m[1]);
+      return json(res, 204);
+    }
     if ((m = /^DELETE \/(networks|volumes)\/([^/]+)$/.exec(route))) return json(res, 404, { message: 'not found' });
     if ((m = /^POST \/networks\/([^/]+)\/disconnect$/.exec(route))) return json(res, 404, { message: 'network not found' });
     if ((m = /^POST \/containers\/([^/]+)\/exec$/.exec(route))) {
@@ -130,13 +144,29 @@ async function fakeEngine(t) {
 
 test('each workspace gets an internal network, Caddy attached to it, a volume and a hardened container', async (t) => {
   const { config, seen, state, driver } = await fakeEngine(t);
-  const spec = workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard', setupToken: 'tok' });
+  const spec = workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard', setupToken: 'tok', invoiceSlot: 7 });
   await driver.create(spec);
   const network = JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body);
   assert.deepEqual(network, { Name: `nil-${ID}`, Driver: 'bridge', Internal: true, Labels: { 'org.nonos.cloud.workspace': ID } });
   assert.ok(state.connected.has(`nil-${ID}`));
   const body = state.containers.get(`nil-${ID}`).body;
-  assert.deepEqual(body, containerBody(spec, { user: '1000:1000', appPort: 3000, tmpfsMb: 64, logMb: 10, logFiles: 3, healthIntervalSec: 30, startTimeoutSec: 120, stopTimeoutSec: 15 }));
+  assert.deepEqual(body, containerBody(spec, { appPort: 3000, tmpfsMb: 64, logMb: 10, logFiles: 3, healthIntervalSec: 30, startTimeoutSec: 120, stopTimeoutSec: 15 }));
+  assert.equal(body.User, '200007:200007', 'its own uid, never 1000 like the control plane');
+
+  // before the container exists, a helper hands the volume to that uid, then goes away
+  const creates = seen.filter((r) => r.path.endsWith('/containers/create'));
+  assert.deepEqual(creates.map((r) => r.query.name), [`nil-${ID}-owner`, `nil-${ID}`]);
+  const helper = JSON.parse(creates[0].body);
+  assert.deepEqual(helper.Entrypoint, ['chown', '-hR', '200007:200007', '/data']);
+  assert.equal(helper.User, '0:0');
+  assert.deepEqual(helper.HostConfig.CapDrop, ['ALL']);
+  assert.deepEqual(helper.HostConfig.CapAdd, ['CHOWN', 'DAC_READ_SEARCH']);
+  assert.equal(helper.HostConfig.NetworkMode, 'none');
+  assert.equal(helper.HostConfig.ReadonlyRootfs, true);
+  assert.deepEqual(helper.HostConfig.Mounts, [{ Type: 'volume', Source: `nil-${ID}-data`, Target: '/data' }]);
+  assert.deepEqual(state.waited, [`nil-${ID}-owner`]);
+  assert.ok(state.removed.includes(`nil-${ID}-owner`));
+  assert.equal(state.containers.has(`nil-${ID}-owner`), false);
   assert.equal(body.HostConfig.ReadonlyRootfs, true);
   assert.deepEqual(body.HostConfig.CapDrop, ['ALL']);
   assert.deepEqual(body.HostConfig.SecurityOpt, ['no-new-privileges:true']);
@@ -179,7 +209,7 @@ test('exports snapshot a running database first; imports, checkpoints and rollba
   const snapshot = state.execs.get('e1');
   assert.equal(snapshot.Cmd[0], 'node');
   assert.match(snapshot.Cmd.at(-1), /VACUUM INTO '\/data\/\.nil-snapshot\/nonos\.db'/);
-  assert.equal(snapshot.User, '1000:1000');
+  assert.equal(snapshot.User, undefined, 'as the container’s own user');
   await new Promise((resolve) => setTimeout(resolve, 50));
   assert.deepEqual(state.execs.get('e2').Cmd, ['rm', '-rf', '/data/.nil-snapshot'], 'the snapshot is removed once streamed');
 
@@ -204,6 +234,21 @@ test('pull failures reported mid-stream, missing things on removal, and Caddy re
   await driver.destroy('ffffffffffffffff', ['nil-ffffffffffffffff-data']);
   await assert.rejects(caddyReloader({ ...config, caddy: { ...config.caddy, container: 'nil-caddy' } })(), /Caddy rejected the configuration: Error: adapting config/);
   assert.equal(await caddyReloader({ ...config, caddy: { ...config.caddy, container: null } })(), false);
+});
+
+test('a helper that can’t hand over the volume stops the create; last writes come from file times only', async (t) => {
+  const { driver, state, config, seen } = await fakeEngine(t);
+  state.helperExit = 1;
+  await assert.rejects(driver.create(workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard' })), /own user failed \(exit code 1\)/);
+  assert.equal(state.containers.size, 0, 'neither the helper nor the workspace container is left');
+  state.helperExit = 0;
+  assert.equal(await driver.lastWrite(ID), null, 'no container, nothing to read');
+  await driver.create(workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard' }));
+  state.mtimes.set('nonos.db', '2026-10-21T09:00:00Z');
+  state.mtimes.set('nonos.db-wal', '2026-10-21T10:30:00Z');
+  assert.deepEqual(await driver.lastWrite(ID), { at: Date.parse('2026-10-21T10:30:00Z'), startedAt: Date.parse('2026-10-21T08:00:00Z') });
+  const heads = seen.filter((r) => r.method === 'HEAD');
+  assert.deepEqual(heads.map((r) => r.query.path).sort(), ['/data/nonos.db', '/data/nonos.db-wal']);
 });
 
 test('by default a missing image is an error and nothing is pulled', async (t) => {

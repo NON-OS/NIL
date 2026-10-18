@@ -2,6 +2,7 @@ import { Readable, pipeline } from 'node:stream';
 import dockerClient from './dockerClient.js';
 import containerBody from './containerBody.js';
 import readExecOutput from './readExecOutput.js';
+import ownVolume from './ownVolume.js';
 import dataLayout from '../dataLayout.js';
 import readHealthReport from '../readHealthReport.js';
 import rewriteTar from '../../lib/tar/rewriteTar.js';
@@ -11,7 +12,8 @@ import tarBlocks from '../../lib/tar/tarBlocks.js';
 const { mount, db: DB, snapshotDir, checkpointDir } = dataLayout;
 
 // VACUUM INTO writes a consistent copy of the live database while the app keeps running. It
-// runs inside the workspace, as the workspace's own user, with the node already in the image.
+// runs inside the workspace, as the workspace's own user (an exec runs as the container's user
+// unless told otherwise), with the node already in the image.
 const SNAPSHOT_SCRIPT = [
   "const fs = require('node:fs');",
   `fs.rmSync('${mount}/${snapshotDir}', { recursive: true, force: true });`,
@@ -29,7 +31,6 @@ const containerName = (id) => `nil-${id}`;
 export default function dockerDriver({ config, log, client = dockerClient(config.docker) }) {
   const { app, caddy, docker } = config;
   const settings = {
-    user: app.user,
     appPort: app.port,
     tmpfsMb: app.tmpfsMb,
     logMb: app.logMb,
@@ -41,7 +42,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
   const archive = (id) => `/containers/${containerName(id)}/archive`;
 
   async function exec(id, cmd) {
-    const created = await client.json('POST', `/containers/${containerName(id)}/exec`, { body: { Cmd: cmd, AttachStdout: true, AttachStderr: true, User: app.user } });
+    const created = await client.json('POST', `/containers/${containerName(id)}/exec`, { body: { Cmd: cmd, AttachStdout: true, AttachStderr: true } });
     const output = await readExecOutput(await client.stream('POST', `/exec/${created.Id}/start`, { body: { Detach: false, Tty: false } }));
     const info = await client.json('GET', `/exec/${created.Id}/json`);
     return { exitCode: info.ExitCode, ...output };
@@ -116,6 +117,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
       }
       await attachProxy(spec.id);
       await client.json('POST', '/volumes/create', { body: { Name: spec.volume, Driver: 'local', Labels: labels } });
+      await ownVolume(client, spec);
       await client.json('POST', '/containers/create', { query: { name: containerName(spec.id) }, body: containerBody(spec, settings) });
     },
 

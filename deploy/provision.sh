@@ -15,6 +15,11 @@ trap 'log "stopped at line $LINENO: $BASH_COMMAND"' ERR
 
 MODE=hosted
 DEPLOY_USER=deploy
+# Not 1000: the control plane runs as uid 1000 inside its container (the node user), and
+# workspaces as 200000 and up. Someone who broke out of a container must not land in an account
+# with sudo and the docker group.
+DEPLOY_UID=1500
+MOVE_DEPLOY_UID=0
 SSH_KEYS=()
 SWAP_GB=8
 NEW_HOSTNAME=
@@ -32,6 +37,9 @@ Usage: provision.sh [options]
 
   --mode hosted|single     hosted Nil (default) or one self-hosted workspace
   --deploy-user NAME       the non-root user that deploys and runs Docker (default: deploy)
+  --deploy-uid N           its uid and gid, one no container uses (default 1500)
+  --move-deploy-uid        move an existing deploy user off uid 1000; stops Nil for a minute,
+                           and must run as root from a session that isn't the deploy user's
   --ssh-key "KEY"          a public key for that user (repeatable)
   --ssh-key-file FILE      public keys for that user, one per line (default: root's keys)
   --swap-gb N              size of the swap file to create if there is no swap (default 8, 0 for none)
@@ -51,6 +59,8 @@ while [ $# -gt 0 ]; do
   case $1 in
     --mode) MODE=$2; shift 2 ;;
     --deploy-user) DEPLOY_USER=$2; shift 2 ;;
+    --deploy-uid) DEPLOY_UID=$2; shift 2 ;;
+    --move-deploy-uid) MOVE_DEPLOY_UID=1; shift ;;
     --ssh-key) SSH_KEYS+=("$2"); shift 2 ;;
     --ssh-key-file) mapfile -t -O "${#SSH_KEYS[@]}" SSH_KEYS < <(grep -E '^(ssh-|ecdsa-|sk-)' "$2"); shift 2 ;;
     --swap-gb) SWAP_GB=$2; shift 2 ;;
@@ -70,6 +80,9 @@ done
 
 case $MODE in hosted | single) ;; *) die "--mode must be hosted or single." ;; esac
 [[ $DEPLOY_USER =~ ^[a-z_][a-z0-9_-]{0,31}$ ]] || die "--deploy-user must be a plain Unix user name."
+if ! [[ $DEPLOY_UID =~ ^[0-9]+$ ]] || [ "$DEPLOY_UID" -le 1000 ] || [ "$DEPLOY_UID" -ge 60000 ]; then
+  die "--deploy-uid must be a whole number from 1001 to 59999 (1000 is the uid inside Nil's containers)."
+fi
 [[ $SWAP_GB =~ ^[0-9]+$ ]] || die "--swap-gb must be a whole number."
 [ -z "$AUTO_REBOOT" ] || [[ $AUTO_REBOOT =~ ^([01][0-9]|2[0-3]):[0-5][0-9]$ ]] || die "--auto-reboot must be HH:MM."
 [[ $ADDRESS_POOL =~ ^[0-9.]+/[0-9]+$ ]] || die "--docker-pool must be a CIDR such as 10.200.0.0/16."
@@ -118,7 +131,45 @@ run systemctl enable --now smartmontools
 log "Free space on /: $(df -h --output=avail / | tail -n 1 | tr -d ' ')"
 
 step "Deploy user $DEPLOY_USER"
-if ! id "$DEPLOY_USER" > /dev/null 2>&1; then run useradd --create-home --shell /bin/bash "$DEPLOY_USER"; fi
+if ! id "$DEPLOY_USER" > /dev/null 2>&1; then
+  taken=$(getent passwd "$DEPLOY_UID" | cut -d: -f1 || true)
+  [ -z "$taken" ] || die "uid $DEPLOY_UID already belongs to $taken. Pick another with --deploy-uid."
+  getent group "$DEPLOY_UID" > /dev/null && die "gid $DEPLOY_UID is already taken. Pick another with --deploy-uid."
+  run groupadd --gid "$DEPLOY_UID" "$DEPLOY_USER"
+  run useradd --create-home --shell /bin/bash --uid "$DEPLOY_UID" --gid "$DEPLOY_UID" "$DEPLOY_USER"
+elif [ "$(id -u "$DEPLOY_USER")" = 1000 ] && [ "$MOVE_DEPLOY_UID" = 0 ]; then
+  warn "$DEPLOY_USER has uid 1000, the uid the control plane (and, on releases up to 3.0.0, every workspace and the single-mode app) runs as inside its container, so someone who broke out of one would be $DEPLOY_USER, with sudo and the docker group. To move it to $DEPLOY_UID: run this again with --keep-root-login, log in as root (or use the Robot console), run it with --move-deploy-uid, then run it once more without --keep-root-login. Nil stops for about a minute while the uid moves."
+elif [ "$(id -u "$DEPLOY_USER")" = 1000 ]; then
+  # usermod refuses while any process runs as the uid, and Nil's containers run as 1000 too
+  [ "${SUDO_USER:-}" != "$DEPLOY_USER" ] || die "--move-deploy-uid has to run as root directly: this sudo from $DEPLOY_USER keeps the uid in use."
+  ! pgrep -u "$DEPLOY_USER" -f '^sshd' > /dev/null 2>&1 || die "$DEPLOY_USER is logged in. Log out every $DEPLOY_USER session and run this again."
+  taken=$(getent passwd "$DEPLOY_UID" | cut -d: -f1 || true)
+  [ -z "$taken" ] || die "uid $DEPLOY_UID already belongs to $taken. Pick another with --deploy-uid."
+  old_gid=$(id -g "$DEPLOY_USER")
+  stopped=()
+  if command -v docker > /dev/null 2>&1; then mapfile -t stopped < <(docker ps -q); fi
+  if [ ${#stopped[@]} -gt 0 ]; then
+    log "Stopping ${#stopped[@]} containers while the uid moves"
+    run docker stop --time 30 "${stopped[@]}" > /dev/null
+  fi
+  if [ "$DRY_RUN" = 0 ] && pgrep -u "$DEPLOY_USER" > /dev/null; then
+    busy=$(pgrep -u "$DEPLOY_USER" -l | head -n 3 | tr '\n' ' ')
+    if [ ${#stopped[@]} -gt 0 ]; then docker start "${stopped[@]}" > /dev/null; fi
+    die "Something still runs as $DEPLOY_USER ($busy). Nothing was changed, and the containers run again."
+  fi
+  run usermod --uid "$DEPLOY_UID" "$DEPLOY_USER"
+  if [ "$(getent group "$DEPLOY_USER" | cut -d: -f3)" = "$old_gid" ] && ! getent group "$DEPLOY_UID" > /dev/null; then
+    run groupmod --gid "$DEPLOY_UID" "$DEPLOY_USER"
+    # usermod moved the files' owner in the home folder, not their group
+    run find "$HOME_DIR" -xdev -gid "$old_gid" -exec chgrp -h "$DEPLOY_USER" {} +
+  fi
+  for spool in "/var/spool/cron/crontabs/$DEPLOY_USER" "/var/mail/$DEPLOY_USER"; do
+    if [ -e "$spool" ]; then run chown "$DEPLOY_USER" "$spool"; fi
+  done
+  # Nil's folder and its logs are handed to the new uid further down
+  if [ ${#stopped[@]} -gt 0 ]; then run docker start "${stopped[@]}" > /dev/null; fi
+  log "$DEPLOY_USER is now uid $DEPLOY_UID."
+fi
 # no password at all: keys only
 run passwd -l "$DEPLOY_USER" > /dev/null
 if [ ${#SSH_KEYS[@]} -eq 0 ] && [ -s /root/.ssh/authorized_keys ]; then mapfile -t SSH_KEYS < <(grep -E '^(ssh-|ecdsa-|sk-)' /root/.ssh/authorized_keys); fi
