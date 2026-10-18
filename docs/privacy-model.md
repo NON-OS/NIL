@@ -11,6 +11,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - Bounty payments are shown only to admins and to the person paid, because a transaction reveals the receiving wallet.
 - Guests see only the projects shared with them and the tasks assigned to them.
 - In an anonymous vote, nobody, admins included, can see who chose what.
+- The audit file of a sealed vote, which lists every ballot, is ready only once the vote closes.
 
 ## What the server operator can read
 
@@ -69,9 +70,10 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
 - Encrypted weighted votes are in beta. The ballot circuit (`circuits/ballot.circom`) hasn't been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2, recorded in `circuits/CEREMONY.json`, was a development ceremony with every contribution made on one machine. Whoever ran it could in principle forge proofs. Rerun phase 2 with independent contributors before relying on these votes for anything that matters; [the ballot ceremony](../circuits/CEREMONY.md) in the source code shows how.
 - In an encrypted vote, two trustees working together could decrypt single ballots. That reveals each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
+- The server decides who is in a vote's census and which ballots the trustees of an encrypted vote decrypt. Browsers check what they can: voters compare the voter list they fetch without a cookie with the one they were shown signed in, and trustees check every ballot and add them up themselves. A dishonest server could still show everyone the same made-up list, or hand trustees only some of the ballots, down to a single one, whose "totals" would then be that ballot.
 - Anonymous votes hide who voted what among the members who voted. In a small team, or with a lopsided result, the totals alone can give choices away.
-- Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
-- Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice.
+- Anonymous ballots, and the voter list fetched just before them, carry no cookie, but the server and any proxy still see the IP address and time each one arrives. Use Tor if that matters. If your keys aren't unlocked when you vote, unlocking them sends signed-in requests just before your ballot.
+- Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice, and in a weighted vote the voter's wallets at the snapshot, which shows they belong together.
 - Files on team tasks aren't encrypted, and an encrypted file still shows its size. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
 - Encryption only helps if the app your browser runs is Nil's own code. Whoever runs the server could serve changed code that reads everything you unlock. Anyone can [check what a server sends](verify-a-server.md) against a release, byte for byte, but that proves what the server sent to the check, not to everyone at every moment. Running a build you trust on a server you control is the strongest defence.

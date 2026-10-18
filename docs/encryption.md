@@ -6,7 +6,7 @@ What Nil encrypts in the browser, who holds which key, what teammates check for 
 
 - The first time you unlock, your browser makes a random 32-byte seed. That seed is your identity. From it come, each by HKDF-SHA256 with its own label:
   - an X25519 key pair, which teammates seal doc keys, private-task keys and vote shares to;
-  - an Ed25519 key pair, which signs what you write in docs and private tasks;
+  - an Ed25519 key pair, which signs what you write in docs and private tasks, and your steps as a trustee of an encrypted vote;
   - your private payout keys (ERC-5564 spending and viewing keys) and your anonymous voting key (Semaphore).
 - The seed leaves your browser only wrapped. The server keeps one wrap per linked wallet: the seed under AES-256-GCM, with a key derived from that wallet's signature of its unlock message (below). That signature never leaves the browser, so the server can't open a wrap.
 - Any linked wallet that has a wrap unlocks the same identity. Linking a wallet while your keys are unlocked gives it a wrap too, and **Add the wallet in your browser** under **Encryption keys** in **Settings → Sign-in & security** adds one later (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)).
@@ -51,14 +51,18 @@ The server writes the messages for signing in and for signed ballots. A dishones
 ## Encrypted votes
 
 - The three trustees run a distributed key generation on Baby Jubjub. Each first commits to a hash of their two coefficient commitments. Only when all three have committed does anyone reveal, together with a Schnorr proof of knowledge for each commitment, bound to the vote and the seat. The server and every browser check the proofs, so no trustee can publish a commitment whose secret they don't hold and steer the vote key to one only they know.
-- Voters rebuild the vote key from the revealed commitments and refuse to vote if the server's copy differs.
-- A trustee's secret line is derived from their identity for that vote and seat, so setup can finish after a reload. Whoever could recompute it already holds that trustee's identity.
-- As soon as all dealings are in, each trustee's browser checks the shares sealed to it against the dealers' commitments. A report of a bad share stops the vote from taking ballots, since its totals could never be decrypted.
+- Each trustee signs their commitment hash, and their reveal (the vote, the seat, their account, both commitments and a SHA-256 digest of the shares they sealed), with their Ed25519 signing key. Voters and trustees check both signatures against the key their browser pinned for that trustee, as for docs, so a server can't deal a seat itself and end up holding the vote key.
+- Voters rebuild the vote key from the signed commitments and refuse to vote if the server's copy differs.
+- A trustee's secret line is derived from their identity for that vote and seat, so setup can finish after a reload. Whoever could recompute it already holds that trustee's identity. Each trustee's browser checks that the dealing shown for its own seat is the one that line gives.
+- As soon as all dealings are in, each trustee's browser checks the shares sealed to it against the dealers' commitments, and that the sealed shares are the ones their dealer signed. No ballot is taken until all three trustees report their shares in order.
+- A trustee whose share doesn't match files a complaint naming the dealer, signed with their key. The dealer's browser answers only a complaint whose signature checks out against its pins, by showing that share, signed. The server checks it against the dealer's commitments, and so can anyone from the audit file. A matching share is used by the trustee who complained; one that doesn't match stops the vote for good.
+- After the vote closes, each trustee's browser fetches every encrypted ballot, checks its Groth16 proof against the circuit's verification key built into the app, its scope, option count, key and root, and that no nullifier appears twice, and adds the ballots up itself. It decrypts only if its sums equal the ones the server says it counted, and it remembers, per vote, the sums it decrypted, so it never decrypts other ones.
 
 ## What a server operator can still do
 
 - Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. [Check what a server sends](verify-a-server.md) compares a server with a release byte for byte; it can't see code sent only to one person or for a moment. Running a build you trust on a server you control is the strongest defence.
 - See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
+- Decide who is in a vote's census and which ballots the trustees decrypt. A census the server made up for everyone isn't caught. Nor is a ballot it leaves out of what trustees get: it could hand them a single valid ballot, and the "totals" two trustees decrypt would be that ballot.
 - Refuse service, delete data, or serve old data. Docs and private tasks carry a signed version or revision number, and a browser warns when the server sends an older one than it has already opened. A new browser or device has nothing to compare with.
 - Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.
 - Copy a private task's sealed contents onto another task. The words are still their writer's real words.
