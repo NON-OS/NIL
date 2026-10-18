@@ -1,13 +1,16 @@
-# Nil's verifier: one Helios light client for the whole server, between every workspace and the
-# Ethereum node. It checks each answer the workspaces act on (payments, invoices, balances,
+# Nil's verifier: one Helios light client for the whole server, next to every workspace's
+# Ethereum node. It checks the answers the workspaces act on (payments, invoices, balances,
 # stakes, passes, smart-wallet signatures) against the chain the beacon sync committee signed,
-# and seals what it proved, so a lying or compromised node can't make a workspace credit a
-# payment that never happened. It can still hide one: see "Verified chain reads" in README.md.
+# and seals what it proved. In shadow mode (CLOUD_VERIFIER_MODE, the launch default) it catches
+# a lying node after the fact; in enforce mode a lying node can't make a workspace credit a
+# payment that never happened, though it can still hide one. See "Verified chain reads" in
+# README.md.
 #
 # Turn it on in /opt/nil/.env: add this file to COMPOSE_FILE, set VERIFIER_KEY (openssl rand
 # -hex 32) and VERIFIER_CHECKPOINT (a finalized beacon block root less than two weeks old),
-# and, without the bundled node, VERIFIER_EXECUTION_RPC and VERIFIER_CONSENSUS_RPC. Then set
-# CLOUD_RPC_URL=http://verifier:8545 in cloud.env, so Caddy's relay sends workspaces here.
+# and, without a synced bundled node, VERIFIER_EXECUTION_RPC and VERIFIER_CONSENSUS_RPC. Then set
+# CLOUD_VERIFIER_URL=http://verifier:8545 in cloud.env for shadow mode, or, for enforce,
+# CLOUD_RPC_URL=http://verifier:8545, so Caddy's relay sends workspaces here.
 services:
   verifier:
     image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}

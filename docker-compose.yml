@@ -31,8 +31,9 @@ services:
 
   # Nil's verifier, off unless you ask for it with COMPOSE_PROFILES=verifier (docs/self-hosting.md,
   # "Verified chain reads"). Its settings go in verifier.env, apart from .env, so it never holds
-  # the app's secrets: the VERIFIER_ lines of .env.example. Then point the app at it in .env with
-  # NOX_RPC_URL=http://verifier:8545 and NOX_VERIFIER_KEY set to the same value as VERIFIER_KEY.
+  # the app's secrets: the VERIFIER_ lines of .env.example. Then, in .env, set NOX_VERIFIER_KEY to
+  # the same value as VERIFIER_KEY and NOX_VERIFIER_MODE=shadow with
+  # NOX_VERIFIER_URL=http://verifier:8545, or enforce with NOX_RPC_URL=http://verifier:8545.
   verifier:
     build: .
     image: nonos:latest

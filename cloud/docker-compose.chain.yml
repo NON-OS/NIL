@@ -6,8 +6,8 @@
 # Turn it on in /opt/nil/.env: set COMPOSE_FILE=docker-compose.yml:docker-compose.chain.yml and
 # RETH_IMAGE and LIGHTHOUSE_IMAGE to the clients' current stable release tags (an outdated
 # client stops following the chain at the next network upgrade). Then set
-# CLOUD_RPC_URL=http://verifier:8545 in cloud.env, with Nil's verifier in front of this node
-# (docker-compose.verifier.yml), or http://reth:8545 without it. deploy/provision.sh
+# CLOUD_RPC_URL=http://reth:8545 in cloud.env, or http://verifier:8545 once Nil's verifier
+# (docker-compose.verifier.yml) runs in enforce mode in front of this node. deploy/provision.sh
 # --with-chain writes the engine API secret to /opt/nil/chain/jwt.hex. Peer-to-peer traffic is
 # outbound only, since the firewall leaves 30303 and 9000 closed; both clients sync fine that way.
 services:

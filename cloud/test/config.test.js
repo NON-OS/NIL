@@ -47,8 +47,8 @@ test('settings that would make the deployment unsafe or broken are errors', () =
     [{ CLOUD_BACKUP_RECIPIENTS: 'nilbk-pub-nope' }, /entry 1/],
     [{ CLOUD_BACKUP_TARGET: 'ftp://host/x', CLOUD_BACKUP_RECIPIENTS: backupKeys.generate().publicKey }, /file:\/\/ or s3:\/\//],
     [{ CLOUD_BACKUP_TIME: '25:00' }, /CLOUD_BACKUP_TIME/],
-    // with the chain on, workspaces act only on reads the verifier proved
-    [{ CLOUD_VERIFIER_KEY: '' }, /CLOUD_VERIFIER_KEY is not set/],
+    // acting only on proven reads needs the verifier's key
+    [{ CLOUD_VERIFIER_MODE: 'enforce', CLOUD_VERIFIER_KEY: '' }, /CLOUD_VERIFIER_MODE=enforce needs the verifier’s key/],
     [{ CLOUD_VERIFIER_KEY: 'short' }, /CLOUD_VERIFIER_KEY must be at least 32/],
   ];
   for (const [env, pattern] of cases) {
@@ -57,11 +57,28 @@ test('settings that would make the deployment unsafe or broken are errors', () =
   }
 });
 
-test('without the chain no verifier key is needed, and none reaches the workspaces', async () => {
-  const { config, errors } = loadConfig({ ...baseEnv, CLOUD_RPC_URL: 'off', CLOUD_VERIFIER_KEY: '' });
-  assert.deepEqual(errors, []);
+test('the verifier runs in shadow by default; without its key or address the control plane still starts, says so, and it is off', async () => {
   const { default: workspaceSpec } = await import('../runtime/workspaceSpec.js');
-  assert.equal(workspaceSpec(config, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard' }).env.NOX_VERIFIER_KEY, undefined);
+  const env = (cfg) => workspaceSpec(cfg, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard' }).env;
+  assert.equal(loadConfig(baseEnv).config.app.verifierMode, 'shadow');
+  for (const missing of [{ CLOUD_VERIFIER_KEY: '' }, { CLOUD_VERIFIER_URL: '' }]) {
+    const { config, errors, warnings } = loadConfig({ ...baseEnv, ...missing });
+    assert.deepEqual(errors, []);
+    assert.equal(config.app.verifierMode, 'off');
+    assert.ok(warnings.some((w) => /CLOUD_VERIFIER_MODE=shadow, but .* is not set/.test(w)), warnings.join(' | '));
+    assert.equal(env(config).NOX_VERIFIER_MODE, undefined);
+    assert.equal(env(config).NOX_VERIFIER_KEY, undefined);
+  }
+  const off = loadConfig({ ...baseEnv, CLOUD_VERIFIER_MODE: 'off' });
+  assert.deepEqual(off.errors, []);
+  assert.equal(env(off.config).NOX_VERIFIER_KEY, undefined);
+  assert.equal(env(loadConfig({ ...baseEnv, CLOUD_RPC_URL: 'off', CLOUD_VERIFIER_KEY: '' }).config).NOX_VERIFIER_MODE, undefined);
+
+  // enforce: the workspaces' one address is the verifier, and no second one is handed out
+  const enforce = env(loadConfig({ ...baseEnv, CLOUD_VERIFIER_MODE: 'enforce', CLOUD_RPC_URL: 'http://verifier:8545' }).config);
+  assert.equal(enforce.NOX_VERIFIER_MODE, 'enforce');
+  assert.equal(enforce.NOX_VERIFIER_KEY, 'v'.repeat(64));
+  assert.equal(enforce.NOX_VERIFIER_URL, undefined);
 });
 
 test('open egress needs no Caddy container, and an S3 target reads its credentials', () => {

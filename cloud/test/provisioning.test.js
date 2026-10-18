@@ -42,8 +42,10 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     TRUST_PROXY: '1',
     // rpc-only egress: the chain is reached through Caddy's relay, never directly
     NOX_RPC_URL: 'http://nil-caddy:8545',
-    // and it acts only on answers Nil's verifier, behind that relay, sealed with this key
+    // shadow mode: what the node says is checked through Nil's verifier, behind its own relay
+    NOX_VERIFIER_MODE: 'shadow',
     NOX_VERIFIER_KEY: 'v'.repeat(64),
+    NOX_VERIFIER_URL: 'http://nil-caddy:8546',
     PLAN_TREASURY: `0x${'7'.repeat(40)}`,
     // the first workspace's slice of the invoice amounts, with the key every workspace shares
     PLAN_INVOICE_SLOT: '0/1000',
@@ -67,6 +69,8 @@ test('the operator’s shared env file reaches every workspace but can’t overr
   assert.equal(env.APP_URL, 'https://acme.nil.test');
   assert.equal(env.NOX_RPC_URL, 'https://rpc.test/v1/key');
   assert.equal(env.NOX_VERIFIER_KEY, 'v'.repeat(64));
+  // open egress reaches the verifier directly
+  assert.equal(env.NOX_VERIFIER_URL, 'http://verifier:8545');
 });
 
 test('a failed first start marks the workspace failed, alerts, and resume retries it', async () => {

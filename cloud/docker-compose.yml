@@ -28,7 +28,7 @@ services:
       CLOUD_TRUST_PROXY: "1"
       CLOUD_APP_ENV_FILE: /etc/nil/workspace.env
       # the key Nil's verifier (docker-compose.verifier.yml) seals its answers with; every
-      # workspace gets it as NOX_VERIFIER_KEY
+      # workspace gets it as NOX_VERIFIER_KEY. Without it the verifier stays off.
       CLOUD_VERIFIER_KEY: ${VERIFIER_KEY:-}
     # The Docker socket makes this container as powerful as root on the host: it has to be, to
     # create workspaces. Everything else is locked down, and nothing publishes its ports.

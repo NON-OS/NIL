@@ -44,6 +44,31 @@ test('health checks restart an unhealthy workspace after repeated failures, then
   assert.ok(ctx.store.workspaces.get(ws.id).lastHealthyAt);
 });
 
+test('a workspace whose node was caught in a false answer is a critical alert, once each time', async () => {
+  const ctx = testContext();
+  const ws = await running(ctx);
+  const check = createHealthCheck(ctx);
+  await check();
+  assert.equal(ctx.alerts.length, 0);
+  ctx.driver.containers.get(ws.id).report = { chainMismatchAt: Date.UTC(2026, 9, 21, 9, 30) };
+  await check();
+  await check();
+  const caught = ctx.alerts.filter((a) => a.event === 'workspace.chain_mismatch');
+  assert.equal(caught.length, 1);
+  assert.equal(caught[0].severity, 'critical');
+  assert.match(caught[0].message, /2026-10-21T09:30:00.000Z.*shadow mode the workspace acted on it/);
+  ctx.driver.containers.get(ws.id).report = { chainMismatchAt: Date.UTC(2026, 9, 21, 11, 0) };
+  await check();
+  assert.equal(ctx.alerts.filter((a) => a.event === 'workspace.chain_mismatch').length, 2);
+});
+
+test('the health report keeps when the node was caught lying, and nothing else from the chain', async () => {
+  const { default: readHealthReport } = await import('../runtime/readHealthReport.js');
+  const body = { ok: true, version: '3.1.0', chain: { enabled: true, verification: { mode: 'shadow', mismatchAt: '2026-10-21T09:30:00.000Z', reason: 'mismatch' } } };
+  assert.deepEqual(readHealthReport(JSON.stringify(body)), { ok: true, version: '3.1.0', chainMismatchAt: Date.UTC(2026, 9, 21, 9, 30) });
+  assert.equal(readHealthReport(JSON.stringify({ ok: true, chain: { verification: { mismatchAt: 'yesterday' } } })).chainMismatchAt, undefined);
+});
+
 test('a missing container for a running workspace is recreated on the same volume', async () => {
   const ctx = testContext({ env: { CLOUD_HEALTH_FAILURES: '1' } });
   const ws = await running(ctx);
