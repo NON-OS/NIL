@@ -52,6 +52,18 @@ test('an index that fails its check is rebuilt from the tasks, and finds the sam
   assert.equal(sql.get('SELECT COUNT(*) AS n FROM task_search').n, sql.get('SELECT COUNT(*) AS n FROM tasks WHERE private = 0 AND sealed IS NULL').n);
 });
 
+test('an index with a damaged block is rebuilt whole from the documents FTS5 keeps', async () => {
+  await owner('POST', '/api/tasks', { title: 'Order the quayside banners' });
+  // index blocks after the two FTS5 keeps for its own bookkeeping
+  const block = sql.get('SELECT id FROM task_search_data WHERE id > 10 ORDER BY id LIMIT 1').id;
+  sql.run('UPDATE task_search_data SET block = zeroblob(length(block)) WHERE id = ?', block);
+  assert.equal(healthy(), false);
+  await purge();
+  assert.equal(healthy(), true);
+  assert.deepEqual(await titles('quayside'), ['Order the quayside banners']);
+  assert.deepEqual(await titles('harbourlease'), ['Pay the harbourlease deposit', 'Renew the harbourlease']);
+});
+
 test('a healthy index is left alone', async () => {
   const { default: checkSearchIndex } = await import('../db/checkSearchIndex.js');
   assert.equal(checkSearchIndex(), false);

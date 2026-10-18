@@ -79,6 +79,9 @@ function copyRows(file, tables) {
       });
       emptySearchIndex();
       db.exec('UPDATE main.tasks SET number = number');
+      // FTS5 builds the index once more from the rows just written, so none of its known defects
+      // carry into the restored workspace
+      db.exec("INSERT INTO main.task_search (task_search) VALUES ('rebuild')");
       // the trial on this server starts when its first workspace arrives, restored or not
       if (billingState.get('trialStart', null) === null) billingState.set('trialStart', Date.now());
     });
