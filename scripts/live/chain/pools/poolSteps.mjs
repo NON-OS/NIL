@@ -11,9 +11,8 @@ const files = (name) => ({ wasm: path.join(ZK, `${name}.wasm`), zkey: path.join(
 // What an admin's browser does for the team pool, step by step with the app's own modules and
 // the app's own API routes. Only the wallet differs: a test key signs and sends raw
 // transactions where the app would ask the browser wallet.
-export default function poolSteps({ api, chain, wallet, info }) {
-  const key = crypto.getRandomValues(new Uint8Array(16));
-  const identity = identityFromSeed(crypto.getRandomValues(new Uint8Array(32)));
+export default function poolSteps({ api, chain, wallet, info, key = crypto.getRandomValues(new Uint8Array(16)), seed = crypto.getRandomValues(new Uint8Array(32)) }) {
+  const identity = identityFromSeed(seed);
   const keys = poolKit.masterKeys(key);
   const usdc = info.assets.find((a) => a.symbol === 'USDC');
   let book = noteBook.empty();
@@ -34,6 +33,15 @@ export default function poolSteps({ api, chain, wallet, info }) {
     keys,
     usdc,
     book: () => book,
+
+    // the team's account as an earlier run left it, or a new one
+    async open() {
+      const { account } = await api.get('/pool-account');
+      if (!account.exists) return this.create();
+      book = await poolKit.noteSeal.open(key, account.notes);
+      rev = account.notesRev;
+      return account;
+    },
 
     async create() {
       const body = { keyTag: poolKit.noteSeal.tag(key), wrapped: await poolKit.poolKeySeal.seal(key, identity.publicKey), notes: await poolKit.noteSeal.seal(key, book) };
