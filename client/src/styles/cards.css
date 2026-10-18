@@ -119,3 +119,52 @@
     justify-content: flex-start;
   }
 }
+
+/* numbered steps with the current one marked: the signing guide, linking a backup wallet */
+.step-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.step-list li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  color: var(--muted);
+}
+
+.step-list li.now {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+  color: var(--ink);
+}
+
+.step-list b {
+  color: var(--accent-text);
+  font-family: var(--font-mono);
+  font-size: var(--text-xs);
+  font-weight: 500;
+  line-height: 20px;
+}
+
+.step-list strong {
+  display: block;
+  color: var(--ink);
+  font-size: var(--text-sm);
+  font-weight: 550;
+}
+
+.step-list small {
+  display: block;
+  font-size: var(--text-sm);
+}
+
+.step-list li.done strong {
+  color: var(--muted);
+}

@@ -66,6 +66,8 @@ Click your name at the bottom of the sidebar, then **Sign out**. To end your ses
 - Each wallet you add to your keys later signs its own unlock message twice.
 - After that, one signature per browser tab unlocks your keys.
 
+Whenever Nil asks for several signatures in a row, a panel in the corner says how many, what each one is for and which one your wallet is asking for now. None of them is a transaction or costs anything.
+
 The unlock message is signed twice because the signature is what opens your keys. A wallet that signs the same message differently each time could never open them again, so Nil compares the two and stops with "Your wallet signs the same message differently each time, so it can't hold your keys." That wallet can still sign you in, and another of your wallets can hold your keys. MetaMask, Rabby, Ledger and Trezor work. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet. Once a regular wallet has set up your keys, though, a passkey can unlock them (see [Unlock with a passkey](#unlock-with-a-passkey)).
 
 Your keys are listed under **Encryption keys** in **Settings → Sign-in & security**: your key fingerprint, which teammates compare with theirs, the wallets that unlock your keys, and any passkeys that do. [Encryption and trust](encryption.md) explains the design.

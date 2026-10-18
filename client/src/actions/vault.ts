@@ -7,6 +7,7 @@ import sealedCache from '../state/sealedCache';
 import revealTask from '../state/revealTask';
 import lockedDetail from '../state/lockedDetail';
 import hadKeys from '../state/hadKeys';
+import signing from '../state/signing';
 import ethereum from '../lib/ethereum';
 import VaultError from '../lib/VaultError';
 import b64u from '../lib/crypto/b64u';
@@ -31,10 +32,11 @@ const sameKeys = (identity: Identity, listed: Listed) => listed.publicKey === b6
 const missing = () => new VaultError('missing', 'Your keys seem to be missing from the server. Restore them from your recovery kit, or start over with new keys. If you didn’t reset them yourself, tell your admin first.');
 
 // A brand-new identity: a random seed, wrapped for this wallet and published with its signature.
+// That's three signatures in a row, so the signing guide says what each one is for.
 async function create(address: string, reset: boolean) {
   const identity = await fromSeed(crypto.getRandomValues(new Uint8Array(32)));
   try {
-    await publishKeys(identity, address, { reset, wrap: await walletWraps.make(identity.seed, address) });
+    await signing.run('keys', async () => publishKeys(identity, address, { reset, wrap: await walletWraps.make(identity.seed, address) }));
   } catch (err) {
     forgetIdentity(identity);
     // keys on record that the listing hides, because the wallet that signed them was unlinked
@@ -138,7 +140,7 @@ const vault = {
     if (!identity) throw new Error('Unlock your keys first.');
     const { address } = await ethereum.account();
     if ((await walletWraps.list()).some((w) => w.address === address.toLowerCase())) return false;
-    await walletWraps.save(await walletWraps.make(identity.seed, address));
+    await walletWraps.save(await signing.run('addWallet', () => walletWraps.make(identity.seed, address)));
     return true;
   },
 

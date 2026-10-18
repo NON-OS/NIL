@@ -156,6 +156,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Changed
 
+- When Nil asks your wallet for several signatures in a row (setting up your encryption keys, linking a backup wallet, adding a wallet to your keys), a panel says how many, what each one is for and which one your wallet is asking for now. Screen readers hear each step as it comes.
 - Under **List on the public bounty board**, the bounty panel says that anyone on the internet can see a listed bounty's title, reward, due date and the start of its description, and that people, comments and files stay private.
 - The task's **Visible to** menu names who can see it: **Only you and Sam** for a private task, and **Everyone in the workspace** with "Members, and guests on this project" for a team task. Property buttons in the task panel are named by the value they show, so screen readers hear the current status, priority or visibility, not only the field's name.
 - A signed vote says, above its options, that it isn't anonymous: your wallet signs your ballot and admins can see who voted for what. The new vote window says the same before you start one.

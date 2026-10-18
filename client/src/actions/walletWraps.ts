@@ -1,5 +1,6 @@
 import http from '../api/http';
 import store from '../state/store';
+import signing from '../state/signing';
 import ethereum from '../lib/ethereum';
 import VaultError from '../lib/VaultError';
 import unlockMessage from '../lib/crypto/unlockMessage';
@@ -24,8 +25,11 @@ const context = (address: string) => {
 // same message differently each time could never open its wrap again.
 async function sign(address: string, nonce: string, issuedAt: string, { twice = false } = {}) {
   const message = unlockMessage({ ...context(address), nonce, issuedAt });
+  signing.next();
   const signature = await ethereum.sign(message, address);
-  if (twice && hex(signatureSecret(await ethereum.sign(message, address), 'check')) !== hex(signatureSecret(signature, 'check'))) {
+  if (!twice) return signature;
+  signing.next();
+  if (hex(signatureSecret(await ethereum.sign(message, address), 'check')) !== hex(signatureSecret(signature, 'check'))) {
     throw new Error('Your wallet signs the same message differently each time, so it can’t hold your keys. Wallets like MetaMask, Rabby, Ledger and Trezor work.');
   }
   return signature;

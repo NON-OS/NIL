@@ -1,0 +1,49 @@
+/* bottom right on wide screens, where it doesn't cover the wallet's own window; full width on phones */
+.signing-guide {
+  position: fixed;
+  right: max(20px, env(safe-area-inset-right));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 85;
+  display: grid;
+  gap: 10px;
+  width: min(380px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-top: 2px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  animation: rise-in 0.18s ease-out;
+}
+
+.signing-guide-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.signing-guide-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-line);
+}
+
+.signing-guide-count {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.signing-guide-foot {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+@media (max-width: 599px) {
+  .signing-guide {
+    right: 16px;
+    left: 16px;
+    width: auto;
+  }
+}

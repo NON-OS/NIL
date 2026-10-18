@@ -8,6 +8,7 @@ import CommandPalette from './components/overlays/CommandPalette';
 import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
 import KeyCheckModal from './components/keys/KeyCheckModal';
+import SigningGuide from './components/keys/SigningGuide';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import MyWorkView from './views/MyWorkView';
@@ -167,6 +168,7 @@ export default function App() {
       </Suspense>
       <UpdatePrompt />
       {keyCheck && <KeyCheckModal />}
+      <SigningGuide />
       <BackupWalletNudge />
       <Toasts />
     </div>
