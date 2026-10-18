@@ -41,7 +41,8 @@ export default function SecuritySettings() {
   const link = async () => {
     setLinking(true);
     try {
-      if (!confirmed) {
+      // checked at the click, since the page may have sat open past the confirmation's few minutes
+      if (confirmedUntil <= Date.now()) {
         setConfirmedUntil((await identity.confirm()).until);
         toast.show('Thanks. Now switch your wallet to the one you want to link, then click Link the new wallet.', { tone: 'success', timeout: 8000 });
         return;
