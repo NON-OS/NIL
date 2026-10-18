@@ -18,8 +18,8 @@ async function payload(task: Task, comment: Comment) {
   const { id, key } = await taskKeys.open(task.sealed!);
   const json = await taskText.open(key, id, 'comment', comment.body);
   const signed = signedText.open(json);
-  const signingKey = await keyDirectory.signingKeyOf(signed.by);
-  if (!signingKey || !signedText.verify(signed, context(task.id, comment.authorId), signingKey)) throw new Error('Nil can’t confirm who wrote this comment.');
+  const author = await keyDirectory.author(signed.by, null, (k) => signedText.verify(signed, context(task.id, comment.authorId), k));
+  if (!author) throw new Error('Nil can’t confirm who wrote this comment.');
   return { json, body: signed.text };
 }
 

@@ -29,12 +29,12 @@ async function keyFor(doc: EncryptedDoc) {
   return key;
 }
 
-// Opens one field and checks its author's signature against the key pinned for them. The author
+// Opens one field and checks its author's signature against a key this person can see for them. The author
 // named inside has to be the one the server names too.
 async function openField(key: Uint8Array, at: DocPlace, blob: string, author: string | null) {
   const signed = signedText.open(await docText.open(key, at, blob));
-  const signingKey = author === signed.by ? await keyDirectory.signingKeyOf(signed.by) : null;
-  return { text: signed.text, verified: Boolean(signingKey) && signedText.verify(signed, docText.context(at), signingKey!) };
+  const checked = author === signed.by && (await keyDirectory.author(signed.by, null, (k) => signedText.verify(signed, docText.context(at), k)));
+  return { text: signed.text, verified: Boolean(checked) };
 }
 
 async function decrypt(doc: EncryptedDoc): Promise<DocItem> {

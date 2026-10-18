@@ -12,15 +12,15 @@ import type SealedTask from '../types/SealedTask';
 import type TaskWords from '../types/TaskWords';
 import type OpenedWords from '../types/OpenedWords';
 
-// Opens one piece and checks the writer's signature against the key pinned for them, for this
-// task, piece and revision. Words the server made up under a key of its own fail here, and the
+// Opens one piece and checks the writer's signature against a key this person can see for them,
+// for this task, piece and revision. Words the server made up under a key of its own fail here, and the
 // task stays closed.
 async function openField(key: Uint8Array, sealId: string, field: TaskField, blob: string) {
   const json = await taskText.open(key, sealId, field, blob);
   const signed = signedText.open(json);
   const rev = taskRevision.of(json);
-  const signingKey = await keyDirectory.signingKeyOf(signed.by);
-  if (!signingKey || !signedText.verify(signed, taskText.context(sealId, field, rev), signingKey)) throw new Error('Nil can’t confirm a teammate wrote this private task.');
+  const author = await keyDirectory.author(signed.by, null, (k) => signedText.verify(signed, taskText.context(sealId, field, rev), k));
+  if (!author) throw new Error('Nil can’t confirm a teammate wrote this private task.');
   return { text: signed.text, rev };
 }
 

@@ -7,6 +7,4 @@ export default interface MemberKey extends KeyEntry {
   state: 'confirmed' | 'new' | 'changed';
   // the pinned key's fingerprint when the published one differs from it
   previousFingerprint: string | null;
-  // what this member's signatures are checked against: the pinned key, until a change is confirmed
-  trustedSigningKey: string;
 }
