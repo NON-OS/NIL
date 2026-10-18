@@ -22,6 +22,7 @@ export default function listedBounties() {
     chainId: config.nox.chainId,
     items: rows.map(toTask).map((t) => {
       const token = rewardToken(t.bountyToken);
+      const open = !t.applicationsClosedAt;
       return {
         id: t.id,
         ref: `${ws.taskPrefix}-${t.number}`,
@@ -31,7 +32,8 @@ export default function listedBounties() {
         due: t.dueDate,
         listedAt: new Date(t.listedAt).toISOString(),
         applicants: sql.get("SELECT COUNT(*) AS n FROM applications WHERE task_id = ? AND status = 'pending'", t.id).n,
-        apply: config.appUrl ? `${config.appUrl}/open#${t.id}` : null,
+        acceptingApplications: open,
+        apply: config.appUrl && open ? `${config.appUrl}/open#${t.id}` : null,
       };
     }),
   };

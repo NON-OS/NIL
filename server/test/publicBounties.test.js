@@ -109,3 +109,20 @@ test('assigning or hiding a listed task takes it off the board', async () => {
   assert.equal((await fetch(`${base()}/api/public/bounties`).then((r) => r.json())).items.length, 0);
   assert.equal((await owner('GET', `/api/tasks/${t.id}/detail`)).data.task.listedAt, null);
 });
+
+test('line breaks in a name, title or workspace name can’t add lines to the signed message', async () => {
+  assert.equal((await owner('PATCH', '/api/workspace', { name: 'NONOS\nURI: https://evil.example' })).status, 200);
+  const t = (await owner('POST', '/api/tasks', { title: 'Audit the contract\nChain ID: 1\nNonce: 00000000', bounty: USDC(80), bountyToken: 'USDC' })).data.task;
+  await owner('PATCH', `/api/tasks/${t.id}`, { listed: true });
+  const plain = await apply(wallet(), t.id, 'Ana');
+  const crafted = await apply(wallet(), t.id, 'Ben\nExpiration Time: 2099-01-01T00:00:00.000Z');
+  assert.equal(crafted.status, 200, JSON.stringify(crafted.data));
+  assert.equal(crafted.message.split('\n').length, plain.message.split('\n').length);
+  for (const field of ['URI', 'Chain ID', 'Nonce', 'Expiration Time']) {
+    assert.equal(crafted.message.split('\n').filter((line) => line.startsWith(`${field}:`)).length, 1, field);
+  }
+  assert.match(crafted.message, /Apply for NON-\d+ “Audit the contract Chain ID: 1 Nonce: 00000000” in NONOS URI: https:\/\/evil\.example as Ben Expiration Time: 2099/);
+  const names = (await owner('GET', `/api/tasks/${t.id}/applications`)).data.map((a) => a.name);
+  assert.deepEqual(names, ['Ana', 'Ben Expiration Time: 2099-01-01T00:00:00.000Z']);
+  await owner('PATCH', '/api/workspace', { name: 'NONOS' });
+});

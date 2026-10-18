@@ -53,6 +53,18 @@ test('empty values count as unset and get the defaults, never 0', () => {
   assert.equal(load({ PLAN_TRIAL_DAYS: '0' }).config.plan.trialDays, 0);
 });
 
+test('upload quotas and bounty board limits have defaults, and 0 turns a quota off', () => {
+  const MB = 1024 * 1024;
+  const names = ['UPLOADS_PER_HOUR', 'UPLOAD_QUOTA_PER_MEMBER_MB', 'UPLOAD_QUOTA_PER_GUEST_MB', 'UPLOAD_QUOTA_MB', 'BOUNTY_MAX_PENDING_APPLICATIONS', 'BOUNTY_APPLICATIONS_PER_WALLET', 'BOUNTY_APPLICATIONS_PER_HOUR'];
+  const { config, warnings } = load(Object.fromEntries(names.map((n) => [n, ''])));
+  assert.deepEqual(warnings, []);
+  assert.deepEqual(config.uploads, { perHour: 120, memberQuotaBytes: 2048 * MB, guestQuotaBytes: 100 * MB, workspaceQuotaBytes: 20480 * MB });
+  assert.deepEqual(config.bountyBoard, { maxPending: 100, perWallet: 5, perHour: 20 });
+  assert.equal(load({ UPLOAD_QUOTA_MB: '0' }).config.uploads.workspaceQuotaBytes, 0);
+  const bad = load({ UPLOADS_PER_HOUR: '0', BOUNTY_APPLICATIONS_PER_HOUR: 'lots' });
+  assert.deepEqual([bad.config.uploads.perHour, bad.config.bountyBoard.perHour, bad.warnings.length], [120, 20, 2]);
+});
+
 test('a treasury that is set but can’t be used is reported at startup', () => {
   const badTreasury = load({ PLAN_TREASURY: '0x1234' });
   assert.equal(badTreasury.config.plan.treasury, null);

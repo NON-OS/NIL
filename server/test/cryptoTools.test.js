@@ -30,6 +30,7 @@ const CRYPTO_ROUTES = [
   ['GET', '/api/stealth/payees/abc'],
   ['GET', '/api/holder-gate'],
   ['POST', '/api/applications/abc/accept'],
+  ['DELETE', '/api/applications/abc'],
 ];
 
 before(async () => {

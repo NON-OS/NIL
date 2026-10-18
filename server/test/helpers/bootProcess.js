@@ -25,6 +25,7 @@ export default async function bootProcess({ dataDir, env = {} }) {
   });
   return {
     base: port ? `http://127.0.0.1:${port}` : null,
+    pid: child.pid,
     exited,
     stdout: () => stdout,
     stderr: () => stderr,

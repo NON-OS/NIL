@@ -585,6 +585,10 @@ That wallet can't hold encryption keys, because its signature is what opens them
 
 Raise `MAX_UPLOAD_MB`. For a capsule restore, raise `MAX_CAPSULE_MB`.
 
+### "You've used the 2 GB of file space you have on this server"
+
+Each person's files count against `UPLOAD_QUOTA_PER_MEMBER_MB` (2048), a guest's against `UPLOAD_QUOTA_PER_GUEST_MB` (100), and everyone's together against `UPLOAD_QUOTA_MB` (20480), which gives "This workspace has used its 20 GB of file space" instead. Remove files, or raise the limit and restart. `0` turns a quota off. "You've attached a lot of files in the last hour" means `UPLOADS_PER_HOUR` (120); it clears within the hour.
+
 ### "This server already has a workspace. Restore only works on a fresh install"
 
 Capsules restore only into an empty volume. See the reset steps in section 8.

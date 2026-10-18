@@ -6,6 +6,7 @@ import eraseTasks from '../services/eraseTasks.js';
 import settleStaged from '../services/settleStaged.js';
 import creditLedger from '../aiCredits/creditLedger.js';
 import signedAllowance from '../ai/signedAllowance.js';
+import commentQuotes from '../services/commentQuotes.js';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -34,6 +35,8 @@ export default function purge() {
     sql.tx(() => {
       sql.run('DELETE FROM comments WHERE created_at < ?', cutoff);
       for (const id of touched) sql.run('UPDATE tasks SET comment_count = (SELECT COUNT(*) FROM comments WHERE task_id = ?) WHERE id = ?', id, id);
+      // nor do their words in notifications and agent briefings
+      commentQuotes.swept(touched, cutoff);
     });
   }
 

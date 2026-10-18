@@ -6,6 +6,7 @@ import retention from '../services/retention.js';
 import publicWorkspace from '../services/publicWorkspace.js';
 import wipeWorkspace from '../services/wipeWorkspace.js';
 import purge from '../jobs/purge.js';
+import pruneAgentData from '../jobs/pruneAgentData.js';
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.patch(
   route((req) => {
     const next = retention.set(req.body?.retention ?? {});
     purge();
+    pruneAgentData();
     return { retention: next, allowed: retention.allowed };
   }),
 );
