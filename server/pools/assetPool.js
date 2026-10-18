@@ -24,7 +24,9 @@ async function read(asset) {
   if (/^0x0+$/.test(pool)) return { problem: `Privacy Pools has no pool for ${asset.symbol} yet. Only its entry contract’s owner can add one.` };
   if (asset.pool && asset.pool !== pool) return { problem: `The entry contract’s ${asset.symbol} pool isn’t the one this server names, so ${asset.symbol} can’t be paid privately until the operator checks it.` };
   const [scope, held, entry, dead] = await Promise.all(['scope', 'asset', 'entrypoint', 'dead'].map((k) => ethCall(pool, `0x${poolAbi[k]}`)));
-  if (!scope && !held && !entry) throw unreadable();
+  // a pool the entry contract names answers all four; a missing one is a read that failed or
+  // couldn't be proven, never an answer to keep
+  if (!scope || !held || !entry || !dead) throw unreadable();
   if (addressAt(held, 0) !== asset.token || addressAt(entry, 0) !== config.pools.entrypoint || abiWord(scope, 0) === null) {
     return { problem: `The ${asset.symbol} pool didn’t answer as a Privacy Pools pool for this token should.` };
   }
