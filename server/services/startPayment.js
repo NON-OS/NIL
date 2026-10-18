@@ -37,7 +37,7 @@ export default async function startPayment(actor, taskId, stealth = null) {
   const owed = BigInt(task.bounty) - bountyReceived(task.id);
   if (owed <= 0n) throw new HttpError(409, 'This bounty is already paid.');
 
-  const target = stealth ? privateTarget(payee, stealth) : { to: payee.address.toLowerCase(), ephemeral: null, viewTag: null };
+  const target = stealth ? await privateTarget(payee, stealth) : { to: payee.address.toLowerCase(), ephemeral: null, viewTag: null };
 
   const startBlock = await headBlock();
   const now = Date.now();

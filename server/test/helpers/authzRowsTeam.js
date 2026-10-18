@@ -38,6 +38,8 @@ export default {
   'PUT /api/holder-gate': { allow: ADMINS, body: {} },
   'PUT /api/me/stealth': { allow: PEOPLE, ok: [400] },
   'DELETE /api/me/stealth': { allow: PEOPLE },
+  'GET /api/me/stealth/registry': { allow: PEOPLE, ok: [400] },
+  'GET /api/stealth/payees/:id': { allow: ADMINS, id: 'ids.guest', ok: [400], denied: [403] },
   'GET /api/stealth/payouts': { allow: PEOPLE, ok: [400] },
   'GET /api/stealth/payouts/:id/balance': { allow: PEOPLE, id: none, ok: [400, 404] },
   'POST /api/stealth/prepare': { allow: PEOPLE, ok: [400] },

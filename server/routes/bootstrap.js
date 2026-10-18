@@ -85,7 +85,7 @@ router.get(
         ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer, transferFeeBps: transferFee.current().bps }
         : null,
       rewards: config.nox.enabled ? config.rewards : [],
-      stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei } : null,
+      stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei, registry: config.stealth.registry } : null,
       sourceUrl: config.sourceUrl,
       // the web app this server hands out, so an open tab can notice it's out of date
       build: buildId(),

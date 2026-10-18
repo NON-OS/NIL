@@ -27,6 +27,8 @@ const CRYPTO_ROUTES = [
   ['GET', '/api/proofs/mine'],
   ['GET', '/api/stealth/payouts'],
   ['PUT', '/api/me/stealth', { meta: 'x' }],
+  ['GET', '/api/me/stealth/registry'],
+  ['GET', '/api/stealth/payees/abc'],
   ['GET', '/api/holder-gate'],
   ['POST', '/api/applications/abc/accept'],
 ];

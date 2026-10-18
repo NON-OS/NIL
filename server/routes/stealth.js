@@ -11,6 +11,9 @@ import feeQuote from '../chain/feeQuote.js';
 import nodeReady from '../chain/nodeReady.js';
 import rpc from '../chain/rpc.js';
 import publishUser from '../services/publishUser.js';
+import userRows from '../services/userRows.js';
+import payeeMeta from '../services/payeeMeta.js';
+import registryMeta from '../services/registryMeta.js';
 import stealthPayouts from '../services/stealthPayouts.js';
 import stealthBalances from '../services/stealthBalances.js';
 import rewardToken from '../lib/rewardToken.js';
@@ -23,6 +26,7 @@ const ADDRESS = /^0x[0-9a-f]{40}$/;
 const TX = /^0x[0-9a-f]{64}$/;
 const HEX = /^0x([0-9a-f]{2})*$/;
 const relayLimit = rateLimit({ windowMs: 60_000, max: 20, key: (req) => req.user.id, message: 'Too many transactions at once. Wait a minute.' });
+const registryLimit = rateLimit({ windowMs: 60_000, max: 20, key: (req) => req.user.id, message: 'Too many registry checks at once. Wait a minute.' });
 
 function needChain() {
   if (!config.nox.enabled) throw HttpError.badRequest('On-chain features are off on this server.');
@@ -50,6 +54,39 @@ router.delete(
   route((req) => {
     sql.run('UPDATE users SET stealth_meta = NULL WHERE id = ?', req.user.id);
     return { user: toUser(publishUser(req.user.id), req.viewer) };
+  }),
+);
+
+// What your own wallet has in the ERC-6538 registry, read now, so Settings can show whether your
+// meta-address is published there and whether it's the one Nil has for you.
+router.get(
+  '/me/stealth/registry',
+  registryLimit,
+  route(async (req) => {
+    needChain();
+    if (!config.stealth.registry) throw HttpError.badRequest('The stealth registry is turned off on this server.');
+    const wallet = userRows.one(req.user.id)?.address?.toLowerCase();
+    if (!wallet) throw HttpError.badRequest('You have no wallet linked.');
+    const found = await registryMeta(wallet, { fresh: true });
+    return { registry: { wallet, state: found.state, metaAddress: found.metaAddress ?? null } };
+  }),
+);
+
+// The meta-address an admin's browser works a private payout to this person out from, and why
+// there is none when there isn't. A node that can't be read leaves only the public payout.
+router.get(
+  '/stealth/payees/:id',
+  requireAdmin,
+  route(async (req) => {
+    needChain();
+    const payee = userRows.one(req.params.id);
+    if (!payee || payee.kind === 'agent') throw HttpError.notFound('That person');
+    try {
+      return { stealth: await payeeMeta(payee) };
+    } catch (err) {
+      if (!(err instanceof HttpError)) throw err;
+      return { stealth: { metaAddress: null, source: null, problem: 'unreadable' } };
+    }
   }),
 );
 
