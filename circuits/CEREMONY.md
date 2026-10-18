@@ -25,7 +25,7 @@ npm run ceremony:contribute -- ~/Downloads/ballot_0003.zkey --name "Your name or
 
 Use the file name you were given. The command mixes 64 random bytes from your machine into the key, writes the next one beside it (here `ballot_0004.zkey`) and prints your contribution hash.
 
-1. Upload the new key to the ceremony thread.
+1. Upload the new key to the ceremony thread. GitHub only takes certain file types, so compress it first with `gzip -k ballot_0004.zkey` and attach `ballot_0004.zkey.gz`; whoever is next runs `gunzip` on it.
 2. Post your contribution hash there and anywhere else people know you, such as your X account. It's how anyone can tell later that your contribution is in the final keys.
 3. Close the terminal. The randomness only ever lived in that process, and there's nothing to keep.
 
