@@ -29,7 +29,7 @@ router.get(
     const goals = nameMap(sql.all('SELECT id, title FROM goals'), 'title');
     const labels = nameMap(sql.all('SELECT id, name FROM labels'));
     const header = ['Key', 'Title', 'Status', 'Priority', 'Project', 'Goal', 'Assignee', 'Due', 'Start', 'Estimate', 'Labels', 'Created', 'Completed', 'Description'];
-    const lines = [header.join(',')];
+    const lines = [header.map(csvCell).join(',')];
     const visible = visibleSql(req.user.id);
     for (const t of sql.all(`SELECT * FROM tasks WHERE deleted_at IS NULL AND ${visible.where} ORDER BY number`, ...visible.params).map(toTask)) {
       lines.push(
