@@ -13,6 +13,11 @@
   color: var(--ink);
 }
 
+/* the phone menu takes focus itself when no link in it is the current page */
+.sidebar:focus {
+  outline: none;
+}
+
 .sidebar-brand {
   display: flex;
   align-items: center;

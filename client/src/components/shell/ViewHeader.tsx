@@ -5,6 +5,8 @@ import Resolve from '../brand/Resolve';
 import useRoute from '../../hooks/useRoute';
 import ui from '../../actions/ui';
 import navItems from '../../lib/navItems';
+import landmarks from '../../lib/landmarks';
+import useStore from '../../state/useStore';
 
 interface Props {
   title: ReactNode;
@@ -15,12 +17,13 @@ interface Props {
 
 export default function ViewHeader({ title, icon, subtitle, actions }: Props) {
   const { path } = useRoute();
+  const menuOpen = useStore((s) => s.sidebarOpen);
   // main sections carry their number, like the brand's numbered pages: 01 My work, 02 Inbox…
   const index = navItems.findIndex((n) => n.to === path || (n.to !== '/' && path.startsWith(`${n.to}/`)));
 
   return (
     <header className="view-head">
-      <button type="button" className="icon-btn menu-toggle" onClick={() => ui.sidebar(true)} aria-label="Open menu">
+      <button type="button" className="icon-btn menu-toggle" onClick={() => ui.sidebar(true)} aria-label="Open menu" aria-controls={landmarks.menu} aria-expanded={menuOpen}>
         <Menu />
       </button>
       {index >= 0 && <span className="view-index" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>}

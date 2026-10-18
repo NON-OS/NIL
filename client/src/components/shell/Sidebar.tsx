@@ -1,5 +1,5 @@
 import './Sidebar.css';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CircleHelp, Plus, Search } from 'lucide-react';
 import NilLogo from '../brand/NilLogo';
 import Avatar from '../ui/Avatar';
@@ -14,7 +14,10 @@ import cx from '../../lib/cx';
 import NAV from '../../lib/navItems';
 import cryptoOnly from '../../lib/cryptoOnly';
 import useCryptoTools from '../../hooks/useCryptoTools';
-
+import useFocusTrap from '../../hooks/useFocusTrap';
+import useMediaQuery from '../../hooks/useMediaQuery';
+import media from '../../lib/media';
+import landmarks from '../../lib/landmarks';
 
 export default function Sidebar({ onNewProject }: { onNewProject: () => void }) {
   const { path } = useRoute();
@@ -29,6 +32,27 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
   const meId = useStore((s) => s.me?.id);
   const guest = useStore((s) => s.guest);
   const cryptoTools = useCryptoTools();
+  // on narrow screens the sidebar is a menu over the page: focus goes in and stays until it closes
+  const folded = useMediaQuery(media.sidebarFolds);
+  const menu = open && folded;
+  const ref = useRef<HTMLElement>(null);
+
+  // The page underneath can't be reached while the menu covers it. This comes before the focus
+  // trap, so on closing the page is reachable again by the time focus goes back to the button.
+  useEffect(() => {
+    if (!menu) return;
+    const content = document.getElementById(landmarks.content);
+    content?.setAttribute('inert', '');
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && !e.defaultPrevented) ui.sidebar(false);
+    };
+    document.addEventListener('keydown', onKey);
+    return () => {
+      content?.removeAttribute('inert');
+      document.removeEventListener('keydown', onKey);
+    };
+  }, [menu]);
+  useFocusTrap(ref, { active: menu, initialFocus: '[aria-current="page"]' });
 
   const projects = useMemo(() => Object.values(projectMap).filter((p) => !p.archived).sort((a, b) => a.position - b.position), [projectMap]);
   const openCounts = useMemo(() => {
@@ -46,7 +70,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
   return (
     <>
       <div className={cx('sidebar-scrim', open && 'open')} onClick={() => ui.sidebar(false)} />
-      <nav className={cx('sidebar', open && 'open')} aria-label="Main">
+      <nav ref={ref} id={landmarks.menu} className={cx('sidebar', open && 'open')} aria-label="Main" tabIndex={-1}>
         <div className="sidebar-brand">
           <NilLogo height={30} />
           {workspace.name && (
