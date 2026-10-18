@@ -23,7 +23,7 @@ const REVIEW: Record<Review, { label: string; tone: string }> = {
   declined: { label: 'Declined', tone: 'declined' },
   exited: { label: 'Taken back', tone: '' },
   spent: { label: 'Spent', tone: '' },
-  unknown: { label: 'Not reviewed yet', tone: 'pending' },
+  unknown: { label: 'Not approved yet', tone: 'pending' },
 };
 
 function status(n: PoolNote, reviews: Map<string, Review>) {
@@ -53,9 +53,9 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
     poolAccount.info().then(setInfo).catch(toast.error);
   }, []);
 
-  const show = useCallback(async (next: PoolState) => {
+  const show = useCallback(async (next: PoolState, ask = false) => {
     setPool(next);
-    if (next.state === 'open') setReviews(await poolReview(next.book, [...new Set(next.book.notes.map((n) => n.symbol))]).catch(() => new Map()));
+    if (next.state === 'open') setReviews(await poolReview(next.book, [...new Set(next.book.notes.map((n) => n.symbol))], { ask }).catch(() => new Map()));
   }, []);
   const refresh = useCallback(async () => {
     const book = poolAccount.book();
@@ -85,6 +85,13 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
     await poolRebuild(info, pool.startBlock);
     await refresh();
     toast.show('The pool notes now match the chain.', { tone: 'success' });
+  });
+  const askProvider = run('Asking the provider', async () => {
+    if (pool?.state === 'open') await show({ ...pool, book: poolAccount.book() ?? pool.book }, true);
+  });
+  const startOver = run('Starting over', async () => {
+    setPhrase(null);
+    await show(await poolAccount.remove());
   });
   const ragequit = (n: PoolNote) =>
     run('Taking back', async () => {
@@ -181,6 +188,14 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
                 The association set declined a deposit, so it can’t pay bounties privately. Take it back: a ragequit returns it, publicly, to the wallet that made it. Nothing else can move it.
               </div>
             )}
+            {book.notes.some((n) => n.state === 'open' && n.label && !reviews.has(n.label)) && (
+              <div className="settings-row" style={{ padding: '0 14px' }}>
+                <span className="muted" style={{ fontSize: 'var(--text-sm)' }}>A deposit not approved yet may still be under review, or declined.</span>
+                <ConfirmButton className="btn btn-sm" confirmLabel="This tells the provider these deposits are this server’s. Ask?" onConfirm={askProvider}>
+                  Ask the provider
+                </ConfirmButton>
+              </div>
+            )}
             <div className="settings-row" style={{ padding: 14 }}>
               <button type="button" className="btn btn-primary" onClick={() => setDepositing(true)} disabled={Boolean(busy) || !usable.length}>
                 <ArrowDownToLine /> Deposit
@@ -191,6 +206,11 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
               <button type="button" className="btn btn-ghost" onClick={() => (phrase ? setPhrase(null) : poolAccount.phrase().then(setPhrase).catch(toast.error))}>
                 <KeyRound /> {phrase ? 'Hide recovery phrase' : 'Recovery phrase'}
               </button>
+              {!book.notes.some((n) => n.state === 'open' || n.state === 'sending') && book.notes.length > 0 && (
+                <ConfirmButton className="btn btn-ghost" confirmLabel="Drop this key for good?" onConfirm={startOver}>
+                  Start over with a new key
+                </ConfirmButton>
+              )}
               {busy && busy !== 'Rebuilding' && (
                 <span className="muted">
                   <Spinner size={14} /> {busy}

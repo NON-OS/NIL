@@ -78,6 +78,17 @@ const poolAccount = {
     return poolAccount.view(userId);
   },
 
+  // Drops the account so the team can start over with a new key, after it has taken its
+  // deposits back. Only a holder can, so a newly made admin can't wipe a pool they never held.
+  remove(userId) {
+    mustHold(userId);
+    sql.tx(() => {
+      sql.run('DELETE FROM pool_account_keys');
+      sql.run('DELETE FROM pool_account WHERE id = ?', ID);
+    });
+    return { exists: false };
+  },
+
   // Saves new notes only over the revision the browser started from, so two admins paying at
   // once can't wipe out each other's notes; the second gets a 409 and merges.
   saveNotes(userId, { notes, rev }) {

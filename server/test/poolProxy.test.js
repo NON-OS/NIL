@@ -142,6 +142,7 @@ test('the pool account is sealed per admin, shared only with admins, and its not
   assert.deepEqual([adaView.exists, adaView.wrapped, adaView.notes], [true, null, 'notes-v1']);
   assert.equal((await ada('PUT', '/api/pool-account/notes', { notes: 'evil', rev: 1 })).status, 409);
   assert.equal((await ada('PUT', '/api/pool-account/keys', { grants: [{ userId: ids.Ada, wrapped: 'self' }] })).status, 409);
+  assert.equal((await ada('DELETE', '/api/pool-account')).status, 409);
 
   // only to admins, never to members
   assert.equal((await owner('PUT', '/api/pool-account/keys', { grants: [{ userId: ids.Mia, wrapped: 'to-mia' }] })).status, 400);
@@ -157,4 +158,8 @@ test('the pool account is sealed per admin, shared only with admins, and its not
   assert.equal((await owner('PATCH', `/api/users/${ids.Ada}`, { role: 'member' })).status, 200);
   assert.deepEqual((await owner('GET', '/api/pool-account')).data.account.holders, [ids.owner]);
   assert.equal((await ada('GET', '/api/pool-account')).status, 403);
+
+  // starting over: a holder drops the account, and then a new key can be set up
+  assert.deepEqual((await owner('DELETE', '/api/pool-account')).data.account, { exists: false });
+  assert.equal((await owner('POST', '/api/pool-account', { keyTag: 'b'.repeat(32), wrapped: 'new-seal', notes: 'fresh' })).data.account.keyTag, 'b'.repeat(32));
 });

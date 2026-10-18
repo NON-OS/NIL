@@ -24,6 +24,8 @@ router.post(
 
 router.put('/pool-account/keys', requireAdmin, off, writes, route((req) => ({ account: poolAccount.grant(req.user.id, req.body?.grants) })));
 
+router.delete('/pool-account', requireAdmin, off, writes, route((req) => ({ account: poolAccount.remove(req.user.id) })));
+
 router.put('/pool-account/notes', requireAdmin, off, writes, route((req) => ({ account: poolAccount.saveNotes(req.user.id, req.body ?? {}) })));
 
 export default router;

@@ -18,5 +18,6 @@ export default {
   'GET /api/pool-account': { allow: ADMINS, ok: [404], denied: [403] },
   'POST /api/pool-account': { allow: ADMINS, body: {}, ok: [404], denied: [403] },
   'PUT /api/pool-account/keys': { allow: ADMINS, body: { grants: [] }, ok: [404], denied: [403] },
+  'DELETE /api/pool-account': { allow: ADMINS, ok: [404], denied: [403] },
   'PUT /api/pool-account/notes': { allow: ADMINS, body: { notes: 'x', rev: 1 }, ok: [404], denied: [403] },
 };

@@ -94,6 +94,15 @@ const poolAccount = {
     throw new Error('Other admins keep changing the pool notes. Reload and try again.');
   },
 
+  // Drops the team's account so it can start over with a new key. The browser offers it only
+  // once nothing is left in the pool.
+  async remove() {
+    await http.del('/pool-account');
+    poolKey.forget();
+    current = null;
+    return { state: 'none' } as PoolState;
+  },
+
   // The phrase, for keeping somewhere safe or for opening the pool in the Privacy Pools app.
   async phrase() {
     const key = poolKey.get();
