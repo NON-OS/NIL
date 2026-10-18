@@ -15,6 +15,7 @@ export default {
   'POST /api/pools/:symbol/events': { allow: ADMINS, symbol: () => 'USDC', body: { fromBlock: 1, toBlock: 2 }, ok: [404], denied: [403] },
   'POST /api/pool-payouts/:intentId/quote': { allow: ADMINS, intentId: none, ok: [404], denied: [403] },
   'POST /api/pool-payouts/:intentId/relay': { allow: ADMINS, intentId: none, ok: [404], denied: [403] },
+  'POST /api/pool-payouts/:intentId/find': { allow: ADMINS, intentId: none, ok: [404], denied: [403] },
   'GET /api/pool-account': { allow: ADMINS, ok: [404], denied: [403] },
   'POST /api/pool-account': { allow: ADMINS, body: {}, ok: [404], denied: [403] },
   'PUT /api/pool-account/keys': { allow: ADMINS, body: { grants: [] }, ok: [404], denied: [403] },

@@ -13,6 +13,7 @@ const OUTCOME: Record<string, string> = {
   confirming: 'Sent by the relayer. It counts once its block is final, usually within 15 minutes.',
   sent: 'Handed to the relayer. Nil confirms it once it’s mined and final.',
 };
+const RECOVERED = 'The relayer reported a problem, but the payout went through. Nil found it on-chain and is checking it.';
 
 // Pays one bounty from the team's pool. Nothing is proven or sent until the admin has seen what
 // it costs: the bounty, the relayer's fee on top, and the total that leaves the pool.
@@ -39,8 +40,9 @@ export default function PoolPayModal({ task, name, onClose, onDone }: { task: Ta
     if (!prepared) return;
     setStep('Starting');
     try {
-      const payment = await poolPayout.send(prepared, setStep);
-      toast.show(payment.status === 'failed' ? payment.problem ?? 'That payout couldn’t be verified.' : OUTCOME[payment.state] ?? 'Recorded.', { tone: payment.status === 'failed' ? 'error' : 'success', timeout: 9000 });
+      const { payment, recovered } = await poolPayout.send(prepared, setStep);
+      const failed = payment.status === 'failed';
+      toast.show(failed ? payment.problem ?? 'That payout couldn’t be verified.' : recovered ? RECOVERED : OUTCOME[payment.state] ?? 'Recorded.', { tone: failed ? 'error' : 'success', timeout: 9000 });
       onDone();
       onClose();
     } catch (err) {

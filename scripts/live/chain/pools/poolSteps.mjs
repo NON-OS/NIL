@@ -8,11 +8,19 @@ import calls from '../calls.mjs';
 
 const ZK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../client/public/zk/privacy-pools');
 const files = (name) => ({ wasm: path.join(ZK, `${name}.wasm`), zkey: path.join(ZK, `${name}.zkey`) });
+// Gas limits for the test wallet's transactions, set rather than estimated. Circle's test USDC
+// on Sepolia used 118,526 gas for approve, more than the 120,000 these steps first allowed, so
+// approve has 300,000. A deposit inserts into the pool's tree, and a ragequit checks a proof.
+const GAS = Object.freeze({ approve: 300_000n, deposit: 1_200_000n, ragequit: 1_000_000n });
+// how often Check for the payout is asked again while a payout the relayer didn't confirm isn't mined
+const FIND_EVERY_MS = 15_000;
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // What an admin's browser does for the team pool, step by step with the app's own modules and
 // the app's own API routes. Only the wallet differs: a test key signs and sends raw
-// transactions where the app would ask the browser wallet.
-export default function poolSteps({ api, chain, wallet, info, key = crypto.getRandomValues(new Uint8Array(16)), seed = crypto.getRandomValues(new Uint8Array(32)) }) {
+// transactions where the app would ask the browser wallet. A relay the relayer didn't confirm is
+// looked for with Check for the payout for up to `findForMs`.
+export default function poolSteps({ api, chain, wallet, info, findForMs = 0, key = crypto.getRandomValues(new Uint8Array(16)), seed = crypto.getRandomValues(new Uint8Array(32)) }) {
   const identity = identityFromSeed(seed);
   const keys = poolKit.masterKeys(key);
   const usdc = info.assets.find((a) => a.symbol === 'USDC');
@@ -28,6 +36,24 @@ export default function poolSteps({ api, chain, wallet, info, key = crypto.getRa
     const receipt = await chain.receipt(hash);
     if (receipt.status !== '0x1') throw new Error(`${hash} failed on-chain`);
     return receipt;
+  };
+  // A relayer can send the withdrawal and still report a failure: 0xbow's does when its
+  // extra-gas swap fails after the withdrawal is out. Nil looks on-chain for it then, and says
+  // so with `recovered`. If it wasn't mined yet, the admin's way on is Check for the payout.
+  const relay = async (intent, body) => {
+    try {
+      const out = await api.post(`/pool-payouts/${intent.id}/relay`, body);
+      return { payment: out.payment, recovered: out.recovered ? 'Nil found it on-chain when the relay came back' : null };
+    } catch (err) {
+      const until = Date.now() + findForMs;
+      for (;;) {
+        // a node that can't answer right now is another try, not the reason the relay failed
+        const { payment } = await api.post(`/pool-payouts/${intent.id}/find`).catch(() => ({ payment: null }));
+        if (payment) return { payment, recovered: `Check for the payout found it after ${String(err.message).slice(0, 200)}` };
+        if (Date.now() >= until) throw err;
+        await sleep(FIND_EVERY_MS);
+      }
+    }
   };
 
   return {
@@ -58,8 +84,8 @@ export default function poolSteps({ api, chain, wallet, info, key = crypto.getRa
       const out = noteBook.reserve(book, { symbol: 'USDC', scope: usdc.scope, depositor: wallet.address, amount });
       await save(out.book);
       const precommitment = poolKit.poolSecrets.precommitment(poolKit.poolSecrets.deposit(keys, BigInt(usdc.scope), out.note.index));
-      await mined(await wallet.send({ to: usdc.token, data: calls.approve(info.entrypoint, amount), gas: 120_000n }));
-      const hash = await wallet.send({ to: info.entrypoint, data: poolKit.poolCalls.deposit(usdc.token, amount, precommitment), gas: 1_200_000n });
+      await mined(await wallet.send({ to: usdc.token, data: calls.approve(info.entrypoint, amount), gas: GAS.approve }));
+      const hash = await wallet.send({ to: info.entrypoint, data: poolKit.poolCalls.deposit(usdc.token, amount, precommitment), gas: GAS.deposit });
       await save(noteBook.sent(book, out.note, hash));
       const receipt = await mined(hash);
       const seen = await api.get(`/pools/receipts/${hash}`);
@@ -93,14 +119,14 @@ export default function poolSteps({ api, chain, wallet, info, key = crypto.getRa
       const provingMs = Date.now() - started;
       await save(noteBook.pending(book, note, intent.id, BigInt(quote.gross)));
       const body = { withdrawal: { processooor: quote.entrypoint, data: quote.withdrawalData }, proof: proof.proof, publicSignals: proof.publicSignals, feeCommitment: quote.feeCommitment };
-      const { payment } = await api.post(`/pool-payouts/${intent.id}/relay`, body);
+      const { payment, recovered } = await relay(intent, body);
       await save(noteBook.withdrew(book, note, { gross: BigInt(quote.gross), intentId: intent.id, txHash: payment.txHash }));
-      return { intent, quote, payment, provingMs, body };
+      return { intent, quote, payment, recovered, provingMs, body };
     },
 
     async ragequit(note) {
       const proof = await poolKit.proveCommitment({ value: BigInt(note.value), label: BigInt(note.label), secrets: poolKit.noteSecrets(keys, note) }, files('commitment'));
-      const hash = await wallet.send({ to: usdc.pool, data: poolKit.poolCalls.ragequit(proof), gas: 1_000_000n });
+      const hash = await wallet.send({ to: usdc.pool, data: poolKit.poolCalls.ragequit(proof), gas: GAS.ragequit });
       await mined(hash);
       const seen = await api.get(`/pools/receipts/${hash}`);
       if (!seen.events.some((e) => e.type === 'ragequit' && e.label === note.label)) throw new Error('Nil saw no ragequit for our label');
