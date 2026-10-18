@@ -92,6 +92,7 @@ test('weighted votes count NOX held, NOX staked and ZSPs, snapshotted when the v
   // Ana links another wallet after the snapshot: the audit still shows what she held then
   const later = wallet();
   chain.setBalance(later.address, 70n * unit);
+  await ana.wallet(wallets.ana, 'confirm');
   assert.equal((await ana.wallet(later, 'add')).status, 200);
 
   const closed = (await owner('POST', `/api/proposals/${proposal.id}/close`)).data.proposal;
