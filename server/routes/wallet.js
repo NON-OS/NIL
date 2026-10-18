@@ -14,6 +14,10 @@ import walletSignature from '../auth/walletSignature.js';
 import currentUser from '../auth/currentUser.js';
 import signIn from '../auth/signIn.js';
 import setupToken from '../auth/setupToken.js';
+import confirmedSession from '../auth/confirmedSession.js';
+import sessionCookie from '../auth/sessionCookie.js';
+import tokenHash from '../auth/tokenHash.js';
+import config from '../config.js';
 import liveInvite from '../services/liveInvite.js';
 import createAccount from '../services/createAccount.js';
 import addCredential from '../services/addCredential.js';
@@ -41,7 +45,10 @@ const STATEMENT = {
   holder: (ws) => `Join ${ws} as a NOX holder with this wallet.`,
   add: (ws) => `Link this wallet to your ${ws} account.`,
   reset: (ws) => `Link this wallet to your ${ws} account and sign in.`,
+  confirm: (ws) => `Confirm it’s you, to link another wallet or make an access key for your ${ws} account.`,
 };
+
+const linked = (userId, address) => Boolean(sql.get("SELECT 1 FROM credentials WHERE user_id = ? AND kind = 'wallet' AND external_id = ?", userId, address));
 
 // Step 1: the server writes the exact message the wallet will sign.
 router.post(
@@ -54,10 +61,13 @@ router.post(
     const rp = relyingParty(req);
     const pending = { mode, address: address.toLowerCase() };
 
-    if (mode === 'add') {
+    if (mode === 'add' || mode === 'confirm') {
       const user = currentUser(req);
       if (!user) throw new HttpError(401, 'Sign in first.');
       pending.userId = user.id;
+      // a borrowed session alone can't add a way back in: a linked wallet has to say so first
+      if (mode === 'add') confirmedSession(req);
+      if (mode === 'confirm' && !linked(user.id, pending.address)) throw HttpError.badRequest('That wallet isn’t linked to your account. Switch to one that is, then try again.');
     } else if (mode === 'setup') {
       if (sql.get('SELECT 1 FROM users LIMIT 1')) throw new HttpError(409, 'This workspace is already set up. Sign in instead.');
       setupToken.check(req.body.setupToken);
@@ -123,9 +133,16 @@ router.post(
       sql.run('UPDATE credentials SET last_used_at = ? WHERE id = ?', Date.now(), row.id);
       return signIn(req, res, row.user_id);
     }
-    if (pending.mode === 'add') {
+    if (pending.mode === 'add' || pending.mode === 'confirm') {
       const user = currentUser(req);
       if (!user || user.id !== pending.userId) throw new HttpError(401, 'Sign in again to link a wallet.');
+      if (pending.mode === 'confirm') {
+        if (!linked(user.id, pending.address)) throw HttpError.badRequest('That wallet isn’t linked to your account any more.');
+        const now = Date.now();
+        sql.run('UPDATE sessions SET confirmed_at = ? WHERE token_hash = ?', now, tokenHash(sessionCookie.read(req)));
+        return { ok: true, until: now + config.signIn.confirmMs };
+      }
+      confirmedSession(req);
       addCredential(user.id, pending.address);
       signInAudit('wallet.linked', { actorId: user.id, subjectId: user.id });
       return { ok: true };

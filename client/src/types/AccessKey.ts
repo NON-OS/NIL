@@ -3,6 +3,7 @@ export default interface AccessKey {
   name: string;
   scope: 'read' | 'write';
   createdAt: number;
-  expiresAt: number | null;
+  // every key expires, including ones made before keys had to
+  expiresAt: number;
   lastUsedAt: number | null;
 }

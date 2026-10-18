@@ -141,7 +141,9 @@ test('the workspace name can’t add lines to the message a wallet signs', async
 
 test('a link-wallet challenge belongs to the session that asked for it', async () => {
   const ana = person();
-  assert.equal((await ana.wallet(wallet(), 'invite', { name: 'Ana', inviteToken: await inviteToken() })).status, 200);
+  const anaWallet = wallet();
+  assert.equal((await ana.wallet(anaWallet, 'invite', { name: 'Ana', inviteToken: await inviteToken() })).status, 200);
+  await ana.wallet(anaWallet, 'confirm');
   const extra = wallet();
   const c = await challenge(ana, { address: extra.address, mode: 'add' });
   const signature = extra.sign(c.data.message);

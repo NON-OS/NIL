@@ -36,6 +36,10 @@ const identity = {
     location.replace('/settings?tab=security&reset=1');
   },
 
+  // A fresh signature from a wallet already linked here, which linking another wallet or making
+  // an access key needs. It's good for a few minutes, in this session only.
+  confirm: () => walletCeremony({ mode: 'confirm' }) as Promise<{ ok: true; until: number }>,
+
   linkWallet: () => walletCeremony({ mode: 'add' }),
 
   overview: () => http.get<SecurityOverview>('/me/credentials'),

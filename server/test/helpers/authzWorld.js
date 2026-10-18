@@ -26,7 +26,9 @@ export default async function authzWorld(base) {
   ids.outsider = await join('outsider', 'member');
   for (const who of ['owner', 'admin', 'member']) await publishKey(people[who], wallets[who]);
 
-  // personal access keys, for the endpoints that take a bearer key instead of a cookie
+  // personal access keys, for the endpoints that take a bearer key instead of a cookie; making
+  // one, like linking a wallet, needs a linked wallet to confirm the session first
+  for (const who of Object.keys(people)) await people[who].wallet(wallets[who], 'confirm');
   for (const who of Object.keys(people)) keys[who] = (await people[who]('POST', '/api/me/tokens', { name: 'matrix', scope: 'write' })).data.token;
   // The read-only agent is given every tool, so only its access level stands between it and a change.
   const tools = (await owner('GET', '/api/agents')).data.options.tools.map((tool) => tool.name);
