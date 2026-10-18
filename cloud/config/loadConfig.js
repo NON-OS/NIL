@@ -59,6 +59,10 @@ export default function loadConfig(env = process.env) {
   const rpcUrl = read.raw('CLOUD_RPC_URL') === 'off' ? 'off' : read.url('CLOUD_RPC_URL', { protocols: ['https:', 'http:'] });
   if (!rpcUrl) read.fail('CLOUD_RPC_URL is not set. Point it at your own Ethereum node (see README), or set it to off to turn on-chain features and billing off.');
   if (rpcUrl === 'off' && treasury) read.warn('CLOUD_RPC_URL is off, so workspaces can’t check payments and run in community mode despite CLOUD_PLAN_TREASURY.');
+  // hosted workspaces act on chain reads only once Nil's verifier proved them
+  const verifierKey = read.text('CLOUD_VERIFIER_KEY');
+  if (rpcUrl && rpcUrl !== 'off' && !verifierKey) read.fail('CLOUD_VERIFIER_KEY is not set. Run Nil’s verifier (docker-compose.verifier.yml) with VERIFIER_KEY in .env, which the control plane gets as CLOUD_VERIFIER_KEY, and point CLOUD_RPC_URL at it.');
+  if (verifierKey && verifierKey.length < 32) read.fail('CLOUD_VERIFIER_KEY must be at least 32 characters. Make one with: openssl rand -hex 32');
   const egress = read.oneOf('CLOUD_EGRESS', ['rpc-only', 'open'], 'rpc-only');
 
   const sourceUrl = read.url('CLOUD_SOURCE_URL');
@@ -125,6 +129,7 @@ export default function loadConfig(env = process.env) {
       invoiceSlots,
       invoiceKey: invoiceKey || null,
       rpcUrl,
+      verifierKey: verifierKey || null,
       egress,
       extraEnv,
       tmpfsMb: read.number('CLOUD_APP_TMPFS_MB', 64, { min: 8, max: 4096 }),

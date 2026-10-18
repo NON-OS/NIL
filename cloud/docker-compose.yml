@@ -27,6 +27,9 @@ services:
       CLOUD_INTERNAL_PORT: "8081"
       CLOUD_TRUST_PROXY: "1"
       CLOUD_APP_ENV_FILE: /etc/nil/workspace.env
+      # the key Nil's verifier (docker-compose.verifier.yml) seals its answers with; every
+      # workspace gets it as NOX_VERIFIER_KEY
+      CLOUD_VERIFIER_KEY: ${VERIFIER_KEY:-}
     # The Docker socket makes this container as powerful as root on the host: it has to be, to
     # create workspaces. Everything else is locked down, and nothing publishes its ports.
     group_add:
@@ -74,7 +77,7 @@ services:
       - caddy-config:/etc/caddy:ro
       - caddy-data:/data
       - caddy-state:/config
-    # edge: the control plane. chain: the optional Ethereum node. The control plane attaches
+    # edge: the control plane. chain: the verifier and the optional Ethereum node. The control plane attaches
     # Caddy to every workspace's own network as well.
     networks:
       - edge
@@ -101,7 +104,8 @@ services:
 
 networks:
   edge: {}
-  # Only Caddy and the optional Ethereum node (docker-compose.chain.yml) join this one.
+  # Only Caddy, the verifier (docker-compose.verifier.yml) and the optional Ethereum node
+  # (docker-compose.chain.yml) join this one.
   chain:
     internal: true
 

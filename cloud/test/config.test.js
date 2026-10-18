@@ -47,11 +47,21 @@ test('settings that would make the deployment unsafe or broken are errors', () =
     [{ CLOUD_BACKUP_RECIPIENTS: 'nilbk-pub-nope' }, /entry 1/],
     [{ CLOUD_BACKUP_TARGET: 'ftp://host/x', CLOUD_BACKUP_RECIPIENTS: backupKeys.generate().publicKey }, /file:\/\/ or s3:\/\//],
     [{ CLOUD_BACKUP_TIME: '25:00' }, /CLOUD_BACKUP_TIME/],
+    // with the chain on, workspaces act only on reads the verifier proved
+    [{ CLOUD_VERIFIER_KEY: '' }, /CLOUD_VERIFIER_KEY is not set/],
+    [{ CLOUD_VERIFIER_KEY: 'short' }, /CLOUD_VERIFIER_KEY must be at least 32/],
   ];
   for (const [env, pattern] of cases) {
     const { errors } = loadConfig({ ...baseEnv, ...env });
     assert.ok(errors.some((e) => pattern.test(e)), `${JSON.stringify(env)} → ${errors.join(' | ')}`);
   }
+});
+
+test('without the chain no verifier key is needed, and none reaches the workspaces', async () => {
+  const { config, errors } = loadConfig({ ...baseEnv, CLOUD_RPC_URL: 'off', CLOUD_VERIFIER_KEY: '' });
+  assert.deepEqual(errors, []);
+  const { default: workspaceSpec } = await import('../runtime/workspaceSpec.js');
+  assert.equal(workspaceSpec(config, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard' }).env.NOX_VERIFIER_KEY, undefined);
 });
 
 test('open egress needs no Caddy container, and an S3 target reads its credentials', () => {

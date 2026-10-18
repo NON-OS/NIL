@@ -6,6 +6,7 @@ const baseEnv = Object.freeze({
   CLOUD_CADDY_CONTAINER: 'nil-caddy',
   CLOUD_PLAN_TREASURY: `0x${'7'.repeat(40)}`,
   CLOUD_INVOICE_KEY: 'k'.repeat(64),
+  CLOUD_VERIFIER_KEY: 'v'.repeat(64),
   CLOUD_SOURCE_URL: 'https://source.test/nil',
   CLOUD_POW_BITS: '4',
 });

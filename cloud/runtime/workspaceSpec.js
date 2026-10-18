@@ -15,6 +15,7 @@ export default function workspaceSpec(config, workspace) {
     TRUST_PROXY: '1',
     NOX_RPC_URL: rpc,
   };
+  if (rpc !== 'off' && app.verifierKey) env.NOX_VERIFIER_KEY = app.verifierKey;
   if (app.treasury) env.PLAN_TREASURY = app.treasury;
   if (app.treasury && app.invoiceKey && workspace.invoiceSlot !== null && workspace.invoiceSlot < app.invoiceSlots) {
     env.PLAN_INVOICE_SLOT = `${workspace.invoiceSlot}/${app.invoiceSlots}`;

@@ -42,6 +42,8 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     TRUST_PROXY: '1',
     // rpc-only egress: the chain is reached through Caddy's relay, never directly
     NOX_RPC_URL: 'http://nil-caddy:8545',
+    // and it acts only on answers Nil's verifier, behind that relay, sealed with this key
+    NOX_VERIFIER_KEY: 'v'.repeat(64),
     PLAN_TREASURY: `0x${'7'.repeat(40)}`,
     // the first workspace's slice of the invoice amounts, with the key every workspace shares
     PLAN_INVOICE_SLOT: '0/1000',
@@ -56,7 +58,7 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
 
 test('the operator’s shared env file reaches every workspace but can’t override managed settings', async () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-env-')), 'workspace.env');
-  fs.writeFileSync(file, '# shared\nPLAN_PRICE=500\nPLAN_FREE_SEATS=3\nAPP_URL=https://evil.example\nnot a line\n');
+  fs.writeFileSync(file, '# shared\nPLAN_PRICE=500\nPLAN_FREE_SEATS=3\nAPP_URL=https://evil.example\nNOX_VERIFIER_KEY=chosen-by-the-shared-file-not-the-operator\nnot a line\n');
   const ctx = testContext({ env: { CLOUD_APP_ENV_FILE: file, CLOUD_EGRESS: 'open' } });
   const ws = await running(ctx);
   const { env } = ctx.driver.containers.get(ws.id).spec;
@@ -64,6 +66,7 @@ test('the operator’s shared env file reaches every workspace but can’t overr
   assert.equal(env.PLAN_FREE_SEATS, '3');
   assert.equal(env.APP_URL, 'https://acme.nil.test');
   assert.equal(env.NOX_RPC_URL, 'https://rpc.test/v1/key');
+  assert.equal(env.NOX_VERIFIER_KEY, 'v'.repeat(64));
 });
 
 test('a failed first start marks the workspace failed, alerts, and resume retries it', async () => {

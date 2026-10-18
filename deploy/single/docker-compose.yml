@@ -34,6 +34,47 @@ services:
         max-size: 10m
         max-file: "5"
 
+  # Nil's verifier, off unless .env has COMPOSE_PROFILES=verifier (docs/self-hosting.md,
+  # "Verified chain reads"). Its settings go in verifier.env, apart from nil.env, so it never
+  # holds the app's secrets. Then set NOX_RPC_URL=http://verifier:8545 and NOX_VERIFIER_KEY in
+  # nil.env.
+  verifier:
+    image: ${NIL_IMAGE:-nonos/nil}:${NIL_VERSION:?set NIL_VERSION in .env}
+    container_name: nil-verifier
+    profiles:
+      - verifier
+    restart: unless-stopped
+    command: ["node", "server/verifier/index.js"]
+    env_file:
+      - path: verifier.env
+        required: false
+    environment:
+      VERIFIER_DATA_DIR: /data
+    volumes:
+      - verifier-data:/data
+    networks:
+      - edge
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    init: true
+    mem_limit: ${VERIFIER_MEMORY:-1g}
+    pids_limit: 128
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8545/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 2m
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
   caddy:
     image: ${CADDY_IMAGE:-caddy:2.10.2}
     container_name: nil-caddy
@@ -78,3 +119,4 @@ volumes:
     name: nil-data
   caddy-data:
   caddy-state:
+  verifier-data:

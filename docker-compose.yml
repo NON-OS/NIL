@@ -29,8 +29,46 @@ services:
         max-size: 10m
         max-file: "5"
 
+  # Nil's verifier, off unless you ask for it with COMPOSE_PROFILES=verifier (docs/self-hosting.md,
+  # "Verified chain reads"). Its settings go in verifier.env, apart from .env, so it never holds
+  # the app's secrets: the VERIFIER_ lines of .env.example. Then point the app at it in .env with
+  # NOX_RPC_URL=http://verifier:8545 and NOX_VERIFIER_KEY set to the same value as VERIFIER_KEY.
+  verifier:
+    build: .
+    image: nonos:latest
+    profiles:
+      - verifier
+    restart: unless-stopped
+    command: ["node", "server/verifier/index.js"]
+    env_file:
+      - path: verifier.env
+        required: false
+    environment:
+      VERIFIER_DATA_DIR: /data
+    volumes:
+      - verifier-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8545/healthz"]
+      interval: 30s
+      timeout: 5s
+      start_period: 2m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
 volumes:
   nonos-data:
     # a fixed name, so backups and restores find it whatever folder the code is in; it's the
     # name Compose gave it before, so existing servers keep their data
     name: nonos_nonos-data
+  verifier-data:
