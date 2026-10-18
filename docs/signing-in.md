@@ -56,7 +56,7 @@ Resetting an owner needs a second admin to approve when the workspace has two or
 
 ## Sign out
 
-Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**.
+Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them.
 
 ## The signatures for encryption keys
 
