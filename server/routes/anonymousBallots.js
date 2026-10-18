@@ -25,13 +25,13 @@ router.post(
       if (sql.get("SELECT 1 FROM proposal_trustees WHERE proposal_id = ? AND shares_check LIKE 'bad:%'", proposal.id)) {
         throw new HttpError(409, 'A trustee found a key share that doesn’t match its dealer’s commitment, so this vote can’t take ballots. Ask an admin to start it again.');
       }
-      const { nullifier, ciphertexts } = await checkEncryptedBallot(proposal, parseJSON(proposal.options, []), req.body);
-      const countsAt = heldBallots.hold(proposal.id, nullifier, { ciphertexts, proof: { proof: req.body.proof, publicSignals: req.body.publicSignals } });
+      const { nullifier, ciphertexts, proof } = await checkEncryptedBallot(proposal, parseJSON(proposal.options, []), req.body);
+      const countsAt = heldBallots.hold(proposal.id, nullifier, { ciphertexts, proof });
       return { ok: true, countsAt };
     }
-    const { choice, nullifier } = await checkBallot(proposal, parseJSON(proposal.options, []), req.body?.proof);
+    const { choice, nullifier, proof } = await checkBallot(proposal, parseJSON(proposal.options, []), req.body?.proof);
     // the same member voting again replaces their earlier choice, like signed ballots do
-    const countsAt = heldBallots.hold(proposal.id, nullifier, { choice, proof: req.body.proof });
+    const countsAt = heldBallots.hold(proposal.id, nullifier, { choice, proof });
     return { ok: true, countsAt };
   }),
 );

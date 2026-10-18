@@ -91,7 +91,8 @@ router.post(
     if (proposal.result) return { ok: true };
     const checked = checkPartial(encryptedTally.publicShare(proposal.id, trustee.position), encryptedTally.aggregates(proposal), req.body);
     if (!checked) throw HttpError.badRequest('That partial decryption doesn’t check out against your public share.');
-    sql.run('UPDATE proposal_trustees SET partial = ?, partial_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify(req.body), Date.now(), proposal.id, trustee.position);
+    const partial = { d: req.body.d, proofs: req.body.proofs.map(({ t1, t2, z }) => ({ t1, t2, z })) };
+    sql.run('UPDATE proposal_trustees SET partial = ?, partial_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify(partial), Date.now(), proposal.id, trustee.position);
     encryptedTally.finish(proposal);
     hub.broadcast({ type: 'proposals' });
     return { ok: true };

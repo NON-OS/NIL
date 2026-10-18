@@ -1,4 +1,5 @@
-import { Base8, addPoint, mulPointEscalar } from '@zk-kit/baby-jubjub';
+import { Base8, addPoint, mulPointEscalar, subOrder } from '@zk-kit/baby-jubjub';
+import canonical from '../canonical.js';
 import curvePoint from './curvePoint.js';
 import dleqChallenge from './dleqChallenge.js';
 
@@ -14,12 +15,12 @@ export default function checkPartial(publicShare, aggregates, partial) {
     const d = curvePoint(partial.d[k]);
     const t1 = curvePoint(partial.proofs[k]?.t1);
     const t2 = curvePoint(partial.proofs[k]?.t2);
-    const z = /^\d{1,78}$/.test(partial.proofs[k]?.z ?? '') ? BigInt(partial.proofs[k].z) : null;
+    const z = canonical.number(partial.proofs[k]?.z, subOrder);
     if (!d || !t1 || !t2 || z === null) return null;
     const c1 = aggregates[k].c1;
     const c = dleqChallenge([Base8, publicShare, c1, d, t1, t2]);
-    if (!same(mulPointEscalar(Base8, z), addPoint(t1, mulPointEscalar(publicShare, c)))) return null;
-    if (!same(mulPointEscalar(c1, z), addPoint(t2, mulPointEscalar(d, c)))) return null;
+    if (!same(mulPointEscalar(Base8, BigInt(z)), addPoint(t1, mulPointEscalar(publicShare, c)))) return null;
+    if (!same(mulPointEscalar(c1, BigInt(z)), addPoint(t2, mulPointEscalar(d, c)))) return null;
     out.push(d);
   }
   return out;
