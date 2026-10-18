@@ -172,6 +172,8 @@ export default function loadConfig(env = process.env) {
       deleteGraceDays: read.number('CLOUD_DELETE_GRACE_DAYS', 14),
       upgradeMaxFailures: read.number('CLOUD_UPGRADE_MAX_FAILURES', 1),
       checkpointKeepDays: read.number('CLOUD_CHECKPOINT_KEEP_DAYS', 7),
+      lockWaitSec: read.number('CLOUD_LOCK_WAIT_SEC', 900, { max: 86_400 }),
+      lockLeaseSec: read.number('CLOUD_LOCK_LEASE_SEC', 300, { min: 30, max: 86_400 }),
     }),
     backup: Object.freeze({
       enabled: Boolean(target && recipients.length && recipients.every(Boolean)),

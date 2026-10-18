@@ -1,11 +1,14 @@
 import purgeWorkspace from '../provisioning/purgeWorkspace.js';
+import recoverInterrupted from './recoverInterrupted.js';
 
 const DAY = 86_400_000;
 
-// Hourly: deletes workspaces whose grace period is over, erases upgrade checkpoints that are
-// past CLOUD_CHECKPOINT_KEEP_DAYS, and lets go of names whose quarantine has ended.
+// Hourly: reports operations left stuck, deletes workspaces whose grace period is over, erases
+// upgrade checkpoints that are past CLOUD_CHECKPOINT_KEEP_DAYS, and lets go of names whose
+// quarantine has ended.
 export default async function housekeeping(ctx) {
   const now = ctx.store.now();
+  await recoverInterrupted(ctx);
   for (const workspace of ctx.store.workspaces.list({ states: ['deleting'] }).filter((w) => w.deleteAfter <= now)) {
     try {
       await purgeWorkspace(ctx, workspace.id);

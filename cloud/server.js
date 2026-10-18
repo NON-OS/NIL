@@ -5,24 +5,19 @@ import createPublicServer from './signup/http/createPublicServer.js';
 import createInternalServer from './signup/http/createInternalServer.js';
 import provisionWorkspace from './provisioning/provisionWorkspace.js';
 import startScheduler from './ops/startScheduler.js';
-import states from './provisioning/states.js';
+import recoverInterrupted from './ops/recoverInterrupted.js';
 
 const config = configOrExit();
-const ctx = createContext(config);
+const ctx = createContext(config, { role: 'server' });
 
 // Caddy may not be up yet on a first start, so the file is written first and the reload is
 // only attempted: Caddy reads the file itself when it starts.
 ctx.routes.write();
 ctx.routes.sync().catch(() => {});
 
-// An operation can't survive a restart of the process running it. A first provisioning that
-// was cut off is marked failed (resume retries it); anything else stuck is left for the
-// operator, since the CLI may be in the middle of it.
-const stale = ctx.store.now() - 3_600_000;
-for (const workspace of ctx.store.workspaces.list({ states: states.busy }).filter((w) => w.updatedAt < stale)) {
-  if (workspace.state === 'provisioning') ctx.store.workspaces.transition(workspace.id, ['provisioning'], 'failed');
-  ctx.alert('workspace.stuck', { workspace, message: `It has been ${workspace.state} for over an hour.` });
-}
+// Sign-ups this server was provisioning when it stopped can't finish now: mark them failed and
+// say so. The scheduler repeats the check hourly for anything else left stuck.
+recoverInterrupted(ctx, { startup: true }).catch((err) => ctx.log.error('recover.failed', { error: err }));
 
 const flow = createSignupFlow(ctx, { provision: (id) => provisionWorkspace(ctx, id) });
 const site = createPublicServer(ctx, flow);

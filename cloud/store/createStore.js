@@ -36,13 +36,23 @@ export default function createStore(db, now = () => Date.now()) {
   const run = (text, ...params) => prepared(text).run(...params);
 
   const workspaces = {
+    // The slot comes from a counter that only goes up, in the same transaction, so a slot is
+    // never handed out twice, not even after its workspace's row is forgotten.
     insert(w) {
       const at = now();
-      run(
-        `INSERT INTO workspaces (id, name, owner, state, image, plan, volume, setup_token, created_at, updated_at, invoice_slot)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, (SELECT COALESCE(MAX(invoice_slot), -1) + 1 FROM workspaces))`,
-        w.id, w.name, w.owner, w.state, w.image, w.plan, w.volume, w.setupToken ?? null, at, at,
-      );
+      db.exec('BEGIN IMMEDIATE');
+      try {
+        const { slot } = get("UPDATE counters SET value = value + 1 WHERE name = 'invoice_slot' RETURNING value - 1 AS slot");
+        run(
+          `INSERT INTO workspaces (id, name, owner, state, image, plan, volume, setup_token, created_at, updated_at, invoice_slot)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          w.id, w.name, w.owner, w.state, w.image, w.plan, w.volume, w.setupToken ?? null, at, at, slot,
+        );
+        db.exec('COMMIT');
+      } catch (err) {
+        db.exec('ROLLBACK');
+        throw err;
+      }
       return workspaces.get(w.id);
     },
 
@@ -111,5 +121,22 @@ export default function createStore(db, now = () => Date.now()) {
     all: () => new Map(all('SELECT workspace_id, disk_bytes, members, measured_at FROM usage').map((r) => [r.workspace_id, { diskBytes: r.disk_bytes, members: r.members, measuredAt: r.measured_at }])),
   };
 
-  return { db, now, workspaces, events, backups, usage };
+  const locks = {
+    // Takes the lock when it is free, its lease has run out, or this holder has it already (a
+    // renewal). True when the lock is now this holder's.
+    take: (workspaceId, holder, operation, expiresAt) =>
+      run(
+        `INSERT INTO locks (workspace_id, holder, operation, expires_at) VALUES (?, ?, ?, ?)
+         ON CONFLICT (workspace_id) DO UPDATE SET holder = excluded.holder, operation = excluded.operation, expires_at = excluded.expires_at
+         WHERE locks.expires_at <= ? OR locks.holder = excluded.holder`,
+        workspaceId, holder, operation, expiresAt, now(),
+      ).changes === 1,
+    get(workspaceId) {
+      const row = get('SELECT holder, operation, expires_at FROM locks WHERE workspace_id = ?', workspaceId);
+      return row ? { holder: row.holder, operation: row.operation, expiresAt: row.expires_at } : null;
+    },
+    release: (workspaceId, holder) => run('DELETE FROM locks WHERE workspace_id = ? AND holder = ?', workspaceId, holder).changes,
+  };
+
+  return { db, now, workspaces, events, backups, usage, locks };
 }

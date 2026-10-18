@@ -36,5 +36,14 @@ export default function createWorkspace(ctx, { name, owner, plan = ctx.config.de
   }
   store.events.add(id, 'created', `plan=${plan} image=${image}`);
   ctx.log.info('workspace.created', { workspace: id, name: workspace.name, owner: ctx.walletTag(address), plan });
+  const { app } = config;
+  if (app.treasury && app.invoiceKey && workspace.invoiceSlot >= app.invoiceSlots) {
+    // the alerter never rejects; the workspace itself is fine, only its invoices could collide
+    ctx.alert('billing.slots_used_up', {
+      workspace,
+      severity: 'critical',
+      message: `All ${app.invoiceSlots} invoice slots (CLOUD_INVOICE_SLOTS) are taken, so this workspace draws invoice amounts at random and could ask for the same amount as another workspace.`,
+    });
+  }
   return workspace;
 }
