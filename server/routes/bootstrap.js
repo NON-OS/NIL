@@ -22,6 +22,7 @@ import archivedSql from '../services/archivedSql.js';
 import archiveBoundary from '../services/archiveBoundary.js';
 import archiveSummary from '../services/archiveSummary.js';
 import keySite from '../keys/keySite.js';
+import passkeyList from '../keys/passkeyList.js';
 import signingKey from '../proofs/signingKey.js';
 
 const router = express.Router();
@@ -92,6 +93,9 @@ router.get(
       // what key messages are bound to: the configured site (APP_URL) and the workspace's signing key
       origin: keySite().origin,
       workspaceKey: signingKey.publicKey(),
+      // your own passkey wraps and when you last saved a recovery kit; nobody else's ever come here
+      passkeys: passkeyList(req.user.id),
+      recoveryKitAt: sql.get('SELECT kit_saved_at FROM encryption_keys WHERE user_id = ?', req.user.id)?.kit_saved_at ?? null,
     };
   }),
 );
