@@ -26,6 +26,8 @@ The contributor gets a notification and a signed payment receipt in their [proof
 
 The money goes to the first wallet linked to the contributor's account, unless they turned on [private payouts](private-payouts.md). Then the button says **privately** and the money goes to a new one-time address that only they can open.
 
+On a server with pool payouts on, admins also see **From pool** next to **Pay** for a contributor with private payouts. It pays the bounty out of the team's [Privacy Pools](private-payouts.md#pay-from-the-teams-pool) pool through a relayer, so no team wallet sends it and the chain doesn't link the team to the contributor. The dialog shows the bounty, the relayer's fee on top and the total that leaves the pool before anything is sent.
+
 To pay, the task needs an assignee with a linked wallet. If nobody is assigned yet, assign someone or list the bounty on the [public bounty board](public-bounty-board.md).
 
 ## Pay from a team treasury or another wallet
@@ -40,7 +42,7 @@ Each payment appears in the **Payments** list on the Bounties page as **Waiting 
 
 - the transaction failed on the blockchain,
 - it doesn't move that token to the contributor's address,
-- the tokens came from a wallet that isn't the paying admin's or a treasury address,
+- the tokens came from a wallet that isn't the paying admin's or a treasury address (or, for a payout from the team's pool, the transaction isn't a withdrawal from the token's pool through the entry contract to the one-time address),
 - the amount doesn't end in the digits Nil asked for, so it can't be told apart from a payment made for something else,
 - it was mined before the payment was started in Nil,
 - it never showed up on the blockchain within 24 hours (`NOX_MISSING_TX_HOURS`).
@@ -66,6 +68,7 @@ Below that come these sections:
 | Per person | What each person was promised, is owed and was paid, per token. Members see only their own row, under the heading Your earnings |
 | Your private payouts | Bounties paid to you at one-time addresses, if you have any |
 | Payments | Every transfer Nil checked, with a link to it on a block explorer. Only admins and the person paid can see a payment, because a transaction reveals the wallet that received it |
+| Team pool | The team's Privacy Pools pool: what it holds, each deposit and whether the association set approved it, deposits, ragequits and recovery. Admins only, on a server with pool payouts on |
 | Treasury addresses | Extra addresses allowed to pay bounties. Admins only |
 
 **Public board** at the top opens the [public bounty board](public-bounty-board.md).
@@ -73,6 +76,8 @@ Below that come these sections:
 ## How the check works
 
 A payment counts only when all of these hold: the right token contract moved the tokens, they came from the wallet of the admin who recorded it or from a treasury address, they went to the contributor's address (or the one-time address of a private payout), the transaction was mined after the payment was started in Nil, the amount ends in the digits Nil asked for, and the block is final. The server reads the chain through its Ethereum node and asks it for the finalized block; on a node or chain without one, a block counts as final 64 blocks under the newest one (`NOX_FINALITY_DEPTH`). Until then it keeps the block's hash and checks it again, so a transaction that a chain reorganisation moves or drops is followed rather than counted too early.
+
+A payout from the team's pool comes from the Privacy Pools entry contract rather than a team wallet. It counts only when the configured pool for the token emitted the withdrawal to the entry contract, the entry contract sent the token to the payout's one-time address, and its WithdrawalRelayed event names that address, the token, the amount and the relayer's fee, with exactly the amount less the fee arriving. That amount has to be the one Nil asked for, digits included: the browser withdraws enough that the contributor receives exactly that, and the team pays the fee on top. Instead of the payer's wallet, the check rests on the one-time address, which only this payment was told about. The rest (the start block, finality, reorgs) is the same as for any payment, and the Payments list shows what the relayer kept.
 
 A transaction can pay only one thing: one bounty, or one [Nil Pro](nox-and-nil-pro.md) invoice. The starting block and the identifying digits also mean a payment made in one workspace can't be passed off as one made in another. Recording the same transaction twice for the same payment changes nothing. Pending payments are checked again every minute.
 
