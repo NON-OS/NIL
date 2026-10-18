@@ -28,6 +28,7 @@ Everything else is stored in plain form in the server's database, where anyone w
 - goals, projects and labels,
 - time entries, reminders and their notes,
 - the list of people, their names, roles and wallet addresses,
+- the names you give your passkeys, when each was added and last used, and whether you've downloaded a recovery kit (never the kit itself),
 - bounty amounts and payment records,
 - signed votes, with each voter's wallet and choice.
 
@@ -57,7 +58,7 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Session, invite, share-link and access-key tokens are random, and only their SHA-256 hashes are stored. A leaked database can't be used to sign in.
 - Session cookies are `HttpOnly` and `SameSite=Lax`. Over HTTPS they are also `Secure` and use the `__Host-` prefix.
 - Every change needs a custom header and a same-origin check, which blocks cross-site request forgery. The live connection and the MCP endpoint check the origin too.
-- The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy`, and HSTS over HTTPS.
+- The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy` that still lets the site itself use passkeys, and HSTS over HTTPS.
 - Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited.
 - Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run.
 - SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is erased after 30 days by default and read notifications after 90 days.
@@ -76,8 +77,10 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
 - Encryption only helps if the app your browser runs is Nil's own code. Whoever runs the server could serve changed code that reads everything you unlock. Anyone can [check what a server sends](verify-a-server.md) against a release, byte for byte, but that proves what the server sent to the check, not to everyone at every moment. Running a build you trust on a server you control is the strongest defence.
 - The server decides which wallets belong to whom, and your browser can't check that. The first key your browser sees for a teammate could come from the server, so compare fingerprints before you rely on it. A new browser or device starts over.
-- A wallet opens your keys with its signature, so it has to give the same signature for the same message every time. A wallet that doesn't can still sign you in but can't hold your keys; Nil checks each wallet when it's added to your keys. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet.
-- If you lose every wallet that holds your keys and have no recovery kit, your keys are gone. You start over with new keys, and docs and private tasks sealed to the old ones have to be shared with you again. Private payouts sent to the old keys stay out of reach.
+- A wallet opens your keys with its signature, so it has to give the same signature for the same message every time. A wallet that doesn't can still sign you in but can't hold your keys; Nil checks each wallet when it's added to your keys. Smart wallets, including passkey wallets, can't hold or publish encryption keys yet. A passkey you add under Encryption keys can unlock keys a regular wallet set up, but it can't publish them.
+- A passkey unlocks your keys without your wallet, so it is only as safe as the device or passkey manager that holds it. Nil asks for user verification each time, such as a fingerprint or device PIN.
+- A passkey belongs to the web address it was made on. If the workspace moves to a new address, passkeys stop opening your keys there. That's why Nil never lets a passkey be your only way back: a wallet must hold your keys too, or you must have downloaded a recovery kit.
+- If you lose every wallet that holds your keys and have no recovery kit or working passkey, your keys are gone. You start over with new keys, and docs and private tasks sealed to the old ones have to be shared with you again. Private payouts sent to the old keys stay out of reach.
 - A server can send an older saved version of a doc or a private task. Every save carries a signed revision number, so a browser that has already opened a newer one shows a warning. A browser or device that has never opened it has nothing to compare with, and the older version is still its writer's real text.
 - Keys live in the browser tab while it's open. Anything that can read that tab's memory, such as a malicious browser extension, could read them.
 - Never lose `DATA_DIR/keys`. The signing key there signs every receipt, and every message that unlocks or publishes encryption keys names the workspace by it. Without it, the workspace gets a new identity: earlier proofs no longer match the key it publishes, no wallet opens anyone's encryption keys, and Nil won't restore recovery kits made for the old key. Everyone starts over with new keys. Back it up with the database.

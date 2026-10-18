@@ -12,7 +12,7 @@ To open a private task up again, choose **Everyone in the workspace**. Your brow
 
 ## Unlock with your wallet
 
-Private tasks use the same keys as [encrypted docs](encrypted-docs.md#unlock-docs). Until you unlock, a private task shows **Encrypted** with an **Unlock** button in its panel. Click it and sign the message in your wallet; it starts with "Unlock my Nil encryption keys". The first time, Nil sets up your keys and your wallet signs three times.
+Private tasks use the same keys as [encrypted docs](encrypted-docs.md#unlock-docs). Until you unlock, a private task shows **Encrypted** with an **Unlock** button in its panel. Click it and sign the message in your wallet; it starts with "Unlock my Nil encryption keys". The first time, Nil sets up your keys and your wallet signs three times. If you've added a passkey to your keys, **Unlock with a passkey** sits under the button and unlocks them without a wallet signature (see [Unlock with a passkey](signing-in.md#unlock-with-a-passkey)).
 
 Your keys live only in that browser tab's memory once unlocked. When you close or reload the tab they're gone, and you unlock again next time.
 

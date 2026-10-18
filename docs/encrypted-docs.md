@@ -12,6 +12,10 @@ The first time, your browser makes your personal keys and your wallet signs thre
 
 Your keys aren't tied to one wallet. Every wallet you add to them unlocks the same keys. [Signing in](signing-in.md#the-signatures-for-encryption-keys) explains how to add a wallet and how to keep a recovery kit.
 
+### Unlock with a passkey
+
+If you've added a passkey to your keys, **Unlock with a passkey** sits next to **Unlock with your wallet**. Click it and confirm in your passkey manager, with your fingerprint, face or device PIN. Your keys unlock without a wallet signature and stay in the tab's memory, just as after a wallet unlock. Signing in still takes your wallet. [Unlock with a passkey](signing-in.md#unlock-with-a-passkey) explains how to add one.
+
 ## Write a doc
 
 Click the plus button above the list. A new doc called "Untitled" opens, shared with the whole team. Start typing. Nil saves a moment after you stop, and encrypts the text before it leaves your browser. The status at the top says **Encrypted · saved**, **Unsaved**, **Encrypting…** or **Conflict**.
@@ -85,7 +89,9 @@ This is the one time a doc's text leaves your browser. Your instruction goes to 
 | This wallet doesn't unlock your keys yet | Your keys were set up with another wallet. Unlock once with that one and add this wallet to your keys (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)). If you no longer have it, restore from your recovery kit |
 | Your keys were set up with a wallet that's no longer linked to your account | Restore from your recovery kit, or start over with new keys |
 | Your wallet's signature doesn't open your keys here | The workspace moved to a new web address since your keys were set up. Restore from your recovery kit. If it didn't move, tell your admin |
-| The server lists different keys for you than the ones your wallet unlocks | If you didn't start over with new keys on another device, tell your admin before you do anything else |
+| The server lists different keys for you than the ones your wallet unlocks | If you didn't start over with new keys on another device, tell your admin before you do anything else. The same goes for "than the ones your passkey unlocks" |
+| No passkey was used | You cancelled, or none of your passkeys is on this device or in this passkey manager. A passkey only works at the web address it was made on, so after the workspace moves, unlock with your wallet or recovery kit and add new passkeys |
+| That passkey doesn't open your keys here | The passkey's copy of your keys was damaged, or the workspace lost its signing key. Unlock with your wallet, or restore from your recovery kit |
 | Your wallet signs the same message differently each time | That wallet can't hold your keys. Use another linked wallet, such as MetaMask, Rabby, Ledger or Trezor |
 | Your wallet returned a signature Nil can't read | Smart wallets, including passkey wallets, can't hold encryption keys yet. Use a regular wallet |
 
@@ -95,7 +101,7 @@ With no recovery kit and no wallet that holds your keys, click **Start over with
 
 ## How it works
 
-Your keys come from a random seed your browser makes the first time you unlock. The server keeps that seed only locked to each wallet you've added to your keys, under a key made from that wallet's signature of its unlock message. The signature never leaves your browser, so the server can't open it. The messages name the workspace by its signing key, not its name, so renaming the workspace changes nothing.
+Your keys come from a random seed your browser makes the first time you unlock. The server keeps that seed only locked to each wallet you've added to your keys, under a key made from that wallet's signature of its unlock message, and to each passkey you've added, under a key made from that passkey's PRF output. Neither ever leaves your browser, so the server can't open the seed. The messages name the workspace by its signing key, not its name, so renaming the workspace changes nothing.
 
 Each doc has its own random AES-256-GCM key. The title and the body are signed with the writer's Ed25519 key, then encrypted separately, each bound to the doc, the field and the version number through associated data. The doc key is sealed to every reader on its own: a throwaway X25519 key pair agrees on a secret with the reader's public key, HKDF-SHA256 turns it into a wrapping key, and AES-256-GCM wraps the doc key. [Encryption and trust](encryption.md) covers the whole design, including what a server operator can still do.
 
