@@ -1,5 +1,7 @@
 import toWorkspace from './toWorkspace.js';
 
+const toRequest = (row) => (row ? { id: row.id, name: row.name, owner: row.owner, setupToken: row.setup_token, requestedAt: row.requested_at } : null);
+
 const COLUMNS = {
   owner: 'owner',
   image: 'image',
@@ -14,6 +16,7 @@ const COLUMNS = {
   deleteAfter: 'delete_after',
   deletedAt: 'deleted_at',
   lastHealthyAt: 'last_healthy_at',
+  activeAt: 'active_at',
 };
 
 function assignments(fields) {
@@ -69,6 +72,8 @@ export default function createStore(db, now = () => Date.now()) {
     countLive: () => get("SELECT COUNT(*) AS n FROM workspaces WHERE state != 'deleted'").n,
     countByOwner: (owner) => get("SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND state != 'deleted'", owner).n,
     countByOwnerSince: (owner, since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND created_at >= ?', owner, since).n,
+    // created since then, deleted ones included, so deleting doesn't refill the day's budget
+    countCreatedSince: (since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE created_at >= ?', since).n,
 
     // 'live' while a workspace uses the name, 'quarantined' for a while after one was deleted
     nameStatus(name, quarantineSince) {
@@ -121,6 +126,15 @@ export default function createStore(db, now = () => Date.now()) {
     all: () => new Map(all('SELECT workspace_id, disk_bytes, members, measured_at FROM usage').map((r) => [r.workspace_id, { diskBytes: r.disk_bytes, members: r.members, measuredAt: r.measured_at }])),
   };
 
+  const requests = {
+    add: ({ id, name, owner, setupToken }) => run('INSERT INTO signup_requests (id, name, owner, setup_token, requested_at) VALUES (?, ?, ?, ?, ?)', id, name, owner, setupToken, now()),
+    list: () => all('SELECT id, name, owner, setup_token, requested_at FROM signup_requests ORDER BY requested_at').map(toRequest),
+    byName: (name) => toRequest(get('SELECT id, name, owner, setup_token, requested_at FROM signup_requests WHERE name = ?', name)),
+    countByOwner: (owner) => get('SELECT COUNT(*) AS n FROM signup_requests WHERE owner = ?', owner).n,
+    remove: (id) => run('DELETE FROM signup_requests WHERE id = ?', id).changes,
+    expire: (before) => run('DELETE FROM signup_requests WHERE requested_at < ?', before).changes,
+  };
+
   const locks = {
     // Takes the lock when it is free, its lease has run out, or this holder has it already (a
     // renewal). True when the lock is now this holder's.
@@ -138,5 +152,5 @@ export default function createStore(db, now = () => Date.now()) {
     release: (workspaceId, holder) => run('DELETE FROM locks WHERE workspace_id = ? AND holder = ?', workspaceId, holder).changes,
   };
 
-  return { db, now, workspaces, events, backups, usage, locks };
+  return { db, now, workspaces, events, backups, usage, requests, locks };
 }

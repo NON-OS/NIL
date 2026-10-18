@@ -78,20 +78,25 @@ test('names are checked before the wallet is asked, and the database settles rac
   await settle();
 });
 
-test('limits: per wallet in total and per day, per network per day, and for everyone per hour', async () => {
-  const { flow, settle } = setup({ env: { CLOUD_MAX_PER_WALLET: '3', CLOUD_SIGNUPS_PER_WALLET_PER_DAY: '2', CLOUD_SIGNUPS_PER_IP_PER_DAY: '2', CLOUD_SIGNUPS_PER_HOUR: '5' } });
+test('limits: per wallet in total and per day, per network per day, and per block per hour', async () => {
+  const { flow, settle } = setup({ env: { CLOUD_MAX_PER_WALLET: '3', CLOUD_SIGNUPS_PER_WALLET_PER_DAY: '2', CLOUD_SIGNUPS_PER_IP_PER_DAY: '2', CLOUD_SIGNUPS_PER_BLOCK_PER_HOUR: '2' } });
   const w = wallet();
-  signUp(flow, w, 'one', '2001:db8:1:1::1');
-  signUp(flow, w, 'two', '2001:db8:1:2::1');
-  assert.throws(() => signUp(flow, w, 'three', '2001:db8:1:3::1'), /enough workspaces for today/);
+  signUp(flow, w, 'one', '2001:db8:1:100::1');
+  signUp(flow, w, 'two', '2001:db8:2:200::1');
+  assert.throws(() => signUp(flow, w, 'three', '2001:db8:3:300::1'), /enough workspaces for today/);
 
-  // a whole IPv6 /64 counts as one network
+  // a whole IPv6 /56 counts as one network, however many /64s it holds
   signUp(flow, wallet(), 'four', '2001:db8:aa:bb::1');
-  signUp(flow, wallet(), 'five', '2001:db8:aa:bb::ffff');
-  assert.throws(() => signUp(flow, wallet(), 'six', '2001:db8:aa:bb:1:2:3:4'), (err) => err.status === 429 && /your network today/.test(err.message) && err.extra.retryAfterSec > 0);
+  signUp(flow, wallet(), 'five', '2001:db8:aa:cc::ffff');
+  assert.throws(() => signUp(flow, wallet(), 'six', '2001:db8:aa:dd:1:2:3:4'), (err) => err.status === 429 && /your network today/.test(err.message) && err.extra.retryAfterSec > 0);
 
-  signUp(flow, wallet(), 'seven', '192.0.2.10');
-  assert.throws(() => signUp(flow, wallet(), 'eight', '192.0.2.11'), /Many workspaces are being created/);
+  // other /56s of the same /48 share its hourly budget, which was used up above
+  assert.throws(() => signUp(flow, wallet(), 'seven', '2001:db8:aa:1200::1'), /from your network right now/);
+  // a refused attempt costs nothing: the network still has its day's sign-ups
+  signUp(flow, wallet(), 'eight', '192.0.2.10');
+  signUp(flow, wallet(), 'nine', '192.0.2.10');
+  assert.throws(() => signUp(flow, wallet(), 'ten', '192.0.2.11'), /from your network right now/, 'an IPv4 /24 is one block');
+  signUp(flow, wallet(), 'eleven', '198.51.100.10');
   await settle();
 });
 

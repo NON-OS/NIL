@@ -16,6 +16,7 @@ import verifyBackup from './commands/verifyBackup.js';
 import decrypt from './commands/decrypt.js';
 import keygen from './commands/keygen.js';
 import maintenance from './commands/maintenance.js';
+import requests from './commands/requests.js';
 
 const HELP = `Nil control plane
 
@@ -36,6 +37,10 @@ Workspaces
   rollback <name…>|--all [--yes]         back to the checkpoint from before the last upgrade
   delete <name> [--now] [--no-export] [--yes]
                                          final encrypted export, then deletion after the grace period
+
+Sign-ups waiting for approval
+  requests                               sign-ups past the daily cap or near capacity
+  approve <name> | reject <name>         create and start it, or release the address
 
 Backups
   backup <name…>|--all                   encrypted backup now (--all: the nightly job)
@@ -78,6 +83,9 @@ const COMMANDS = {
   check: maintenance,
   'setup-token': maintenance,
   'alert-test': maintenance,
+  requests,
+  approve: requests,
+  reject: requests,
 };
 
 // Commands that don't need Docker, the database or even a configuration, so they also run on a

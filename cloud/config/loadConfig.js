@@ -4,10 +4,8 @@ import parsePlans from './parsePlans.js';
 import parseDailyTime from './parseDailyTime.js';
 import parseBackupTarget from './parseBackupTarget.js';
 import parseEnvFile from './parseEnvFile.js';
-import readWordList from './readWordList.js';
+import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
-import reservedNames from '../names/reservedNames.js';
-import blockedWords from '../names/blockedWords.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -94,9 +92,6 @@ export default function loadConfig(env = process.env) {
   const backupTime = parseDailyTime(read.text('CLOUD_BACKUP_TIME', '03:15'));
   if (backupTime === undefined) read.fail('CLOUD_BACKUP_TIME must be HH:MM in UTC, or off.');
 
-  const nameMin = read.number('CLOUD_NAME_MIN', 3, { min: 1, max: 63 });
-  const nameMax = read.number('CLOUD_NAME_MAX', 32, { min: nameMin, max: 63 });
-
   const config = {
     domain,
     signupHost,
@@ -151,24 +146,7 @@ export default function loadConfig(env = process.env) {
       rpcRelayPort: read.number('CLOUD_RPC_RELAY_PORT', 8545, { min: 1, max: 65535 }),
       streamCloseDelayMin: read.number('CLOUD_STREAM_CLOSE_DELAY_MIN', 5, { max: 120 }),
     }),
-    signup: Object.freeze({
-      open: read.oneOf('CLOUD_SIGNUP', ['open', 'closed'], 'open') === 'open',
-      maxWorkspaces: read.number('CLOUD_MAX_WORKSPACES', 300, { min: 1 }),
-      perWallet: read.number('CLOUD_MAX_PER_WALLET', 3, { min: 1 }),
-      perWalletPerDay: read.number('CLOUD_SIGNUPS_PER_WALLET_PER_DAY', 2, { min: 1 }),
-      perIpPerDay: read.number('CLOUD_SIGNUPS_PER_IP_PER_DAY', 3, { min: 1 }),
-      perHour: read.number('CLOUD_SIGNUPS_PER_HOUR', 30, { min: 1 }),
-      challengesPerIp: read.number('CLOUD_CHALLENGES_PER_IP', 20, { min: 1 }),
-      nameChecksPerIp: read.number('CLOUD_NAME_CHECKS_PER_IP', 60, { min: 1 }),
-      powBits: read.number('CLOUD_POW_BITS', 16, { max: 24 }),
-      nameMin,
-      nameMax,
-      reserved: Object.freeze(new Set([...reservedNames, ...read.list('CLOUD_RESERVED_NAMES').map((n) => n.toLowerCase())])),
-      blocked: Object.freeze([...blockedWords, ...readWordList(read.text('CLOUD_BLOCKLIST_FILE'), read)]),
-      quarantineDays: read.number('CLOUD_NAME_QUARANTINE_DAYS', 90),
-      unclaimedDays: read.number('CLOUD_UNCLAIMED_DAYS', 7),
-      ticketMinutes: read.number('CLOUD_TICKET_MINUTES', 30, { min: 5, max: 1440 }),
-    }),
+    signup: signupRules(read),
     lifecycle: Object.freeze({
       deleteGraceDays: read.number('CLOUD_DELETE_GRACE_DAYS', 14),
       upgradeMaxFailures: read.number('CLOUD_UPGRADE_MAX_FAILURES', 1),

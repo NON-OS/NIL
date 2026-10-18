@@ -14,6 +14,15 @@ const NOTICES = {
   deleting: ['This workspace is being closed', 'It is scheduled for deletion and is no longer available.'],
   starting: ['This workspace is starting', 'Try again in a minute.'],
 };
+const DAY = 86_400_000;
+// workspaces the control plane paused by itself say why, and what happens next
+const REASONS = {
+  [states.reasons.idle]: (w, config) => [
+    'This workspace is paused',
+    `Nobody has used it for a long time, so the host paused it. Its data is kept until ${new Date(w.suspendedAt + config.signup.idleNoticeDays * DAY).toISOString().slice(0, 10)}, and then deleted unless its owner asks the host to bring it back.`,
+  ],
+  [states.reasons.disk]: () => ['This workspace is paused', 'It holds more data than its plan allows, so the host paused it. Its data is kept; its owner can ask the host to bring it back.'],
+};
 
 // The public face of the control plane, behind Caddy: the sign-up page and its small JSON API,
 // plus the notice shown for workspaces that aren't running. No cookies are ever set: the
@@ -41,7 +50,8 @@ export default function createPublicServer(ctx, flow) {
     const suffix = `.${ctx.config.domain}`;
     const workspace = host.endsWith(suffix) ? ctx.store.workspaces.byName(host.slice(0, -suffix.length)) : null;
     if (!workspace) return html(res, 404, pages.unavailable('There’s no workspace here', `Nothing is hosted at ${host || 'this address'}.`));
-    const [title, detail] = NOTICES[workspace.state] ?? (states.routed.includes(workspace.state) ? NOTICES.starting : ['This workspace isn’t available', 'Try again later.']);
+    const automatic = workspace.state === 'suspended' && REASONS[workspace.suspendReason]?.(workspace, ctx.config);
+    const [title, detail] = automatic || NOTICES[workspace.state] || (states.routed.includes(workspace.state) ? NOTICES.starting : ['This workspace isn’t available', 'Try again later.']);
     html(res, 503, pages.unavailable(title, detail), { 'retry-after': '60' });
   }
 

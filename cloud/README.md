@@ -34,7 +34,8 @@ Root on the server would also let NØNOS send a changed web app that reads what 
 
 **What the control plane itself records**
 
-- Per workspace: its address, the one wallet address that signed up (the owner), its state, app version, resource plan, creation, suspension and deletion dates, disk use, and whether its setup was finished. A member count only if the app reports one in `/healthz`; it currently reports its version and database schema, nothing about people.
+- Per workspace: its address, the one wallet address that signed up (the owner), its state, app version, resource plan, creation, suspension and deletion dates, disk use, whether its setup was finished, and when its data last changed. That last one is the modification time of its database files, read without opening them, and decides when a workspace nobody uses is paused. A member count only if the app reports one in `/healthz`; it currently reports its version and database schema, nothing about people.
+- Sign-ups waiting for approval: the address asked for, the wallet that signed, and the setup code it was given, until the operator approves or rejects it, or for `CLOUD_SIGNUP_REQUEST_DAYS`.
 - At sign-up, the visitor's IP address is kept in memory for rate limiting and is never written to disk. The sign-up page sets no cookies, loads nothing from other sites and has no analytics.
 - Its log names wallets only by a keyed hash, never IP addresses, and rotates by size.
 
@@ -67,7 +68,7 @@ Root on the server would also let NØNOS send a changed web app that reads what 
 - One container per workspace, created through the Docker Engine API from the app image. Each has its own data volume, its own bridge network (so its own network namespace and no route to other workspaces), a read-only root filesystem with a small no-exec `/tmp`, no Linux capabilities, `no-new-privileges`, an init process, hard CPU, memory and process limits without swap, rotated logs and a health check on the app's own `/healthz`. The app inside is unmodified: the control plane only sets `APP_URL`, `TRUST_PROXY`, `PLAN_TREASURY` with each workspace's own invoice slot (`PLAN_INVOICE_SLOT`, `PLAN_INVOICE_KEY`), `SOURCE_URL`, `NOX_RPC_URL` and a one-time `SETUP_TOKEN`; every other app setting comes from a shared `workspace.env`.
 - Egress: with `CLOUD_EGRESS=rpc-only` (the default) workspace networks are Docker "internal" networks. Caddy is attached to each one, which makes it the only way in and, through its JSON-RPC relay, the only way out.
 - Routing and TLS: the Caddyfile is generated from the control database. Running workspaces are proxied to their container, with WebSocket connections kept open across reloads; paused ones get a short notice; anything else is a 404. Certificates are either issued on demand, only for addresses the control plane confirms through its `ask` endpoint, or one wildcard certificate through a DNS challenge.
-- Sign-up: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace.
+- Sign-up: the visitor picks an address, signs a Sign-In with Ethereum message the server wrote (it names the address), and the workspace is created. The page then shows the workspace's setup code exactly once. The app's own setup screen asks for it, so only the person who signed up can claim the workspace. Limits count per network (an IPv4 address or an IPv6 /56) and per block (/24 or /48), never in one budget shared by everyone, so one network can't close sign-ups for the rest. Wallet challenges are sealed tokens the server doesn't store, so a flood can't push out anyone else's. Past `CLOUD_SIGNUPS_PER_DAY`, or once the server is nearly full, a signed sign-up waits for the operator's approval; the person gets the setup code at once and the address opens when it is approved. A claimed workspace whose data hasn't changed in `CLOUD_IDLE_DAYS` is paused with a notice that gives the date it will be deleted.
 - Upgrades: one workspace at a time. Each is stopped, its database checkpointed inside its own volume, started on the new image (which migrates the database) and health-checked. A failure puts the checkpoint back and starts the old image. The rollout stops after `CLOUD_UPGRADE_MAX_FAILURES` failures. The app also keeps its own `pre-migration-*.db` copies in the data folder; backups leave those out.
 - Backups: nightly, one workspace after another. A consistent snapshot of the database (SQLite `VACUUM INTO`, taken inside the workspace) and its files are streamed straight into encryption (X25519 and AES-256-GCM, the way age does it), then to the target. The server holds public keys only.
 - Health: Docker runs `/healthz` in every container; the control plane restarts a workspace that stays unhealthy, alerts the operator, and stops restarting one that keeps failing. It also alerts on a degraded RAID mirror, a nearly full disk, failed backups and failed upgrades.
@@ -128,7 +129,7 @@ Create these records at your DNS provider:
 
 Set the server's reverse DNS in Robot to `nil.example` as well. Check from your own machine before going on: `dig +short nil.example` and `dig +short anything.nil.example` must both return the server.
 
-Pick the TLS mode now. **On demand** (default) needs nothing more, but Let's Encrypt issues at most 50 new certificates per registered domain per week, and each new workspace needs one (Caddy can fall back to ZeroSSL, which is why the CAA records allow it too). **Wildcard** gets one certificate for every workspace through a DNS challenge, so it has no such limit, but needs an API token from your DNS provider and a Caddy build with its module. With more than a few dozen sign-ups a week, use wildcard.
+Pick the TLS mode now, and for a public launch pick wildcard. **Wildcard** gets one certificate for every workspace through a DNS challenge. It needs an API token from your DNS provider and a Caddy build with its module (step 5). **On demand** (the default) needs nothing more, but each new workspace needs its own certificate and Let's Encrypt issues at most 50 per registered domain per week. Anyone can sign up a few dozen throwaway workspaces and use them up, and real workspaces then have no certificate until the week is over (Caddy can fall back to ZeroSSL, which is why the CAA records allow it too). On demand is fine for a private test server.
 
 ### 3. Provision
 
@@ -259,6 +260,8 @@ docker compose exec control node cli.js delete restore-drill --now --no-export -
 
 - [ ] `dig` returns the server for `nil.example` and `*.nil.example`, IPv4 and IPv6; CAA records set.
 - [ ] `https://nil.example` loads with a valid certificate; `http://` redirects to it.
+- [ ] `CLOUD_TLS=wildcard`, and a new workspace's address gets the wildcard certificate.
+- [ ] The terms say that sign-ups may wait for approval, and that unused workspaces are paused and later deleted (`CLOUD_UNCLAIMED_DAYS`, `CLOUD_IDLE_DAYS`, `CLOUD_IDLE_NOTICE_DAYS`).
 - [ ] From outside, only 22, 80 and 443 answer: `nmap -Pn 203.0.113.10`.
 - [ ] SSH works for `deploy` with a key and refuses passwords and root.
 - [ ] `/proc/mdstat` shows `[UU]` for every array.
@@ -281,9 +284,9 @@ docker compose exec control node cli.js delete restore-drill --now --no-export -
 
 **Every month.** Reboot in a quiet hour if `/var/run/reboot-required` exists (workspaces are down for a minute or two; they all come back by themselves). Update Docker: `sudo apt-get install --only-upgrade docker-ce docker-ce-cli containerd.io docker-compose-plugin` (live-restore keeps containers running while the daemon restarts). Update Caddy: set a newer `CADDY_IMAGE`, then `docker compose up -d caddy` and `docker compose exec control node cli.js routes` to reconnect it to the workspace networks. Do a restore drill.
 
-**Abuse.** `cli.js suspend <name> --reason "<ticket>"` takes a workspace offline with a notice and keeps its data; `resume` brings it back. For illegal content, `cli.js delete <name> --now` (it still takes a final encrypted backup unless `--no-export`). Add recurring bad words to a `CLOUD_BLOCKLIST_FILE`.
+**Abuse.** `cli.js suspend <name> --reason "<ticket>"` takes a workspace offline with a notice and keeps its data; `resume` brings it back. For illegal content, `cli.js delete <name> --now` (it still takes a final encrypted backup unless `--no-export`). Add recurring bad words to a `CLOUD_BLOCKLIST_FILE`. Sign-ups are limited per network and per block (see `.env.example`), so a flood from one provider stops at its own share.
 
-**Capacity.** Sign-ups close by themselves at `CLOUD_MAX_WORKSPACES`. When memory or disk runs short, raise plans for the busy few (`cli.js resize <name> pro`) or plan a second server; workspaces move between servers with `backup` and `restore`.
+**Capacity.** Past `CLOUD_SIGNUPS_PER_DAY` new workspaces in a day, or once `CLOUD_APPROVAL_ABOVE_PERCENT` of `CLOUD_MAX_WORKSPACES` is in use, sign-ups wait for approval and an alert says so: `cli.js requests` lists them, `cli.js approve <name>` creates and starts one (its owner already has the setup code), `cli.js reject <name>` frees the address. Sign-ups close by themselves at `CLOUD_MAX_WORKSPACES`. A workspace nobody set up is removed after `CLOUD_UNCLAIMED_DAYS`; a claimed one whose data hasn't changed in `CLOUD_IDLE_DAYS` is paused with a notice and deleted `CLOUD_IDLE_NOTICE_DAYS` later unless its owner asks for it back (`resume`), so put both in the terms. When memory or disk runs short, raise plans for the busy few (`cli.js resize <name> pro`) or plan a second server; workspaces move between servers with `backup` and `restore`.
 
 **Backup keys.** To rotate, add the new public key to `CLOUD_BACKUP_RECIPIENTS`, restart the control plane, and keep the old secret key until the last backup made for it has expired.
 
@@ -304,6 +307,7 @@ Run it in the control plane's container: `docker compose exec control node cli.j
 | `upgrade <name…>\|--all --image i [--max-failures n]` | rolling upgrade with checkpoints and automatic rollback |
 | `rollback <name…>\|--all [--yes]` | back to the pre-upgrade checkpoint |
 | `delete <name> [--now] [--no-export] [--yes]` | final encrypted export, then deletion after the grace period |
+| `requests`, `approve <name>`, `reject <name>` | sign-ups waiting for approval; create one, or free its address |
 | `backup <name…>\|--all` | encrypted backup now; `--all` is the nightly job |
 | `restore <name> <file> --identity k [--owner 0x…]` | replace a workspace's data, or recreate it, from a backup |
 | `verify-backup <file> --identity k` | decrypt and check a backup without writing anything |

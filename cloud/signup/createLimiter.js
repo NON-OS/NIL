@@ -11,6 +11,13 @@ export default function createLimiter({ windowMs, max, now = Date.now, maxKeys =
   }
 
   return {
+    // what hit() would answer, without counting anything
+    check(key) {
+      const t = now();
+      const bucket = buckets.get(key);
+      if (!bucket || bucket.reset <= t || bucket.count < max) return { ok: true };
+      return { ok: false, retryAfterSec: Math.ceil((bucket.reset - t) / 1000) };
+    },
     hit(key) {
       const t = now();
       let bucket = buckets.get(key);

@@ -106,6 +106,22 @@
     }
   }
 
+  // The setup code, once. A sign-up waiting for approval gets its code now as well, since the
+  // page won't be open when the operator approves it.
+  function showDone(result, waiting = false) {
+    $('setup-code').textContent = result.setupToken;
+    const link = $('ws-link');
+    link.href = result.url;
+    link.textContent = result.url.replace(/^https:\/\//, '');
+    if (waiting) {
+      $('done-title').textContent = 'Your workspace is waiting for approval';
+      $('done-days').textContent = String(result.days);
+      $('done-waiting').hidden = false;
+    }
+    codeShown = true;
+    step('step-done');
+  }
+
   async function waitUntilReady(created) {
     step('step-wait');
     $('wait-name').textContent = `${created.name}.${domain}`;
@@ -121,13 +137,7 @@
       }
       if (status.state === 'provisioning') continue;
       if (status.state !== 'ready') throw new Error(status.message);
-      $('setup-code').textContent = status.setupToken;
-      const link = $('ws-link');
-      link.href = status.url;
-      link.textContent = status.url.replace(/^https:\/\//, '');
-      codeShown = true;
-      step('step-done');
-      return;
+      return showDone(status);
     }
     throw new Error('This is taking longer than it should. Your workspace may still appear; if it doesn’t, contact the host.');
   }
@@ -156,7 +166,8 @@
         }),
       ]);
       const created = await api('POST', '/api/verify', { challengeId: challenge.challengeId, signature, nonce });
-      await waitUntilReady(created);
+      if (created.queued) showDone(created, true);
+      else await waitUntilReady(created);
     } catch (err) {
       if (!codeShown) step('step-name');
       showError(err);

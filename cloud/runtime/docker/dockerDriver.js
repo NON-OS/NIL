@@ -233,6 +233,27 @@ export default function dockerDriver({ config, log, client = dockerClient(config
       if (exitCode !== 0) throw new Error('Couldn’t remove the checkpoint.');
     },
 
+    // When the workspace's data last changed: the newest modification time of its database
+    // files, from the stat header of the archive API (a HEAD request reads nothing inside them),
+    // and when its container started, so writes the app makes as it starts can be told apart.
+    async lastWrite(id) {
+      const info = await client.quiet('GET', `/containers/${containerName(id)}/json`);
+      if (!info) return null;
+      const mtime = async (path) => {
+        try {
+          const res = await client.stream('HEAD', archive(id), { query: { path } });
+          res.resume();
+          const stat = res.headers['x-docker-container-path-stat'];
+          return stat ? Date.parse(JSON.parse(Buffer.from(stat, 'base64').toString('utf8')).mtime) || null : null;
+        } catch (err) {
+          if (err.status === 404) return null;
+          throw err;
+        }
+      };
+      const times = (await Promise.all([`${mount}/${DB}`, `${mount}/${DB}-wal`].map(mtime))).filter(Boolean);
+      return { at: times.length ? Math.max(...times) : null, startedAt: Date.parse(info.State?.StartedAt) || null };
+    },
+
     // Disk used by each workspace volume, from Docker's own accounting.
     async usage() {
       const df = await client.json('GET', '/system/df', { query: { type: 'volume' }, timeout: 300_000 });

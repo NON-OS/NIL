@@ -3,6 +3,7 @@ import collectUsage from './collectUsage.js';
 import checkClaims from './checkClaims.js';
 import checkHost from './checkHost.js';
 import housekeeping from './housekeeping.js';
+import checkIdle from './checkIdle.js';
 import createHealthCheck from './createHealthCheck.js';
 import nextDailyRun from './nextDailyRun.js';
 
@@ -41,7 +42,10 @@ export default function startScheduler(ctx) {
     await collectUsage(ctx);
     await checkClaims(ctx);
   }));
-  const hourly = every(3_600_000, job('housekeeping', () => housekeeping(ctx)));
+  const hourly = every(3_600_000, job('housekeeping', async () => {
+    await housekeeping(ctx);
+    await checkIdle(ctx);
+  }));
   // a first pass soon after start, without waiting a full interval
   timers.push(setTimeout(() => (usage(), hourly()), 30_000));
 

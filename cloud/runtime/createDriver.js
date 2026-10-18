@@ -25,6 +25,8 @@ import dockerDriver from './docker/dockerDriver.js';
 //   ensureProxy(ids)            the same for many workspaces, cheaply; returns how many it fixed
 //   upstream(id)                host:port the reverse proxy forwards to
 //   usage()                     Map of volume name to bytes used
+//   lastWrite(id)               { at, startedAt }: when the database files last changed (their
+//                               modification time only) and when the workload started
 export default function createDriver(config, log) {
   if (config.runtime === 'docker') return dockerDriver({ config, log });
   throw new Error(`Unknown runtime: ${config.runtime}`);

@@ -5,7 +5,7 @@ const DAY = 86_400_000;
 
 // Hourly: reports operations left stuck, deletes workspaces whose grace period is over, erases
 // upgrade checkpoints that are past CLOUD_CHECKPOINT_KEEP_DAYS, and lets go of names whose
-// quarantine has ended.
+// quarantine has ended and of sign-up requests nobody approved in time.
 export default async function housekeeping(ctx) {
   const now = ctx.store.now();
   await recoverInterrupted(ctx);
@@ -27,4 +27,6 @@ export default async function housekeeping(ctx) {
     }
   }
   ctx.store.workspaces.forgetDeleted(now - ctx.config.signup.quarantineDays * DAY);
+  const dropped = ctx.store.requests.expire(now - ctx.config.signup.requestDays * DAY);
+  if (dropped) ctx.log.info('signup.requests_expired', { count: dropped });
 }

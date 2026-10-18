@@ -16,7 +16,9 @@ The NØNOS foundation runs Nil for anyone who doesn't want to run their own serv
 4. Open your workspace, enter the code, and create the workspace with the same wallet. You are its owner.
 5. Link a second wallet and invite a second admin, so losing one wallet never locks you out.
 
-A workspace nobody sets up within a week is removed, and its address becomes free again.
+On busy days, or when the server is nearly full, NØNOS opens new workspaces by hand. The sign-up page then says so and shows your setup code straight away; keep it, because the page won't show it again. Your workspace's address opens once the request is approved.
+
+A workspace nobody sets up within a week is removed, and its address becomes free again. A workspace whose data hasn't changed in six months is paused, and its address shows a notice with the date it will be deleted, a month later. Ask NØNOS before then to bring it back.
 
 ## What NØNOS can and cannot see
 
@@ -24,7 +26,7 @@ A workspace nobody sets up within a week is removed, and its address becomes fre
 
 **Stored in plain form.** Everything else in your workspace is stored as written, in your workspace's own storage on NØNOS's server: team tasks and their comments, files, goals, projects, time entries, reminders, notifications, the activity history, and the member list with names, roles and linked wallet addresses. NØNOS doesn't look at any of it, and its tools never open your workspace's database. But it runs the server, so it could, and it could be ordered by a court to hand it over. Docs and private tasks would be handed over still encrypted.
 
-**What NØNOS keeps about your workspace.** Its address, the wallet address that signed up, its state, app version and plan, when it was created, how much disk it uses, and whether its setup was finished. Not your members, not your tasks.
+**What NØNOS keeps about your workspace.** Its address, the wallet address that signed up, its state, app version and plan, when it was created, how much disk it uses, whether its setup was finished, and when its data last changed (the time on its database files, not what is in them). Not your members, not your tasks.
 
 **Sign-up and web traffic.** The sign-up page sets no cookies, loads nothing from other sites and has no analytics. Your IP address is used for rate limits in memory and is never written down. The web server sees each request's IP address, as every web server does, and keeps no access log.
 
