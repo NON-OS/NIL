@@ -13,6 +13,7 @@ import forgetIdentity from '../lib/crypto/forgetIdentity';
 import memberFingerprint from '../lib/crypto/memberFingerprint';
 import keyDirectory from './keyDirectory';
 import walletWraps from './walletWraps';
+import passkeys from './passkeys';
 import publishKeys from './publishKeys';
 import openSealed from './openSealed';
 import taskHandover from './taskHandover';
@@ -22,7 +23,8 @@ import type Identity from '../types/Identity';
 // the key maths loads on first unlock rather than with the app
 const fromSeed = async (seed: Uint8Array) => (await import('../lib/crypto/identityFromSeed')).default(seed);
 
-const sameKeys = (identity: Identity, listed: { publicKey: string; signingKey: string }) => listed.publicKey === b64u.encode(identity.publicKey) && listed.signingKey === b64u.encode(identity.signingKey);
+type Listed = { publicKey: string; signingKey: string };
+const sameKeys = (identity: Identity, listed: Listed) => listed.publicKey === b64u.encode(identity.publicKey) && listed.signingKey === b64u.encode(identity.signingKey);
 
 // A brand-new identity: a random seed, wrapped for this wallet and published with its signature.
 async function create(address: string, reset: boolean) {
@@ -33,6 +35,23 @@ async function create(address: string, reset: boolean) {
     forgetIdentity(identity);
     // keys on record that the listing hides, because the wallet that signed them was unlinked
     if (err instanceof ApiError && err.status === 409) throw new VaultError('no-wrap', 'Your keys were set up with a wallet that’s no longer linked to your account. Restore from your recovery kit, or start over with new keys.');
+    throw err;
+  }
+  await vault.adopt(identity);
+}
+
+// How every unlock ends, whichever wrap opened: the seed must derive the keys published for you,
+// or it's forgotten and refused.
+async function take(identity: Identity, listed: Listed | undefined, opener: string, address?: string) {
+  if (listed && !sameKeys(identity, listed)) {
+    forgetIdentity(identity);
+    throw new VaultError('mismatch', `The server lists different keys for you than the ones ${opener} unlocks. If you didn’t reset your keys on another device, tell your admin before doing anything else.`);
+  }
+  try {
+    // the wallet that signed your keys was unlinked, so the listing dropped them: sign again
+    if (!listed) await publishKeys(identity, address ?? (await ethereum.account()).address);
+  } catch (err) {
+    forgetIdentity(identity);
     throw err;
   }
   await vault.adopt(identity);
@@ -52,22 +71,31 @@ async function unlockWithWallet(reset: boolean) {
     if (listed || wraps.length) throw new VaultError('no-wrap', 'This wallet doesn’t unlock your keys yet. Unlock once with a wallet that does and add this one in Settings, under Sign-in & security, or restore from your recovery kit.');
     return create(address, false);
   }
-  const identity = await fromSeed(await walletWraps.open(wrap, address));
-  if (listed && !sameKeys(identity, listed)) {
+  await take(await fromSeed(await walletWraps.open(wrap, address)), listed, 'your wallet', address);
+}
+
+// Opens the wrap of whichever of your passkeys you use. The passkey is asked first, while the
+// click that started this still counts as the person's own gesture.
+async function unlockWithPasskey() {
+  const { seed, id } = await passkeys.open();
+  const identity = await fromSeed(seed);
+  let listed: Listed | undefined;
+  try {
+    listed = (await keyDirectory.load({ fresh: true })).get(store.get().me!.id);
+  } catch (err) {
     forgetIdentity(identity);
-    throw new VaultError('mismatch', 'The server lists different keys for you than the ones your wallet unlocks. If you didn’t reset your keys on another device, tell your admin before doing anything else.');
+    throw err;
   }
-  // the wallet that signed your keys was unlinked, so the listing dropped them: sign again
-  if (!listed) await publishKeys(identity, address);
-  await vault.adopt(identity);
+  await take(identity, listed, 'your passkey');
+  void passkeys.used(id);
 }
 
 // One unlock at a time: a second caller waits for the first instead of asking the wallet again.
 let unlocking: Promise<void> | null = null;
 
 // Unlocks encrypted docs, private tasks, payouts and votes for this tab. Your identity is a
-// random key made in your browser, stored on the server only wrapped once per linked wallet,
-// so any of your wallets opens it and the server never can.
+// random key made in your browser, stored on the server only wrapped once per linked wallet and
+// once per passkey you add, so any of those opens it and the server never can.
 const vault = {
   unlocked: () => keyring.identity() !== null,
 
@@ -76,10 +104,10 @@ const vault = {
     return id ? memberFingerprint(b64u.encode(id.publicKey), b64u.encode(id.signingKey)) : null;
   },
 
-  async unlock({ reset = false } = {}) {
+  async unlock({ reset = false, passkey = false } = {}) {
     if (keyring.identity() && !reset) return;
     if (unlocking) return unlocking;
-    unlocking = unlockWithWallet(reset).finally(() => (unlocking = null));
+    unlocking = (passkey ? unlockWithPasskey() : unlockWithWallet(reset)).finally(() => (unlocking = null));
     return unlocking;
   },
 

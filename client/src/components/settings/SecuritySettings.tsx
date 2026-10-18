@@ -18,6 +18,7 @@ import HelpLink from '../help/HelpLink';
 import WalletAddress from './WalletAddress';
 import useCryptoTools from '../../hooks/useCryptoTools';
 import MyKeysCard from './MyKeysCard';
+import PasskeysCard from './PasskeysCard';
 import TeamKeysCard from './TeamKeysCard';
 import vault from '../../actions/vault';
 
@@ -98,8 +99,9 @@ export default function SecuritySettings() {
         <>
           <section className="settings-section">
             <h2>Encryption keys</h2>
-            <p>Your keys are made in your browser and stored only locked to your wallets. Teammates check each other’s keys by comparing fingerprints, so a server can’t slip in a key of its own.</p>
+            <p>Your keys are made in your browser and stored only locked to your wallets and any passkeys you add. Teammates check each other’s keys by comparing fingerprints, so a server can’t slip in a key of its own.</p>
             <MyKeysCard />
+            <PasskeysCard />
           </section>
 
           <section className="settings-section">

@@ -23,6 +23,7 @@ import type SharingPolicy from '../types/SharingPolicy';
 import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
+import type Passkey from '../types/Passkey';
 import privateKeys from '../state/privateKeys';
 import keyring from '../state/keyring';
 
@@ -49,6 +50,8 @@ interface Bootstrap {
   build: string | null;
   origin: string;
   workspaceKey: string;
+  passkeys: Passkey[];
+  recoveryKitAt: number | null;
 }
 
 // Re-bootstrapping after a reconnect is spread over this long, so a server that just restarted
@@ -83,6 +86,8 @@ async function load() {
     sourceUrl: b.sourceUrl,
     origin: b.origin,
     workspaceKey: b.workspaceKey,
+    passkeys: b.passkeys ?? [],
+    recoveryKitAt: b.recoveryKitAt ?? null,
   });
   checkBuild(b.build);
   void openSealed();

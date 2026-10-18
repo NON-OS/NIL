@@ -32,7 +32,7 @@ A capsule restores only into a server that has no workspace yet, so it can never
 
 Everyone then signs in again with their wallets. Wallets work on any domain, so nobody needs a new invite. Because the signing key comes along, earlier proofs of work still verify.
 
-Encryption keys depend on the web address. If the new server keeps the old address, everyone's keys open as before. At a new address, the messages that unlock people's keys change, so no wallet opens them there. Each person then restores their keys once from their [recovery kit](signing-in.md#keep-a-recovery-kit), which also lets the wallet in their browser unlock them from then on. Anyone without a kit starts over with new keys and loses what was shared with the old ones. Every browser's confirmed keys start over too, so teammates check each other's fingerprints again. Before moving to a new address, make sure everyone has a recovery kit.
+Encryption keys depend on the web address. If the new server keeps the old address, everyone's keys open as before. At a new address, the messages that unlock people's keys change, so no wallet opens them there, and passkeys stop working too, because a passkey belongs to the address it was made on. Each person then restores their keys once from their [recovery kit](signing-in.md#keep-a-recovery-kit), which also lets the wallet in their browser unlock them from then on. Anyone without a kit starts over with new keys and loses what was shared with the old ones. Every browser's confirmed keys start over too, so teammates check each other's fingerprints again. Before moving to a new address, make sure everyone has a recovery kit. Anyone who wants to can add passkeys again at the new address.
 
 By default the new server accepts capsules up to 4096 MB. The operator can raise this with `MAX_CAPSULE_MB`.
 
@@ -54,7 +54,7 @@ A capsule and a recovery kit are both files locked with a passphrase, but they h
 | What it holds | The database, uploads and the workspace signing key | One person's encryption keys |
 | What it brings back | The whole workspace, on a server with no workspace yet | That person's keys, after they lose every wallet that holds them or the workspace moves to a new address |
 
-A capsule can't open anyone's docs or private tasks. Their contents stay encrypted inside it, and people's keys are in the capsule only locked to their wallets. A recovery kit, in turn, is no use without the workspace it belongs to. Keep both.
+A capsule can't open anyone's docs or private tasks. Their contents stay encrypted inside it, and people's keys are in the capsule only locked to their wallets and passkeys. A recovery kit, in turn, is no use without the workspace it belongs to. Keep both.
 
 ## How capsules work
 

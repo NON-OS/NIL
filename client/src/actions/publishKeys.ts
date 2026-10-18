@@ -14,4 +14,6 @@ export default async function publishKeys(identity: Identity, address: string, {
   const fields = { publicKey: b64u.encode(identity.publicKey), signingKey: b64u.encode(identity.signingKey), createdAt: Date.now(), address };
   const signature = await ethereum.sign(keyStatement({ origin: s.origin, workspaceKey: s.workspaceKey, userId: s.me!.id, ...fields }), address);
   await http.put('/me/encryption-key', { ...fields, signature, reset, ...(wrap ? { wrap } : {}) });
+  // new keys leave the passkeys and the recovery kit behind with the old ones
+  if (reset) store.set({ passkeys: [], recoveryKitAt: null });
 }

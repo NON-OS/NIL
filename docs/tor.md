@@ -38,7 +38,7 @@ For running the onion service next to an HTTPS address, or on its own, see [sect
 
 ## Signing in over Tor
 
-An Ethereum wallet is the only way to sign in to Nil. There are no passwords, passkeys or email. The app talks to an injected EIP-1193 wallet: a browser extension, or a wallet's own in-app browser.
+An Ethereum wallet is the only way to sign in to Nil. There are no passwords or email, and passkeys only unlock encryption keys. The app talks to an injected EIP-1193 wallet: a browser extension, or a wallet's own in-app browser.
 
 - Tor Browser ships without wallet extensions. You can add one, but the Tor Project recommends against add-ons: they can bypass Tor or compromise your privacy, for example by making your browser stand out from other Tor users. Decide how your team will sign in before you rely on the onion address alone.
 - Your wallet makes its own network requests, for example to its Ethereum node, and they don't necessarily go through Tor. Nil can't control them.
