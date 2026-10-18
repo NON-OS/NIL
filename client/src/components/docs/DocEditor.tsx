@@ -29,6 +29,7 @@ interface Props {
 // so what leaves this tab is already ciphertext.
 export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }: Props) {
   const me = useStore((s) => s.me)!;
+  const users = useStore((s) => s.users);
   const aiOn = useStore((s) => s.ai);
   const [drafting, setDrafting] = useState(false);
   const [title, setTitle] = useState(doc.title);
@@ -155,6 +156,18 @@ export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }
       {doc.warning === 'rollback' && (
         <div className="doc-conflict" role="alert">
           <span>This is an older version than one you’ve already opened here. The server may be holding back newer changes.</span>
+        </div>
+      )}
+      {doc.olderFormat && !readOnly && (
+        <div className="doc-conflict">
+          <span>This version was saved in an older format that can’t show who it’s for, so Nil won’t share it with new teammates on its own. Saving it again updates it.</span>
+        </div>
+      )}
+      {doc.oldKey && (
+        <div className="doc-conflict">
+          <span>
+            {users[doc.updatedBy ?? '']?.name ?? 'A former member'} signed this version with an earlier key, <span className="mono">{doc.oldKey}</span>, from before their key changed.
+          </span>
         </div>
       )}
       <div className="doc-body">

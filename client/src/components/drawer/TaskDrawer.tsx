@@ -11,6 +11,7 @@ import Checklist from './Checklist';
 import Attachments from './Attachments';
 import Timeline from './Timeline';
 import LockedTask from './LockedTask';
+import SealNotes from './SealNotes';
 import WordsLoading from './WordsLoading';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
@@ -83,6 +84,7 @@ export default function TaskDrawer({ number }: { number: number }) {
                       This is an older version of this private task than one you’ve already opened here. The server may be holding back newer changes.
                     </p>
                   )}
+                  <SealNotes task={task} />
                   <TitleEditor task={task} />
                   <PropertyGrid task={task} />
                   <BountyPanel task={task} />

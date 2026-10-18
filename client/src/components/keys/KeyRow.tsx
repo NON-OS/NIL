@@ -9,15 +9,17 @@ import type User from '../../types/User';
 
 const LABEL = { confirmed: 'Confirmed', new: 'New key', changed: 'Key changed' };
 
-// One teammate's key: its fingerprint to compare out loud, the pinned one it replaces if it
-// changed, and the wallet that signed it.
+// One person's key: its fingerprint to compare out loud, the pinned one it replaces if it
+// changed, and the wallet that signed it. A key for someone deactivated, or for someone the
+// workspace doesn't list at all, says so, since nobody should be publishing one.
 export default function KeyRow({ entry, user, action }: { entry: MemberKey; user: User | undefined; action?: ReactNode }) {
   return (
     <div className="key-row">
       <Avatar user={user} size={26} />
       <div style={{ minWidth: 0 }}>
         <div className="key-row-head">
-          {user?.name ?? 'A former member'}
+          {user?.name ?? 'Not in this workspace'}
+          {user?.deactivated && <span className="key-state">Deactivated</span>}
           <span className={cx('key-state', entry.state)}>{LABEL[entry.state]}</span>
         </div>
         <div className="key-fingerprint" aria-label="Fingerprint">

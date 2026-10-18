@@ -19,6 +19,7 @@ let key;
 before(async () => {
   srv = await startServer({ env: { ALLOWED_ORIGINS: `${EXTRA}/` } });
   await owner.wallet(ownerWallet, 'setup', { name: 'Olivia Owner', workspaceName: 'Acme' });
+  await owner.wallet(ownerWallet, 'confirm');
   key = (await owner('POST', '/api/me/tokens', { name: 'csrf test', scope: 'write' })).data.token;
 });
 after(() => srv.close());

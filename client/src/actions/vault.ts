@@ -6,6 +6,7 @@ import records from '../state/records';
 import sealedCache from '../state/sealedCache';
 import revealTask from '../state/revealTask';
 import lockedDetail from '../state/lockedDetail';
+import hadKeys from '../state/hadKeys';
 import ethereum from '../lib/ethereum';
 import VaultError from '../lib/VaultError';
 import b64u from '../lib/crypto/b64u';
@@ -25,6 +26,9 @@ const fromSeed = async (seed: Uint8Array) => (await import('../lib/crypto/identi
 
 type Listed = { publicKey: string; signingKey: string };
 const sameKeys = (identity: Identity, listed: Listed) => listed.publicKey === b64u.encode(identity.publicKey) && listed.signingKey === b64u.encode(identity.signingKey);
+
+// Nothing on record for you, yet this browser has seen you hold keys: new ones only when you say so.
+const missing = () => new VaultError('missing', 'Your keys seem to be missing from the server. Restore them from your recovery kit, or start over with new keys. If you didn’t reset them yourself, tell your admin first.');
 
 // A brand-new identity: a random seed, wrapped for this wallet and published with its signature.
 async function create(address: string, reset: boolean) {
@@ -69,6 +73,7 @@ async function unlockWithWallet(reset: boolean) {
   const wrap = wraps.find((w) => w.address === address.toLowerCase());
   if (!wrap) {
     if (listed || wraps.length) throw new VaultError('no-wrap', 'This wallet doesn’t unlock your keys yet. Unlock once with a wallet that does and add this one in Settings, under Sign-in & security, or restore from your recovery kit.');
+    if (hadKeys()) throw missing();
     return create(address, false);
   }
   await take(await fromSeed(await walletWraps.open(wrap, address)), listed, 'your wallet', address);
@@ -77,6 +82,11 @@ async function unlockWithWallet(reset: boolean) {
 // Opens the wrap of whichever of your passkeys you use. The passkey is asked first, while the
 // click that started this still counts as the person's own gesture.
 async function unlockWithPasskey() {
+  // with no passkey listed nothing needs the gesture, so the server can be asked first
+  if (!store.get().passkeys.length && hadKeys()) {
+    const [keys, wraps] = await Promise.all([keyDirectory.load({ fresh: true }), walletWraps.list()]);
+    if (!keys.get(store.get().me!.id) && !wraps.length) throw missing();
+  }
   const { seed, id } = await passkeys.open();
   const identity = await fromSeed(seed);
   let listed: Listed | undefined;

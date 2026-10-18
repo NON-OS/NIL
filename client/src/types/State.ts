@@ -51,6 +51,8 @@ export default interface State {
   sharing: SharingPolicy;
   plan: Plan;
   stealth: StealthInfo | null;
+  // admins on a server with private pool payouts on get the pool tools
+  privacyPools: boolean;
   // the getting-started card; null until My work asks for it
   firstRun: FirstRun | null;
   proposalsRev: number;

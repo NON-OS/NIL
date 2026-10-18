@@ -4,6 +4,6 @@ export default interface SignInAuditEntry {
   action: 'reset.requested' | 'reset.approved' | 'reset.issued' | 'reset.cancelled' | 'reset.used' | 'wallet.linked' | 'wallet.removed';
   actorId: string | null;
   subjectId: string | null;
-  data: { unapproved?: boolean; replaced?: boolean };
+  data: { unapproved?: boolean; replaced?: boolean; waits?: boolean; adminLeft?: boolean };
   createdAt: number;
 }

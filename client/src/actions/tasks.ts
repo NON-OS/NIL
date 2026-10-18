@@ -7,6 +7,7 @@ import router from '../lib/router';
 import dates from '../lib/dates';
 import taskKey from '../lib/taskKey';
 import type Task from '../types/Task';
+import type { TaskReaders } from '../lib/crypto/taskFacts';
 import type TaskPatch from '../types/TaskPatch';
 import vault from './vault';
 import taskKeys from './taskKeys';
@@ -19,8 +20,9 @@ async function sealedNew(input: Partial<Task> & { dueTime?: string | null }) {
   await vault.unlock();
   const { title = '', description = '', checklist = [], ...rest } = input;
   const fresh = taskKeys.fresh();
-  const keys = await taskKeys.wrap(fresh.key, [store.get().me!.id, input.assigneeId ?? null], { ask: true });
-  return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys, 1) };
+  const readers: TaskReaders = [store.get().me!.id, input.assigneeId ?? null];
+  const keys = await taskKeys.wrap(fresh.key, readers, { ask: true });
+  return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys, { rev: 1, readers }) };
 }
 
 type NewTask = Partial<Task> & { dueTime?: string | null };

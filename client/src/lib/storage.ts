@@ -1,6 +1,6 @@
 // localStorage can throw (private mode, quota, blocked cookies), so every access is guarded.
 // Only UI preferences and public key data (pinned teammate keys, doc and private task revision
-// numbers) live here, never task data or anything personal.
+// numbers, comment edit numbers) live here, never task data or anything personal.
 const PREFIX = 'nonos:';
 
 const storage = {

@@ -5,17 +5,18 @@ import Picker from '../ui/Picker';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import accessKeys from '../../actions/accessKeys';
+import identity from '../../actions/identity';
 import dates from '../../lib/dates';
 import PlanNotice from '../plan/PlanNotice';
 import type AccessKey from '../../types/AccessKey';
 import HelpLink from '../help/HelpLink';
 import AnonymousAiCard from './AnonymousAiCard';
 
+// every key expires, at most a year out unless the server allows less
 const EXPIRY = [
   { value: '30', label: 'Expires in 30 days' },
   { value: '90', label: 'Expires in 90 days' },
   { value: '365', label: 'Expires in a year' },
-  { value: 'never', label: 'Never expires' },
 ];
 
 async function copy(text: string) {
@@ -55,10 +56,12 @@ export default function AiSettings() {
     accessKeys.list().then(setKeys).catch(toast.error);
   }, []);
 
+  // a key outlives this session, so a wallet that's already linked signs off on it first
   const create = async (e: FormEvent) => {
     e.preventDefault();
     try {
-      const res = await accessKeys.create({ name: form.name.trim(), scope: form.scope, days: form.expiry === 'never' ? null : Number(form.expiry) });
+      await identity.confirm();
+      const res = await accessKeys.create({ name: form.name.trim(), scope: form.scope, days: Number(form.expiry) });
       setFresh(res.token);
       setKeys(res.tokens);
     } catch (err) {
@@ -125,7 +128,7 @@ export default function AiSettings() {
                 <div className="member-name">{k.name}</div>
                 <div className="member-sub">
                   {k.scope === 'write' ? 'Read and write' : 'Read only'} · created {dates.short(dates.toISO(new Date(k.createdAt)))}
-                  {k.expiresAt ? ` · ${k.expiresAt < Date.now() ? 'expired' : `expires ${dates.short(dates.toISO(new Date(k.expiresAt)))}`}` : ' · never expires'}
+                  {` · ${k.expiresAt < Date.now() ? 'expired' : `expires ${dates.short(dates.toISO(new Date(k.expiresAt)))}`}`}
                   {k.lastUsedAt ? ` · last used ${dates.ago(k.lastUsedAt)}` : ' · never used'}
                 </div>
               </div>

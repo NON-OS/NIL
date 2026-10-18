@@ -40,6 +40,8 @@ export default function SealedFileRow({ task, attachment: a, canRemove }: { task
           {name}
         </button>
       )}
+      {a.olderFormat && <small className="file-note" title="Attached before Nil signed files, so their name and contents can’t be checked">Older format</small>}
+      {a.oldKey && <small className="file-note" title={`Signed with an earlier key, ${a.oldKey}`}>Earlier key</small>}
       <span className="muted num">{formatBytes(Math.max(0, a.size - fileCipher.overhead))}</span>
       {!a.locked && (
         <button type="button" className="icon-only" onClick={save} disabled={saving} aria-label={`Download ${name}`}>

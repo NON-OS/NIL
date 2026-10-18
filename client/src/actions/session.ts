@@ -48,6 +48,7 @@ interface Bootstrap {
   sharing: SharingPolicy;
   plan: Plan;
   stealth: StealthInfo | null;
+  privacyPools?: boolean;
   timer: TimeEntry | null;
   sourceUrl: string | null;
   build: string | null;
@@ -98,6 +99,7 @@ async function load() {
     sharing: b.sharing,
     plan: b.plan,
     stealth: b.stealth,
+    privacyPools: Boolean(b.privacyPools),
     timer: b.timer,
     sourceUrl: b.sourceUrl,
     origin: b.origin,
@@ -157,11 +159,11 @@ const session = {
     }
   },
 
-  async signOutEverywhere() {
+  async signOutEverywhere(keys = false) {
     try {
-      await http.post('/me/sign-out-everywhere');
+      await http.post('/me/sign-out-everywhere', { keys });
     } finally {
-      signedOut('Signed out on every device.');
+      signedOut(keys ? 'Signed out on every device, and your access keys were revoked.' : 'Signed out on every device.');
     }
   },
 };

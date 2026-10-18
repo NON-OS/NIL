@@ -1,6 +1,5 @@
 import assert from 'node:assert/strict';
 import { secp256k1 } from '@noble/curves/secp256k1';
-import { bytesToHex } from '@noble/hashes/utils';
 import calls from '../calls.mjs';
 import mainnet from '../mainnet.mjs';
 import waitFor from '../waitFor.mjs';
@@ -19,7 +18,8 @@ export default async function privatePayouts(ctx) {
   const { owner, member, smart } = ctx.people;
   const spendingKey = secp256k1.utils.randomPrivateKey();
   const viewingKey = secp256k1.utils.randomPrivateKey();
-  await member.api.put('/me/stealth', { metaAddress: stealthKeys.meta(spendingKey, viewingKey) });
+  const meta = stealthKeys.meta(spendingKey, viewingKey);
+  await member.api.put('/me/stealth', { metaAddress: meta });
   const boot = await owner.api.get('/bootstrap');
   const topUp = BigInt(boot.stealth.gasTopUpWei);
   assert.equal(boot.stealth.announcer, mainnet.announcer);
@@ -29,12 +29,14 @@ export default async function privatePayouts(ctx) {
 
   const pay = async (payer, bounty, { batch }) => {
     const t = (await owner.api.post('/tasks', { title: `Private ${Date.now()}`, assigneeId: member.id, bounty: String(bounty) })).task;
-    const ephemeralKey = `0x${bytesToHex(secp256k1.utils.randomPrivateKey())}`;
-    const intent = (await payer.api.post(`/tasks/${t.id}/payments/intent`, { stealth: { ephemeralKey } })).intent;
+    // the payer's side works out the one-time address; Nil gets it with public values only
+    const one = stealthKeys.pay(meta);
+    const intent = (await payer.api.post(`/tasks/${t.id}/payments/intent`, { stealth: one })).intent;
     assert.ok(intent.stealth);
+    assert.equal(intent.to, one.address, 'Nil asks for the address the payer worked out');
     assert.notEqual(intent.to, member.wallet.address, 'a private payout never goes to the contributor’s own wallet');
     const opened = stealthKeys.open(spendingKey, viewingKey, intent.ephemeralPublicKey);
-    assert.equal(opened.address, intent.to, 'the contributor can open the address Nil derived');
+    assert.equal(opened.address, intent.to, 'the contributor can open the address');
     assert.equal(opened.viewTag, intent.viewTag);
     const amount = BigInt(intent.amount);
     const announce = stealthKeys.announceData({ stealthAddress: intent.to, ephemeralPublicKey: intent.ephemeralPublicKey, viewTag: intent.viewTag, token: mainnet.nox, amount });

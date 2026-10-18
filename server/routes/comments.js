@@ -28,7 +28,7 @@ function ownComment(req, { allowAdmin = false } = {}) {
   return row;
 }
 
-router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body, { sealed: req.body?.sealed === true }) })));
+router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body, { sealed: req.body?.sealed === true, id: req.body?.id }) })));
 
 router.patch(
   '/comments/:id',

@@ -66,7 +66,8 @@ export default async function pro(ctx) {
   assert.ok(Math.abs((await status()).paidUntil - (Date.now() + 60 * DAY)) < DAY, 'sixty days of Pro');
 
 
-  // a reorg takes the payment's block away before it's final; the same transaction lands again
+  // a reorg takes the payment's block away before it's final: the payment is kept, without a
+  // block, and counts again when the same transaction lands again
   const reorged = await invoice({ periods: 1, people: 8 });
   const snapshot = await chain.snapshot();
   const raw = await payer.wallet.sign({ to: mainnet.usdc, data: calls.transfer(treasury.address, BigInt(amountOf(reorged, 'USDC').amount)) });
@@ -75,7 +76,7 @@ export default async function pro(ctx) {
   await chain.revert(snapshot);
   await chain.syncClock();
   await chain.mine(2);
-  await waitFor(async () => (await view(reorged.id)).payments.some((p) => p.status === 'dropped'), { what: 'the payment to be dropped by the reorg', every: SLOW });
+  await waitFor(async () => (await view(reorged.id)).payments.some((p) => p.status === 'confirming' && p.blockNumber === null), { what: 'the payment to lose its block in the reorg', every: SLOW });
   await payer.wallet.broadcast(raw);
   await reaches(reorged.id, 'confirming');
   await chain.finalize();

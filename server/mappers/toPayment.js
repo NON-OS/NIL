@@ -38,5 +38,8 @@ export default function toPayment(row) {
     // already public once announced; the payer needs them to announce a payout that wasn't
     ephemeralPublicKey: row.stealth_ephemeral ?? null,
     viewTag: row.stealth_view_tag ?? null,
+    // paid from the team's Privacy Pools pool, and what the relayer kept on top of the amount
+    via: row.via ?? null,
+    relayFee: row.relay_fee ?? null,
   };
 }

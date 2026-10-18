@@ -6,7 +6,7 @@ import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import rateLimit from '../auth/rateLimit.js';
-import challenges from '../auth/challenges.js';
+import walletChallenges from '../auth/walletChallenges.js';
 import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
@@ -75,7 +75,7 @@ router.post(
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });
-    return { challengeId: challenges.issue('apply', { taskId: item.id, address: address.toLowerCase(), name, pitch, message }, clientKey(req.ip)), message };
+    return { challengeId: walletChallenges.issue('apply', { taskId: item.id, address: address.toLowerCase(), name, pitch, message }, clientKey(req.ip)), message };
   }),
 );
 
@@ -83,7 +83,7 @@ router.post(
 router.post(
   '/public/bounties/:id/apply',
   route(async (req, res) => {
-    const pending = challenges.take(req.body?.challengeId, 'apply');
+    const pending = walletChallenges.take(req.body?.challengeId, 'apply', clientKey(req.ip));
     if (!pending || pending.taskId !== req.params.id) throw HttpError.badRequest('That request expired. Apply again.');
     await walletSignature(pending.address, pending.message, req.body?.signature);
     const item = listed(pending.taskId);

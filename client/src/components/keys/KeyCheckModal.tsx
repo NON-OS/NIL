@@ -29,7 +29,8 @@ export default function KeyCheckModal() {
     if (keys && !keys.length) confirmKeys.done(true);
   }, [keys]);
 
-  const confirm = (ids: string[]) => keyDirectory.confirm(ids).catch(toast.error);
+  // exactly the keys on screen, so a key the server swaps in meanwhile isn't the one confirmed
+  const confirm = (shown: MemberKey[]) => keyDirectory.confirm(shown).catch(toast.error);
   const allNew = Boolean(keys?.length) && keys!.every((k) => k.state === 'new');
 
   return (
@@ -43,7 +44,7 @@ export default function KeyCheckModal() {
             Not now
           </button>
           {allNew && keys!.length > 1 && (
-            <button type="button" className="btn btn-primary" onClick={() => confirm(keys!.map((k) => k.userId))}>
+            <button type="button" className="btn btn-primary" onClick={() => confirm(keys!)}>
               Confirm all
             </button>
           )}
@@ -67,7 +68,7 @@ export default function KeyCheckModal() {
                 entry={k}
                 user={users[k.userId]}
                 action={
-                  <button type="button" className="btn btn-sm btn-primary" onClick={() => confirm([k.userId])} aria-label={`Confirm the key for ${users[k.userId]?.name ?? 'this person'}`}>
+                  <button type="button" className="btn btn-sm btn-primary" onClick={() => confirm([k])} aria-label={`Confirm the key for ${users[k.userId]?.name ?? 'this person'}`}>
                     Confirm
                   </button>
                 }

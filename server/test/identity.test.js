@@ -76,6 +76,7 @@ test('people can link more wallets but never remove their last one', async () =>
   assert.equal(first.data.credentials.length, 1);
   assert.equal((await member('DELETE', `/api/me/credentials/${first.data.credentials[0].id}`)).status, 400);
   const second = wallet();
+  await member.wallet(memberWallet, 'confirm');
   assert.equal((await member.wallet(second, 'add')).status, 200);
   const after = await member('GET', '/api/me/credentials');
   assert.equal(after.data.credentials.length, 2);
