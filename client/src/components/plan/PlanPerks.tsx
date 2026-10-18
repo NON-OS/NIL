@@ -14,7 +14,7 @@ export default function PlanPerks() {
           <li>
             <Ticket />
             <span>
-              <strong>Zero-State Pass: Pro included.</strong> If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, this workspace has Nil Pro without paying. It’s checked every few hours and whenever an invoice is made.
+              <strong>Zero-State Pass: Pro included.</strong> If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, this workspace has Nil Pro without paying. It’s checked every few hours, at moments nobody can predict: Pro starts once the checks have kept finding a pass for a few hours, and ends at the first check that doesn’t.
               {status.zsp.active ? ' Right now a pass covers this workspace.' : ''}
             </span>
           </li>
@@ -24,7 +24,7 @@ export default function PlanPerks() {
             <Coins />
             <span>
               <strong>Stake {symbol}, pay less.</strong> When an admin stakes {symbol} in the official staking contract, invoices cost less:{' '}
-              {tiers.map((t) => `${Number(t.stake).toLocaleString('en-US')} ${symbol} staked takes ${t.percent}% off`).join(', ')}. It’s read when the invoice is made.
+              {tiers.map((t) => `${Number(t.stake).toLocaleString('en-US')} ${symbol} staked takes ${t.percent}% off`).join(', ')}. A stake counts once the same checks have kept seeing it for a few hours, and only if it’s still there when the invoice is made.
             </span>
           </li>
         )}

@@ -43,15 +43,15 @@ A server that sets a treasury, such as the hosted service the NØNOS foundation 
 - The price is in US dollars: a flat fee per period ($12 per 30 days by default) plus a price per person above the free seats ($3 each by default, with 5 free seats). Guests never count.
 - You pay in USDC at face value, or in NOX for less (20% off by default).
 - A free trial runs when the workspace first appears on the server, 14 days by default including the grace days. Erasing the workspace or restoring a capsule never starts another trial.
-- After Nil Pro runs out, a grace period (7 days by default) keeps the paid tools working while you renew. Owners and admins get a reminder 7 days and 1 day before it runs out.
+- After paid time or the trial runs out, a grace period (7 days by default) keeps the paid tools working while you renew. Owners and admins get a reminder 7 days and 1 day before it runs out. Pro from a Zero-State Pass has no grace period.
 - Nothing renews by itself, and no card or email is ever asked for.
 
 **Settings → Plan** shows where you stand: **Trial**, **Pro until** a date, **Pro with a Zero-State Pass**, **Grace period** with the day the tools pause, or **Paid tools paused**. It also shows the price and how many people the plan covers.
 
 ### What NOX holders get
 
-- A Zero-State Pass gives Pro. If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. It's checked every few hours and whenever an invoice is made. If the pass is sold, Pro ends at the next check and the grace period follows.
-- Staking takes money off. When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. The discount is read when the invoice is made and locked into it.
+- A Zero-State Pass gives Pro. If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. Nil checks every few hours, each time at a moment nobody can predict, between 3 and 6 hours after the last check by default (`PLAN_PERK_CHECK_HOURS`). Pro starts once the checks have kept finding a pass for at least 6 hours, so it can take up to about 12 hours after you get one. If the pass is sold, Pro ends at the first check that doesn't find it, with no grace period and no more people than the plan otherwise covers. A pass held only for a moment, or lent from one workspace to the next, gives no Pro.
+- Staking takes money off. When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. A stake counts at a tier once the same checks have kept seeing it there for at least 6 hours, and only if it's still there when the invoice is made. The discount is then locked into the invoice.
 - A staking or pass contract that refuses to answer (paused or replaced, say) counts as no stake and no pass, the same as in a vote snapshot, so invoices can always be made. When NOX can't be priced and no manual rate is set, invoices are offered in USDC only, with a notice saying so.
 - Paying in NOX costs less than paying in USDC.
 

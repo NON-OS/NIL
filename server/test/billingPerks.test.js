@@ -15,6 +15,8 @@ const DAY = 86_400_000;
 const HOUR = 3_600_000;
 
 let srv;
+let sql;
+let plan;
 let billingState;
 let checkPerks;
 let sendReminders;
@@ -32,6 +34,8 @@ const ids = {};
 before(async () => {
   // no pool and no manual rate: NOX can't be priced here, so invoices are USDC only
   srv = await startServer({ chain, env: { PLAN_TREASURY: TREASURY, PLAN_TREASURY_NAME: 'the NØNOS foundation treasury', PLAN_PRICE_USD: '20', PLAN_TRIAL_DAYS: '0', PLAN_STAKER_TIERS: '10000:10,100000:25', BURN_SHARE: '20', BURN_REPORT_URL: 'https://example.org/burns' } });
+  ({ default: sql } = await import('../db/sql.js'));
+  ({ default: plan } = await import('../services/plan.js'));
   ({ default: billingState } = await import('../billing/billingState.js'));
   ({ default: checkPerks } = await import('../jobs/checkPerks.js'));
   ({ default: sendReminders } = await import('../jobs/sendReminders.js'));
@@ -45,74 +49,121 @@ before(async () => {
 after(() => srv.close());
 
 const quote = async () => (await owner('GET', '/api/plan/quote')).data;
+// The scheduled checks run on this clock, `hours` apart, so each one is due when it runs. Each
+// returns where the plan stands just after it.
+let clock = Date.now();
+const check = async (hours = 7) => {
+  clock += hours * HOUR;
+  await checkPerks(clock);
+  return plan.status(clock + 1000);
+};
+const forgetChecks = () => sql.run("DELETE FROM billing_state WHERE key IN ('zsp', 'stakes', 'perkChecks')");
 
 test('when NOX can’t be priced, invoices are offered in USDC only', async () => {
   const q = await quote();
   assert.deepEqual(q.tokens.map((t) => t.symbol), ['USDC']);
 });
 
-test('stakers get the discount of the highest tier any one admin reaches', async () => {
+test('stakers get the discount of the highest tier one admin has held through the checks', async () => {
   assert.equal((await quote()).stakerPercent, 0);
   chain.setStake(ownerWallet.address, 10_000n * NOX);
+  assert.equal((await quote()).stakerPercent, 0, 'a stake no check has seen yet earns nothing');
+  await check();
+  assert.equal((await quote()).stakerPercent, 0, 'nor one only a single check has seen');
+  await check();
   let q = await quote();
   assert.deepEqual([q.stakerPercent, q.stakerUsd, q.totalUsd], [10, 2_000_000, 18_000_000]);
+
   // a member's stake doesn't count, and two admins can't pool theirs into a higher tier
   chain.setStake(memberWallet.address, 500_000n * NOX);
   chain.setStake(adminWallet.address, 95_000n * NOX);
-  q = await quote();
-  assert.equal(q.stakerPercent, 10);
+  await check();
+  await check();
+  assert.equal((await quote()).stakerPercent, 10);
   chain.setStake(adminWallet.address, 100_000n * NOX);
+  assert.equal((await quote()).stakerPercent, 10, 'the higher tier counts once the checks have seen it there');
+  await check();
+  await check();
   q = await quote();
   assert.deepEqual([q.stakerPercent, q.totalUsd], [25, 15_000_000]);
-  // the discount is locked into the invoice
+
+  // the discount is locked into the invoice, and a stake taken away counts at once
   const invoice = (await owner('POST', '/api/plan/invoices', {})).data.invoice;
   assert.deepEqual([invoice.price.stakerPercent, invoice.price.totalUsd], [25, 15_000_000]);
   chain.setStake(adminWallet.address, 0n);
   chain.setStake(ownerWallet.address, 0n);
+  assert.equal((await quote()).stakerPercent, 0);
   assert.equal((await owner('GET', `/api/plan/invoices/${invoice.id}`)).data.invoice.price.stakerPercent, 25);
   await owner('POST', `/api/plan/invoices/${invoice.id}/cancel`);
+
+  // a stake that is gone at one check starts over, even if it is back by the invoice
+  chain.setStake(ownerWallet.address, 100_000n * NOX);
+  await check();
+  await check();
+  chain.setStake(ownerWallet.address, 0n);
+  await check();
+  chain.setStake(ownerWallet.address, 100_000n * NOX);
+  assert.equal((await quote()).stakerPercent, 0);
+  chain.setStake(ownerWallet.address, 0n);
+  chain.setStake(memberWallet.address, 0n);
 });
 
-test('a Zero-State Pass held by an admin gives the workspace Pro, re-checked on a schedule', async () => {
-  assert.equal((await owner('GET', '/api/plan')).data.unlocked, false);
+test('a Zero-State Pass gives Pro once checks hours apart have found it, and ends it with no grace', async () => {
   // a member's pass doesn't count
   chain.setTokenBalance(ZSP, memberWallet.address, 1);
-  await checkPerks();
-  assert.equal((await owner('GET', '/api/plan')).data.unlocked, false);
+  assert.equal((await check()).unlocked, false);
 
   chain.setTokenBalance(ZSP, adminWallet.address, 1);
-  billingState.set('zsp', { ...billingState.get('zsp'), checkedAt: Date.now() - 7 * HOUR });
-  await checkPerks();
-  let s = (await owner('GET', '/api/plan')).data;
+  assert.equal((await check()).unlocked, false, 'one check isn’t enough');
+  let s = await check();
   assert.deepEqual([s.unlocked, s.active, s.source, s.zsp.active, s.seatLimit], [true, true, 'zsp', true, null]);
   assert.equal((await owner('POST', '/api/proposals', { title: 'Pro through a pass' })).status, 200);
 
-  // not due again yet: selling the pass shows up at the next scheduled check
+  // not due again within half an interval of the last check
   chain.setTokenBalance(ZSP, adminWallet.address, 0);
-  await checkPerks();
-  assert.equal((await owner('GET', '/api/plan')).data.source, 'zsp');
-  billingState.set('zsp', { ...billingState.get('zsp'), checkedAt: Date.now() - 7 * HOUR });
-  await checkPerks();
-  s = (await owner('GET', '/api/plan')).data;
-  assert.deepEqual([s.active, s.inGrace, s.unlocked], [false, true, true], 'the grace period follows, like after any lapse');
-
-  // the quote, which runs whenever an invoice is made, checks again on the spot
-  chain.setTokenBalance(ZSP, ownerWallet.address, 2);
-  assert.equal((await quote()).zsp, true);
-  assert.equal((await owner('GET', '/api/plan')).data.source, 'zsp');
+  await checkPerks(clock + HOUR);
+  assert.equal(plan.status(clock + HOUR + 1000).source, 'zsp');
+  // the next check finds no pass: Pro ends right then, and the seat cap with it
+  s = await check();
+  assert.deepEqual([s.active, s.inGrace, s.unlocked, s.seatLimit], [false, false, false, 5]);
+  chain.setTokenBalance(ZSP, memberWallet.address, 0);
+  // the test clock runs ahead of the real one, where this perk's end is still to come
+  forgetChecks();
 });
 
-test('an unreachable node neither grants nor removes the pass perk', async () => {
-  const before = billingState.get('zsp');
-  const lift = chain.refuse((method, params) => method === 'eth_call' && params[0].to?.toLowerCase() === ZSP, { status: 503, error: { code: -32603, message: 'Service unavailable' } });
-  billingState.set('zsp', { ...before, checkedAt: Date.now() - 7 * HOUR });
-  await checkPerks();
-  assert.equal(billingState.get('zsp').until, before.until);
-  lift();
+test('a pass held for a quote, or for a single check, earns no Pro at all', async () => {
+  const start = clock;
+  chain.setTokenBalance(ZSP, ownerWallet.address, 1);
+  assert.equal((await quote()).zsp, false);
   chain.setTokenBalance(ZSP, ownerWallet.address, 0);
-  billingState.set('zsp', { until: Date.now() - 30 * DAY, checkedAt: Date.now() - 7 * HOUR });
-  await checkPerks();
-  assert.equal((await owner('GET', '/api/plan')).data.unlocked, false);
+  assert.equal((await check()).unlocked, false);
+  assert.equal(plan.status(start + 6 * DAY).unlocked, false);
+
+  chain.setTokenBalance(ZSP, ownerWallet.address, 1);
+  await check();
+  chain.setTokenBalance(ZSP, ownerWallet.address, 0);
+  assert.equal((await check()).unlocked, false);
+});
+
+test('an unreachable node neither grants nor removes the pass perk, and the check runs again soon', async () => {
+  chain.setTokenBalance(ZSP, ownerWallet.address, 1);
+  await check();
+  const granted = await check();
+  assert.equal(granted.source, 'zsp');
+  const before = billingState.get('zsp');
+  chain.setTokenBalance(ZSP, ownerWallet.address, 0);
+  const lift = chain.refuse((method, params) => method === 'eth_call' && params[0].to?.toLowerCase() === ZSP, { status: 503, error: { code: -32603, message: 'Service unavailable' } });
+  try {
+    await check();
+    assert.equal(billingState.get('zsp').until, before.until);
+  } finally {
+    lift();
+  }
+  // still due a minute later, and that check sees the pass is gone
+  clock += 60_000;
+  await checkPerks(clock);
+  assert.equal(plan.status(clock + 1000).unlocked, false);
+  forgetChecks();
 });
 
 test('a staking or pass contract that reverts means no discount and no pass, never a failed invoice', async () => {
