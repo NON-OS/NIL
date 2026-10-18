@@ -2,7 +2,7 @@
 // bucket can say so itself. It needs versioning, so writing an object never replaces the old
 // one, and Object Lock in compliance mode for at least CLOUD_BACKUP_KEEP_DAYS, so no key, the
 // server's included, can delete a version before then. A file target (a Storage Box) can't be
-// checked from here; its snapshots are set up in Robot (see the README).
+// checked from here; its snapshots are set up in Hetzner Console (see the README).
 export default async function checkBackupTarget(ctx) {
   if (!ctx.backupTarget?.protection) return null;
   let state;

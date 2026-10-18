@@ -187,6 +187,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 - Filter chips that run past the edge of a phone screen end in a chevron that scrolls them on.
 - The comment box only mentions Ctrl+Enter where there is likely a keyboard.
 - The sign-in screen uses plain words. It no longer mentions gas or on-chain checks, and "Hold NOX? Join without an invite" now reads "Have NOX tokens? Join without an invite".
+- The hosting guide covers an OVHcloud RISE-2 next to the Hetzner EX63: what the server needs, installing Ubuntu with software RAID 1 and no swap from the Control Panel or the API, rescue mode, IPv6, reverse DNS and the Edge Network Firewall, and backups to OVHcloud Object Storage, Backblaze B2, Scaleway or Wasabi with compliance-mode Object Lock. Its wildcard TLS example now uses `github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3`, since Hetzner shut down the DNS API the v1 module used, and it lists the module and token for Cloudflare; OVHcloud's DNS module doesn't fit the control plane yet. A Storage Box needs to be a BX31 or larger to keep 30 daily snapshots.
 
 ### Fixed
 

@@ -41,7 +41,7 @@ Usage: release.sh [options]
   --registry PREFIX           also push the images to PREFIX/nil and PREFIX/nil-cloud, a registry
                               the foundation controls
   --caddy-dns-module MODULE   also build Caddy with a DNS module at a fixed version, for wildcard
-                              TLS (e.g. github.com/caddy-dns/hetzner@v1.0.0)
+                              TLS (e.g. github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3)
   --out DIR                   where to put the release files
   --platform P                image platform (default linux/amd64)
   --allow-dirty               a test build from the working tree as it is, uncommitted and
@@ -67,7 +67,7 @@ while [ $# -gt 0 ]; do
 done
 case $MODE in hosted | single) ;; *) die "--mode must be hosted or single." ;; esac
 if [ -n "$CADDY_DNS_MODULE" ] && ! [[ $CADDY_DNS_MODULE =~ @v[0-9] ]]; then
-  die "--caddy-dns-module needs a version, such as github.com/caddy-dns/hetzner@v1.0.0, so a build never takes whatever the module's latest is."
+  die "--caddy-dns-module needs a version, such as github.com/caddy-dns/hetzner/v2@v2.0.0-preview-3, so a build never takes whatever the module's latest is."
 fi
 require git tar gzip sha256sum
 [ "$DRY_RUN" = 1 ] || require docker
