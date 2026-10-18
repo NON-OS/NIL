@@ -166,7 +166,9 @@ touch /mnt/nil-backups/.nil-backup-target
 
 `uid=1000` is the control plane's user inside its container. `seal` encrypts the SMB traffic as well; the backups are encrypted either way. The `.nil-backup-target` file tells the control plane the share is mounted: if the mount ever drops, the folder underneath is empty, and backups stop with an alert instead of filling the server's own disk. In `cloud.env` use `CLOUD_BACKUP_TARGET=file:///backups`. Old backups are pruned after `CLOUD_BACKUP_KEEP_DAYS`.
 
-**S3 instead.** Create a bucket and a key in another location, add a lifecycle rule that expires objects after 30 days, and set in `cloud.env`: `CLOUD_BACKUP_TARGET=s3://nil-backups/hosted`, `CLOUD_S3_ENDPOINT=https://hel1.your-objectstorage.com`, `CLOUD_S3_REGION=hel1` and the key pair. The control plane never deletes from a bucket, so the key can be limited to writing (and reading, for restores).
+The server can delete whatever it can write on the share, so someone who took it over could delete every backup. Turn on the Storage Box's snapshots in Robot (an automatic snapshot plan, daily, keeping at least 30): Hetzner takes them, the sub-account on the server can read them under `.zfs/snapshot` but can't change or delete them, and only the main account in Robot can. Keep the Robot login and its API credentials off the server.
+
+**S3 instead.** Create a bucket in another location with versioning and Object Lock turned on (Object Lock can only be turned on when the bucket is created), and give it a default retention in compliance mode of at least 30 days (`CLOUD_BACKUP_KEEP_DAYS`). Add a lifecycle rule that expires current objects after 30 days and noncurrent versions after one day; locked versions stay until their retention ends either way. Then set in `cloud.env`: `CLOUD_BACKUP_TARGET=s3://nil-backups/hosted`, `CLOUD_S3_ENDPOINT=https://hel1.your-objectstorage.com`, `CLOUD_S3_REGION=hel1` and the key pair. The control plane never deletes from a bucket, but a key that can write can also overwrite, and a stolen key can do whatever the provider lets it. Versioning keeps the old copy of anything overwritten, and compliance mode means no key, the server's included, can delete a version before its retention ends. Where the provider allows narrower keys, the server's key needs to put objects, abort its own uploads, read objects (for restores) and read the bucket's versioning and Object Lock settings, and nothing else. At startup the control plane reads those settings and alerts when versioning is off or the retention is shorter or not in compliance mode.
 
 **Keys.** On your own machine, not the server, with Node 22 and this repository:
 
@@ -271,6 +273,7 @@ Don't drill with `restore` into a new name: that creates a real workspace, and t
 - [ ] A test sign-up from a phone wallet worked end to end, and the setup code was accepted.
 - [ ] `backup --all` succeeded, `verify-backup` passed on your machine, and a restore drill worked.
 - [ ] Both backup secret keys are stored offline by two people.
+- [ ] The backups survive a compromised server: Storage Box snapshots are on in Robot, or the bucket has versioning and compliance-mode Object Lock (no `backup.target_unprotected` alert at startup).
 - [ ] `alert-test` arrived; outside uptime checks are on.
 - [ ] With the Ethereum node: it is synced (`docker compose logs reth` shows new blocks), and a workspace's Settings → Plan shows no node error.
 - [ ] Unattended upgrades are on (`systemctl status unattended-upgrades`), and someone owns the monthly reboot.
