@@ -31,7 +31,9 @@ export default async function scanTreasury(now = Date.now()) {
   if (!watched.length) return;
   const [head, final] = await Promise.all([headBlock(), finalizedBlock()]);
   const cursors = billingState.get('scan', {});
-  const oldest = Math.max(0, head - config.nox.logHistoryBlocks + MARGIN);
+  // the verifier proves nothing older than the chain keeps block hashes for
+  const history = config.verification.required ? Math.min(config.nox.logHistoryBlocks, config.verification.historyBlocks) : config.nox.logHistoryBlocks;
+  const oldest = Math.max(0, head - history + MARGIN);
   let failure = null;
 
   for (const { token, start } of watched) {

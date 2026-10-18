@@ -4,11 +4,12 @@ import appVersion from '../lib/appVersion.js';
 import logLimited from '../lib/logLimited.js';
 import jobState from '../jobs/jobState.js';
 import rpcHealth from '../chain/rpcHealth.js';
+import verifyHealth from '../chain/verifyHealth.js';
 
 // For Docker, load balancers and uptime checks, and anyone can call it. It answers 503 when the
 // database doesn't answer. Everything else is for an operator glancing at it: versions, when each
-// job last ran, whether the Ethereum node answered lately. Nothing in it names the workspace,
-// its people, file paths or settings.
+// job last ran, whether the Ethereum node answered lately and its answers could be verified.
+// Nothing in it names the workspace, its people, file paths or settings.
 export default function healthz(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   let schema;
@@ -24,6 +25,6 @@ export default function healthz(req, res) {
     version: appVersion,
     schema,
     jobs: jobState.report(),
-    chain: config.nox.enabled ? { enabled: true, ...rpcHealth.report() } : { enabled: false },
+    chain: config.nox.enabled ? { enabled: true, ...rpcHealth.report(), verification: verifyHealth.report() } : { enabled: false },
   });
 }

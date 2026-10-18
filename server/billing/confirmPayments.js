@@ -7,15 +7,29 @@ import finalizePayment from './finalizePayment.js';
 import log from '../lib/log.js';
 import feeAt from '../services/feeAt.js';
 
+const OUT_OF_RANGE = 'This transaction is in a block older than Nil’s verifier can check (about 27 hours), so it can’t be counted automatically.';
+
+// A named transaction that never appeared. Without verified reads it is dropped (the treasury
+// scan still picks it up if it is mined later). With them it stays as it is: a missing
+// transaction is the one thing a light client can't prove, so it decides nothing.
+function missing(row, now) {
+  if (config.verification.required) sql.run('UPDATE billing_payments SET problem = ?, checked_at = ? WHERE id = ?', 'The transaction hasn’t shown up on-chain yet. Nil keeps watching for it.', now, row.id);
+  else sql.run("UPDATE billing_payments SET status = 'dropped', problem = 'The transaction never showed up on-chain.', checked_at = ? WHERE id = ?", now, row.id);
+}
+
 async function follow(row, receipt, final, now) {
   if (row.status === 'seen') {
     if (receipt.state === 'mined') attachReceipt(row, receipt, { feeBps: await feeAt(receipt.blockNumber) });
     else if (receipt.state === 'failed') sql.run("UPDATE billing_payments SET status = 'failed', problem = ?, checked_at = ? WHERE id = ?", `The transaction failed on-chain, so nothing reached ${config.billing.treasuryName}. Send the payment again.`, now, row.id);
-    else if (now - row.created_at > config.nox.missingTxMs) sql.run("UPDATE billing_payments SET status = 'dropped', problem = 'The transaction never showed up on-chain.', checked_at = ? WHERE id = ?", now, row.id);
+    else if (now - row.created_at > config.nox.missingTxMs) missing(row, now);
     else sql.run('UPDATE billing_payments SET checked_at = ? WHERE id = ?', now, row.id);
     return;
   }
 
+  if (receipt.state === 'unknown' && config.verification.required) {
+    sql.run('UPDATE billing_payments SET problem = ?, checked_at = ? WHERE id = ?', 'This transfer isn’t in its block any more, perhaps after a chain reorganisation. Nil keeps watching for it.', now, row.id);
+    return;
+  }
   if (receipt.state !== 'mined') {
     const failed = receipt.state === 'failed';
     const problem = failed ? 'After a chain reorganisation the transaction failed, so nothing arrived.' : 'A chain reorganisation removed this transfer. Nil keeps watching in case it is mined again.';
@@ -46,12 +60,16 @@ export default async function confirmPayments(now = Date.now()) {
   const final = await finalizedBlock();
 
   for (const row of rows) {
-    const receipt = await readReceipt(row.tx_hash);
+    let receipt;
     try {
+      receipt = await readReceipt(row.tx_hash);
       await follow(row, receipt, final, now);
     } catch (err) {
-      // one odd row mustn't hold up the rest; it's tried again next minute
-      log.error('billing', `payment check for ${row.id} failed`, err.message);
+      // a node that can't answer stops the run, as before; anything else is one odd row, and
+      // mustn't hold up the rest. Either is tried again next minute.
+      if (!receipt && err.reason !== 'out-of-range') throw err;
+      if (err.reason === 'out-of-range') sql.run('UPDATE billing_payments SET problem = ?, checked_at = ? WHERE id = ?', OUT_OF_RANGE, now, row.id);
+      else log.error('billing', `payment check for ${row.id} failed`, err.message);
     }
   }
 }
