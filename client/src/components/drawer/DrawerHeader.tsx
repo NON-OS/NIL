@@ -54,7 +54,7 @@ export default function DrawerHeader({ task }: { task: Task }) {
   };
 
   return (
-    <header className="drawer-head">
+    <div className="drawer-head">
       <CompleteButton task={task} />
       <button type="button" className="drawer-key mono hit" onClick={() => copy(taskKey(task), `Copied ${taskKey(task)}`)} title="Copy task key">
         {taskKey(task)}
@@ -103,6 +103,6 @@ export default function DrawerHeader({ task }: { task: Task }) {
       <button type="button" className="icon-btn tip tip-end" onClick={detail.close} aria-label="Close task">
         <X />
       </button>
-    </header>
+    </div>
   );
 }

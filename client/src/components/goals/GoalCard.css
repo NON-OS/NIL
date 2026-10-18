@@ -14,7 +14,7 @@
   box-shadow: var(--shadow-2);
 }
 
-.goal-card h3 {
+.goal-card h2 {
   font-family: var(--font-display);
   font-size: var(--text-lg);
   line-height: 1.25;

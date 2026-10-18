@@ -45,7 +45,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
   return (
     <article className={cx('proposal', !open && 'closed')}>
       <div className="proposal-head">
-        <h3>{proposal.title}</h3>
+        <h2>{proposal.title}</h2>
         <div className="proposal-meta">
           <span>
             <Clock /> {open ? timeLeft(proposal.closesAt) : `closed ${dates.ago(proposal.closedAt ?? proposal.closesAt)}`}

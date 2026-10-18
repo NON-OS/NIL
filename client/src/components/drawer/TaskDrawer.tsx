@@ -26,7 +26,7 @@ export default function TaskDrawer({ number }: { number: number }) {
   const taskId = task?.id;
   // a link to an older finished task finds it in the archive before saying it's gone
   const [searching, setSearching] = useState(!task && archived);
-  const ref = useRef<HTMLElement>(null);
+  const ref = useRef<HTMLDivElement>(null);
   useFocusTrap(ref);
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export default function TaskDrawer({ number }: { number: number }) {
   return createPortal(
     <>
       <div className="drawer-scrim" onClick={detail.close} />
-      <aside ref={ref} className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'} tabIndex={-1}>
+      <div ref={ref} className="drawer" role="dialog" aria-modal="true" aria-label={task ? task.title : 'Task'} tabIndex={-1}>
         {task ? (
           <>
             <DrawerHeader task={task} />
@@ -113,7 +113,7 @@ export default function TaskDrawer({ number }: { number: number }) {
             </button>
           </div>
         )}
-      </aside>
+      </div>
     </>,
     document.body,
   );

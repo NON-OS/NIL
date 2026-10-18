@@ -21,6 +21,8 @@ import useRoute from './hooks/useRoute';
 import useCryptoTools from './hooks/useCryptoTools';
 import cryptoOnly from './lib/cryptoOnly';
 import BackupWalletNudge from './components/shell/BackupWalletNudge';
+import SkipLink from './components/shell/SkipLink';
+import MainContent from './components/shell/MainContent';
 
 // The everyday screens above load with the app. The rest arrive when first opened, so the
 // first paint of My work and the board doesn't wait on settings, charts, crypto or exports.
@@ -146,11 +148,14 @@ export default function App() {
 
   return (
     <div className="app">
+      <SkipLink />
       <AppEffects />
       <Sidebar onNewProject={() => setNewProject(true)} />
-      <Suspense fallback={<ViewLoading />}>
-        <Screen segments={segments} />
-      </Suspense>
+      <MainContent>
+        <Suspense fallback={<ViewLoading />}>
+          <Screen segments={segments} />
+        </Suspense>
+      </MainContent>
       {taskNumber > 0 && <TaskDrawer key={taskNumber} number={taskNumber} />}
       {quickAdd && <QuickAdd />}
       {palette && <CommandPalette />}

@@ -141,6 +141,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Changed
 
+- Every signed-in page has one main region, a Skip to content link as the first thing Tab reaches, and headings in order: the page title, then its sections and cards. Opening another section moves keyboard focus to the new page instead of leaving it behind in the sidebar. The task panel is no longer announced as a second page header.
 - Built-in AI has a daily limit per person (`AI_REQUESTS_PER_DAY`), signed in or not. While anonymous requests are on, a member whose voting key is in the group can't also send signed-in ones. People who can't prove membership right now (no key yet, or a key that changed after a reset while an anonymous vote holds the old one) send signed in, against a per-person count kept for the day, and the old key leaves the group meanwhile.
 - The voting key can be registered with the crypto tools off, since it also sends AI requests anonymously.
 - A status deck's AI request leaves private tasks out, even when they're on the slides. The task AI buttons are hidden on private tasks.
