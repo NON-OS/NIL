@@ -6,7 +6,7 @@ import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
 import rateLimit from '../auth/rateLimit.js';
-import challenges from '../auth/challenges.js';
+import walletChallenges from '../auth/walletChallenges.js';
 import clientKey from '../auth/clientKey.js';
 import relyingParty from '../auth/relyingParty.js';
 import siwe from '../auth/siwe.js';
@@ -99,7 +99,7 @@ router.post(
       issuedAt: now.toISOString(),
       expiresAt: new Date(now.getTime() + 5 * 60_000).toISOString(),
     });
-    return { challengeId: challenges.issue('wallet', pending, clientKey(req.ip)), message: pending.message };
+    return { challengeId: walletChallenges.issue('wallet', pending, clientKey(req.ip)), message: pending.message };
   }),
 );
 
@@ -107,7 +107,9 @@ router.post(
 router.post(
   '/auth/wallet/verify',
   route(async (req, res) => {
-    const pending = challenges.take(req.body.challengeId, 'wallet');
+    // a challenge is checked before the signature, so a smart wallet's on-chain check only ever
+    // follows one this client was given, and both sit behind the rate limit above
+    const pending = walletChallenges.take(req.body.challengeId, 'wallet', clientKey(req.ip));
     if (!pending) throw HttpError.badRequest('That wallet request expired. Try again.');
     await walletSignature(pending.address, pending.message, req.body.signature);
 
