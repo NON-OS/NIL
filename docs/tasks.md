@@ -62,6 +62,8 @@ A notification about a comment shows its first words. If the comment is edited, 
 
 Drop files onto the task panel, or click **Attach**. Files are stored on your server, up to 25 MB each unless the server allows more. Images and PDFs open in the browser. Other files download, so a file can never run inside Nil. Whoever uploaded a file, or an admin, can remove it.
 
+Unless the server's operator changes the limits, each person can attach up to 120 files an hour and keep up to 2 GB of files, a guest up to 100 MB, and the whole workspace up to 20 GB. Files in the trash count until they're erased. When you reach a limit, Nil says so and the file isn't stored; removing files you no longer need makes room again.
+
 Files on team tasks are stored as they are. On a [private task](private-tasks.md), your browser encrypts each file before it uploads.
 
 ## Repeating tasks

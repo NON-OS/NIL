@@ -32,6 +32,6 @@ For the strictest setups, run Nil with its data folder in memory. Nothing is wri
 docker compose -f docker-compose.yml -f docker-compose.ram.yml up -d --build
 ```
 
-The data folder gets up to 1 GB of memory. To carry a workspace from one session to the next, restore an encrypted capsule when you start and download a fresh one before you stop.
+The data folder gets up to 1 GB of memory, and files attached to tasks can take up to 768 MB of it, so the database always has room. Set `UPLOAD_QUOTA_MB` in `.env` to change that. To carry a workspace from one session to the next, restore an encrypted capsule when you start and download a fresh one before you stop.
 
 > If the host swaps memory to disk, data can still end up on disk. Turn swap off, or use encrypted swap, for real memory-only operation.

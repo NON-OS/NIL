@@ -24,6 +24,7 @@ import push from './config/push.js';
 import due from './config/due.js';
 import calendarFeeds from './config/calendarFeeds.js';
 import bountyBoard from './config/bountyBoard.js';
+import uploads from './config/uploads.js';
 import ai from './config/ai.js';
 import agents from './config/agents.js';
 import PUBLIC_NODE from './config/publicNode.js';
@@ -61,6 +62,7 @@ const config = Object.freeze({
   // how deep request JSON may nest; real requests stay far below this
   maxJsonDepth: envNumber('MAX_JSON_DEPTH', 64, { min: 8 }),
   maxUploadBytes: envNumber('MAX_UPLOAD_MB', 25, { min: 1 }) * MB,
+  uploads,
   maxCapsuleBytes: envNumber('MAX_CAPSULE_MB', 4096, { min: 1 }) * MB,
   sessionDays: envNumber('SESSION_DAYS', 30, { min: 1 }),
   // messages one live connection may send a minute; the app sends a few, a flood gets cut off
