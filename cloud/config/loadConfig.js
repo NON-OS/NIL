@@ -87,7 +87,7 @@ export default function loadConfig(env = process.env) {
   }
   const tls = read.oneOf('CLOUD_TLS', ['on-demand', 'wildcard'], 'on-demand');
   const dnsProvider = read.text('CLOUD_DNS_PROVIDER');
-  if (tls === 'wildcard' && !/^[a-z0-9_]+$/.test(dnsProvider ?? '')) read.fail('CLOUD_TLS=wildcard needs CLOUD_DNS_PROVIDER, the name of the Caddy DNS module (for example hetzner or cloudflare).');
+  if (tls === 'wildcard' && !/^[a-z0-9_]+$/.test(dnsProvider ?? '')) read.fail('CLOUD_TLS=wildcard needs CLOUD_DNS_PROVIDER, the name of the Caddy DNS module (for example hetzner, cloudflare or ovh).');
   const controlUpstream = read.text('CLOUD_CADDY_CONTROL', `control:${port}`);
   const askUpstream = read.text('CLOUD_CADDY_ASK', `control:${internalPort}`);
   for (const [name, value] of [['CLOUD_CADDY_CONTROL', controlUpstream], ['CLOUD_CADDY_ASK', askUpstream]]) {

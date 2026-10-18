@@ -82,8 +82,13 @@ services:
       - "443:443"
       - "443:443/udp"
     environment:
-      # only for CLOUD_TLS=wildcard; the generated Caddyfile reads it as {env.DNS_API_TOKEN}
+      # only for CLOUD_TLS=wildcard; the generated Caddyfile reads them as {env.…}: the one
+      # token most DNS modules take, or the four values of OVHcloud's (CLOUD_DNS_PROVIDER=ovh)
       DNS_API_TOKEN: ${DNS_API_TOKEN:-}
+      OVH_ENDPOINT: ${OVH_ENDPOINT:-}
+      OVH_APPLICATION_KEY: ${OVH_APPLICATION_KEY:-}
+      OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:-}
+      OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:-}
     volumes:
       - caddy-config:/etc/caddy:ro
       - caddy-data:/data
