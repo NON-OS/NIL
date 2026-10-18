@@ -18,7 +18,7 @@ NOX in linked wallets is the balance of every wallet linked to the member's acco
 
 Admins set the power per pass in **Settings → Team → Voting power**, under **Power per Zero-State Pass, in NOX**. The default is 100,000 NOX per pass.
 
-Power is read when a vote opens, for every member at the same block. Tokens moved after that can't count twice, and people who join later have no power in that vote. Each vote also keeps the power per pass that applied when it opened, so changing the setting never changes a vote that's already running. Encrypted weighted votes count whole NOX only.
+Power is read when a vote opens, for every member at the same block: the newest final one, named by its hash, so a chain reorganisation can't mix two versions of it. On Ethereum that block is usually about 15 minutes old, so tokens that moved in those last minutes count where they were before. Tokens moved after that can't count twice, and people who join later have no power in that vote. Each vote also keeps the power per pass that applied when it opened, so changing the setting never changes a vote that's already running. Encrypted weighted votes count whole NOX only.
 
 The staking contract is read with `getStakeInfo` (default `0xa94d6009790Ba13597A1E1b7cF4e1531eA513613`) and the pass contract with `balanceOf` (default `0x7b575dd8e8b111c52ab1e872924d4efd4df403df`). The operator can change either, or leave one out by setting it to `off`.
 
