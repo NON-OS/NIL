@@ -1,9 +1,16 @@
 name = "nil"
 version = "0.1.0"
-defaultTargets = ["Nil", "Axioms"]
+defaultTargets = ["Nil", "Axioms", "vectors"]
 
 [[lean_lib]]
 name = "Nil"
 
 [[lean_lib]]
 name = "Axioms"
+
+[[lean_lib]]
+name = "Vectors"
+
+[[lean_exe]]
+name = "vectors"
+root = "Main"

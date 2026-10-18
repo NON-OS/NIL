@@ -42,6 +42,7 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.Rollback.warns_iff
   Nil.Rollback.older_always_warns
   Nil.Rollback.mixed_always_warns
+  Nil.Invoice.halfFor_covers
   Nil.Invoice.permute_total
   Nil.Invoice.permute_range
   Nil.Invoice.permute_inj
@@ -52,6 +53,7 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.Invoice.suffix_identifies
   Nil.Invoice.live_suffixes_distinct
   Nil.Invoice.firstFree_fresh
+  Nil.Invoice.pickSuffix_fresh
   Nil.Invoice.topUp_same_suffix
   Nil.Invoice.topUp_completes
   Nil.Invoice.owed_le_paid

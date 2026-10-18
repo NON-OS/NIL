@@ -33,6 +33,23 @@ def permute (half : Nat) (f : Nat → Nat → Nat) (size x : Nat) : Option Nat :
 /-- The `half` permute.js uses: ceil(ceil(log2 size) / 2). -/
 def halfFor (size : Nat) : Nat := (Nat.log2 (size - 1) + 1 + 1) / 2
 
+theorem log2_of (n m : Nat) (h : 2 ^ m ≤ n ∧ n < 2 ^ (m + 1)) : Nat.log2 n = m := by
+  have hn : n ≠ 0 := by have := Nat.pow_pos (n := m) (show 0 < 2 by decide); omega
+  have a := (Nat.le_log2 hn).2 h.1
+  have b := (Nat.log2_lt hn).2 h.2
+  omega
+
+/-- For every suffix length the server allows (2 to 6 digits), the halves permute.js picks
+cover 1 … 10^digits − 1, which is the hypothesis the theorems below need. -/
+theorem halfFor_covers :
+    [2, 3, 4, 5, 6].map (fun d => halfFor (10 ^ d)) = [4, 5, 7, 9, 10] ∧
+    ∀ h ∈ [(2, 4), (3, 5), (4, 7), (5, 9), (6, 10)], 10 ^ h.1 ≤ 2 ^ h.2 * 2 ^ h.2 := by
+  refine ⟨?_, by decide⟩
+  simp only [List.map, halfFor]
+  rw [log2_of (10 ^ 2 - 1) 6 (by decide), log2_of (10 ^ 3 - 1) 9 (by decide),
+    log2_of (10 ^ 4 - 1) 13 (by decide), log2_of (10 ^ 5 - 1) 16 (by decide),
+    log2_of (10 ^ 6 - 1) 19 (by decide)]
+
 theorem pack_lt {m L R : Nat} (hL : L < m) (hR : R < m) : L * m + R < m * m := by
   have : (L + 1) * m ≤ m * m := Nat.mul_le_mul_right _ hL
   rw [Nat.add_mul, Nat.one_mul] at this; omega

@@ -137,6 +137,15 @@ theorem owed_le_sent (span credit due total sent asked : Nat) :
     rw [rearrange1, rearrange2]; exact Nat.mul_le_mul_left _ (Nat.add_le_add_left this _)
   rw [rearrange3]; exact Nat.le_trans h3 h4
 
+/-- paidFraction: SCALE when nothing was due after credit, else the sum of each token's share. -/
+def paidFraction (due : Nat) (tokens : List (Nat × Nat)) : Nat :=
+  if due = 0 then SCALE else tokens.foldr (fun (sent, asked) acc => share sent asked + acc) 0
+
+/-- The Pro time settleInvoice grants a "periods" invoice in total: nothing while an open invoice
+is short of being paid, otherwise what `owed` says. -/
+def settledTime (wasOpen : Bool) (span credit due total fraction : Nat) : Nat :=
+  if total = 0 || (wasOpen && fraction < SCALE) then 0 else owed span credit due total fraction
+
 /-- settleInvoice adds only the difference from what was already granted, so settling the same
 payments again adds nothing. Returns (granted afterwards, time added). -/
 def grant (granted owedNow : Nat) : Nat × Nat :=

@@ -17,6 +17,7 @@ def sameSuffix (value asked grid : Nat) : Bool := value % grid == asked % grid
 /-- amountGrid: `low` is one unit of the last decimal place in use, the grid is low · 10^digits,
 and an invoice's suffix sits in the places below the grid as tail = suffix · low. -/
 def grid (low digits : Nat) : Nat := low * 10 ^ digits
+def lowFor (decimals amountDecimals : Nat) : Nat := 10 ^ (decimals - min decimals amountDecimals)
 def tail (low suffix : Nat) : Nat := suffix * low
 
 theorem price_ge (m : Nat) (g : Nat) (hg : 0 < g) : m ≤ (m + g - 1) / g * g := by
@@ -117,5 +118,26 @@ theorem firstFree_fresh (taken : Nat → Bool) (cs : List Nat) (s : Nat)
     split at h
     · have := ih h; exact ⟨this.1, by simp [this.2]⟩
     · cases h; simp_all
+
+/-- pickSuffix(taken, { digits, slot }) without a key: candidate r of the share is
+1 + offset + r. `draws` stands for the random draws in [0, capacity); the code makes 32. -/
+def pickSuffix (taken : Nat → Bool) (digits : Nat) (slot : Option (Nat × Nat)) (draws : List Nat) :
+    Option Nat :=
+  let space := 10 ^ digits - 1
+  let capacity := match slot with | some (_, count) => space / count | none => space
+  let offset := match slot with | some (index, _) => index * capacity | none => 0
+  let cand := fun r => 1 + offset + r
+  match firstFree taken ((draws.take 32).map cand) with
+  | some s => some s
+  | none => firstFree taken ((List.range capacity).map cand)
+
+/-- A new invoice's suffix is never one a live invoice already uses. -/
+theorem pickSuffix_fresh (taken : Nat → Bool) (digits : Nat) (slot : Option (Nat × Nat))
+    (draws : List Nat) (s : Nat) (h : pickSuffix taken digits slot draws = some s) :
+    taken s = false := by
+  simp only [pickSuffix] at h
+  split at h
+  · rename_i e; cases h; exact (firstFree_fresh _ _ _ e).1
+  · exact (firstFree_fresh _ _ _ h).1
 
 end Nil.Invoice
