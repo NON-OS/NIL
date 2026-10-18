@@ -10,8 +10,8 @@ What Nil encrypts in the browser, who holds which key, what teammates check for 
   - your private payout keys (ERC-5564 spending and viewing keys) and your anonymous voting key (Semaphore).
 - The seed leaves your browser only wrapped. The server keeps one wrap per linked wallet: the seed under AES-256-GCM, with a key derived from that wallet's signature of its unlock message (below). That signature never leaves the browser, so the server can't open a wrap.
 - Any linked wallet that has a wrap unlocks the same identity. Linking a wallet while your keys are unlocked gives it a wrap too, and **Add the wallet in your browser** under **Encryption keys** in **Settings → Sign-in & security** adds one later (see [Signing in](signing-in.md#add-a-wallet-to-your-keys)).
-- Unlocked keys live only in the tab's memory and are wiped when you lock, sign out or reload.
-- Optional recovery kit: a small JSON file with the seed under a passphrase (scrypt with N = 2^17, r = 8, p = 1, then AES-256-GCM, the same cost as workspace capsules). Everything else in the file is bound in as additional data, so it can't be edited to claim another account or a cheaper cost.
+- Unlocked keys live only in the tab's memory and are wiped when you lock, sign out or reload. Locking and signing out also forget every private task, comment and file the tab opened with them.
+- Optional recovery kit: a small JSON file with the seed under a passphrase (scrypt with N = 2^17, r = 8, p = 1, then AES-256-GCM, the same cost as workspace capsules). Everything else in the file is bound in as additional data, so it can't be edited to claim another account or a cheaper cost. A kit asking for more than 4 times the memory or 8 times the work of that cost is refused before anything runs, so a doctored file can't stall the tab.
 
 ## Messages your wallet signs
 
@@ -24,13 +24,15 @@ Every key message has the Sign-In with Ethereum (EIP-4361) layout and names the 
 
 A new wrap signs its unlock message twice, because a wallet that signs the same message differently each time could never open the wrap again.
 
-The server writes the messages for signing in and for signed ballots. A dishonest server could try to pass off a key message as one of those and collect its signature, so the browser refuses to sign any server-written text that carries the `urn:nil:` resources key messages use.
+The server writes the messages for signing in, for signed ballots and for applying to a bounty on the public board. A dishonest server could try to pass off a key message as one of those and collect its signature, so every server-written message goes through one check before the wallet sees it, and the browser refuses to sign any that carries the `urn:nil:` resources key messages use. Only key messages the browser builds itself are signed without that check. The sign-up page of hosted Nil makes the same check.
 
 ## The key directory, and what teammates check
 
 - Publishing keys, or replacing them with a reset, needs a key statement signed in the last ten minutes by one of your linked wallets. The server checks the signature, the site, the workspace and the account. A stolen session cookie alone can't publish or reset keys.
 - Every browser rebuilds each statement from the published fields and recovers the signer itself (secp256k1). A key whose statement doesn't check out is ignored.
 - The server is the only source for which wallets belong to whom, and a browser can't check that. So each browser pins every teammate's keys the first time it sees them, in local storage (public data only, per site, workspace and account), and seals nothing to a key until you confirm it. If a teammate's published keys later differ from the pinned ones, the key shows as changed, with the old and new fingerprints, and nothing new is sealed to it until you confirm the change.
+- The site, the workspace key and your account come from the server, again at every reconnect. Unlocking records the ones your keys were opened for, and pins and version records stay filed under those. If the server later names anything else, the browser locks your keys, says so, and won't unlock them in that tab until you reload. A server could otherwise move an unlocked browser to an empty set of pins and slip in a key of its own for a teammate you had already confirmed.
+- When this browser holds pins for another workspace or account but none for the one the server names, Nil warns you at sign-in. That's expected the first time someone uses this browser, and otherwise a sign that the server may be starting your pins over.
 - A fingerprint is the first 80 bits of SHA-256 over both public keys, written as five groups of four hex digits. Yours is under **Encryption keys** in **Settings → Sign-in & security**, and every teammate's is under **Teammates' keys**. Compare fingerprints face to face or on a call, not in a message sent through the same workspace.
 - Docs shows a notice when someone new appears with a key or someone's key changes, and anything that needs a teammate's key (sharing a doc, a private task for them, a trustee share) asks you to check it first. Team docs reach a newcomer only after a teammate has confirmed the newcomer's key.
 - Each key statement shows teammates the address of the wallet that signed it. If you'd rather they didn't see a particular wallet, link another one and sign your keys with that.
@@ -60,7 +62,7 @@ The server writes the messages for signing in and for signed ballots. A dishones
 - Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. [Check what a server sends](verify-a-server.md) compares a server with a release byte for byte; it can't see code sent only to one person or for a moment. Running a build you trust on a server you control is the strongest defence.
 - See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
 - Refuse service, delete data, or serve old data. Docs and private tasks carry a signed version or revision number, and a browser warns when the server sends an older one than it has already opened. A new browser or device has nothing to compare with.
-- Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.
+- Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins, and so does a workspace key or account your browser hasn't used before, which is why it warns when it holds pins for another one.
 - Copy a private task's sealed contents onto another task. The words are still their writer's real words.
 
 ## Recovery and moves
