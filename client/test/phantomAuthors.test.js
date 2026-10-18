@@ -1,14 +1,18 @@
 import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { keyDirectory, entry, person, signIn, route, reset, confirm, sealedCache } from './helpers/fakeBrowser.js';
+import { keyDirectory, keyring, entry, person, signIn, route, reset, confirm, sealedCache } from './helpers/fakeBrowser.js';
 
 const load = (path) => import(`../src/${path}.ts`).then((m) => m.default);
 const taskKeys = await load('actions/taskKeys');
 const taskSeal = await load('actions/taskSeal');
 const sealedPatch = await load('actions/sealedPatch');
+const docs = await load('actions/docs');
 const taskKeySeal = await load('lib/crypto/taskKeySeal');
+const docKeySeal = await load('lib/crypto/docKeySeal');
 const taskText = await load('lib/crypto/taskText');
+const docText = await load('lib/crypto/docText');
 const taskFacts = await load('lib/crypto/taskFacts');
+const docFacts = await load('lib/crypto/docFacts');
 const signedText = await load('lib/crypto/signedText');
 const signedFacts = await load('lib/crypto/signedFacts');
 const taskRevision = await load('lib/crypto/taskRevision');
@@ -83,4 +87,50 @@ test('a teammate’s key seen first counts for their words only while the notice
   listed = [entry('w', W)];
   await keyDirectory.load({ fresh: true });
   await assert.rejects(taskSeal.open(ref), /for the people it shows/);
+});
+
+// A doc the server made: its own key K, sealed to Vic, signed by its ghost identity.
+async function forgedDoc(K, { older = false, readers = ['ghost', 'v'] } = {}) {
+  const docId = 'existing-doc-id';
+  const version = 7;
+  const facts = { audience: 'people', readers, key: keyHash(K), at: Date.now() };
+  const field = (f, text) => {
+    const at = { docId, field: f, version };
+    const payload = older
+      ? signedText.seal(text, { context: docText.context(at), by: 'ghost', signingPrivate: G.signingPrivate })
+      : signedFacts.seal(text, { kind: docFacts.kind, place: docFacts.place(at), facts: docFacts.list(facts), by: 'ghost', signingPrivate: G.signingPrivate });
+    return docText.seal(K, at, payload);
+  };
+  return { id: docId, version, audience: 'people', titleCt: await field('title', 'Board minutes'), bodyCt: await field('body', 'Draft'), wrappedKey: await docKeySeal.seal(K, V.publicKey), createdBy: 'v', updatedBy: 'ghost', createdAt: 1, updatedAt: 2, readers: ['v'] };
+}
+
+test('a doc signed by a key the server made opens marked as unverified, and nothing is saved under its key', async () => {
+  signIn('v', V, [{ id: 'v', name: 'Vic' }]);
+  route('GET', '/api/encryption-keys', () => [entry('v', V), entry('ghost', G, { active: false })]);
+  for (const older of [true, false]) {
+    const served = await forgedDoc(randomKey(), { older });
+    route('GET', `/api/docs/${served.id}`, () => ({ doc: served }));
+    keyring.forgetDocKey(served.id);
+    const item = await docs.open(served.id);
+    assert.equal(item.warning, 'unverified');
+    await assert.rejects(docs.save(item, 'Board minutes', 'Acquisition offer: 12M'), /can’t confirm a teammate wrote this version/);
+  }
+});
+
+test('a genuine doc version moved under a key of the server’s doesn’t check out', async () => {
+  signIn('v', V, users);
+  route('GET', '/api/encryption-keys', () => [entry('v', V), entry('w', W)]);
+  await confirm(['w']);
+  let stored;
+  route('POST', '/api/docs', (url, b) => ((stored = { id: b.id, version: 1, audience: b.audience, titleCt: b.titleCt, bodyCt: b.bodyCt, wrappedKey: b.grants[0].wrappedKey, createdBy: 'v', updatedBy: 'v', createdAt: 1, updatedAt: 1, readers: ['v', 'w'] }), { doc: stored }));
+  await docs.create({ title: 'Runbook', body: 'Restart the node', audience: 'people', people: ['w'] });
+  const honestKey = keyring.docKey(stored.id);
+  const K = randomKey();
+  const at = (field) => ({ docId: stored.id, field, version: 1 });
+  const move = async (field, ct) => docText.seal(K, at(field), await docText.open(honestKey, at(field), ct));
+  const moved = { ...stored, titleCt: await move('title', stored.titleCt), bodyCt: await move('body', stored.bodyCt), wrappedKey: await docKeySeal.seal(K, W.publicKey) };
+  signIn('w', W, users);
+  await confirm(['v']);
+  route('GET', `/api/docs/${stored.id}`, () => ({ doc: moved }));
+  assert.equal((await docs.open(stored.id)).warning, 'unverified');
 });
