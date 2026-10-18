@@ -5,11 +5,13 @@ import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import useStore from '../../state/useStore';
 import identity from '../../actions/identity';
+import ethereum from '../../lib/ethereum';
 import dates from '../../lib/dates';
 import SignOutEverywhere from './SignOutEverywhere';
 import type SecurityOverview from '../../types/SecurityOverview';
 import PrivatePayouts from './PrivatePayouts';
 import BackupWalletCard from './BackupWalletCard';
+import BackupWalletSteps from './BackupWalletSteps';
 import WalletChoices from '../auth/WalletChoices';
 import WalletStatus from '../auth/WalletStatus';
 import useWalletFlow from '../../hooks/useWalletFlow';
@@ -21,6 +23,7 @@ import MyKeysCard from './MyKeysCard';
 import PasskeysCard from './PasskeysCard';
 import TeamKeysCard from './TeamKeysCard';
 import vault from '../../actions/vault';
+import signing from '../../state/signing';
 
 export default function SecuritySettings() {
   const guest = useStore((s) => s.guest);
@@ -47,12 +50,32 @@ export default function SecuritySettings() {
         toast.show('Thanks. Now switch your wallet to the one you want to link, then click Link the new wallet.', { tone: 'success', timeout: 8000 });
         return;
       }
-      await identity.linkWallet();
-      setConfirmedUntil(0);
-      toast.show('Wallet linked.', { tone: 'success' });
-      await refresh();
-      // while your keys are unlocked, the new wallet can be given its own copy of them right away
-      if (vault.unlocked() && (await vault.addWallet())) toast.show('The new wallet unlocks your encryption keys too.', { tone: 'success' });
+      // the wallet still on the account that confirmed would only be refused after a signature
+      const { address } = await ethereum.account();
+      if (data?.credentials.some((c) => c.address?.toLowerCase() === address.toLowerCase())) {
+        toast.show('Your wallet is still on a linked account. Switch it to the backup, then click Link the new wallet.', { tone: 'error' });
+        return;
+      }
+      // while your keys are unlocked, the new wallet gets its own copy of them straight after:
+      // three signatures in a row, which the signing guide walks through
+      const withKeys = vault.unlocked();
+      let linked = false;
+      const linkNew = async () => {
+        signing.next();
+        await identity.linkWallet();
+        linked = true;
+        if (withKeys) await vault.addWallet();
+      };
+      try {
+        await (withKeys ? signing.run('link', linkNew) : linkNew());
+      } finally {
+        // the confirmation is spent once the new wallet is linked, even if sharing the keys fails
+        if (linked) {
+          setConfirmedUntil(0);
+          await refresh();
+        }
+      }
+      toast.show(withKeys ? 'Backup linked. It can sign you in and open your encryption keys.' : 'Backup linked. It can sign you in. To let it open your encryption keys too, add it under Encryption keys.', { tone: 'success' });
     } catch (err) {
       toast.error(err);
     } finally {
@@ -92,17 +115,13 @@ export default function SecuritySettings() {
             </div>
           ))}
         </div>
+        <BackupWalletSteps confirmed={confirmed} />
         <div className="settings-row">
           <button type="button" className={data.credentials.length === 1 || confirmed ? 'btn btn-primary' : 'btn'} disabled={linking} onClick={() => flow.start(link)}>
             {linking ? <Spinner size={14} /> : <Wallet />} {confirmed ? 'Link the new wallet' : 'Link another wallet'}
           </button>
           <SignOutEverywhere />
         </div>
-        <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          {confirmed
-            ? 'Switch your wallet to the account you want to link, or connect the other wallet, then click Link the new wallet.'
-            : 'Linking starts with a signature from a wallet that’s already linked, so nobody can add one with your session alone.'}
-        </p>
         {flow.stage === 'pick' && <WalletChoices wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} />}
         {flow.stage === 'guide' && <p className="muted">There’s no wallet in this browser. Add one, reload this page, then link it here.</p>}
         <WalletStatus flow={flow} />

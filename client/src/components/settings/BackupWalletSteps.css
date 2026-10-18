@@ -1,0 +1,14 @@
+.backup-steps {
+  display: grid;
+  gap: 10px;
+}
+
+.backup-steps-keys {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.backup-steps-keys .btn {
+  margin-top: 6px;
+}

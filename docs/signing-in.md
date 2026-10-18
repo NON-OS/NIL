@@ -35,7 +35,9 @@ If you lose every wallet linked to your account, you can't sign in until an admi
 
 The first signature proves the request comes from you and not just from someone using your signed-in browser. It's good for 5 minutes in that browser (the server can change this). Any linked wallet can sign you in. You can rename each one by clicking its name, and remove any of them as long as one is left. The first wallet in the list is marked "receives bounties": bounties are paid there unless you turn on [private payouts](private-payouts.md).
 
-If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
+If your encryption keys are unlocked in that tab when you link the wallet, Nil adds it to your keys as well, and the new wallet signs one more message twice. So unlock your keys before you switch wallets: once your wallet is on the new account, it can't open them. The same page lists these steps and marks the one you're on, and offers **Unlock your keys** while they're locked. Otherwise, see [Add a wallet to your keys](#add-a-wallet-to-your-keys).
+
+If you click **Link the new wallet** while your wallet is still on an account that's already linked, Nil says so before asking for a signature.
 
 ## If you lose every wallet
 

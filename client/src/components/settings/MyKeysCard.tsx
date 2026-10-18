@@ -78,6 +78,7 @@ export default function MyKeysCard() {
             {busy === 'wallet' ? <Spinner size={13} /> : <Wallet />} Add the wallet in your browser
           </button>
         </div>
+        <small className="muted">For a wallet that already signs you in. Switch your wallet to it first; it signs twice.</small>
       </div>
       <form onSubmit={download} style={{ display: 'grid', gap: 8 }}>
         <strong>Recovery kit</strong>
