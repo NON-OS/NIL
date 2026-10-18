@@ -24,6 +24,7 @@ import archiveSummary from '../services/archiveSummary.js';
 import keySite from '../keys/keySite.js';
 import passkeyList from '../keys/passkeyList.js';
 import signingKey from '../proofs/signingKey.js';
+import creditSetting from '../aiCredits/creditSetting.js';
 
 const router = express.Router();
 
@@ -82,6 +83,8 @@ router.get(
       // guests work inside someone else's subscription; they don't need its details
       plan: guestScope.of(req.user.id) ? { unlocked: plan.status().unlocked } : plan.status(),
       ai: config.ai.enabled,
+      // members with a voting key send built-in AI requests anonymously while this is on
+      aiAnonymous: config.ai.enabled && creditSetting.on(),
       nox: config.nox.enabled
         ? { token: config.nox.token, chainId: config.nox.chainId, symbol: config.nox.symbol, decimals: config.nox.decimals, explorer: config.nox.explorer, transferFeeBps: transferFee.current().bps }
         : null,

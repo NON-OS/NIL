@@ -7,6 +7,7 @@ import PriorityIcon from '../ui/PriorityIcon';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import ai from '../../actions/ai';
+import AiMode from '../ai/AiMode';
 import taskActions from '../../actions/tasks';
 import ui from '../../actions/ui';
 import dates from '../../lib/dates';
@@ -85,6 +86,7 @@ export default function ExtractModal() {
             <p className="hint" style={{ marginTop: 8 }}>
               Your notes are sent to the AI service only for this request and aren’t stored by Nil.
             </p>
+            <AiMode />
           </>
         ) : (
           <ul style={{ display: 'grid', gap: 6, margin: 0, padding: 0, listStyle: 'none' }}>
