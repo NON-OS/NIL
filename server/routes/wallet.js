@@ -26,14 +26,10 @@ import useSignInReset from '../services/useSignInReset.js';
 import signInAudit from '../services/signInAudit.js';
 import publishUser from '../services/publishUser.js';
 import holderGate from '../services/holderGate.js';
-import holdings from '../services/holdings.js';
-import holderPower from '../services/holderPower.js';
-import holderStanding from '../services/holderStanding.js';
+import holderWallets from '../services/holderWallets.js';
+import holderSignIn from '../services/holderSignIn.js';
+import checkHolderJoin from '../services/checkHolderJoin.js';
 import recheckHolders from '../services/recheckHolders.js';
-import nox from '../lib/nox.js';
-import dateText from '../lib/dateText.js';
-import planGate from '../services/planGate.js';
-import seatGate from '../services/seatGate.js';
 
 const router = express.Router();
 router.use('/auth/wallet', rateLimit({ windowMs: 15 * 60_000, max: 60 }));
@@ -82,6 +78,7 @@ router.post(
       pending.inviteHash = invite.token_hash;
     } else if (mode === 'holder') {
       if (!holderGate.get().enabled) throw HttpError.forbidden('This workspace is invite-only.');
+      holderWallets.checkFree(pending.address);
       pending.name = check.text(req.body.name, 'Name', { min: 1, max: 80 });
     } else if (mode === 'reset') {
       const reset = liveReset(req.body.resetToken);
@@ -120,16 +117,8 @@ router.post(
         throw HttpError.forbidden('Your bounty application is still waiting for the team. Sign in here again once they accept it.');
       }
       if (!row || row.deactivated || row.kind !== 'human') throw new HttpError(404, 'No account here uses this wallet. Ask an admin for an invite, then join with your wallet.');
-      // People who came in through the open door have to keep holding to keep coming in. Falling
-      // below starts a grace period with a notice; only after it are they turned away.
       const gate = holderGate.get();
-      if (row.joined_via === 'holder' && gate.enabled) {
-        const held = (await holdings(row.user_id)).total;
-        const standing = holderStanding(row.user_id, held, gate.minimum);
-        if (standing.state === 'locked') {
-          throw HttpError.forbidden(`Your linked wallets hold ${nox(held)} counting NOX held, staked and Zero-State Passes. This workspace asks members who joined as holders to keep at least ${nox(gate.minimum)}, and the grace period ended on ${dateText(standing.until)}.`);
-        }
-      }
+      if (row.joined_via === 'holder' && gate.enabled) await holderSignIn(row.user_id, gate);
       sql.run('UPDATE credentials SET last_used_at = ? WHERE id = ?', Date.now(), row.id);
       return signIn(req, res, row.user_id);
     }
@@ -148,24 +137,15 @@ router.post(
       return { ok: true };
     }
     if (pending.mode === 'reset') return signIn(req, res, useSignInReset(pending.resetId, pending.address));
-    if (pending.mode === 'holder') {
-      const gate = holderGate.get();
-      if (!gate.enabled) throw HttpError.forbidden('This workspace is invite-only.');
-      planGate('Joining as a holder');
-      seatGate('member');
-      const held = (await holderPower([pending.address])).total;
-      if (held < BigInt(gate.minimum)) throw HttpError.forbidden(`This wallet holds ${nox(held)} counting NOX held, staked and Zero-State Passes. Joining without an invite needs at least ${nox(gate.minimum)}.`);
-    }
+    if (pending.mode === 'holder') await checkHolderJoin(pending.address);
     // only these three make an account; anything else reaching here is a bug, never a sign-up
     if (!['setup', 'invite', 'holder'].includes(pending.mode)) throw HttpError.badRequest('Unknown wallet request.');
     const id = createAccount({ mode: pending.mode, id: newId(), name: pending.name, workspaceName: pending.workspaceName, cryptoTools: pending.cryptoTools, inviteHash: pending.inviteHash, address: pending.address });
     if (pending.mode === 'setup') setupToken.discard();
     else publishUser(id);
-    if (pending.mode === 'holder') {
-      sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', Date.now(), id);
-      // the NOX that just let this wallet in may have come from another member's wallet
-      recheckHolders({ force: true }).catch(() => {});
-    }
+    // the NOX that just let this wallet in may have come from another member's wallet; a burst
+    // of joins shares one pass (see recheckHolders)
+    if (pending.mode === 'holder') recheckHolders({ force: true }).catch(() => {});
     return signIn(req, res, id);
   }),
 );

@@ -7,6 +7,7 @@ import wallet from './helpers/wallet.js';
 
 const NOX = 10n ** 18n;
 const DAY = 86_400_000;
+const HOUR = 3_600_000;
 const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
 let srv;
 let sql;
@@ -77,13 +78,25 @@ test('a holder who falls below gets a grace period and a notice, then is turned 
   await session.wallet(holder, 'login');
   assert.equal((await session('GET', '/api/notifications')).data.filter((n) => n.type === 'holder_low').length, 1);
 
-  // once the grace period is over the door stays shut until they hold enough again
+  // once the grace period is over the door stays shut until they've held enough for a while
   sql.run('UPDATE users SET holder_below_since = ? WHERE id = ?', Date.now() - 4 * DAY, ids.holder);
   const refused = await client(base).wallet(holder, 'login');
   assert.equal(refused.status, 403);
   assert.match(refused.data.error, /hold 10 NOX.*at least 1,000 NOX, and the grace period ended/);
   chain.setBalance(holder.address, 1000n * NOX);
+  // topping up isn't enough at the moment of signing in: the scheduled checks have to see it
+  const early = await client(base).wallet(holder, 'login');
+  assert.equal(early.status, 403);
+  assert.match(early.data.error, /hold enough again.*regular checks, every 6 hours, have seen at least 1,000 NOX there for 6 hours/);
+  sql.run('UPDATE users SET holder_checked_at = ? WHERE id = ?', Date.now() - 7 * HOUR, ids.holder);
+  await recheckHolders();
+  assert.equal((await client(base).wallet(holder, 'login')).status, 403);
+  sql.run('UPDATE users SET holder_held_since = holder_held_since - ? WHERE id = ?', 6 * HOUR, ids.holder);
   assert.equal((await client(base).wallet(holder, 'login')).status, 200);
+  // the shortfall stays on record until the checks have seen them hold for a whole grace period
+  assert.ok(sql.get('SELECT holder_below_since FROM users WHERE id = ?', ids.holder).holder_below_since);
+  sql.run('UPDATE users SET holder_held_since = ?, holder_checked_at = ? WHERE id = ?', Date.now() - 4 * DAY, Date.now() - 7 * HOUR, ids.holder);
+  await recheckHolders();
   assert.equal(sql.get('SELECT holder_below_since FROM users WHERE id = ?', ids.holder).holder_below_since, null);
 
   chain.setBalance(holder.address, 0n);
