@@ -9,6 +9,9 @@
 // A ballot may only be proven against the current voter list, or one replaced in the last few
 // minutes, so each root notes when it was replaced. Roots of open votes count as current until
 // their list next changes.
+//
+// A held anonymous ballot remembers which choices its voter changed away from in its hour, so a
+// copy of one of those earlier ballots can't be sent again to undo the change.
 const odd = (column) => `(${column} GLOB '0?*' OR length(${column}) > 77 OR (length(${column}) = 77 AND ${column} >= '21888242871839275222246405745257275088548364400416034343698204186575808495617'))`;
 
 const voteReview = `
@@ -18,6 +21,7 @@ const voteReview = `
   UPDATE users SET semaphore_commitment = NULL WHERE semaphore_commitment IS NOT NULL AND ${odd('semaphore_commitment')};
 
   ALTER TABLE proposal_roots ADD COLUMN replaced_at INTEGER;
+  ALTER TABLE held_ballots ADD COLUMN replaced TEXT NOT NULL DEFAULT '';
 
   CREATE TABLE proposal_wallet_power (
     proposal_id TEXT NOT NULL REFERENCES proposals(id) ON DELETE CASCADE,

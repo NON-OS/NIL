@@ -7,6 +7,8 @@ import type Proposal from '../types/Proposal';
 import type AnonymousVote from '../types/AnonymousVote';
 import type AnonymousVoteView from '../types/AnonymousVoteView';
 
+const HOUR = 3_600_000;
+
 const loadIdentity = async () => {
   const [{ Identity }, keys] = await Promise.all([import('@semaphore-protocol/identity'), unlockPrivateKeys()]);
   return new Identity(keys.semaphoreSecret);
@@ -61,7 +63,8 @@ const anonymousVotes = {
     // prove against the latest member list, which may have grown since the page loaded
     const view = await anonymousVotes.fresh(proposal);
     const { default: proveBallot } = await import('../lib/semaphore/proveBallot');
-    const proof = await proveBallot(identity, view, choice);
+    // the hour goes into the proof by the server's clock, not this device's
+    const proof = await proveBallot(identity, view, choice, Math.floor(view.now / HOUR));
     return anonymousVotes.send(proposal.id, { proof });
   },
 

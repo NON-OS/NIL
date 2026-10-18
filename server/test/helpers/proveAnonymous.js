@@ -15,8 +15,9 @@ const groupOf = (vote) => {
   return g;
 };
 
-// A Semaphore ballot for `choice`, as a browser proves it. `group` replaces the vote's tree,
-// the way an outsider would have to make one up.
-export default function proveAnonymous(identity, vote, choice, { group = groupOf(vote) } = {}) {
-  return generateProof(identity, group, choice, vote.anonymous.scope, DEPTH, artifacts);
+// A Semaphore ballot for `choice` in the hour `hour` (hours since the Unix epoch, this one by
+// default), as a browser proves it: the message is hour × 8 + choice. `group` replaces the
+// vote's tree, the way an outsider would have to make one up.
+export default function proveAnonymous(identity, vote, choice, { group = groupOf(vote), hour = Math.floor(Date.now() / 3_600_000) } = {}) {
+  return generateProof(identity, group, BigInt(hour) * 8n + BigInt(choice), vote.anonymous.scope, DEPTH, artifacts);
 }

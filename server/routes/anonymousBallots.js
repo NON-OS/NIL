@@ -39,12 +39,14 @@ router.post(
         throw new HttpError(409, 'A trustee found a key share that doesn’t match its dealer’s commitment, so this vote can’t take ballots. Ask an admin to start it again.');
       }
       const { nullifier, ciphertexts, proof } = await checkEncryptedBallot(proposal, parseJSON(proposal.options, []), req.body);
-      const countsAt = heldBallots.hold(proposal.id, nullifier, { ciphertexts, proof });
+      // the ballot circuit has no field for the hour, so an encrypted ballot can't be replaced
+      // safely: the first one each voter casts is final
+      const countsAt = heldBallots.hold(proposal.id, nullifier, { ciphertexts, proof }, { final: true });
       return { ok: true, countsAt };
     }
-    const { choice, nullifier, proof } = await checkBallot(proposal, parseJSON(proposal.options, []), req.body?.proof);
+    const { choice, nullifier, hour, proof } = await checkBallot(proposal, parseJSON(proposal.options, []), req.body?.proof);
     // the same member voting again replaces their earlier choice, like signed ballots do
-    const countsAt = heldBallots.hold(proposal.id, nullifier, { choice, proof });
+    const countsAt = heldBallots.hold(proposal.id, nullifier, { choice, proof }, { hour });
     return { ok: true, countsAt };
   }),
 );

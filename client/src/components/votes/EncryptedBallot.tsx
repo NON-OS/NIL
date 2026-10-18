@@ -25,7 +25,6 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
   const step = encryptedVotes.nextStep(proposal);
   const committed = enc.trustees.filter((t) => t.committed).length;
   const dealt = enc.trustees.filter((t) => t.dealt).length;
-  const checked = enc.trustees.filter((t) => t.shares === 'ok').length;
   const decrypted = enc.trustees.filter((t) => t.decrypted).length;
   const voters = enc.eligible;
   const trusteeNames = enc.trustees.map((t) => (t.userId ? users[t.userId]?.name ?? 'A former member' : 'A former member')).join(', ');
@@ -91,7 +90,7 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
     <>
       {open && !key && <JoinVote onJoined={onChange} />}
       {open && key && !anonymousVotes.joined(proposal.anonymous?.members, key) && <p className="muted proposal-anon">You had no voting power when this vote opened, so you have no seat in it.</p>}
-      {open && anonymousVotes.joined(proposal.anonymous?.members, key) && (
+      {open && !mine.voted && anonymousVotes.joined(proposal.anonymous?.members, key) && (
         <div className="proposal-options" role="group" aria-label="Your encrypted vote">
           {proposal.options.map((option, i) => (
             <button key={option} type="button" className="btn" aria-pressed={mine.choice === i} disabled={busy !== null} onClick={() => run(`vote-${i}`, () => encryptedVotes.cast(proposal, i), (countsAt) => `Ballot encrypted and proven. It joins the count at ${dates.time(countsAt)} with the others from this hour. Nobody can tell it was yours or how much weight it carried.`, () => setMine({ voted: true, choice: i }))}>
@@ -102,7 +101,7 @@ export default function EncryptedBallot({ proposal, open, onChange }: { proposal
       )}
       <p className="muted proposal-anon">
         <LockKeyhole size={13} />
-        {open && `Encrypted and weighted: ${voters} member${voters === 1 ? '' : 's'} had voting power when it opened and can vote with it. Totals stay sealed until two of ${trusteeNames} decrypt them after it closes. Key shares checked by ${checked} of 3 trustees.`}
+        {open && `Encrypted and weighted: ${voters} member${voters === 1 ? '' : 's'} had voting power when it opened and can vote with it. Totals stay sealed until two of ${trusteeNames} decrypt them after it closes. A ballot is final once it’s cast, so pick carefully.`}
         {!open && !proposal.totals && `Closed. Waiting for two of ${trusteeNames} to decrypt the totals. Decrypting: ${decrypted} of 2 trustees done.`}
         {proposal.totals && `Encrypted and weighted. Two of ${trusteeNames} decrypted the totals, with proofs anyone can check in the audit file.`}
         {mine.voted && ` You voted${mine.choice !== undefined ? ` ${proposal.options[mine.choice]}` : ''}; only you can tell.`}

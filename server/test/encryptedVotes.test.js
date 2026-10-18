@@ -181,10 +181,15 @@ test('weighted ballots are proven and encrypted; nobody sees totals before decry
   for (const [n, choice] of [['owner', 0], ['ana', 1], ['cy', 0]]) {
     const res = await ballot(ids.vote, await proveBallot(n, vote, choice));
     assert.equal(res.status, 200);
-    assert.equal(res.data.countsAt % 3_600_000, 0);
+    // counted with the rest of its hour, once the hour and five minutes' grace are over
+    assert.equal((res.data.countsAt - 300_000) % 3_600_000, 0);
   }
-  // Ana changes her mind: same nullifier, replaced, still three ballots
-  assert.equal((await ballot(ids.vote, await proveBallot('ana', vote, 2))).status, 200);
+  // the circuit can't name an hour, so a copy of an old ballot couldn't be told from a change of
+  // mind: an encrypted ballot is final, and a second one from Ana, or a copy of it, is refused
+  const again = await proveBallot('ana', vote, 2);
+  const refused = await ballot(ids.vote, again);
+  assert.equal(refused.status, 409);
+  assert.match(refused.data.error, /final/);
   // held until the hour ends: nothing anyone can see moves when a ballot arrives
   const now = await getVote(ids.vote);
   assert.deepEqual([now.voters, now.totals, now.anonymous.nullifiers.length], [0, null, 0]);
@@ -222,8 +227,8 @@ test('after closing, two trustees decrypt the totals with proofs, and a bad part
   assert.equal((await who.cy('POST', `/api/proposals/${ids.vote}/partial`, partialFor(3, aggregates))).status, 200);
 
   const done = await getVote(ids.vote);
-  // Grants: owner 1000 + cy 5000; Buyback: nobody (Ana moved); Hold: Ana 350
-  assert.deepEqual(done.totals, [6000n * unit, 0n, 350n * unit].map(String));
+  // Grants: owner 1000 + cy 5000; Buyback: Ana 350, whose first ballot stood; Hold: nobody
+  assert.deepEqual(done.totals, [6000n * unit, 350n * unit, 0n].map(String));
   assert.equal(done.voters, 3);
 });
 
