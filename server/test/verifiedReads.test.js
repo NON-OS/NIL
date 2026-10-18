@@ -38,7 +38,7 @@ before(async () => {
   v = await testVerifier(nodeUrl);
   proxy = await verifierProxy(v.url, nodeUrl, testVerifier.KEY);
   srv = await startServer({
-    env: { NOX_RPC_URL: proxy.url, NOX_VERIFIER_KEY: testVerifier.KEY, NOX_MISSING_TX_HOURS: '1', PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '10', PLAN_NOX_USD: '0.05', PLAN_LOG_BLOCKS: '200' },
+    env: { NOX_RPC_URL: proxy.url, NOX_VERIFIER_MODE: 'enforce', NOX_VERIFIER_KEY: testVerifier.KEY, NOX_MISSING_TX_HOURS: '1', PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '10', PLAN_NOX_USD: '0.05', PLAN_LOG_BLOCKS: '200' },
   });
   ({ default: sql } = await import('../db/sql.js'));
   ({ default: checkPayments } = await import('../jobs/checkPayments.js'));
@@ -80,6 +80,7 @@ test('a real payment, proven by the verifier, settles; only admins see the verif
   const p = await recorded(tx());
   assert.equal(p.state, 'paid');
   const state = await verification();
+  assert.equal(state.mode, 'enforce');
   assert.equal(state.required, true);
   assert.equal(state.ok, true);
   assert.equal((await member('GET', '/api/bootstrap')).data.nox.verification, undefined);

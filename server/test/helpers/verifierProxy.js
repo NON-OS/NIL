@@ -15,8 +15,15 @@ export default async function verifierProxy(verifierUrl, nodeUrl, key) {
       res.statusCode = 502;
       return res.end();
     }
-    const upstream = await fetch(mode === 'direct' ? nodeUrl : verifierUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: Buffer.concat(chunks) });
-    const body = await upstream.text();
+    let upstream;
+    let body;
+    try {
+      upstream = await fetch(mode === 'direct' ? nodeUrl : verifierUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: Buffer.concat(chunks) });
+      body = await upstream.text();
+    } catch {
+      res.statusCode = 502;
+      return res.end();
+    }
     const seal = upstream.headers.get('nil-verification');
     if (seal && mode === 'through') res.setHeader('Nil-Verification', seal);
     if (mode === 'forged') res.setHeader('Nil-Verification', `proven ${'0'.repeat(64)}`);

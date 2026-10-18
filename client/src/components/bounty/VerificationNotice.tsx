@@ -16,17 +16,26 @@ const WHY: Record<string, string> = {
 
 const when = (iso: string) => new Date(iso).toLocaleString([], { dateStyle: 'medium', timeStyle: 'short' });
 
-// Shown to admins while the server checks what Ethereum says through its verifier and can't
-// right now, or after the node was caught in a false answer. Nothing is counted or refused on
-// an unchecked answer, so this is what explains a payment that waits or a vote that won't open.
+// Shown to admins after the Ethereum node was caught in a false answer, and, when only proven
+// answers count (enforce), while the server can't verify: nothing is counted or refused on an
+// unchecked answer then, so this is what explains a payment that waits or a vote that won't open.
+// In shadow mode Nil still went by the node, so the notice says to look at what it acted on.
 export default function VerificationNotice() {
   const check = useStore((s) => s.nox?.verification);
   const isAdmin = useStore((s) => isAdminUser(s.me));
-  if (!isAdmin || !check?.required || check.ok) return null;
+  if (!isAdmin || !check || check.mode === 'off' || check.ok) return null;
+  const at = check.mismatchAt ? `On ${when(check.mismatchAt)}, ` : '';
+  if (check.reason === 'mismatch' && check.mode === 'shadow') {
+    return (
+      <p className="plan-callout warn" role="status">
+        {at}the Ethereum node gave this server an answer that its verifier proved false. Verification is only watching for now, so Nil went by the node’s answer: check payments, invoices and votes from around then. If this notice keeps coming back, the node may be misconfigured or lying, and whoever runs the server should look at it.
+      </p>
+    );
+  }
   if (check.reason === 'mismatch') {
     return (
       <p className="plan-callout warn" role="status">
-        {check.mismatchAt ? `On ${when(check.mismatchAt)}, ` : ''}the Ethereum node gave this server an answer that didn’t match the chain. The verifier threw it away and nothing was counted on it. Once can be a fault; if this notice keeps coming back, the node may be misconfigured or lying, and whoever runs the server should look at it.
+        {at}the Ethereum node gave this server an answer that didn’t match the chain. The verifier threw it away and nothing was counted on it. Once can be a fault; if this notice keeps coming back, the node may be misconfigured or lying, and whoever runs the server should look at it.
       </p>
     );
   }

@@ -4,6 +4,8 @@ import rpcHealth from './rpcHealth.js';
 import rpcRefusal from './rpcRefusal.js';
 import sealedResult from './sealedResult.js';
 import verifyHealth from './verifyHealth.js';
+import shadowCheck from './shadowCheck.js';
+import relayedRead from './relayedRead.js';
 
 let nextId = 1;
 
@@ -13,9 +15,10 @@ function unreachable(detail) {
 }
 
 // One JSON-RPC call to the node in NOX_RPC_URL. No cookies, no redirects, and a hard
-// timeout so a slow node can't hold requests open. With verified reads on (NOX_VERIFIER_KEY),
-// the answer only counts when Nil's verifier sealed it (chain/sealedResult.js).
-export default async function rpc(method, params = [], { timeoutMs = config.nox.rpcTimeoutMs } = {}) {
+// timeout so a slow node can't hold requests open. With NOX_VERIFIER_MODE=enforce the answer
+// only counts when Nil's verifier sealed it (chain/sealedResult.js); with shadow it is used as
+// it comes and checked through the verifier on the side (chain/shadowCheck.js).
+export default async function rpc(method, params = [], { timeoutMs = config.nox.rpcTimeoutMs, shadow = true } = {}) {
   const request = JSON.stringify({ jsonrpc: '2.0', id: nextId++, method, params });
   let res;
   try {
@@ -53,6 +56,13 @@ export default async function rpc(method, params = [], { timeoutMs = config.nox.
   }
   rpcHealth.answered();
   if (config.verification.required) return sealedResult(method, params, request, text, res.headers.get('nil-verification'), reply);
-  if (reply.error) throw rpcRefusal(reply.error);
+  const watched = shadow && config.verification.shadow && !relayedRead(method, params);
+  const node = (m, p) => rpc(m, p, { timeoutMs, shadow: false });
+  if (reply.error) {
+    const refused = rpcRefusal(reply.error);
+    if (watched && refused.reverted) shadowCheck(method, params, { reverted: true }, node);
+    throw refused;
+  }
+  if (watched) shadowCheck(method, params, { result: reply.result }, node);
   return reply.result;
 }

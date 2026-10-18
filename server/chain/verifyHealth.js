@@ -2,8 +2,9 @@ import config from '../config.js';
 import publishVerification from '../services/publishVerification.js';
 
 // Whether the server could verify its chain reads lately, for the admins' notice and /healthz.
-// Only times and a reason are kept, never what was read. A verifier that was unavailable is
-// fine again with its next proven answer. A node caught in a false answer ("mismatch") stays on
+// Only times and a reason are kept, never what was read. In enforce mode a verifier that was
+// unavailable is fine again with its next proven answer; in shadow mode being unavailable makes
+// nothing wait, so it isn't shown at all. A node caught in a false answer ("mismatch") stays on
 // the notice for NOX_VERIFY_MISMATCH_HOURS, since the next true answer doesn't undo the lie. A
 // block too old to prove says nothing about either, so it leaves this alone; the payment it
 // belongs to says so itself.
@@ -36,11 +37,13 @@ const verifyHealth = {
   },
 
   report(now = Date.now()) {
-    if (!config.verification.required) return { required: false, ok: true, reason: null, since: null, mismatchAt: null };
-    const unavailable = lastFailure > lastProven && reason !== 'mismatch';
+    const { mode, required } = config.verification;
+    if (mode === 'off') return { mode, required: false, ok: true, reason: null, since: null, mismatchAt: null };
+    const unavailable = required && lastFailure > lastProven && reason !== 'mismatch';
     const mismatch = lastMismatch && now - lastMismatch < config.verification.mismatchNoticeMs ? lastMismatch : 0;
     return {
-      required: true,
+      mode,
+      required,
       ok: !unavailable && !mismatch,
       reason: unavailable ? reason : mismatch ? 'mismatch' : null,
       since: unavailable ? iso(lastFailure) : null,
