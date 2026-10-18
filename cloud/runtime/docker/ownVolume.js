@@ -27,6 +27,7 @@ export default async function ownVolume(client, spec) {
         SecurityOpt: ['no-new-privileges:true'],
         PidsLimit: 16,
         Memory: 128 * 1024 ** 2,
+        MemorySwap: 128 * 1024 ** 2,
         LogConfig: { Type: 'none', Config: {} },
       },
     },
