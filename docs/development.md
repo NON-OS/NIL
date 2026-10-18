@@ -125,6 +125,7 @@ Team pool payouts through Privacy Pools have two checks of their own, run with t
 ```bash
 node --experimental-strip-types --import ./scripts/test/registerTs.mjs scripts/live/chain/checkPools.mjs
 node --experimental-strip-types --import ./scripts/test/registerTs.mjs scripts/live/chain/checkPoolsSepolia.mjs [--dir path]
+node scripts/live/chain/checkPoolsBrowser.mjs [--shots dir]   # the same on the fork, through the app in Chromium
 ```
 
 `checkPools.mjs` forks mainnet with 0xbow's real entry contract, USDC pool, verifiers and circuits. 0xbow's relayer and association set provider can't see a fork, so it approves its own deposit by sending a new association root as the real postman, and a local relayer sends `Entrypoint.relay` for real. It deposits, proves and relays a payout, checks that Nil credits exactly the bounty once final, refuses a replay, ragequits the rest and rebuilds the notes from public events. `checkPoolsSepolia.mjs` runs against 0xbow's own testnet relayer and association set provider. It keeps a throwaway key in `--dir` and prints only its address; without Sepolia ETH and Circle's test USDC there, it runs the steps that need no funds and says what's left. Approval by the testnet provider can take a while, so it can be run again later and picks up where it stopped.

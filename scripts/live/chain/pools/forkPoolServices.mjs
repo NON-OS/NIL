@@ -6,9 +6,9 @@ const pad = (hex) => hex.replace(/^0x/, '').toLowerCase().padStart(64, '0');
 // A relayer and an association set provider for a fork of mainnet, where 0xbow's own can't
 // reach. The relayer does what 0xbow's does: it quotes a fee, signs nothing that matters here,
 // and sends Entrypoint.relay from its own wallet, paying the gas and taking the fee. The
-// provider serves the leaves it's given, which the check keeps in step with the root it puts
-// on-chain as the real postman.
-export default async function forkPoolServices({ relayer, entrypoint, feeBps = 50n }) {
+// provider serves the leaves it's given, plus those inserted on the fork since, and the labels
+// the check approves by putting their root on-chain as the real postman.
+export default async function forkPoolServices({ relayer, entrypoint, feeBps = 50n, newLeaves = async () => [] }) {
   const state = { aspLeaves: [], stateLeaves: [], requests: [] };
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -31,7 +31,7 @@ export default async function forkPoolServices({ relayer, entrypoint, feeBps = 5
           const txHash = await relayer.send({ to: entrypoint, data, gas: 1_500_000n });
           return send(200, { success: true, txHash, timestamp: Date.now(), requestId: 'fork' });
         }
-        if (/\/public\/mt-leaves$/.test(req.url)) return send(200, { aspLeaves: state.aspLeaves, stateTreeLeaves: state.stateLeaves });
+        if (/\/public\/mt-leaves$/.test(req.url)) return send(200, { aspLeaves: state.aspLeaves, stateTreeLeaves: [...state.stateLeaves, ...(await newLeaves())] });
         if (/\/public\/deposits-by-label$/.test(req.url)) {
           const labels = String(req.headers['x-labels'] ?? '').split(',');
           return send(200, labels.map((label) => ({ label, reviewStatus: state.aspLeaves.includes(label) ? 'approved' : 'pending' })));
