@@ -233,13 +233,18 @@ test('a payment in a block older than the verifier can prove waits, saying so, w
   }
 });
 
-test('a Nil Pro transaction that hasn’t shown up is kept, not dropped, while reads are verified', async () => {
+// Unlike a bounty payment, which waits for an admin, a Nil Pro transaction is given up on in
+// every mode. That only lets its invoice expire, and the reconciliation still counts it if it's
+// mined after all, so a node hiding it can delay Pro but never leave billing stuck.
+test('a Nil Pro transaction that never shows up is given up on in time, also while reads are verified', async () => {
   const invoice = (await owner('POST', '/api/plan/invoices', {})).data.invoice;
   const hash = tx();
   assert.equal((await owner('POST', `/api/plan/invoices/${invoice.id}/transactions`, { txHash: hash })).status, 200);
+  await watchInvoices();
+  assert.equal(sql.get('SELECT status FROM billing_payments WHERE tx_hash = ?', hash).status, 'seen');
   sql.run('UPDATE billing_payments SET created_at = ? WHERE tx_hash = ?', Date.now() - 2 * 3_600_000, hash);
   await watchInvoices();
   const row = sql.get('SELECT status, problem FROM billing_payments WHERE tx_hash = ?', hash);
-  assert.equal(row.status, 'seen');
-  assert.match(row.problem, /keeps watching/);
+  assert.equal(row.status, 'dropped');
+  assert.match(row.problem, /Nil still finds it/);
 });

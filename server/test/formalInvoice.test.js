@@ -36,10 +36,13 @@ function invoice({ status = 'open', periods = 1, credit = 0, due, amounts, sent 
   return id;
 }
 
+// a confirming payment is in a block, waiting for it to be final; one a reorg took out has no
+// block and doesn't count
 function pay(invoiceId, token, value, status) {
   if (BigInt(value) === 0n) return;
   const tx = `0x${(++made).toString(16).padStart(64, '0')}`;
-  sql.run('INSERT INTO billing_payments (id, invoice_id, tx_hash, log_index, token, amount, status, on_time, created_at) VALUES (?, ?, ?, 0, ?, ?, ?, 1, ?)', tx, invoiceId, tx, TOKENS[token], String(value), status, Date.now());
+  const block = status === 'confirming' ? tx : null;
+  sql.run('INSERT INTO billing_payments (id, invoice_id, tx_hash, log_index, token, amount, status, on_time, block_hash, created_at) VALUES (?, ?, ?, 0, ?, ?, ?, 1, ?, ?)', tx, invoiceId, tx, TOKENS[token], String(value), status, block, Date.now());
 }
 
 const row = (id) => sql.get('SELECT * FROM billing_invoices WHERE id = ?', id);
