@@ -5,6 +5,7 @@ import HttpError from '../lib/HttpError.js';
 import rewardToken from '../lib/rewardToken.js';
 import headBlock from '../chain/headBlock.js';
 import stealthAddress from '../stealth/stealthAddress.js';
+import assetPool from '../pools/assetPool.js';
 import pickSuffix from '../billing/pickSuffix.js';
 import askAmount from '../billing/askAmount.js';
 import amountGrid from '../billing/amountGrid.js';
@@ -20,7 +21,8 @@ const DAY = 86_400_000;
 // transfer mined after this moment can pay it. Together they make a payment impossible to pass
 // off as one made for another task or another workspace. For a private payout, the one-time
 // address is derived here from the payer's ephemeral key, which is used once and never stored.
-export default async function startPayment(actor, taskId, stealth = null) {
+// A payout from the team's Privacy Pools pool always goes to such an address.
+export default async function startPayment(actor, taskId, stealth = null, via = null) {
   const task = visibleTask(taskId, actor);
   if (!task.bounty) throw HttpError.badRequest('This task has no bounty.');
   if (task.bountyState === 'paid') throw new HttpError(409, 'This bounty is already paid.');
@@ -36,6 +38,11 @@ export default async function startPayment(actor, taskId, stealth = null) {
   if (digits < 2) throw HttpError.badRequest(`${token.symbol} has too few decimal places for Nil to mark the payment, so bounties in it can’t be paid through Nil.`);
   const owed = BigInt(task.bounty) - bountyReceived(task.id);
   if (owed <= 0n) throw new HttpError(409, 'This bounty is already paid.');
+
+  if (via !== null && via !== 'pool') throw HttpError.badRequest('A bounty is paid from a wallet or from the team’s pool.');
+  if (via === 'pool' && !config.pools.enabled) throw HttpError.badRequest('Private pool payouts are off on this server.');
+  if (via === 'pool' && !stealth) throw HttpError.badRequest('A payout from the pool goes to a one-time address, so it needs the contributor’s private payouts on.');
+  const pool = via === 'pool' ? (await assetPool.usable(token.symbol)).pool : null;
 
   let to = payee.address.toLowerCase();
   let hidden = { ephemeral: null, viewTag: null };
@@ -55,8 +62,8 @@ export default async function startPayment(actor, taskId, stealth = null) {
     if (suffix === null) throw new HttpError(503, 'Too many payments are being started at once. Try again in a minute.');
     const { low, grid } = amountGrid(token.decimals, digits);
     sql.run(
-      'INSERT INTO payment_intents (id, task_id, payer_id, payee_id, to_address, token, amount, suffix, grid, start_block, stealth_ephemeral, stealth_view_tag, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, task.id, actor.id, payee.id, to, token.symbol, String(askAmount(owed, grid, BigInt(suffix) * low)), suffix, String(grid), startBlock, hidden.ephemeral, hidden.viewTag, now, now + config.payments.intentDays * DAY,
+      'INSERT INTO payment_intents (id, task_id, payer_id, payee_id, to_address, token, amount, suffix, grid, start_block, stealth_ephemeral, stealth_view_tag, via, pool_address, created_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+      id, task.id, actor.id, payee.id, to, token.symbol, String(askAmount(owed, grid, BigInt(suffix) * low)), suffix, String(grid), startBlock, hidden.ephemeral, hidden.viewTag, via, pool, now, now + config.payments.intentDays * DAY,
     );
     return sql.get('SELECT * FROM payment_intents WHERE id = ?', id);
   });

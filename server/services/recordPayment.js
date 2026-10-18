@@ -41,9 +41,9 @@ export default async function recordPayment(actor, taskId, { intentId, txHash, a
   const id = newId();
   sql.tx(() => {
     sql.run(
-      `INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, expected, grid, token, tx_hash, intent_id, start_block, stealth_ephemeral, stealth_view_tag, announce_tx, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, intent.payee_id, intent.to_address, intent.amount, intent.amount, intent.grid, intent.token, hash, intent.id, intent.start_block, intent.stealth_ephemeral, intent.stealth_view_tag, announce, Date.now(),
+      `INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, expected, grid, token, tx_hash, intent_id, start_block, stealth_ephemeral, stealth_view_tag, announce_tx, via, pool_address, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, intent.payee_id, intent.to_address, intent.amount, intent.amount, intent.grid, intent.token, hash, intent.id, intent.start_block, intent.stealth_ephemeral, intent.stealth_view_tag, announce, intent.via, intent.pool_address, Date.now(),
     );
     refreshBountyState(task.id);
   });

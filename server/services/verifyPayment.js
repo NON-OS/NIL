@@ -12,6 +12,7 @@ import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
 import feeAt from './feeAt.js';
 import netOfFee from '../billing/netOfFee.js';
+import relayedTransfers from '../pools/relayedTransfers.js';
 
 // Who may fund a bounty: the wallets of the admin who recorded it, plus treasury addresses.
 function payers(payerId) {
@@ -50,8 +51,13 @@ export default async function verifyPayment(id) {
   }
   if (found.state === 'failed') return refuse(payment, `The transaction failed on-chain, so no ${token.symbol} moved.`);
 
-  const toPayee = found.transfers.filter((t) => t.token === token.address && t.to === payment.to_address);
-  const funded = toPayee.filter((t) => payers(payment.payer_id).has(t.from));
+  // A bounty paid from a Privacy Pools pool comes from the entry contract, not a team wallet:
+  // the payer's check is the pool's own accounting, and the one-time address only this payment
+  // was told about.
+  const pooled = payment.via === 'pool' ? relayedTransfers(found.logs, { entrypoint: config.pools.entrypoint, pool: payment.pool_address, token: token.address, to: payment.to_address }) : null;
+  const toPayee = pooled ?? found.transfers.filter((t) => t.token === token.address && t.to === payment.to_address);
+  const funded = pooled ?? toPayee.filter((t) => payers(payment.payer_id).has(t.from));
+  if (pooled && !pooled.length) return refuse(payment, `This transaction isn’t a relayed withdrawal from the ${token.symbol} pool to the contributor’s private address.`);
   if (!toPayee.length) return refuse(payment, `This transaction has no ${token.symbol} transfer to the contributor’s ${payment.stealth_ephemeral ? 'private address' : 'wallet'}.`);
   if (!funded.length) return refuse(payment, `The ${token.symbol} came from a wallet that isn’t yours or a treasury address.`);
   if (payment.start_block !== null && found.blockNumber < payment.start_block) {
@@ -92,6 +98,7 @@ export default async function verifyPayment(id) {
   // the node hasn't settled on that block yet; look again next time
   if (!block || block.hash !== found.blockHash) return;
 
+  if (pooled) sql.run('UPDATE payments SET relay_fee = ? WHERE id = ?', String(paying.reduce((sum, t) => sum + t.relayFee, 0n)), id);
   settlePayment(payment, { from: paying[0].from, blockNumber: found.blockNumber, blockHash: found.blockHash, received: paying.reduce((sum, t) => sum + t.value, 0n), fee });
   if (payment.stealth_ephemeral) await checkAnnouncement(id);
 }

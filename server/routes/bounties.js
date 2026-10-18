@@ -20,12 +20,13 @@ const checks = perAdmin(120);
 
 router.get('/bounties', route((req) => bountyOverview(req.user)));
 
-// Step 1: Nil says exactly what to send and where. A private payout sends the one-time key here.
+// Step 1: Nil says exactly what to send and where. A private payout sends the one-time key here,
+// and one from the team's pool says so with via: 'pool'.
 router.post(
   '/tasks/:id/payments/intent',
   requireAdmin,
   writes,
-  route(async (req) => ({ intent: await startPayment(req.user, req.params.id, req.body?.stealth ?? null) })),
+  route(async (req) => ({ intent: await startPayment(req.user, req.params.id, req.body?.stealth ?? null, req.body?.via ?? null) })),
 );
 
 // Step 2: the transaction that sent it, from the browser wallet or pasted from a multisig.
