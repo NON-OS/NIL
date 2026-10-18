@@ -34,6 +34,8 @@ const BOUNTY = 1_000_000n;
 const SWAP_ETH = 5n * 10n ** 14n;
 // a Sepolia block takes about 12 seconds; receipts are looked for every 100 ms for five minutes
 const RECEIPT_TRIES = 3000;
+// how long Check for the payout keeps looking for a relay the relayer didn't confirm
+const FIND_FOR_MS = 5 * 60_000;
 const RPC = process.env.LIVE_SEPOLIA_RPC || 'https://ethereum-sepolia-rpc.publicnode.com';
 const arg = (name) => process.argv[process.argv.indexOf(name) + 1];
 const dir = path.resolve(process.argv.includes('--dir') ? arg('--dir') : path.join(os.tmpdir(), 'nil-pools-sepolia'));
@@ -93,7 +95,7 @@ try {
   assert.equal(new Group(sets.stateLeaves.map(BigInt)).root.toString(), sets.stateRoot);
   step(`0xbow's association set (${sets.aspLeaves.length} labels) and the pool tree (${sets.stateLeaves.length} leaves) rebuild the on-chain roots`);
 
-  const pool = poolSteps({ api: admin, chain, wallet: owner, info, key: derive('pool key', 16), seed: derive('identity') });
+  const pool = poolSteps({ api: admin, chain, wallet: owner, info, findForMs: FIND_FOR_MS, key: derive('pool key', 16), seed: derive('identity') });
   await pool.open();
 
   // a quote from 0xbow's testnet relayer for a real pool intent costs nothing
@@ -129,6 +131,7 @@ try {
     else {
       const paid = await pool.pay(task, meta);
       step(`relayed by 0xbow's testnet relayer: ${paid.payment.txHash} (proved in ${(paid.provingMs / 1000).toFixed(1)} s)`);
+      if (paid.recovered) step(`the relayer reported a failure, but the withdrawal went out and was recorded for the same payout: ${paid.recovered}`);
       let payment = paid.payment;
       for (let i = 0; i < 40 && payment.status !== 'confirmed'; i++) {
         await sleep(60_000);
