@@ -10,9 +10,9 @@ import parseJSON from '../lib/parseJSON.js';
 const HEADER = Buffer.from('SQLite format 3\0');
 const refuse = (why) => HttpError.badRequest(`That capsule can’t be restored: ${why} Nothing on this server was changed.`);
 
-// The schema as SQLite describes it, apart from its own tables and the search index's, which
-// FTS5 manages and a restore rebuilds anyway.
-const OBJECTS = "SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND name NOT LIKE 'task\\_search%' ESCAPE '\\'";
+// The schema as SQLite describes it, apart from its own tables and the search index's tables,
+// which FTS5 manages and a restore rebuilds anyway. The index's triggers are compared like the rest.
+const OBJECTS = "SELECT type, name, tbl_name, sql FROM sqlite_schema WHERE name NOT LIKE 'sqlite_%' AND NOT (type = 'table' AND name LIKE 'task\\_search%' ESCAPE '\\')";
 const objects = (conn, types) => conn.prepare(`${OBJECTS} AND type IN (SELECT value FROM json_each(?)) ORDER BY type, name`).all(JSON.stringify(types)).map((o) => JSON.stringify(o));
 const shape = (conn, table) => JSON.stringify(conn.prepare('SELECT name, type, "notnull", dflt_value, pk, hidden FROM pragma_table_xinfo(?)').all(table));
 

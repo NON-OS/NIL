@@ -85,6 +85,7 @@ const CASES = [
   ['a file that isn’t a database', () => entries({ database: Buffer.from('not sqlite at all') }), /isn’t a database/],
   ['a damaged database', () => entries({ database: Buffer.concat([fs.readFileSync(parts.db).subarray(0, 4096), Buffer.alloc(8192, 0xa5), fs.readFileSync(parts.db).subarray(12288)]) }), /damaged/],
   ['a trigger Nil didn’t write', () => entries({ database: doctored('CREATE TRIGGER sneaky AFTER UPDATE ON tasks BEGIN DELETE FROM users; END') }), /code Nil didn’t write/],
+  ['one named like the search index’s', () => entries({ database: doctored('CREATE TRIGGER task_search_extra AFTER UPDATE ON tasks BEGIN DELETE FROM users; END') }), /code Nil didn’t write/],
   ['a table with a column of its own', () => entries({ database: doctored('ALTER TABLE tasks ADD COLUMN smuggled TEXT') }), /tasks table isn’t the one/],
   ['a comment on a task that isn’t there', () => entries({ database: doctored("PRAGMA foreign_keys = OFF; INSERT INTO comments (id, task_id, body, created_at) VALUES ('orphan', 'no-such-task', 'boo', 1)") }), /point at rows that aren’t there/],
   ['no owner', () => entries({ database: doctored("UPDATE users SET role = 'member'") }), /no workspace with an owner/],
