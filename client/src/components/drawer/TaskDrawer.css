@@ -674,3 +674,19 @@ button.file-name:hover {
   font-size: var(--text-sm);
   font-style: italic;
 }
+
+.comment-note {
+  margin: 4px 0 0;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.comment-note.warn {
+  color: var(--warning);
+}
+
+.file-note {
+  flex: none;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}

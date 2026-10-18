@@ -45,6 +45,8 @@ export default function DocHistory({ doc, onClose, onRestore }: { doc: DocItem; 
               </div>
               <small className="muted">
                 {r.updatedBy ? users[r.updatedBy]?.name ?? 'A former member' : 'Someone'} · {dates.dateTime(r.createdAt)}
+                {r.verified && r.olderFormat && ' · older format'}
+                {r.verified && r.oldKey && ` · signed with an earlier key, ${r.oldKey}`}
               </small>
               <pre>{r.body.slice(0, 600)}</pre>
             </div>
