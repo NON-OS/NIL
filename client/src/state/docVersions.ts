@@ -9,9 +9,11 @@ const slot = () => keyScope.slot('doc-versions');
 const docVersions = {
   // Records a verified version; says whether it's older than one seen before.
   check(docId: string, version: number): 'ok' | 'rollback' {
-    const seen = storage.get<Record<string, number>>(slot(), {});
+    const here = slot();
+    if (!here) return 'ok';
+    const seen = storage.get<Record<string, number>>(here, {});
     if ((seen[docId] ?? 0) > version) return 'rollback';
-    if (seen[docId] !== version) storage.set(slot(), { ...seen, [docId]: version });
+    if (seen[docId] !== version) storage.set(here, { ...seen, [docId]: version });
     return 'ok';
   },
 };

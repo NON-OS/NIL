@@ -14,15 +14,17 @@ export interface Pin {
 // confirmations for the session when storage is blocked.
 const memory = new Map<string, Record<string, Pin>>();
 const slot = () => keyScope.slot('key-pins');
-const pinsIn = (name: string) => ({ ...storage.get<Record<string, Pin>>(name, {}), ...memory.get(name) });
+const pinsIn = (name: string | null): Record<string, Pin> => (name ? { ...storage.get<Record<string, Pin>>(name, {}), ...memory.get(name) } : {});
 
 const keyPins = {
-  all: (): Record<string, Pin> => pinsIn(slot()),
+  all: () => pinsIn(slot()),
 
   put(userId: string, pin: Pin) {
-    const next = { ...keyPins.all(), [userId]: pin };
-    memory.set(slot(), next);
-    storage.set(slot(), next);
+    const here = slot();
+    if (!here) return;
+    const next = { ...pinsIn(here), [userId]: pin };
+    memory.set(here, next);
+    storage.set(here, next);
   },
 
   // True when this browser holds pins for another workspace key or account but none for this
@@ -30,6 +32,7 @@ const keyPins = {
   // workspace or account this person never used here, so that every pin starts over.
   startedOver() {
     const here = slot();
+    if (!here) return false;
     const elsewhere = [...storage.keys('key-pins:'), ...memory.keys()].filter((name) => name !== here);
     return !Object.keys(pinsIn(here)).length && elsewhere.some((name) => Object.keys(pinsIn(name)).length > 0);
   },

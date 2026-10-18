@@ -7,11 +7,16 @@ import keyScope from './keyScope';
 const slot = () => keyScope.slot('task-versions');
 
 const taskVersions = {
-  seen: (taskId: string) => storage.get<Record<string, number>>(slot(), {})[taskId] ?? 0,
+  seen(taskId: string) {
+    const here = slot();
+    return here ? (storage.get<Record<string, number>>(here, {})[taskId] ?? 0) : 0;
+  },
 
   record(taskId: string, rev: number) {
-    const all = storage.get<Record<string, number>>(slot(), {});
-    if ((all[taskId] ?? 0) < rev) storage.set(slot(), { ...all, [taskId]: rev });
+    const here = slot();
+    if (!here) return;
+    const all = storage.get<Record<string, number>>(here, {});
+    if ((all[taskId] ?? 0) < rev) storage.set(here, { ...all, [taskId]: rev });
   },
 };
 

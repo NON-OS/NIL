@@ -15,8 +15,8 @@ const same = (a: Scope, b: Scope) => a.origin === b.origin && a.workspaceKey ===
 
 // The site, workspace key and account this tab's keys were unlocked for. The server sends all
 // three again with every bootstrap, and pins and revision records are filed under them. While the
-// keys are unlocked those records stay where they were; a bootstrap naming another site,
-// workspace or account locks the keys instead of moving them to an empty slot.
+// keys are unlocked the records stay filed under these. A bootstrap naming another site,
+// workspace or account locks the keys, and the tab files nothing more until it reloads.
 let bound: Scope | null = null;
 // what the last bootstrap named, and whether one since sign-in named something else
 let last: Scope | null = null;
@@ -53,8 +53,10 @@ const keyScope = {
     switched = false;
   },
 
-  // The local storage name for public key data of one kind, for this workspace and account.
+  // The local storage name for public key data of one kind, for this workspace and account. None
+  // in a tab that was switched: nothing is read or written there until it reloads.
   slot(kind: string) {
+    if (switched) return null;
     const s = bound ?? current();
     return `${kind}:${s.workspaceKey}:${s.userId}`;
   },

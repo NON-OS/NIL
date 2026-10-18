@@ -98,6 +98,25 @@ test('a bootstrap naming another workspace key locks the keys instead of moving 
   assert.equal(taskVersions.seen('t1'), 4);
 });
 
+test('a switched tab files no pins, so the warning still shows after a reload', async () => {
+  const vic = person();
+  await enter();
+  keyring.unlock(vic);
+  route('GET', '/api/encryption-keys', () => [keyEntry('v', vic)]);
+  await keyDirectory.load({ fresh: true });
+
+  await enter({ workspaceKey: 'switched-again' });
+  route('GET', '/api/encryption-keys', () => [keyEntry('b', person(), { workspaceKey: 'switched-again' })]);
+  await keyDirectory.load({ fresh: true });
+  await keyDirectory.confirm(['b']);
+  assert.deepEqual(keyPins.all(), {});
+
+  await session.logout();
+  await enter({ workspaceKey: 'switched-again' });
+  assert.deepEqual(keyPins.all(), {});
+  assert.match(notices(), /but none for this one/);
+});
+
 test('a bootstrap naming another account or site locks the keys too', async () => {
   for (const over of [{ me: users[1] }, { origin: 'https://other.example' }, { me: null }]) {
     await session.logout();
