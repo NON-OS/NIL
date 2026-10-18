@@ -58,7 +58,7 @@ test('paying privately never sends the server, or the chain, the one-time key’
     stealth: { announcer: ANNOUNCER, gasTopUpWei: '300000000000000' },
     users: { ana: { id: 'ana', name: 'Ana', address: ANA, stealthMeta: payee.meta } },
   });
-  await bounties.pay({ id: 't1', bounty: '250000000000000000000', bountyToken: 'NOX', assigneeId: 'ana', bountyState: null });
+  await bounties.pay({ id: 't1', bounty: '250000000000000000000', bountyToken: 'NOX', assigneeId: 'ana', bountyState: null }, payee.meta);
 
   const intent = requests.find((r) => r.url.endsWith('/payments/intent')).body;
   assert.deepEqual(Object.keys(intent.stealth).sort(), ['address', 'ephemeralPublicKey', 'viewTag']);

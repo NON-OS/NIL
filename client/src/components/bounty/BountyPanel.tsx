@@ -12,6 +12,8 @@ import cx from '../../lib/cx';
 import type Task from '../../types/Task';
 import isAdminUser from '../../lib/isAdmin';
 import useCryptoTools from '../../hooks/useCryptoTools';
+import usePayeeStealth from '../../hooks/usePayeeStealth';
+import payoutNote from '../../lib/stealth/payoutNote';
 
 // The bounty's story inside a task: what it's worth, who gets it, and the way to pay it.
 export default function BountyPanel({ task }: { task: Task }) {
@@ -20,6 +22,8 @@ export default function BountyPanel({ task }: { task: Task }) {
   const assignee = useStore((s) => (task.assigneeId ? s.users[task.assigneeId] : undefined));
   const [pasting, setPasting] = useState(false);
   const cryptoTools = useCryptoTools();
+  const payable = Boolean(task.bounty && cryptoTools && isAdmin && nox && task.bountyState !== 'paid' && task.bountyState !== 'pending');
+  const stealth = usePayeeStealth(payable ? task.assigneeId : null);
   if (!task.bounty || !cryptoTools) return null;
 
   const amount = tokenAmount(task.bounty, task.bountyToken);
@@ -55,6 +59,7 @@ export default function BountyPanel({ task }: { task: Task }) {
   } else if (!assignee.address) {
     body = <p>{assignee.name} has no wallet linked, so there’s nowhere to send it yet.</p>;
   } else {
+    const note = payoutNote(assignee.name, stealth);
     body = (
       <>
         <p>
@@ -67,6 +72,7 @@ export default function BountyPanel({ task }: { task: Task }) {
             Paid another way?
           </button>
         </div>
+        {note && <p>{note}</p>}
         {pasting && <PastePayment taskId={task.id} />}
       </>
     );

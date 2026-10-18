@@ -10,6 +10,7 @@ import type Task from '../types/Task';
 import type Payment from '../types/Payment';
 import type PaymentIntent from '../types/PaymentIntent';
 import type BountyOverview from '../types/BountyOverview';
+import type PayeeStealth from '../types/PayeeStealth';
 
 const BOUNTY_STATE: Record<Payment['state'], Task['bountyState']> = { sent: 'pending', confirming: 'pending', paid: 'paid', overpaid: 'paid', underpaid: 'underpaid', failed: null, cancelled: null };
 
@@ -30,17 +31,31 @@ function sameAddress(expected: string, intent: PaymentIntent) {
   if (intent.to.toLowerCase() !== expected.toLowerCase()) throw new Error('Nil asked to send to a different address than this browser expected, so nothing was sent.');
 }
 
+// a pay button and the note under it ask at the same time; one request answers both
+const lookups = new Map<string, Promise<PayeeStealth>>();
+
 const announced = (id: string, txHash: string) => http.post<{ payment: Payment }>(`/payments/${id}/announce`, { txHash }).then((r) => r.payment);
 
 const bounties = {
   overview: () => http.get<BountyOverview>('/bounties'),
 
+  // The meta-address a private payout to this person would be worked out from: theirs in Nil,
+  // or their wallet's in the public ERC-6538 registry, which only the server can read.
+  payee(userId: string) {
+    let lookup = lookups.get(userId);
+    if (!lookup) {
+      lookup = http.get<{ stealth: PayeeStealth }>(`/stealth/payees/${userId}`).then((r) => r.stealth).finally(() => lookups.delete(userId));
+      lookups.set(userId, lookup);
+    }
+    return lookup;
+  },
+
   // The payer's own wallet sends the reward token straight to the contributor. Nil first says
   // exactly how much (what's still owed, ending in a few digits that identify this payment),
-  // then checks the result on-chain; it never touches the funds. When the contributor has
-  // private payouts on, the tokens go to a fresh one-time address only they can open,
-  // announced on-chain so they can find it without Nil.
-  async pay(task: Task) {
+  // then checks the result on-chain; it never touches the funds. Given the contributor's
+  // meta-address, the tokens go to a fresh one-time address only they can open, announced
+  // on-chain so they can find it without Nil.
+  async pay(task: Task, metaAddress: string | null) {
     const { nox, users, rewards, stealth } = store.get();
     const token = rewards.find((t) => t.symbol === task.bountyToken);
     const payee = task.assigneeId ? users[task.assigneeId] : undefined;
@@ -48,7 +63,7 @@ const bounties = {
     if (!payee?.address) throw new Error('The assignee has no wallet linked yet.');
     const from = await payerWallet(nox.chainId);
 
-    if (!payee.stealthMeta || !stealth) {
+    if (!metaAddress || !stealth) {
       const intent = await start(task.id);
       sameAddress(payee.address, intent);
       return recorded(task.id, intent.id, await ethereum.send({ from, to: token.address, data: encodeTransfer(intent.to, BigInt(intent.amount)) }));
@@ -56,7 +71,7 @@ const bounties = {
 
     // the curve maths for one-time addresses loads only for a private payout
     const { default: newStealthPayment } = await import('../lib/stealth/newStealthPayment');
-    const one = newStealthPayment(payee.stealthMeta);
+    const one = newStealthPayment(metaAddress);
     const intent = await start(task.id, one);
     sameAddress(one.address, intent);
     const amount = BigInt(intent.amount);
