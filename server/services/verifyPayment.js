@@ -12,6 +12,7 @@ import failPayment from './failPayment.js';
 import checkAnnouncement from './checkAnnouncement.js';
 import feeAt from './feeAt.js';
 import netOfFee from '../billing/netOfFee.js';
+import feeTaken from '../billing/feeTaken.js';
 
 // Who may fund a bounty: the wallets of the admin who recorded it, plus treasury addresses.
 function payers(payerId) {
@@ -64,11 +65,11 @@ export default async function verifyPayment(id) {
     const expected = BigInt(payment.expected);
     paying = funded.filter((t) => t.value === expected || sameSuffix(t.value, expected, payment.grid));
     // NOX may keep a fee on transfers between wallets: the exact amount, less exactly that fee,
-    // was sent in full
+    // was sent in full, as long as the same transaction shows the token keeping it
     if (!paying.length && token.address === config.nox.token) {
       const bps = await feeAt(found.blockNumber);
       const net = bps > 0 ? netOfFee(expected, bps) : null;
-      paying = funded.filter((t) => t.value === net);
+      paying = funded.filter((t) => t.value === net && feeTaken(found.transfers, { token: token.address, from: t.from, fee: expected - net, except: t.logIndex }));
       if (paying.length) fee = expected - net;
     }
     if (!paying.length) {

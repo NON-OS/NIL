@@ -71,8 +71,9 @@ export default function mockChain() {
   const sent = [];
   let callDelayMs = 0;
   let priorityFee = 100_000_000n;
-  // NOX's fees(): null answers nothing, like a token without it
-  let transferFeeBps = null;
+  // NOX's fees() over time, as [first block, bps]; before the first one it answers nothing, like a
+  // token without it
+  const feeHistory = [];
   const genesis = Math.floor(Date.now() / 1000);
   let block = 1000;
   let chainId = 1;
@@ -89,7 +90,7 @@ export default function mockChain() {
     logs: r.logs.map((log, i) => ({ ...log, logIndex: hex(i), blockNumber: hex(r.blockNumber), blockHash: blockHash(r.blockNumber), transactionHash: hash, removed: false })),
   });
 
-  function call(to, data) {
+  function call(to, data, at) {
     const contract = to?.toLowerCase();
     const holder = `0x${data.slice(-40)}`;
     if (failing.has(contract)) throw new Error('reverted');
@@ -124,7 +125,8 @@ export default function mockChain() {
     if (data.startsWith('0xc3453153')) return `0x${pad((stakes.get(holder) ?? 0n).toString(16))}${pad('0').repeat(6)}`;
     if (data === DECIMALS) return `0x${pad('12')}`;
     // fees(): buy, sell, transfer, then how the fee is shared out, as the NOX token answers
-    if (data === FEES && transferFeeBps !== null) return `0x${word(0)}${word(300)}${word(transferFeeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
+    const feeBps = feeHistory.filter(([from]) => from <= (/^0x[0-9a-f]+$/i.test(at ?? '') ? Number(at) : block)).at(-1)?.[1];
+    if (data === FEES && feeBps !== undefined) return `0x${word(0)}${word(300)}${word(feeBps)}${word(1000)}${word(9000)}${word(0)}${word(0)}`;
     return '0x';
   }
 
@@ -187,7 +189,7 @@ export default function mockChain() {
         else if (method === 'eth_getCode') result = smartWallets.get(params[0].toLowerCase())?.deployed ? '0x6080' : '0x';
         else if (method === 'eth_chainId') result = hex(chainId);
         else if (method === 'eth_blockNumber') result = hex(block);
-        else if (method === 'eth_call') result = call(params[0].to, params[0].data);
+        else if (method === 'eth_call') result = call(params[0].to, params[0].data, params[1]);
         else if (method === 'eth_getTransactionReceipt') {
           const r = receipts.get(params[0].toLowerCase());
           result = r && r.blockNumber <= block ? receiptOut(params[0].toLowerCase(), r) : null;
@@ -236,7 +238,8 @@ export default function mockChain() {
     // the tip the node suggests for eth_maxPriorityFeePerGas, in wei
     setPriorityFee: (wei) => (priorityFee = BigInt(wei)),
     // the token's fee on transfers between wallets, in basis points, as NOX's fees() reports it
-    setTransferFee: (bps) => (transferFeeBps = bps),
+    // from the current head on
+    setTransferFee: (bps) => feeHistory.push([block, bps]),
     mine: (blocks) => (block += blocks),
     head: () => block,
     // null: the node doesn't know the `finalized` tag

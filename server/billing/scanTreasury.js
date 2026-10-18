@@ -6,7 +6,7 @@ import transferLogs from '../chain/transferLogs.js';
 import billingState from './billingState.js';
 import recordTransfer from './recordTransfer.js';
 import scanGaps from './scanGaps.js';
-import transferFee from '../services/transferFee.js';
+import feeAt from '../services/feeAt.js';
 
 const DAY = 86_400_000;
 // the head moves on during a scan, so it keeps this many blocks inside the node's window
@@ -34,6 +34,14 @@ export default async function scanTreasury(now = Date.now()) {
   const oldest = Math.max(0, head - config.nox.logHistoryBlocks + MARGIN);
   let failure = null;
 
+  // NOX's fee as it was in each transfer's own block, read once per block
+  const fees = new Map();
+  const feeFor = async (transfer) => {
+    if (transfer.token !== config.nox.token) return 0;
+    if (!fees.has(transfer.blockNumber)) fees.set(transfer.blockNumber, await feeAt(transfer.blockNumber));
+    return fees.get(transfer.blockNumber);
+  };
+
   for (const { token, start } of watched) {
     let from = Math.max(start, (cursors[token] ?? 0) + 1);
     if (from < oldest) {
@@ -44,7 +52,7 @@ export default async function scanTreasury(now = Date.now()) {
     try {
       for (let at = from; at <= head; at += config.billing.logBlocks) {
         const to = Math.min(head, at + config.billing.logBlocks - 1);
-        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer, { feeBps: transferFee.current().bps });
+        for (const transfer of await transferLogs(token, config.plan.treasury, at, to)) recordTransfer(transfer, { feeBps: await feeFor(transfer) });
         cursors[token] = Math.max(cursors[token] ?? 0, Math.min(final, to));
       }
     } catch (err) {

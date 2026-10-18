@@ -4,6 +4,7 @@ import readReceipt from '../chain/readReceipt.js';
 import finalizedBlock from '../chain/finalizedBlock.js';
 import attachReceipt from './attachReceipt.js';
 import finalizePayment from './finalizePayment.js';
+import feeTaken from './feeTaken.js';
 import log from '../lib/log.js';
 import feeAt from '../services/feeAt.js';
 
@@ -38,6 +39,11 @@ async function follow(row, receipt, final, now) {
   const transfer = receipt.transfers.find((t) => same(t) && t.logIndex === row.log_index) ?? receipt.transfers.find(same);
   if (!transfer) {
     sql.run("UPDATE billing_payments SET status = 'failed', problem = 'The transaction no longer contains this transfer.', checked_at = ? WHERE id = ?", now, row.id);
+    return;
+  }
+  // matched as short by NOX's fee: the token must be seen keeping it, or it is just short
+  if (BigInt(row.token_fee) > 0n && !feeTaken(receipt.transfers, { token: row.token, from: row.from_address, fee: BigInt(row.token_fee), except: transfer.logIndex })) {
+    sql.run("UPDATE billing_payments SET status = 'failed', problem = 'This arrived short of the amount Nil asked for by exactly NOX’s transfer fee, but the token kept no fee on it, so it can’t count. Send the exact amount.', checked_at = ? WHERE id = ?", now, row.id);
     return;
   }
   if (receipt.blockHash !== row.block_hash || transfer.logIndex !== row.log_index) {
