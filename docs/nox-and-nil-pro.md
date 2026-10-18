@@ -75,7 +75,7 @@ If a chain reorganisation takes the transaction out of its block, or the server'
 - Overpaid: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
 - Expired or cancelled: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.
 
-Under- and overpayments from any wallet are matched automatically on hosted servers that give each workspace its own share of suffixes (`PLAN_INVOICE_SLOT`). Elsewhere, paste the transaction hash under the invoice and it's matched the same way.
+Under- and overpayments from any wallet are matched automatically on hosted servers that give each workspace its own share of suffixes (`PLAN_INVOICE_SLOT`). Elsewhere, paste the transaction hash under the invoice: an under- or overpayment sent from a wallet linked to someone in the workspace is then matched the same way. Without a share of their own, other workspaces paying the same treasury draw from the same suffixes, so one sent from an exchange or anyone else's wallet can't be told apart from theirs and isn't counted; send the exact amount instead. A transaction you paste pays only the invoice you pasted it under.
 
 The invoice list keeps every invoice with its transactions and a link to check each one on a block explorer.
 

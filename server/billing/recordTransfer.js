@@ -21,8 +21,9 @@ function savedAs(transfer) {
 // Saves a transfer to the treasury that pays one of this workspace's invoices, as
 // "confirming" until its block is final. A transfer is saved once, a transaction that pays a
 // bounty is never counted here, and a transaction someone told us about before it was mined
-// gives up its placeholder. Returns the payment id, or null.
-export default function recordTransfer(transfer, { named = false, feeBps = 0 } = {}) {
+// gives up its placeholder. `named` is the invoice an admin named the transaction for, if any.
+// Returns the payment id, or null.
+export default function recordTransfer(transfer, { named = null, feeBps = 0 } = {}) {
   if (transfer.to !== config.plan.treasury) return null;
   const hash = transfer.txHash;
   const existing = savedAs(transfer);

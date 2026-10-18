@@ -19,13 +19,14 @@ let watchInvoices;
 let confirmPayments;
 const chain = mockChain();
 const owner = client(() => srv.base);
+const ownerWallet = wallet();
 
 before(async () => {
   srv = await startServer({ chain, env: { PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '12', PLAN_TRIAL_DAYS: '0', PLAN_NOX_USD: '0.05', PLAN_INVOICES_PER_DAY: '40' } });
   ({ default: sql } = await import('../db/sql.js'));
   ({ default: watchInvoices } = await import('../jobs/watchInvoices.js'));
   ({ default: confirmPayments } = await import('../billing/confirmPayments.js'));
-  await owner.wallet(wallet(), 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
+  await owner.wallet(ownerWallet, 'setup', { name: 'Erik Lind', workspaceName: 'NONOS' });
 });
 after(() => srv.close());
 
@@ -107,4 +108,52 @@ test('a receipt the node refuses for one payment doesn’t hold up the others', 
   }
   await watchInvoices();
   assert.equal((await view(first.id)).status, 'paid');
+});
+
+test('naming another workspace’s payment to a shared treasury doesn’t claim it, even with our suffix', async () => {
+  const invoice = await create();
+  const suffix = BigInt(usdc(invoice)) % 10_000n;
+  // ten periods paid by another workspace whose suffix happens to equal ours
+  const hash = tx();
+  chain.mine(1);
+  send(hash, 120n * 10n ** 6n + suffix);
+  await watchInvoices();
+  const named = await owner('POST', `/api/plan/invoices/${invoice.id}/transactions`, { txHash: hash });
+  assert.equal(named.data.invoice.state, 'waiting');
+  assert.equal(named.data.invoice.payments.find((p) => p.txHash === hash).status, 'unmatched');
+  await finalize();
+  const after = await view(invoice.id);
+  assert.deepEqual([after.status, after.grantedDays], ['open', 0]);
+  sql.run("UPDATE billing_invoices SET status = 'cancelled' WHERE id = ?", invoice.id);
+});
+
+test('a named underpayment from a wallet of someone here still counts', async () => {
+  const invoice = await create();
+  const short = BigInt(usdc(invoice)) - 2n * 10n ** 6n;
+  const hash = tx();
+  chain.mine(1);
+  send(hash, short, ownerWallet.address);
+  await watchInvoices();
+  assert.equal((await view(invoice.id)).state, 'waiting', 'the scan alone can’t tell it is ours');
+  const named = await owner('POST', `/api/plan/invoices/${invoice.id}/transactions`, { txHash: hash });
+  assert.equal(named.data.invoice.state, 'underpaid');
+  sql.run("UPDATE billing_invoices SET status = 'cancelled' WHERE id = ?", invoice.id);
+});
+
+test('a named transaction pays only the invoice it was named for', async () => {
+  const named = await create();
+  const other = await create();
+  // short of the other invoice, with its suffix
+  const hash = tx();
+  chain.mine(1);
+  send(hash, BigInt(usdc(other)) - 10n ** 6n, ownerWallet.address);
+  const res = await owner('POST', `/api/plan/invoices/${named.id}/transactions`, { txHash: hash });
+  assert.equal(res.data.invoice.payments.find((p) => p.txHash === hash).status, 'unmatched');
+  await finalize();
+  assert.deepEqual([(await view(named.id)).state, (await view(other.id)).state], ['waiting', 'waiting']);
+
+  // and the exact amount of the other invoice is still found for it by the scan
+  send(tx(), usdc(other));
+  await finalize();
+  assert.equal((await view(other.id)).status, 'paid');
 });
