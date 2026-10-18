@@ -53,6 +53,10 @@ const config = Object.freeze({
   dbFile: env.DB_FILE || null,
   // after a checkpoint SQLite cuts the write-ahead log back to this size instead of keeping its peak
   dbJournalLimitBytes: envNumber('DB_JOURNAL_LIMIT_MB', 64, { min: 1 }) * MB,
+  // how long a write waits for another connection (a backup reading, say) before giving up
+  dbBusyTimeoutMs: envNumber('DB_BUSY_TIMEOUT_MS', 5000, { min: 1 }),
+  // how long folding the write-ahead log in waits for readers; the server waits with it
+  dbCheckpointWaitMs: envNumber('DB_CHECKPOINT_WAIT_MS', 250, { min: 1 }),
   // prepared statements kept for reuse; queries built from a request's fields come in many shapes
   dbStatementCache: envNumber('DB_STATEMENT_CACHE', 1000, { min: 10 }),
   trustProxy,

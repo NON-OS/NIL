@@ -12,6 +12,12 @@ const KEY = 'a'.repeat(64);
 const OWNER = `0x${'d'.repeat(40)}`;
 const make = (store, name) => store.workspaces.insert({ id: name.padEnd(16, '0'), name, owner: null, state: 'provisioning', image: 'nonos/nil:1.0.0', plan: 'standard', volume: `nil-${name}-data` });
 
+test('the control database syncs every commit, so a power cut can’t hand a slot out again', () => {
+  const db = openDatabase(':memory:');
+  assert.equal(db.prepare('PRAGMA synchronous').get().synchronous, 2, 'FULL');
+  assert.equal(db.prepare('PRAGMA temp_store').get().temp_store, 2, 'MEMORY');
+});
+
 test('every workspace gets its own invoice slot, never handed out twice', () => {
   const db = openDatabase(':memory:');
   const store = createStore(db);

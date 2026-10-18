@@ -5,13 +5,16 @@ import migrations from './migrations.js';
 
 // Opens (and creates, then migrates) the control database. The server and the CLI open it at
 // the same time, which WAL mode and the busy timeout make safe; state changes themselves are
-// compare-and-set, so the two never act on the same workspace at once.
+// compare-and-set, so the two never act on the same workspace at once. Every commit is synced
+// (synchronous = FULL): after a power cut an invoice slot or a workspace's state must not go
+// back to what it was before it was handed out. Temporary tables and sorts stay in memory.
 export default function openDatabase(file) {
   if (file !== ':memory:') fs.mkdirSync(path.dirname(file), { recursive: true, mode: 0o700 });
   const db = new DatabaseSync(file);
   db.exec(`
     PRAGMA journal_mode = WAL;
-    PRAGMA synchronous = NORMAL;
+    PRAGMA synchronous = FULL;
+    PRAGMA temp_store = MEMORY;
     PRAGMA foreign_keys = ON;
     PRAGMA busy_timeout = 10000;
     PRAGMA secure_delete = ON;
