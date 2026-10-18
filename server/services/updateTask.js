@@ -14,6 +14,7 @@ import scheduleNext from './scheduleNext.js';
 import issueReceipt from '../proofs/issueReceipt.js';
 import revokeReceipts from '../proofs/revokeReceipts.js';
 import planGate from './planGate.js';
+import bountyLocked from './bountyLocked.js';
 import checkSealKeys from './checkSealKeys.js';
 import resealComments from './resealComments.js';
 import resealFiles from './resealFiles.js';
@@ -117,7 +118,9 @@ export default function updateTask(actor, id, body, { today } = {}) {
   }
   if (changes.some((c) => c.key === 'bounty' || c.key === 'bountyToken')) {
     if (!actor.isAdmin) throw HttpError.forbidden('Only admins can set bounties.');
-    if (existing.bountyState) throw new HttpError(409, 'This bounty is already paid or being paid, so it can’t change.');
+    if (existing.bountyState || bountyLocked(existing.id)) {
+      throw new HttpError(409, 'A payment for this bounty is recorded (paid, on its way, or cancelled but still watched in case it lands), so the bounty can’t change.');
+    }
     if (patch.bounty) planGate('A new bounty');
   }
 

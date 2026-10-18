@@ -6,7 +6,7 @@ A bounty is a reward on a task, paid in NOX, USDC or another token the server li
 
 Only admins can set bounties. Open the task, type an amount like 250 or 12.5 in its **Bounty** field, and pick the token under **Paid in**. Press Enter or click elsewhere to save. To remove a bounty, clear the field.
 
-Once a payment for a bounty has been recorded, the bounty can't change.
+Once a payment for a bounty has been recorded, the bounty's amount and token can't change. That holds for a cancelled payment too while Nil still watches for its transaction (7 days, `PAYMENT_WATCH_DAYS`), since money that lands then counts toward the bounty it was sent for.
 
 On a server that charges for [Nil Pro](nox-and-nil-pro.md), adding a bounty needs an active plan. Bounties that already exist can always be paid.
 
