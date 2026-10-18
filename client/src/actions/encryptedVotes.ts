@@ -28,12 +28,15 @@ const encryptedVotes = {
   // Returns when the ballot joins the count, once the hour it arrived in is over.
   async cast(proposal: Proposal, choice: number) {
     const identity = await anonymousVotes.identity();
+    // anything signed in comes first, so the cookie-less steps that follow stay together: the
+    // trustees' pinned keys, by the seats this browser was shown signed in
+    const signers = await trusteeSeats.signers(proposal.encrypted!.trustees);
     const view = await anonymousVotes.fresh(proposal);
     const enc = view.encrypted;
     if (!enc?.publicKey) throw new Error('This vote isn’t open yet.');
     if (!enc.trustees.every((t) => t.shares === 'ok')) throw new Error('This vote opens once all three trustees have checked their key shares.');
     // encrypt to the key the trustees' signed dealings add up to, never to the server's say-so
-    const [{ default: votePublicKey }, signers] = await Promise.all([import('../lib/ballot/votePublicKey'), trusteeSeats.signers(enc.trustees)]);
+    const { default: votePublicKey } = await import('../lib/ballot/votePublicKey');
     const key = votePublicKey(view.id, enc.commitments, signers);
     if (!key || key[0] !== enc.publicKey[0] || key[1] !== enc.publicKey[1]) throw new Error(`The vote key the server sent isn’t the one the trustees signed for, so Nil won’t encrypt a ballot to it. ${TELL}`);
     const { default: proveEncryptedBallot } = await import('../lib/ballot/proveEncryptedBallot');
