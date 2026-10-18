@@ -10,15 +10,17 @@ In **Settings → Data & privacy → Zero-state**, admins choose how long each k
 |---|---|
 | Finished and canceled tasks | The tasks, with their comments and files |
 | Comments | Comments on every task, open or not, with the words quoted from them in notifications and in agent briefings |
-| Task history | The activity log: who changed what and when |
+| Task history | The activity log: who changed what and when, and the sign-in audit trail |
 
 Each can be kept forever (the default) or erased after 1, 7, 30, 90, 180 or 365 days. An hourly sweep on the server erases whatever has expired, for good. SQLite's `secure_delete` overwrites the freed space in the database file, and after every sweep, wipe or erase the write-ahead log (`nonos.db-wal`) is folded back in and cut to nothing, so erased text doesn't linger there either. Neither can reach copies the filesystem, a snapshot or a backup already made.
 
-Agents' run logs, run summaries and audit trails, their decided approval cards and the replies stored for their repeated requests quote task text too, so they're erased after the shorter of the comment and task history settings.
+Agents' run logs, run summaries and audit trails, their decided approval cards and the replies stored for their repeated requests quote task text too, so they're erased after the shorter of the comment and task history settings. So is the log of webhook deliveries, which otherwise keeps 30 days (`AGENT_WEBHOOK_LOG_DAYS`).
 
 Receipts survive this, so proofs that people already exported stay valid. The data needed to reveal a task's title in a proof is erased with the task, and the Proof of work page then shows "Title erased by a retention policy".
 
-Some things are always erased on a schedule, whatever the settings: deleted tasks after 30 days in the trash (the operator can change this with `TRASH_DAYS`), read notifications after 90 days, and expired sessions and invites.
+Some things are always erased on a schedule, whatever the settings: deleted tasks after 30 days in the trash (the operator can change this with `TRASH_DAYS`), read notifications after 90 days, and expired sessions and invites. A reminder goes as soon as it has been sent, since its notification carries it from then on. Share links and sign-in reset links go 30 days after they expired, were used or were revoked, API keys 30 days after they expired, and a bounty payment that was started but never sent 30 days after it ran out (`EXPIRED_DAYS`). A private payout's one-time address is kept until a recorded payment carries it, so the same address is never handed out twice.
+
+Before each upgrade the server keeps a copy of the database, in case the upgrade has to be undone. Each copy holds everything erased since it was taken, so it is deleted after 7 days (`UPGRADE_COPY_DAYS`), or sooner when a setting above is shorter. A capsule download or restore cut off by a crash leaves a scratch copy of the database behind, which the server deletes when it starts again.
 
 ## Erase everything
 

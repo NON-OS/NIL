@@ -23,6 +23,12 @@ const snapshots = {
     return file;
   },
 
+  // The copies taken before `before` (a time), which by then have done their job: an upgrade
+  // that went wrong shows itself well before UPGRADE_COPY_DAYS, and none outlasts a policy.
+  prune(dir, before) {
+    for (const name of listed(dir)) if (Number(name.split('-')[2]) < before) fs.rmSync(path.join(dir, name), { force: true });
+  },
+
   // for "erase everything", which has to mean the copies too
   eraseAll(dir) {
     for (const name of listed(dir)) fs.rmSync(path.join(dir, name), { force: true });

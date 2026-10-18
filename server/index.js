@@ -10,6 +10,7 @@ import gracefulShutdown from './lib/gracefulShutdown.js';
 import appVersion from './lib/appVersion.js';
 import log from './lib/log.js';
 import settleStaged from './services/settleStaged.js';
+import clearScratch from './capsules/clearScratch.js';
 import vapidKeys from './push/vapidKeys.js';
 import recoverAgentRuns from './jobs/recoverAgentRuns.js';
 
@@ -21,8 +22,10 @@ try {
   else log.error('db', 'The database couldn’t be brought up to date. The step that failed was rolled back.', err);
   process.exit(1);
 }
-// nothing is mid-upload before the server listens, so every staged copy can be settled now
+// nothing is mid-upload, mid-export or mid-restore before the server listens, so every staged
+// copy can be settled now and every scratch copy of the database cleared
 settleStaged();
+clearScratch();
 // made before any request can ask for it, so two first requests can't race to create it
 if (config.push.enabled) vapidKeys.ensure();
 

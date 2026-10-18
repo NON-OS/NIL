@@ -18,7 +18,9 @@ export default async function privateTarget(payee, stealth) {
   const { metaAddress, problem } = await payeeMeta(payee);
   if (!metaAddress) throw HttpError.badRequest(WITHOUT[problem]);
   const one = parseOneTime(stealth);
-  if (sql.get('SELECT 1 FROM payment_intents WHERE stealth_ephemeral IS NOT NULL AND (stealth_ephemeral = ? OR to_address = ?)', one.ephemeralPublicKey, one.address)) {
+  // payments as well as intents: the purge erases an expired intent once a payment carries its address
+  const seen = 'stealth_ephemeral IS NOT NULL AND (stealth_ephemeral = ? OR to_address = ?)';
+  if (sql.get(`SELECT 1 FROM payment_intents WHERE ${seen} UNION ALL SELECT 1 FROM payments WHERE ${seen}`, one.ephemeralPublicKey, one.address, one.ephemeralPublicKey, one.address)) {
     throw HttpError.badRequest('That one-time address was already used for another payout. Pay again for a fresh one.');
   }
   if (sql.get("SELECT 1 FROM credentials WHERE kind = 'wallet' AND lower(external_id) = ?", one.address)) throw HttpError.badRequest('That’s a sign-in wallet, not a one-time address.');

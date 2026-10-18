@@ -284,7 +284,7 @@ Everything Nil stores is in the `nonos-data` volume, mounted at `/data` in the c
 | `nonos.db`, `nonos.db-wal`, `nonos.db-shm` | The SQLite database. Don't copy these files while the server runs: use a snapshot (below) |
 | `keys/receipts-ed25519.pem` | The workspace signing key. It signs receipts, and every message that unlocks or publishes someone's encryption keys names the workspace by it. Without it, no wallet opens anyone's encryption keys and recovery kits won't restore, so everyone starts over with new keys |
 | `uploads/` | File attachments |
-| `pre-migration-*.db` | Copies of the database the server takes before each schema upgrade. The newest three are kept |
+| `pre-migration-*.db` | Copies of the database the server takes before each schema upgrade. The newest three are kept, each for `UPGRADE_COPY_DAYS` (7) or the shortest zero-state setting, whichever is shorter |
 | `setup-token` | The one-time setup token, only until the workspace exists |
 
 Also keep `/opt/nonos/.env`, `Caddyfile` and `docker-compose.override.yml`, and the `tor-keys` volume if you use Tor. Caddy's certificates are re-issued automatically and don't need a backup.

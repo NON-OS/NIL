@@ -89,6 +89,8 @@ Admins can download an **Audit file** for any vote, so anyone can recount it:
 - for an anonymous vote, the voter group, every accepted group root and every proof, with no names,
 - for an encrypted vote, the census, the roots, the vote's public key, each trustee's commitments with their proofs, their decryption proofs, and every encrypted ballot with its proof.
 
+Each member's power stays in the file for 90 days after a weighted vote closes, or after an encrypted vote's totals are decrypted. After that only the power of members who signed a ballot is kept, since each ballot carries the weight it was counted with, and an encrypted vote keeps the power in its census. The operator sets the number of days with `VOTE_POWER_DAYS`.
+
 ## Limits
 
 - In a small team, or with a lopsided result, the totals alone can give choices away.

@@ -7,6 +7,8 @@ import config from '../config.js';
 import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
 import sweepComments from '../services/sweepComments.js';
+import expiredRows from '../services/expiredRows.js';
+import snapshots from '../db/snapshots.js';
 import settleStaged from '../services/settleStaged.js';
 import creditLedger from '../aiCredits/creditLedger.js';
 import signedAllowance from '../ai/signedAllowance.js';
@@ -38,12 +40,10 @@ async function sweep(signal) {
   // copies staged for a seal or an open-up that never went through; one takes seconds, not an hour
   settleStaged({ olderThan: HOUR });
 
-  await rows((limit) => deleteSome('notifications', 'read_at IS NOT NULL AND read_at < ?', limit, now - config.readNotificationDays * DAY));
-  await rows((limit) => deleteSome('sessions', 'expires_at < ?', limit, now));
-  // unused links go once they expire; links people joined through stay a while longer, so
-  // admins can still see who came in with them
-  const history = now - config.usedInviteDays * DAY;
-  await rows((limit) => deleteSome('invites', '(uses = 0 AND expires_at < ?) OR expires_at < ? OR revoked_at < ?', limit, now, history, history));
+  for (const [table, where, ...params] of expiredRows(now, policy)) await rows((limit) => deleteSome(table, where, limit, ...params));
+  // the copies taken before upgrades hold what the policies erased since, so they don't outlast them
+  const shortest = Math.min(config.keep.upgradeCopyDays, ...[policy.doneDays, policy.commentDays, policy.activityDays].filter(Boolean));
+  snapshots.prune(config.dataDir, now - shortest * DAY);
   // spent AI credits from days that are over; only each day's total stays
   creditLedger.prune();
   signedAllowance.prune();

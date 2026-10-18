@@ -20,6 +20,7 @@ import semaphore from './config/semaphore.js';
 import signIn from './config/signIn.js';
 import jobs from './config/jobs.js';
 import purge from './config/purge.js';
+import keep from './config/keep.js';
 import tasks from './config/tasks.js';
 import push from './config/push.js';
 import due from './config/due.js';
@@ -79,6 +80,7 @@ const config = Object.freeze({
   usedInviteDays: envNumber('USED_INVITE_DAYS', 30),
   jobs,
   purge,
+  keep,
   nox,
   rewards,
   plan,
