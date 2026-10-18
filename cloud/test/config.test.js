@@ -2,7 +2,19 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import loadConfig from '../config/loadConfig.js';
 import backupKeys from '../backups/backupKeys.js';
+import workspaceSpec from '../runtime/workspaceSpec.js';
 import baseEnv from './helpers/baseEnv.js';
+
+test('each workspace has its own uid, never 1000, unless set back for a rollback', () => {
+  const at = (env, slot) => workspaceSpec(loadConfig({ ...baseEnv, ...env }).config, { id: 'x', name: 'acme', image: 'i', volume: 'v', plan: 'standard', invoiceSlot: slot }).user;
+  assert.equal(at({}, 0), '200000:200000');
+  assert.equal(at({}, 41), '200041:200041');
+  assert.equal(at({ CLOUD_APP_UID_BASE: '500000' }, 3), '500003:500003');
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_UID_BASE: '0' }).warnings.some((w) => /uid 1000/.test(w)));
+  assert.equal(at({ CLOUD_APP_UID_BASE: '0' }, 41), '1000:1000');
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_UID_BASE: '1000' }).errors.some((e) => /10000 or more/.test(e)));
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_APP_USER: '1000:1000' }).warnings.some((w) => /no longer used/.test(w)));
+});
 
 test('missing required settings are all reported at once', () => {
   const { errors } = loadConfig({});

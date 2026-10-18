@@ -34,7 +34,9 @@ export default function loadConfig(env = process.env) {
 
   const image = read.required('CLOUD_APP_IMAGE', 'Set it to the Nil image every workspace runs, for example localhost/nonos/nil:3.0.0.');
   // each workspace runs as its own uid, this plus its number, never 1000 like the control plane
-  const uidBase = read.number('CLOUD_APP_UID_BASE', 200_000, { min: 10_000, max: 2_000_000_000 });
+  const uidBase = read.number('CLOUD_APP_UID_BASE', 200_000, { max: 2_000_000_000 });
+  if (uidBase > 0 && uidBase < 10_000) read.fail('CLOUD_APP_UID_BASE must be 10000 or more, clear of the uids of accounts on the host, or 0.');
+  if (uidBase === 0) read.warn('CLOUD_APP_UID_BASE=0 runs every workspace as uid 1000, the control plane’s own. Use it only to go back to a release from before each workspace had its own uid.');
   if (read.raw('CLOUD_APP_USER')) read.warn('CLOUD_APP_USER is no longer used: each workspace runs as its own uid from CLOUD_APP_UID_BASE.');
 
   const treasury = read.text('CLOUD_PLAN_TREASURY');

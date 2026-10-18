@@ -26,8 +26,9 @@ export default function workspaceSpec(config, workspace) {
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 
   // its own uid and gid: files in one workspace's volume belong to nobody else on the host, and a
-  // process that broke out of its container would be no user the host knows
-  const uid = app.uidBase + (workspace.invoiceSlot ?? 0);
+  // process that broke out of its container would be no user the host knows. 0 is the old way,
+  // the image's own user, for going back to a release from before this.
+  const uid = app.uidBase ? app.uidBase + (workspace.invoiceSlot ?? 0) : 1000;
 
   return Object.freeze({
     id: workspace.id,

@@ -15,7 +15,7 @@ export default async function drillRestore(ctx, { tar, manifest = null }) {
   const base = workspaceSpec(ctx.config, { id, name: 'restore-drill', image, volume: `nil-${id}-drill`, plan: ctx.config.defaultPlan, invoiceSlot: null });
   const { PLAN_TREASURY, PLAN_INVOICE_SLOT, PLAN_INVOICE_KEY, ...env } = base.env;
   // a uid of its own, just below every workspace's
-  const uid = ctx.config.app.uidBase - 1;
+  const uid = ctx.config.app.uidBase ? ctx.config.app.uidBase - 1 : 1000;
   const spec = { ...base, isolated: true, user: `${uid}:${uid}`, env: { ...env, NOX_RPC_URL: 'off', PUSH_NOTIFICATIONS: 'off' } };
   ctx.log.info('drill.started', { workspace: id, image });
   try {
