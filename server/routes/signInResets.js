@@ -44,8 +44,10 @@ router.post(
   '/users/:id/sign-in-reset',
   requireAdmin,
   route((req) => {
-    const target = sql.get('SELECT id, role, deactivated FROM users WHERE id = ?', req.params.id);
+    const target = sql.get('SELECT id, role, kind, deactivated FROM users WHERE id = ?', req.params.id);
     if (!target) throw HttpError.notFound('That person');
+    // a link would give whoever opens it a browser session as the agent, which agents never have
+    if (target.kind === 'agent') throw HttpError.badRequest('Agents don’t sign in, so there’s nothing to reset. Manage them in Settings → Agents.');
     if (target.id === req.user.id) throw HttpError.badRequest('You can’t reset your own sign-in. While you’re signed in, link a backup wallet under Settings → Sign-in & security instead.');
     if (target.deactivated) throw HttpError.badRequest('Restore their access first, then reset their sign-in.');
     const { needsApproval, unapproved } = resetApproval(target);

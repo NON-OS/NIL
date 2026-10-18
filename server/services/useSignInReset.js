@@ -4,6 +4,7 @@ import sessions from '../auth/sessions.js';
 import hub from '../realtime/hub.js';
 import addCredential from './addCredential.js';
 import signInAudit from './signInAudit.js';
+import resetUsable from './resetUsable.js';
 
 // Links the new wallet and spends the link together, so a wallet that's already linked
 // somewhere leaves the link usable. Every earlier session ends, in case one is on the lost device.
@@ -11,8 +12,8 @@ import signInAudit from './signInAudit.js';
 export default function useSignInReset(resetId, address) {
   const userId = sql.tx(() => {
     const now = Date.now();
-    const reset = sql.get('SELECT r.*, u.deactivated FROM sign_in_resets r JOIN users u ON u.id = r.user_id WHERE r.id = ?', resetId);
-    if (!reset || !reset.issued_at || reset.used_at || reset.closed_at || reset.expires_at <= now || reset.deactivated) {
+    const reset = sql.get('SELECT * FROM sign_in_resets WHERE id = ?', resetId);
+    if (!resetUsable(reset, now)) {
       throw HttpError.badRequest('This sign-in reset link has expired or was already used. Ask your admin for a new one.');
     }
     // named and stamped so it stands out from the lost wallets in the person's list
