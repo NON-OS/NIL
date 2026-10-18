@@ -80,6 +80,20 @@ Under- and overpayments from any wallet are matched automatically on hosted serv
 
 The invoice list keeps every invoice with its transactions and a link to check each one on a block explorer.
 
+### Nothing waits for a person
+
+Billing runs by itself. Nobody has to step in for an invoice or a payment to reach its end, even when the server's Ethereum node is down for hours, answers with errors, falls behind or reorganises.
+
+- Every invoice ends up paid, expired or cancelled. An open invoice expires 24 hours after it was made, or, if a payment for it is still on its way then, as soon as that payment settles or is given up on.
+- A transaction pasted under an invoice that never shows up on-chain is given up on after 24 hours (`NOX_MISSING_TX_HOURS`), whether or not the node answers.
+- A payment in a block counts once the block is final. One that a reorganisation takes out, or that the node can't find for a while, is looked for every minute for 7 days (`PLAN_LATE_DAYS`) and then given up on, node or no node.
+- Every hour (`PLAN_RECONCILE_MINUTES`), Nil reads the treasury's transfers of about the last day (`PLAN_RECONCILE_BLOCKS`) again, whatever it saw before, and looks up every payment it gave up on in the last 30 days (`PLAN_RECONCILE_DAYS`). A payment that was missed or turned up late is counted then, toward its invoice if it was sent in time and as credit otherwise. Reading a transfer again never counts it twice.
+- A bounty payment waits for the node: one in a block counts once the block is final, and one the node says isn't there fails after 24 hours. A node that is down never fails a payment. A cancelled one is watched for 7 days (`PAYMENT_WATCH_DAYS`), then left alone.
+- If the server stops at any moment, even halfway through a step, it carries on where it was when it starts again. Every step can run twice without counting anything twice, and an invoice its payments already cover is settled on the next run.
+- A price or a contract that doesn't answer never stops a quote or an invoice. When NOX can't be priced, invoices are offered in USDC only.
+
+When something stays unsettled more than 6 hours past its normal time (`PAYMENT_STALL_HOURS`), the owners and admins get a notice in the app saying what is happening and what Nil does about it. The operator sees the same in the server log, and `/healthz` lists it by a short code, which hosted Nil turns into an alert. The notice comes once per stall, and again if a new one starts later.
+
 ### Where the money goes
 
 Under **Where the money goes**, admins see what the workspace has paid the treasury for Nil Pro and the share of that revenue that buys and burns NOX, as published by whoever runs the server (`BURN_SHARE`).
