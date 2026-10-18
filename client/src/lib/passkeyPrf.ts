@@ -13,9 +13,13 @@ interface PrfOutputs {
 
 const random = (n: number) => crypto.getRandomValues(new Uint8Array(n));
 
-function friendly(err: unknown) {
+const CANCELLED = 'The passkey request was cancelled or timed out. Try again when you’re ready.';
+// at unlock, no answer can also mean none of your passkeys works at this address
+const NO_PASSKEY = 'No passkey was used. Try again, or unlock with your wallet. A passkey only works at the web address it was made on.';
+
+function friendly(err: unknown, cancelled = CANCELLED) {
   const name = err instanceof DOMException ? err.name : '';
-  if (name === 'NotAllowedError' || name === 'AbortError') return new Error('The passkey request was cancelled or timed out. Try again when you’re ready.');
+  if (name === 'NotAllowedError' || name === 'AbortError') return new Error(cancelled);
   if (name === 'SecurityError') return new Error('Passkeys can’t be used at this site’s address.');
   if (name === 'NotSupportedError') return new Error('This browser or passkey manager can’t make a passkey that works here.');
   return err instanceof Error ? err : new Error('Your passkey manager returned an error.');
@@ -33,7 +37,7 @@ function outputOf(credential: PublicKeyCredential) {
   return bytes?.length === 32 ? bytes : null;
 }
 
-async function ask(allow: string[], prf: PrfInputs['prf']) {
+async function ask(allow: string[], prf: PrfInputs['prf'], cancelled?: string) {
   supported();
   let credential: Credential | null;
   try {
@@ -47,9 +51,9 @@ async function ask(allow: string[], prf: PrfInputs['prf']) {
       },
     });
   } catch (err) {
-    throw friendly(err);
+    throw friendly(err, cancelled);
   }
-  if (!(credential instanceof PublicKeyCredential)) throw new Error('No passkey was used.');
+  if (!(credential instanceof PublicKeyCredential)) throw new Error(cancelled ?? CANCELLED);
   return { credentialId: b64u.encode(new Uint8Array(credential.rawId)), output: outputOf(credential) };
 }
 
@@ -96,6 +100,7 @@ const passkeyPrf = {
     ask(
       salts.map((s) => s.credentialId),
       { evalByCredential: Object.fromEntries(salts.map((s) => [s.credentialId, { first: s.salt }])) },
+      NO_PASSKEY,
     ),
 };
 
