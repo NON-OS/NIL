@@ -6,12 +6,22 @@ import rateLimit from '../auth/rateLimit.js';
 import visibleTask from '../services/visibleTask.js';
 import aiFeatures from '../ai/aiFeatures.js';
 import runAi from '../ai/runAi.js';
+import creditSetting from '../aiCredits/creditSetting.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
 
 router.use('/ai', (req, res, next) => {
   if (!config.ai.enabled) return res.status(503).json({ error: 'AI assist is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server.' });
+  next();
+});
+
+// Signed-in requests are the fallback for people without a voting key. Someone who has one sends
+// anonymously while the workspace has that on, so their day can't hold both allowances.
+router.use('/ai', (req, res, next) => {
+  if (req.user.semaphoreCommitment && req.user.role !== 'guest' && creditSetting.on()) {
+    return res.status(409).json({ error: 'This workspace sends your AI requests anonymously. Reload the page and try again.' });
+  }
   next();
 });
 

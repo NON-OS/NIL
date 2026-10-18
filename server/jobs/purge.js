@@ -4,6 +4,7 @@ import config from '../config.js';
 import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
 import settleStaged from '../services/settleStaged.js';
+import creditLedger from '../aiCredits/creditLedger.js';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -48,6 +49,8 @@ export default function purge() {
     const history = now - config.usedInviteDays * DAY;
     sql.run('DELETE FROM invites WHERE (uses = 0 AND expires_at < ?) OR expires_at < ? OR revoked_at < ?', now, history, history);
   });
+  // spent AI credits from days that are over; only each day's total stays
+  creditLedger.prune();
   // what the policies above erased mustn't survive in the write-ahead log
   checkpoint();
 }

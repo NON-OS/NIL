@@ -88,4 +88,7 @@ export default {
   'POST /api/ai/deck': { allow: PEOPLE, ok: [503] },
   'POST /api/ai/draft': { allow: PEOPLE, ok: [503] },
   'POST /api/ai/brief': { allow: MEMBERS, ok: [503] },
+  'GET /api/ai-credits': { allow: MEMBERS },
+  'GET /api/ai-credits/usage': { allow: ADMINS },
+  'PUT /api/ai-credits': { allow: ADMINS, body: { anonymous: true } },
 };
