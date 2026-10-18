@@ -5,6 +5,7 @@ import retention from '../services/retention.js';
 import eraseTasks from '../services/eraseTasks.js';
 import settleStaged from '../services/settleStaged.js';
 import creditLedger from '../aiCredits/creditLedger.js';
+import signedAllowance from '../ai/signedAllowance.js';
 
 const HOUR = 3_600_000;
 const DAY = 24 * HOUR;
@@ -51,6 +52,7 @@ export default function purge() {
   });
   // spent AI credits from days that are over; only each day's total stays
   creditLedger.prune();
+  signedAllowance.prune();
   // what the policies above erased mustn't survive in the write-ahead log
   checkpoint();
 }

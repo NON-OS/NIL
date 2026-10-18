@@ -3,7 +3,7 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import units from '../config/units.js';
 
-const MEMBERS = "SELECT semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human' AND semaphore_commitment IS NOT NULL ORDER BY semaphore_commitment";
+const MEMBERS = "SELECT semaphore_commitment AS c FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human' AND semaphore_commitment IS NOT NULL AND (semaphore_pending IS NULL OR semaphore_pending = semaphore_commitment) ORDER BY semaphore_commitment";
 let cached = { key: '', root: null };
 
 function rootOf(members) {
@@ -31,7 +31,9 @@ function record(root, members) {
 }
 
 // Who may spend an AI credit: the people anonymous votes count, every active member (no guests,
-// no agents) with a voting key. Read fresh each time, so someone who leaves is out at once.
+// no agents) with a voting key, except anyone waiting to switch to a new one: they send signed in
+// meanwhile, so their old key mustn't also spend. Read fresh each time, so someone who leaves is
+// out at once.
 // Members go in key order, which says nothing about who joined when.
 const creditGroup = {
   current() {

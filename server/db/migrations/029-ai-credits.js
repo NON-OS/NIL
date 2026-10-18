@@ -3,7 +3,8 @@
 // table keeps no arrival order (no rowid; rows sort by nullifier). They go once their day is
 // over; what stays is a count per day. Recent group roots are kept with the members they hold,
 // so a root that still holds someone who has since left can be refused, and with the minute a
-// newer root replaced them (null for the current one).
+// newer root replaced them (null for the current one). People who can't prove membership right
+// now send signed in, against a count of their own that also lasts only the day.
 const aiCredits = `
   CREATE TABLE ai_credit_nullifiers (
     scope TEXT NOT NULL,
@@ -23,6 +24,17 @@ const aiCredits = `
     members TEXT NOT NULL,
     replaced_at INTEGER
   ) WITHOUT ROWID;
+
+  -- signed-in AI requests per person, for the day only
+  CREATE TABLE ai_signed_usage (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    day TEXT NOT NULL,
+    requests INTEGER NOT NULL,
+    PRIMARY KEY (user_id, day)
+  ) WITHOUT ROWID;
+
+  -- a new voting key someone couldn't register yet, because an open anonymous vote holds the old one
+  ALTER TABLE users ADD COLUMN semaphore_pending TEXT;
 `;
 
 export default aiCredits;
