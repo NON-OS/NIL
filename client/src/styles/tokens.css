@@ -18,9 +18,13 @@
   --ink: #0a0b0d;
   --ink-2: #3a3e47;
   --muted: #676c77;
-  --faint: #6b707a;
+  /* as dark as muted, so it still reads at 4.5:1 on the greyest surfaces and on hover */
+  --faint: #676c77;
   --line: #e2e4ea;
   --line-strong: #cdd0d8;
+  /* the edge of a field or switch, which has to stand out from what's around it by 3:1: the
+     palette's lightest grey that does, 3.86:1 on white and 3.41:1 on the greyest surface */
+  --line-control: #7d828c;
   --accent: #66ffff;
   --accent-hover: #4df0f0;
   --accent-ink: #0a0b0d;
@@ -32,7 +36,8 @@
 
   --danger: #c4302b;
   --danger-soft: #fbe8e7;
-  --warning: #9a6400;
+  /* dark enough for 4.5:1 on its own soft fill as well as on white */
+  --warning: #946000;
   --warning-soft: #fcf0d6;
   --success: #007c85;
   --success-soft: #dcfafa;

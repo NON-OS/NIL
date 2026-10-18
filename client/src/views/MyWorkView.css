@@ -43,7 +43,7 @@
   gap: 10px;
   padding: 4px 10px;
   margin-bottom: 8px;
-  border: 1px dashed var(--line-strong);
+  border: 1px dashed var(--line-control);
   border-radius: var(--r-md);
   color: var(--muted);
 }

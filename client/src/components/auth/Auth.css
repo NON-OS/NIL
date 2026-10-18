@@ -108,8 +108,9 @@
   animation-delay: 0.24s;
 }
 
+/* Deep Teal, because type cyan on Paper is just under 4.5:1 at this size */
 .auth-facts .mono {
-  color: var(--accent-line);
+  color: var(--brand-teal);
   font-size: 11px;
   line-height: 20px;
 }

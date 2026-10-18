@@ -461,7 +461,7 @@ button.file-name:hover {
 
 .composer-box {
   position: relative;
-  border: 1px solid var(--line-strong);
+  border: 1px solid var(--line-control);
   border-radius: var(--r-lg);
   background: var(--surface);
   transition: border-color 0.12s, box-shadow 0.12s;
