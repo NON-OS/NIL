@@ -35,5 +35,5 @@ export default function holderStanding(userId, held, minimum, { now = Date.now()
   }
   const state = heldSince !== null && now - heldSince >= window ? 'ok' : until > now ? 'grace' : 'locked';
   sql.run('UPDATE users SET holder_held_since = ?, holder_locked_at = ? WHERE id = ?', heldSince, state === 'locked' ? row.holder_locked_at ?? now : null, userId);
-  return { state, until, back: heldSince === null ? null : heldSince + window };
+  return { state, until };
 }

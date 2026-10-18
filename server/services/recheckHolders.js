@@ -17,9 +17,9 @@ let again = false;
 // count for two people. Someone below gets the grace period and a notice; once it's over they
 // are signed out, and their access keys stop working while they stay locked.
 async function pass({ force, now }) {
+  holderWallets.forgetOld(now);
   const gate = holderGate.get();
   if (!gate.enabled) return;
-  holderWallets.forgetOld(now);
   const due = now - config.holders.recheckHours * HOUR;
   const members = sql.all("SELECT id FROM users WHERE joined_via = 'holder' AND deactivated = 0 AND kind = 'human' AND (? OR holder_checked_at IS NULL OR holder_checked_at < ?)", force ? 1 : 0, due);
   if (!members.length) return;

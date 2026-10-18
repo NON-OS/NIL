@@ -79,7 +79,7 @@ router.patch(
       if (off) {
         sessions.revokeAll(row.id);
         hub.disconnect(row.id);
-        if (isAdminRole(role)) adminLeft(row.id, req.user.id);
+        if (isAdminRole(role) && !row.deactivated) adminLeft(row.id, req.user.id);
         else revokeInvitesBy(row.id);
       }
     }

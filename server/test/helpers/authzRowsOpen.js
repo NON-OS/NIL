@@ -18,14 +18,16 @@ export default {
   'POST /api/public/bounties/:id/challenge': { open: true, allow: NOBODY, id: 'task', denied: [404] },
   'POST /api/public/bounties/:id/apply': { open: true, allow: NOBODY, id: 'task', denied: [400, 404] },
   'POST /api/auth/wallet/challenge': { open: true, allow: ALL, body: () => ({ address: wallet().address, mode: 'login' }) },
-  // a wallet that signs correctly but has no account here gets nothing
+  // a wallet that signs correctly but has no account here gets nothing; a challenge only comes
+  // back from the network it was given to, so both calls come from one address
   'POST /api/auth/wallet/verify': {
     open: true,
     allow: NOBODY,
     denied: [404],
+    headers: { 'X-Forwarded-For': '10.251.0.1' },
     body: async ({ world }) => {
       const w = wallet();
-      const res = await fetch(`${world.base()}/api/auth/wallet/challenge`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-NONOS': '1' }, body: JSON.stringify({ address: w.address, mode: 'login' }) });
+      const res = await fetch(`${world.base()}/api/auth/wallet/challenge`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-NONOS': '1', 'X-Forwarded-For': '10.251.0.1' }, body: JSON.stringify({ address: w.address, mode: 'login' }) });
       const { challengeId, message } = await res.json();
       return { challengeId, signature: w.sign(message) };
     },
