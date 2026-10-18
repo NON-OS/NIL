@@ -359,3 +359,13 @@
     inset: min(0px, calc(50% - var(--tap-min) / 2));
   }
 }
+
+/* An error said in a sentence, inside a form or card. Sign-in, Docs, sharing and the proof
+   checker all use it. */
+.auth-error {
+  padding: 9px 12px;
+  border-radius: var(--r-md);
+  background: var(--danger-soft);
+  color: var(--danger);
+  font-size: var(--text-sm);
+}

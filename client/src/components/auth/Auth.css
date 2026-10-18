@@ -165,14 +165,6 @@
   color: var(--muted);
 }
 
-.auth-error {
-  padding: 9px 12px;
-  border-radius: var(--r-md);
-  background: var(--danger-soft);
-  color: var(--danger);
-  font-size: var(--text-sm);
-}
-
 .auth-note {
   color: var(--muted);
   font-size: var(--text-xs);

@@ -95,6 +95,22 @@
   color: var(--muted);
 }
 
+/* a page shown outside the app shell, with its own header: Verify and Help before sign-in */
+.verify-standalone {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: var(--bg);
+}
+
+.verify-standalone header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left));
+  border-bottom: 1px solid var(--line);
+}
+
 @media (max-width: 900px) {
   .app {
     padding-left: 0;

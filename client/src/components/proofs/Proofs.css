@@ -144,21 +144,6 @@
   overflow-wrap: anywhere;
 }
 
-.verify-standalone {
-  min-height: 100vh;
-  min-height: 100dvh;
-  background: var(--bg);
-}
-
-.verify-standalone header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding: max(16px, env(safe-area-inset-top)) max(20px, env(safe-area-inset-right)) 16px max(20px, env(safe-area-inset-left));
-  border-bottom: 1px solid var(--line);
-}
-
 @media (max-width: 640px) {
   .proof-intro {
     grid-template-columns: 1fr;

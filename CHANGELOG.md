@@ -184,6 +184,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Fixed
 
+- Bounties, Time, the doc sharing and history windows, vote trustees, the recovery kit and a few other places looked unstyled when opened straight from a link, because their styles only loaded with Settings, Docs or the sign-in page. Those styles now load with the app, and a test checks that every class a screen uses comes with it.
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
 - A background job that failed, for example on "database is locked" or a full disk, could take the whole server down. Every job now logs its failure (at most once every ten minutes while it keeps failing) and runs again on schedule. Errors in the live-update connection are caught the same way, and an error nothing else handles stops the server cleanly instead of abruptly.
 - Payment checks that failed were dropped without a word. They are logged now, rate-limited.

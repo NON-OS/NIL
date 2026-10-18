@@ -1,3 +1,4 @@
+import '../ui/SharePeople.css';
 import { useEffect, useState } from 'react';
 import Avatar from '../ui/Avatar';
 import useStore from '../../state/useStore';

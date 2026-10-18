@@ -4,6 +4,7 @@ import './styles/tokens.css';
 import './styles/base.css';
 import './styles/controls.css';
 import './styles/layout.css';
+import './styles/cards.css';
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
