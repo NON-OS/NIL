@@ -156,6 +156,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Changed
 
+- Nil sends the web app's scripts, styles, WebAssembly and circuit files compressed with brotli or gzip, to browsers that accept it, so it no longer depends on a proxy for that. Each file is compressed once and kept in memory. The encrypted-ballot circuit goes from 16.4 MB to 8.5 MB on the wire and a typical script to about a third. Caddy's `encode` skipped the circuit files before. What the browser ends up with is unchanged, so `npm run verify:server` still compares the same bytes and the release hash is the same.
 - When Nil asks your wallet for several signatures in a row (setting up your encryption keys, linking a backup wallet, adding a wallet to your keys), a panel says how many, what each one is for and which one your wallet is asking for now. Screen readers hear each step as it comes.
 - Linking a backup wallet lists its steps under **Your wallets** and marks the one you're on: confirm with the wallet you use now, switch to the backup, sign with it. It says how many signatures the backup gives and why, offers **Unlock your keys** first so the backup can open them too, and stops before asking for a signature when your wallet is still on an account that's already linked.
 - Under **List on the public bounty board**, the bounty panel says that anyone on the internet can see a listed bounty's title, reward, due date and the start of its description, and that people, comments and files stay private.

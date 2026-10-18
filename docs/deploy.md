@@ -140,7 +140,7 @@ nonos.example.com {
 }
 ```
 
-Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers Nil reads. `encode` compresses what it sends, which makes the app's files and the task data it starts with several times smaller on the wire. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
+Caddy gets and renews the certificate, redirects HTTP to HTTPS, passes WebSocket connections through and sets the `X-Forwarded-*` headers Nil reads. `encode` compresses what it sends, which makes the task data the app starts with several times smaller on the wire. Nil compresses the app's own files itself, with brotli or gzip, including the proving circuit files that Caddy's `encode` leaves alone, and Caddy passes those through as they are. It keeps no access log unless you add a `log` directive. To receive certificate expiry notices, add a global options block with your email at the very top of the file:
 
 ```
 {
