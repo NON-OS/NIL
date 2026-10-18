@@ -1,37 +1,8 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
-import { registerHooks } from 'node:module';
-import { fileURLToPath } from 'node:url';
-import ts from 'typescript';
-
-// The web app's components are .tsx, which Node can't strip on its own. These hooks compile them
-// with the project's TypeScript the way Vite would, and turn stylesheet imports into nothing, so
-// the real Markdown renderer runs here exactly as it runs in the browser.
-registerHooks({
-  resolve(specifier, context, nextResolve) {
-    if (/^\.{1,2}\//.test(specifier) && !/\.[cm]?[jt]sx?$|\.css$/.test(specifier)) {
-      for (const ext of ['.ts', '.tsx']) {
-        try {
-          return nextResolve(`${specifier}${ext}`, context);
-        } catch {}
-      }
-    }
-    return nextResolve(specifier, context);
-  },
-  load(url, context, nextLoad) {
-    if (url.endsWith('.css')) return { format: 'module', source: '', shortCircuit: true };
-    if (url.endsWith('.tsx')) {
-      const source = ts.transpileModule(fs.readFileSync(fileURLToPath(url), 'utf8'), { compilerOptions: { jsx: ts.JsxEmit.ReactJSX, module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 } }).outputText;
-      return { format: 'module', source, shortCircuit: true };
-    }
-    return nextLoad(url, context);
-  },
-});
-
-const { createElement } = await import('react');
-const { renderToStaticMarkup } = await import('react-dom/server');
-const { default: Markdown } = await import('../src/components/ui/Markdown.tsx');
+import { createElement } from 'react';
+import { renderToStaticMarkup } from 'react-dom/server';
+import Markdown from '../src/components/ui/Markdown.tsx';
 
 const render = (text) => renderToStaticMarkup(createElement(Markdown, { text }));
 
