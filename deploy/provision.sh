@@ -21,7 +21,10 @@ DEPLOY_USER=deploy
 DEPLOY_UID=1500
 MOVE_DEPLOY_UID=0
 SSH_KEYS=()
-SWAP_GB=8
+# No swap by default: what is in memory (setup codes, keys, a restore's backup key in the
+# control plane's /tmp) would otherwise be written to the disk unencrypted. The containers have
+# hard memory limits without swap either way.
+SWAP_GB=0
 NEW_HOSTNAME=
 AUTO_REBOOT=
 HWE=0
@@ -42,7 +45,7 @@ Usage: provision.sh [options]
                            and must run as root from a session that isn't the deploy user's
   --ssh-key "KEY"          a public key for that user (repeatable)
   --ssh-key-file FILE      public keys for that user, one per line (default: root's keys)
-  --swap-gb N              size of the swap file to create if there is no swap (default 8, 0 for none)
+  --swap-gb N              create an unencrypted swap file of N GB if there is no swap (default 0: none)
   --hostname NAME          set the host name
   --auto-reboot HH:MM      reboot automatically at this UTC time when an update needs it
   --hwe-kernel             install Ubuntu's newer HWE kernel (recommended for Intel Core Ultra)
@@ -250,13 +253,17 @@ run modprobe nf_conntrack
 run sysctl --quiet --system
 
 step "Swap"
-if [ "$SWAP_GB" = 0 ]; then
-  log "No swap requested."
-elif [ -n "$(swapon --show --noheadings 2> /dev/null)" ]; then
-  log "Swap is already on: $(swapon --show --noheadings | awk '{ print $1, $3 }' | tr '\n' ' ')"
+swaps=$(swapon --show=NAME --noheadings 2> /dev/null | tr '\n' ' ' || true)
+if [ -n "$swaps" ] && swapon --show=NAME --noheadings | grep -qvE '^/dev/(mapper/|dm-)'; then
+  warn "Swap is on ($swaps) and not on an encrypted device, so what the host keeps in memory can end up on the disk in the clear. To turn it off: sudo swapoff -a, then remove its line from /etc/fstab."
+elif [ -n "$swaps" ]; then
+  log "Swap is on, on an encrypted device: $swaps"
+elif [ "$SWAP_GB" = 0 ]; then
+  log "No swap, as recommended."
 elif ! findmnt -no FSTYPE / | grep -qE '^(ext4|xfs)$'; then
   warn "The root filesystem isn't ext4 or xfs; create swap by hand if you want it."
 else
+  warn "Creating an unencrypted ${SWAP_GB} GB swap file because of --swap-gb. Memory that is swapped out is written to the disk in the clear."
   run fallocate -l "${SWAP_GB}G" /swapfile
   run chmod 600 /swapfile
   run mkswap /swapfile

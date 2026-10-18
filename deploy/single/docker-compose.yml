@@ -28,7 +28,9 @@ services:
     security_opt:
       - no-new-privileges:true
     init: true
+    # no swap, so session secrets and keys in memory never reach the disk
     mem_limit: ${NIL_MEMORY:-2g}
+    memswap_limit: ${NIL_MEMORY:-2g}
     pids_limit: 512
     logging:
       driver: local
@@ -65,6 +67,7 @@ services:
     security_opt:
       - no-new-privileges:true
     mem_limit: 1g
+    memswap_limit: 1g
     logging:
       driver: local
       options:

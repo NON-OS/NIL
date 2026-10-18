@@ -113,7 +113,7 @@ The examples use `nil.example` for the hosted domain, `203.0.113.10` and `2001:d
 
 ### 1. Install the server
 
-In Hetzner's Robot, boot the server into the rescue system and run `installimage`. Choose Ubuntu 24.04, keep `SWRAID 1` and `SWRAIDLEVEL 1` (RAID 1 over both NVMe drives), keep a `/boot` partition and give the rest to one ext4 root partition `/`; leave swap out, provision.sh creates a swap file. Add your SSH public key when asked, then reboot into the new system and log in as root with your key.
+In Hetzner's Robot, boot the server into the rescue system and run `installimage`. Choose Ubuntu 24.04, keep `SWRAID 1` and `SWRAIDLEVEL 1` (RAID 1 over both NVMe drives), keep a `/boot` partition and give the rest to one ext4 root partition `/`; leave swap out. The server runs without swap, so nothing in memory (setup codes, keys, a backup key brought in for a restore) is ever written to the disk in the clear; with 128 GB and hard limits on every container it doesn't need any. Add your SSH public key when asked, then reboot into the new system and log in as root with your key.
 
 ### 2. DNS
 
@@ -143,7 +143,7 @@ ssh root@203.0.113.10 /root/nil-deploy/provision.sh --mode hosted --hwe-kernel \
 
 Leave out `--with-chain` if you won't run the Ethereum node. Add `--auto-reboot 04:30` if kernel updates may reboot the server by themselves at that UTC time. Run it with `--dry-run` first to see every change it would make.
 
-What it does, each step only if needed: checks the RAID arrays and warns about a degraded or syncing one; installs all updates; creates the `deploy` user with your keys and no password, as uid 1500 (`--deploy-uid`), a uid no container uses; turns SSH into keys only with root logins off (it refuses if `deploy` has no key, so you can't lock yourself out); lets only 22, 80 and 443 through ufw; sets up fail2ban, unattended security upgrades (Ubuntu's and Docker's own repository, with `live-restore` keeping containers up while the engine restarts), time sync, Docker Engine from Docker's own repository with a hardened `daemon.json`, kernel and network tuning, an 8 GB swap file, journald and logrotate limits; and creates `/opt/nil`.
+What it does, each step only if needed: checks the RAID arrays and warns about a degraded or syncing one; installs all updates; creates the `deploy` user with your keys and no password, as uid 1500 (`--deploy-uid`), a uid no container uses; turns SSH into keys only with root logins off (it refuses if `deploy` has no key, so you can't lock yourself out); lets only 22, 80 and 443 through ufw; sets up fail2ban, unattended security upgrades (Ubuntu's and Docker's own repository, with `live-restore` keeping containers up while the engine restarts), time sync, Docker Engine from Docker's own repository with a hardened `daemon.json`, kernel and network tuning, journald and logrotate limits; and creates `/opt/nil`. It sets up no swap, and warns about swap that isn't on an encrypted device (`--swap-gb` creates an unencrypted swap file if you want one anyway).
 
 Before closing the root session, check from a second terminal that `ssh deploy@203.0.113.10` works. Reboot if it says so (for the HWE kernel): `sudo reboot`.
 
@@ -239,12 +239,12 @@ scp deploy@203.0.113.10:/mnt/nil-backups/workspaces/<id>/<file>.nilbackup .
 node cloud/cli.js verify-backup <file>.nilbackup --identity ~/nil-backup-alice.key
 ```
 
-It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a real restore into a scratch workspace on the server. This is the one time the secret key goes there, so remove it afterwards:
+It decrypts the whole backup, checks every chunk and the archive's structure, and writes nothing. Then do a real restore into a scratch workspace on the server. This is the one time the secret key goes there. Stream it from your machine over SSH into the control plane's `/tmp`, which lives in memory and is never swapped out, so the key never touches the server's disk, and remove it afterwards:
 
 ```bash
-scp ~/nil-backup-alice.key deploy@203.0.113.10:/tmp/k
-cd /opt/nil
-docker compose exec -T control sh -c 'cat > /tmp/k' < /tmp/k && shred -u /tmp/k
+# on your machine
+ssh deploy@203.0.113.10 'cd /opt/nil && docker compose exec -T control sh -c "umask 077 && cat > /tmp/k"' < ~/nil-backup-alice.key
+# then on the server, in /opt/nil
 docker compose exec control node cli.js restore restore-drill /backups/workspaces/<id>/<file>.nilbackup --identity /tmp/k --owner 0xYourWallet
 docker compose exec control rm /tmp/k
 docker compose exec control node cli.js delete restore-drill --now --no-export --yes
@@ -290,7 +290,7 @@ docker compose exec control node cli.js delete restore-drill --now --no-export -
 
 **Backup keys.** To rotate, add the new public key to `CLOUD_BACKUP_RECIPIENTS`, restart the control plane, and keep the old secret key until the last backup made for it has expired.
 
-**Disaster recovery.** On a new server: provision, release, configure with the same `cloud.env`, start. Then restore each workspace from its latest backup: `cli.js restore <name> <file> --identity <key>` recreates a workspace this control plane has never seen from the manifest inside the backup (owner, plan, image). The encrypted control database backups (`control/` in the target) hold the history as well; `cli.js decrypt` turns one back into a database file.
+**Disaster recovery.** On a new server: provision, release, configure with the same `cloud.env`, start. Then restore each workspace from its latest backup: bring a secret key into the control plane's `/tmp` as in step 9, and `cli.js restore <name> <file> --identity /tmp/k` recreates a workspace this control plane has never seen from the manifest inside the backup (owner and plan; the image only if it is ours and already on the server, otherwise the current one). Remove the key when you are done. The encrypted control database backups (`control/` in the target) hold the history as well; `cli.js decrypt` turns one back into a database file.
 
 ## Operator CLI
 
@@ -338,7 +338,7 @@ On the server, fill in `/opt/nil/.env` (`NIL_DOMAIN`, `ACME_EMAIL`) and `/opt/ni
 - No uid is shared between a container and an account on the host. The control plane runs as 1000 (the image's `node` user), each workspace as its own uid from 200000 up, and `deploy` as 1500, so someone who broke out of a container would not be `deploy`, with its sudo and docker group. A server provisioned before this has `deploy` at 1000: `provision.sh` warns, and `--move-deploy-uid`, run as root from a session that isn't `deploy`'s, moves it (Nil stops for about a minute). To get a root session, run `provision.sh --keep-root-login` first, or use Robot's console, then run it once more without that option.
 - Isolation between workspaces comes from separate network namespaces and networks, per-container limits, a read-only root, no capabilities and `no-new-privileges`, plus Docker's default seccomp and AppArmor profiles. What a compromised workspace can reach: Caddy (as anyone on the internet can) and the RPC relay. Not other workspaces, not the control plane, not the internet.
 - Not done, on purpose. Docker user namespaces (`userns-remap`) would add a layer but complicate volume ownership for the app and its backups; gVisor or Kata would add more at a performance cost. Both can be layered on later through the driver interface.
-- Secrets on the server: `cloud.env` (S3 keys, the alert token), the generated Caddyfile (the RPC node's credentials, if its URL carries any), setup codes until a workspace is claimed, and each workspace's data. The backup secret keys are not on the server.
+- Secrets on the server: `cloud.env` (S3 keys, the alert token, and `CLOUD_INVOICE_KEY`, which every workspace also gets in its environment), `/opt/nil/.env` (the DNS token for wildcard TLS), `/etc/nil-storagebox.cred`, the generated Caddyfile (the RPC node's credentials, if its URL carries any), the Ethereum node's engine API secret in `chain/jwt.hex`, the key that hashes wallet addresses in the control plane's log, setup codes until a workspace is claimed (in the control database, and in the workspace's environment, which `docker inspect` shows), the setup codes of sign-ups waiting for approval, and each workspace's data, its receipt signing key included. The backup secret keys are not kept there: a restore brings one in over SSH into the control plane's memory-only `/tmp` and removes it afterwards. Nothing is swapped to disk: the server has no swap, and the control plane, Caddy and every workspace have memory limits that leave swap out.
 - Supply chain: the control plane has four dependencies (two fonts and `@noble/curves` and `@noble/hashes`, which the app already uses), pinned in `package-lock.json`. The Docker and S3 clients, the backup encryption and the tar handling use only Node's standard library.
 
 ## Development
