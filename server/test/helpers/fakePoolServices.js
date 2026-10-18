@@ -5,9 +5,10 @@ const pad = (hex) => String(hex).replace(/^0x/, '').toLowerCase().padStart(64, '
 
 // A fake Privacy Pools relayer and association set provider on one local port. It answers the
 // way 0xbow's services do, records every request (method, path, headers, body), and can be told
-// to misbehave: refuse, redirect elsewhere, send too much, or sign terms for someone else.
+// to misbehave: refuse, redirect elsewhere, send too much, or sign terms for someone else. A
+// relay can also be answered with any status and body (`relayAnswer`), or not at all (`hangUp`).
 export default async function fakePoolServices() {
-  const state = { feeBps: 42n, feeRecipient: '0x00000000000000000000000000000000000fee00', txHash: null, refuse: false, redirect: null, huge: false, otherRecipient: null, aspLeaves: [], stateLeaves: [], reviews: [] };
+  const state = { feeBps: 42n, feeRecipient: '0x00000000000000000000000000000000000fee00', txHash: null, refuse: false, redirect: null, huge: false, otherRecipient: null, relayAnswer: null, hangUp: false, aspLeaves: [], stateLeaves: [], reviews: [] };
   const requests = [];
   const server = http.createServer((req, res) => {
     let raw = '';
@@ -32,6 +33,8 @@ export default async function fakePoolServices() {
         return send(200, { baseFeeBPS: '10', feeBPS: state.feeBps.toString(), gasPrice: '1', feeCommitment: { expiration: Date.now() + 60_000, asset: body.asset, withdrawalData, signedRelayerCommitment: `0x${'5'.repeat(130)}`, extraGas: body.extraGas, amount: body.amount } });
       }
       if (req.url === '/relayer/request') {
+        if (state.hangUp) return req.socket.destroy();
+        if (state.relayAnswer) return send(state.relayAnswer.status, state.relayAnswer.body);
         if (state.refuse) return send(400, { success: false, error: 'Relayer said no \u0007 politely', timestamp: Date.now(), requestId: 'r1' });
         return send(200, { success: true, txHash: state.txHash, timestamp: Date.now(), requestId: 'r1' });
       }
