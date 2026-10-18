@@ -16,6 +16,8 @@
     "check:quality": "node scripts/check-quality.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --import ./scripts/test/registerTs.mjs --test server/test/*.test.js client/test/*.test.js client/test/*.test.ts",
+    "release:manifest": "node scripts/release/manifest.mjs",
+    "verify:server": "node scripts/release/verify.mjs",
     "zk:fetch": "node scripts/zk-fetch.mjs",
     "zk:ballot": "node scripts/zk-ballot.mjs"
   },

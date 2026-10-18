@@ -30,6 +30,8 @@ NØNOS runs the server, so it is honest to start with what that gives it access 
 
 NØNOS does not look at any of this, and the control plane is built so it never opens a workspace's database or files: it handles them only as an encrypted backup stream or as file names. But NØNOS has root on the server and holds the backup keys, so it is technically able to read everything in the list above, and could be compelled to hand it over. Docs and private tasks would only ever be handed over as ciphertext.
 
+Root on the server would also let NØNOS send a changed web app that reads what people unlock. Every workspace runs the published image, and anyone can [check what a workspace sends](../docs/verify-a-server.md) against the release, byte for byte, from their own build of the source.
+
 **What the control plane itself records**
 
 - Per workspace: its address, the one wallet address that signed up (the owner), its state, app version, resource plan, creation, suspension and deletion dates, disk use, and whether its setup was finished. A member count only if the app reports one in `/healthz`; it currently reports its version and database schema, nothing about people.

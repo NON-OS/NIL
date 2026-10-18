@@ -57,7 +57,7 @@ The server writes the messages for signing in and for signed ballots. A dishones
 
 ## What a server operator can still do
 
-- Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. Running a build you trust on a server you control is the defence.
+- Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. [Check what a server sends](verify-a-server.md) compares a server with a release byte for byte; it can't see code sent only to one person or for a moment. Running a build you trust on a server you control is the strongest defence.
 - See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
 - Refuse service, delete data, or serve old data. Docs warn when rolled back. Private tasks aren't versioned yet, so an older saved version of one can be served without a warning, though it is still its writer's real text.
 - Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins.

@@ -20,7 +20,7 @@ A workspace nobody sets up within a week is removed, and its address becomes fre
 
 ## What NØNOS can and cannot see
 
-**Encrypted in your browser.** Docs (titles and text) and private tasks (title, notes, checklist and comments) are encrypted before they leave your browser, with keys that only you and the people you share with hold. NØNOS stores them and cannot read them. The same goes for the contents of encrypted votes and who cast an anonymous vote.
+**Encrypted in your browser.** Docs (titles and text) and private tasks (title, notes, checklist and comments) are encrypted before they leave your browser, with keys that only you and the people you share with hold. NØNOS stores them and cannot read them. The same goes for the contents of encrypted votes and who cast an anonymous vote. That depends on your browser running Nil's real code, and anyone can [check what a hosted workspace sends](verify-a-server.md) against the release, byte for byte.
 
 **Stored in plain form.** Everything else in your workspace is stored as written, in your workspace's own storage on NØNOS's server: team tasks and their comments, files, goals, projects, time entries, reminders, notifications, the activity history, and the member list with names, roles and linked wallet addresses. NØNOS doesn't look at any of it, and its tools never open your workspace's database. But it runs the server, so it could, and it could be ordered by a court to hand it over. Docs and private tasks would be handed over still encrypted.
 

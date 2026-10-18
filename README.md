@@ -40,7 +40,7 @@ The full documentation is in [docs/](docs/README.md). The same pages are in the 
 |---|---|
 | Start here | [Getting started](docs/getting-started.md), [Signing in](docs/signing-in.md), [People and roles](docs/people-and-roles.md) |
 | Everyday work | [Tasks](docs/tasks.md), [Views and finding things](docs/views.md), [Time and reminders](docs/time-and-reminders.md), [Goals, insights and decks](docs/goals-and-insights.md), [Keyboard shortcuts](docs/keyboard-shortcuts.md) |
-| Privacy and encryption | [Private tasks](docs/private-tasks.md), [Encrypted docs](docs/encrypted-docs.md), [Privacy model](docs/privacy-model.md), [Encryption and trust](docs/encryption.md), [Zero-state](docs/zero-state.md) |
+| Privacy and encryption | [Private tasks](docs/private-tasks.md), [Encrypted docs](docs/encrypted-docs.md), [Privacy model](docs/privacy-model.md), [Encryption and trust](docs/encryption.md), [Zero-state](docs/zero-state.md), [Check what a server sends](docs/verify-a-server.md) |
 | Money and decisions | [Bounties and payouts](docs/bounties-and-payouts.md), [Private payouts](docs/private-payouts.md), [Public bounty board](docs/public-bounty-board.md), [Votes](docs/votes.md), [NOX, voting power and Nil Pro](docs/nox-and-nil-pro.md), [Proof of work](docs/proof-of-work.md) |
 | Sharing and AI | [Sharing and guests](docs/sharing-and-guests.md), [AI assistants](docs/ai-assistants.md), [AI agents](docs/ai-agents.md) |
 | Your data and your server | [Backups and moving](docs/backups-and-moving.md), [Self-hosting](docs/self-hosting.md), [Hosted Nil](docs/hosted.md), [Production deployment](docs/deploy.md), [Tor onion service](docs/tor.md), [Development](docs/development.md) |
