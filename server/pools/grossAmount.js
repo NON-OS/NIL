@@ -6,8 +6,10 @@ const BPS = 10_000n;
 // Nil asked for.
 export default function grossAmount(net, bps) {
   if (net <= 0n || bps < 0n || bps >= BPS) throw new Error('grossAmount needs a positive amount and a fee under 100%');
+  const arrives = (gross) => gross - (gross * bps) / BPS;
+  // the estimate lands within a unit or two; step to the least gross that delivers `net`
   let gross = (net * BPS + (BPS - bps) - 1n) / (BPS - bps);
-  while (gross - (gross * bps) / BPS > net) gross -= 1n;
-  while (gross - (gross * bps) / BPS < net) gross += 1n;
+  while (gross > net && arrives(gross - 1n) >= net) gross -= 1n;
+  while (arrives(gross) < net) gross += 1n;
   return gross;
 }

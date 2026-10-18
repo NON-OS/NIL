@@ -64,6 +64,8 @@ export default function mockChain() {
   const pairs = new Map();
   const feeds = new Map();
   const failing = new Set();
+  // fixed eth_call answers by `${to}:${data}`, for contracts the helpers above don't model
+  const answers = new Map();
   // requests the node refuses outright, as [match(method, params), { status, error }]
   const faults = [];
   // every call the server made, in order, so tests can check what the node got to see and when
@@ -93,6 +95,7 @@ export default function mockChain() {
     const contract = to?.toLowerCase();
     const holder = `0x${data.slice(-40)}`;
     if (failing.has(contract)) throw new Error('reverted');
+    if (answers.has(`${contract}:${data.toLowerCase()}`)) return answers.get(`${contract}:${data.toLowerCase()}`);
     const pool = pools.get(contract);
     if (pool) {
       if (pool.fail) throw new Error('OLD');
@@ -136,7 +139,8 @@ export default function mockChain() {
       if (r.status !== '0x1' || r.blockNumber < from || r.blockNumber > to || r.blockNumber > block) continue;
       receiptOut(hash, r).logs.forEach((log) => {
         if (address && log.address.toLowerCase() !== address.toLowerCase()) return;
-        if (topics.some((t, i) => t !== null && t !== undefined && log.topics[i]?.toLowerCase() !== t.toLowerCase())) return;
+        const fits = (t, i) => t === null || t === undefined || [t].flat().some((one) => log.topics[i]?.toLowerCase() === one.toLowerCase());
+        if (!topics.every(fits)) return;
         out.push(log);
       });
     }
@@ -274,6 +278,12 @@ export default function mockChain() {
     // Records a mined ERC-20 Transfer, `depth` blocks below the current head (1 = the head).
     addTransfer({ hash, token, from, to, value, status = '0x1', depth = 6 }) {
       receipts.set(hash.toLowerCase(), { status, blockNumber: block - depth + 1, logs: [transferLog({ token, from, to, value })] });
+    },
+    // A contract call that always answers `result` (hex), whatever the block.
+    answer: (to, data, result) => answers.set(`${to.toLowerCase()}:${data.toLowerCase()}`, result),
+    // A mined transaction with these raw logs ({ address, topics, data }), `depth` blocks down.
+    addLogs({ hash, logs: raw, status = '0x1', depth = 6 }) {
+      receipts.set(hash.toLowerCase(), { status, blockNumber: block - depth + 1, logs: raw });
     },
     // One transaction with several transfers in it.
     addTransfers({ hash, transfers, status = '0x1', depth = 6 }) {
