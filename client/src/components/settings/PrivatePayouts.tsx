@@ -1,25 +1,32 @@
 import { useState } from 'react';
 import { EyeOff } from 'lucide-react';
 import Spinner from '../ui/Spinner';
+import StealthRegistry from './StealthRegistry';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import stealth from '../../actions/stealth';
 import HelpLink from '../help/HelpLink';
+import type RegistryEntry from '../../types/RegistryEntry';
 
 // Opt-in: bounties paid to you land on a fresh one-time address every time, instead of the
 // wallet that signs you in, so nobody watching the chain can add up what you earn.
 export default function PrivatePayouts() {
-  const on = useStore((s) => Boolean(s.me?.stealthMeta));
+  const meta = useStore((s) => s.me?.stealthMeta ?? null);
   const chain = useStore((s) => Boolean(s.stealth));
   const [busy, setBusy] = useState(false);
+  const [registered, setRegistered] = useState<RegistryEntry | null>(null);
   if (!chain) return null;
+  const on = Boolean(meta);
 
   const toggle = async () => {
     setBusy(true);
     try {
       if (on) await stealth.disable();
       else await stealth.enable();
-      toast.show(on ? 'Private payouts off. New bounties go to your sign-in wallet.' : 'Private payouts on. Each bounty now lands on its own one-time address.', { tone: 'success' });
+      if (!on) toast.show('Private payouts on. Each bounty now lands on its own one-time address.', { tone: 'success' });
+      // the registry entry outlives the switch: payers who look it up still pay privately
+      else if (registered?.state === 'found') toast.show('Private payouts off in Nil. Your meta-address stays in the public registry, so payers who look it up still pay you privately.', { tone: 'success', timeout: 8000 });
+      else toast.show('Private payouts off. New bounties go to your sign-in wallet.', { tone: 'success' });
     } catch (err) {
       toast.error(err);
     } finally {
@@ -46,6 +53,7 @@ export default function PrivatePayouts() {
           {busy ? <Spinner size={16} /> : <button type="button" className="toggle" role="switch" aria-checked={on} onClick={toggle} aria-label="Receive bounties at one-time addresses" />}
         </label>
       </div>
+      {meta && <StealthRegistry metaAddress={meta} onRead={setRegistered} />}
     </section>
   );
 }

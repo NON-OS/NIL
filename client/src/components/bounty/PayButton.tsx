@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import { EyeOff, Wallet } from 'lucide-react';
-import useStore from '../../state/useStore';
+import usePayeeStealth from '../../hooks/usePayeeStealth';
 import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import bounties from '../../actions/bounties';
 import tokenAmount from '../../lib/tokenAmount';
+import payoutNote from '../../lib/stealth/payoutNote';
 import type Task from '../../types/Task';
 
 const OUTCOME: Record<string, string> = {
@@ -17,12 +18,13 @@ const OUTCOME: Record<string, string> = {
 
 export default function PayButton({ task, name, primary = true, onDone }: { task: Task; name: string; primary?: boolean; onDone?: () => void }) {
   const [busy, setBusy] = useState(false);
-  const privately = useStore((s) => Boolean(task.assigneeId && s.users[task.assigneeId]?.stealthMeta && s.stealth));
+  const stealth = usePayeeStealth(task.assigneeId);
+  const privately = Boolean(stealth.metaAddress);
 
   const pay = async () => {
     setBusy(true);
     try {
-      const payment = await bounties.pay(task);
+      const payment = await bounties.pay(task, stealth.metaAddress);
       if (payment.status === 'failed') toast.show(payment.problem ?? 'That payment couldn’t be verified.', { tone: 'error', timeout: 9000 });
       else toast.show(OUTCOME[payment.state] ?? 'Recorded.', { tone: 'success' });
       onDone?.();
@@ -34,8 +36,8 @@ export default function PayButton({ task, name, primary = true, onDone }: { task
   };
 
   return (
-    <button type="button" className={primary ? 'btn btn-primary' : 'btn'} onClick={pay} disabled={busy}>
-      {busy ? <Spinner size={14} /> : privately ? <EyeOff /> : <Wallet />} {task.bountyState === 'underpaid' ? 'Pay the rest' : `Pay ${tokenAmount(task.bounty!, task.bountyToken)}`} {privately ? 'privately ' : ''}to {name}
+    <button type="button" className={primary ? 'btn btn-primary' : 'btn'} onClick={pay} disabled={busy || stealth.loading} title={payoutNote(name, stealth) ?? undefined}>
+      {busy || stealth.loading ? <Spinner size={14} /> : privately ? <EyeOff /> : <Wallet />} {task.bountyState === 'underpaid' ? 'Pay the rest' : `Pay ${tokenAmount(task.bounty!, task.bountyToken)}`} {privately ? 'privately ' : ''}to {name}
     </button>
   );
 }

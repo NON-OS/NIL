@@ -28,6 +28,8 @@ The team sees your name, your pitch and your wallet address. A wallet can apply 
 
 If the team accepts you, sign in on that server with the same wallet. Until then, signing in shows "Your bounty application is still waiting for the team".
 
+To be paid privately, publish a stealth meta-address for that wallet in the public registry (ERC-6538) before you're paid, with a wallet app that supports stealth addresses. The team's admin then pays you at a fresh one-time address only your keys can open, and that app finds the payout from its announcement. See [Private payouts](private-payouts.md#publish-your-meta-address-in-the-registry).
+
 ## Review applications
 
 Admins get an Inbox notification for each application. Applications appear under the bounty in the task's panel, with the applicant's name, wallet address and pitch.
@@ -38,4 +40,4 @@ Click **Accept** to take someone on. Nil then:
 - assigns them the task,
 - closes the other applications.
 
-The new guest sees only that task, not its project or anything else in the workspace. When the work is done, pay them like any other bounty; see [Bounties and payouts](bounties-and-payouts.md). The × next to an application declines it.
+The new guest sees only that task, not its project or anything else in the workspace. When the work is done, pay them like any other bounty; see [Bounties and payouts](bounties-and-payouts.md). If their wallet has a meta-address in the public stealth registry, the pay button pays them privately, at a fresh one-time address only they can open. If it has none, the bounty goes to their wallet and the bounty panel says why. The × next to an application declines it.

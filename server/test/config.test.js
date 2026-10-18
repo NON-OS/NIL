@@ -127,6 +127,22 @@ test('on a chain other than mainnet every contract has to be named', () => {
   assert.deepEqual(load({ NOX_CHAIN_ID: '11155111', NOX_RPC_URL: 'off' }).warnings, []);
 });
 
+test('the stealth registry is the ERC-6538 singleton on every chain unless turned off', () => {
+  const REGISTRY = '0x6538e6bf4b0ebd30a8ea093027ac2422ce5d6538';
+  const plain = load({ STEALTH_REGISTRY: '', STEALTH_REGISTRY_CACHE_SECONDS: '' });
+  assert.deepEqual(plain.warnings, []);
+  assert.deepEqual([plain.config.stealth.registry, plain.config.stealth.registryCacheMs], [REGISTRY, 300_000]);
+  assert.equal(load({ STEALTH_REGISTRY: '0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538' }).config.stealth.registry, REGISTRY);
+  assert.equal(load({ STEALTH_REGISTRY: 'off' }).config.stealth.registry, null);
+  const typo = load({ STEALTH_REGISTRY: '0x6538E6bf4B0eBd30A8Ea093027Ac2422ce5d6538'.replace('E6', 'e6'), STEALTH_REGISTRY_CACHE_SECONDS: '0' });
+  assert.equal(typo.config.stealth.registry, REGISTRY);
+  assert.equal(typo.warnings.length, 2);
+  assert.match(typo.warnings[0], /STEALTH_REGISTRY isn’t a valid Ethereum address .*Using the default/);
+  assert.equal(typo.config.stealth.registryCacheMs, 300_000);
+  const sepolia = load({ NOX_CHAIN_ID: '11155111', NOX_TOKEN: '0x1111111111111111111111111111111111111111', NOX_STAKING: 'off', ZSP_CONTRACT: 'off', REWARD_TOKENS: 'none' });
+  assert.equal(sepolia.config.stealth.registry, REGISTRY);
+});
+
 test('settings that no longer do anything say so', () => {
   const { warnings } = load({ NOX_CONFIRMATIONS: '0' });
   assert.match(warnings[0], /NOX_CONFIRMATIONS is no longer read/);
