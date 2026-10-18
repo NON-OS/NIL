@@ -43,7 +43,7 @@ If the hash you built matches the published one, the published manifest is an ho
 
 - What other people were sent. The check proves what the server sent to the check, at the moment it ran. A server set on harm could send the real app to the check and a changed one to a particular person, or only for an hour. Running the check often, from different networks and over Tor (prefix the command with `torsocks`), makes that harder to hide. Catching it for certain takes a check on every page load inside the browser itself, which Nil doesn't have yet.
 - What the server program does. The check covers the web app because that's the part that holds your keys. The server never gets them, and what it can still see is listed in the [privacy model](privacy-model.md).
-- What an open tab is running. A page keeps the code it loaded until you reload it.
+- What your browser runs from its own storage. A page keeps the code it loaded until you reload it, and the service worker also keeps the app's files so it opens offline. It keeps a file only if its SHA-256 matches the build's own list (`build.json`, which the check above covers too), fetches that list fresh on every page load, and drops what no longer matches, so a file changed once on the way doesn't stay. A server that sends a changed list together with changed files is believed, though: catching that is what the check is for.
 
 ## For maintainers: publishing a release
 

@@ -128,7 +128,7 @@ function getWithHost(base, path, host) {
     http.get(`${base}${path}`, { headers: { host } }, (res) => {
       let text = '';
       res.on('data', (chunk) => (text += chunk));
-      res.on('end', () => resolve({ status: res.statusCode, text }));
+      res.on('end', () => resolve({ status: res.statusCode, text, notice: res.headers['x-nil-notice'] }));
     }).on('error', reject);
   });
 }
@@ -190,6 +190,12 @@ test('stopped and suspended workspaces get a plain notice; the ask endpoint only
     const notice = await getWithHost(site.base, '/unavailable', 'paused.nil.test');
     assert.equal(notice.status, 503);
     assert.match(notice.text, /This workspace is paused/);
+    assert.equal(notice.notice, 'suspended', 'the service worker shows it instead of its stored copy');
+    ctx.store.workspaces.transition(ctx.store.workspaces.byName('paused').id, ['suspended'], 'starting');
+    const starting = await getWithHost(site.base, '/unavailable', 'paused.nil.test');
+    assert.match(starting.text, /starting/);
+    assert.equal(starting.notice, undefined, 'a restart leaves the stored app in place');
+    ctx.store.workspaces.transition(ctx.store.workspaces.byName('paused').id, ['starting'], 'suspended');
     assert.equal((await getWithHost(site.base, '/unavailable', 'ghost.nil.test')).status, 404);
 
     const ask = async (domain) => (await fetch(`${internal.base}/internal/tls?domain=${encodeURIComponent(domain)}`)).status;

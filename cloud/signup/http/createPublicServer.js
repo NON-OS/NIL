@@ -52,7 +52,10 @@ export default function createPublicServer(ctx, flow) {
     if (!workspace) return html(res, 404, pages.unavailable('There’s no workspace here', `Nothing is hosted at ${host || 'this address'}.`));
     const automatic = workspace.state === 'suspended' && REASONS[workspace.suspendReason]?.(workspace, ctx.config);
     const [title, detail] = automatic || NOTICES[workspace.state] || (states.routed.includes(workspace.state) ? NOTICES.starting : ['This workspace isn’t available', 'Try again later.']);
-    html(res, 503, pages.unavailable(title, detail), { 'retry-after': '60' });
+    // A paused or deleting workspace says so in a header, and the app's service worker then shows
+    // this notice instead of the copy of the app it keeps for when the server is restarting.
+    const paused = states.paused.includes(workspace.state) ? { 'x-nil-notice': workspace.state } : {};
+    html(res, 503, pages.unavailable(title, detail), { 'retry-after': '60', ...paused });
   }
 
   async function handle(req, res) {
