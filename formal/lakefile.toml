@@ -1,0 +1,9 @@
+name = "nil"
+version = "0.1.0"
+defaultTargets = ["Nil", "Axioms"]
+
+[[lean_lib]]
+name = "Nil"
+
+[[lean_lib]]
+name = "Axioms"
