@@ -167,6 +167,8 @@ router.post(
   route(async (req) => {
     const row = sql.get('SELECT * FROM payments WHERE id = ?', req.params.id);
     if (!row?.stealth_ephemeral) throw HttpError.notFound('That private payout');
+    // announcing from a team wallet would link it to a payout the pool kept apart from it
+    if (row.via === 'pool') throw HttpError.badRequest('A payout from the team’s pool isn’t announced, since the announcement would come from a team wallet.');
     const hash = String(req.body?.txHash ?? '').trim().toLowerCase();
     if (!TX.test(hash)) throw HttpError.badRequest('That doesn’t look like a transaction hash.');
     if (!row.announced_at) sql.run('UPDATE payments SET announce_tx = ? WHERE id = ?', hash, row.id);

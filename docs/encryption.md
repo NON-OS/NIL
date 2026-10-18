@@ -59,6 +59,12 @@ The server writes the messages for signing in, for signed ballots and for applyi
 - Browsers hand a doc to newcomers only when its version is signed for the whole team, whatever the server lists, and save or share a doc only under the key its version checked out with.
 - Each browser remembers the highest version of each doc it has verified and warns when the server serves an older one.
 
+## The team pool key
+
+- On a server with [pool payouts](private-payouts.md#pay-from-the-teams-pool) on, the team's Privacy Pools key is 16 random bytes made in an admin's browser and shown as a 12-word BIP-39 phrase, the format the Privacy Pools SDK takes. Every deposit's and withdrawal's secrets come from it as the SDK derives them, so the key and the chain alone recover the team's deposits.
+- The key is sealed to each admin's X25519 key like a doc key, with its own label, and only to admins whose key the sealing admin confirmed. The server keeps the sealed copies and a public tag (HKDF-SHA256 of the key) that lets a browser check it opened the team's current key. It hands a sealed copy only to someone who is an admin now.
+- The team's notes are encrypted with AES-256-GCM under a key derived from the pool key, bound to the tag, and saved over the revision they started from, so two admins can't overwrite each other.
+
 ## Private tasks
 
 - Same scheme, with one key per task sealed to its creator and its assignee. The title, notes and checklist are each signed by whoever last saved them (`nil/task-words/v2`), together with the revision, the time, the creator and assignee the task is for, and a SHA-256 hash of the task key.
