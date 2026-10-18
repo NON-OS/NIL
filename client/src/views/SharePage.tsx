@@ -8,6 +8,7 @@ import http from '../api/http';
 import meta from '../lib/meta';
 import dates from '../lib/dates';
 import type Status from '../types/Status';
+import countOf from '../lib/countOf';
 
 type Line = { key: string; title: string; status: Status; due: string | null };
 type View =
@@ -48,7 +49,7 @@ export default function SharePage({ token }: { token: string }) {
             <span className="eyebrow">{view.workspace}</span>
             <h1 style={{ fontSize: 'var(--text-2xl)', fontWeight: 500, margin: '6px 0 4px' }}>{view.project.name}</h1>
             <p className="muted" style={{ marginBottom: 16 }}>
-              {view.counts.done} of {view.counts.total} tasks done
+              {view.counts.done} of {countOf(view.counts.total, 'task')} done
             </p>
             <div className="panel">{view.tasks.map(row)}</div>
           </>
@@ -61,7 +62,7 @@ export default function SharePage({ token }: { token: string }) {
             <p className="muted" style={{ marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
               <StatusIcon status={view.task.status} size={15} /> {meta.status[view.task.status]}
               {view.task.due && ` · due ${dates.short(view.task.due)}`}
-              {view.task.checklist.total > 0 && ` · ${view.task.checklist.done}/${view.task.checklist.total} steps`}
+              {view.task.checklist.total > 0 && ` · ${view.task.checklist.done}/${countOf(view.task.checklist.total, 'step')}`}
               {view.task.bounty && ` · ${view.task.bounty} bounty`}
             </p>
             {view.task.description && (

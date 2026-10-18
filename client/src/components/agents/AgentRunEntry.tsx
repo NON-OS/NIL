@@ -8,6 +8,7 @@ import useStore from '../../state/useStore';
 import dates from '../../lib/dates';
 import cx from '../../lib/cx';
 import type AgentRun from '../../types/AgentRun';
+import countOf from '../../lib/countOf';
 
 // A built-in agent's run in the task timeline: one line, with the full step log a click away.
 export default function AgentRunEntry({ run }: { run: AgentRun }) {
@@ -24,7 +25,7 @@ export default function AgentRunEntry({ run }: { run: AgentRun }) {
         <span className="agent-run-title">
           <strong>{agent?.name ?? 'An agent'}</strong> <AgentBadge /> {runStatus(run)}
           {actingFor && <span className="muted"> · for {actingFor.name}</span>}
-          <span className="muted"> · {run.stepCount} steps{tokens ? ` · ${tokens.toLocaleString()} tokens` : ''}</span>
+          <span className="muted"> · {countOf(run.stepCount, 'step')}{tokens ? ` · ${countOf(tokens, 'token')}` : ''}</span>
         </span>
         <time className="muted" title={dates.dateTime(run.createdAt)}>
           {dates.ago(run.createdAt)}

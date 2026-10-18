@@ -8,6 +8,7 @@ import creditBalance from './creditBalance.js';
 import priceBreakdown from './priceBreakdown.js';
 import acceptedTokens from './acceptedTokens.js';
 import usdToUnits from './usdToUnits.js';
+import countOf from '../lib/countOf.js';
 
 const DAY = 86_400_000;
 const FACE = 10n ** 18n;
@@ -32,7 +33,7 @@ export default async function quote({ kind = 'periods', periods = 1, people } = 
   const remainingMs = Math.max(0, (status.paidUntil ?? 0) - Date.now());
   if (kind === 'seats') {
     if (!remainingMs) throw HttpError.badRequest('Seats are added to paid time that is still running. Pay for a period instead.');
-    if (count <= Math.max(status.seatLimit ?? 0, status.freeSeats)) throw HttpError.badRequest(`Your plan already covers ${Math.max(status.seatLimit ?? 0, status.freeSeats)} people. Choose more to add seats.`);
+    if (count <= Math.max(status.seatLimit ?? 0, status.freeSeats)) throw HttpError.badRequest(`Your plan already covers ${countOf(Math.max(status.seatLimit ?? 0, status.freeSeats), 'person', 'people')}. Choose more to add seats.`);
   }
 
   const holdings = await adminHoldings();

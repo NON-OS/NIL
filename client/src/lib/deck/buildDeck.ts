@@ -1,6 +1,7 @@
 import logoPng from './logoPng';
 import type DeckFacts from '../../types/DeckFacts';
 import type DeckNarrative from '../../types/DeckNarrative';
+import countOf from '../../lib/countOf';
 
 // NØNOS brand on a slide: white ground, ink type, cyan as a fill, brand type cyan for small
 // numbers and rules, Geist and JetBrains Mono (PowerPoint substitutes if they're missing).
@@ -83,8 +84,7 @@ export default async function buildDeck(facts: DeckFacts, story: DeckNarrative |
     glance.addText(label.toUpperCase(), { x: x + 0.2, y: 2.12, w: 2.5, h: 0.3, fontFace: MONO, fontSize: 10, color: i === 0 ? INK : MUTED, charSpacing: 2 });
     glance.addText(value, { x: x + 0.2, y: 2.45, w: 2.5, h: 0.9, fontFace: SANS, fontSize: 40, color: INK });
   });
-  const plural = (count: number, word: string) => `${count} ${word}${count === 1 ? '' : 's'}`;
-  const summary = story?.summary || `${plural(facts.counts.shipped, 'task')} shipped in the last ${facts.period.days} days, ${facts.counts.active} in progress and ${facts.counts.overdue} overdue.`;
+  const summary = story?.summary || `${countOf(facts.counts.shipped, 'task')} shipped in the last ${facts.period.days} days, ${facts.counts.active} in progress and ${facts.counts.overdue} overdue.`;
   glance.addText(summary, { x: 0.6, y: 3.95, w: 12.1, h: 1.2, fontFace: SANS, fontSize: 18, color: INK, valign: 'top' });
   if (story?.highlights.length) bullets(glance, story.highlights.slice(0, 4), { y: 5.05, h: 1.8 });
   glance.addNotes(note('glance', summary));
@@ -95,7 +95,7 @@ export default async function buildDeck(facts: DeckFacts, story: DeckNarrative |
 
   const active = frame(pptx, ++n, 'In progress', 'What the team is on now');
   list(active, facts.active, { empty: 'Nothing is in progress right now.' });
-  active.addNotes(note('active', `${facts.counts.active} tasks are in progress or in review.`));
+  active.addNotes(note('active', `${countOf(facts.counts.active, 'task')} in progress or in review.`));
 
   if (facts.goals.length) {
     const goals = frame(pptx, ++n, 'Goals', 'Progress towards the goals');

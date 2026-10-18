@@ -2,6 +2,7 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import agentScope from './agentScope.js';
 import NeedsApproval from './NeedsApproval.js';
+import countOf from '../lib/countOf.js';
 
 const minutes = (ms) => Math.round(ms / 60_000);
 
@@ -49,7 +50,7 @@ export default function toolGuard(agent, { approved = false } = {}) {
       const since = Date.now() - config.agents.bulkWindowMs;
       const recent = new Set(sql.all('SELECT DISTINCT task_id FROM agent_writes WHERE agent_id = ? AND created_at > ?', agent.id, since).map((r) => r.task_id));
       if ((!taskId || !recent.has(taskId)) && recent.size >= config.agents.bulkLimit) {
-        note(`changes more than ${config.agents.bulkLimit} tasks within ${minutes(config.agents.bulkWindowMs)} minutes`);
+        note(`changes more than ${countOf(config.agents.bulkLimit, 'task')} within ${countOf(minutes(config.agents.bulkWindowMs), 'minute')}`);
       }
     },
 

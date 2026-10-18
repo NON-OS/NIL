@@ -5,10 +5,10 @@ import foldText from '../../lib/foldText';
 import guessMatch from '../../lib/import/guessMatch';
 import type ImportFile from '../../types/ImportFile';
 import type ImportPlan from '../../types/ImportPlan';
+import countOf from '../../lib/countOf';
 
 const SOURCE = { todoist: 'Todoist', trello: 'Trello', csv: 'CSV' };
 const NEW = '+new';
-const plural = (n: number, word: string) => `${n.toLocaleString()} ${word}${n === 1 ? '' : 's'}`;
 const unique = (values: (string | null)[]) => [...new Set(values.filter((v): v is string => Boolean(v)))];
 
 // What's in the file, and where it goes: each person and project named in it is matched to
@@ -49,8 +49,8 @@ export default function ImportReview({ file, onStart, onCancel }: { file: Import
   return (
     <div className="import-step">
       <p>
-        <strong>{file.name}</strong> from {SOURCE[file.source]}: {[plural(file.items.length, 'task'), comments && plural(comments, 'comment'), names.projects.length && plural(names.projects.length, 'project'), names.people.length && plural(names.people.length, 'person')].filter(Boolean).join(' · ')}.
-        {file.skipped > 0 && ` ${plural(file.skipped, 'row')} that weren’t open tasks are left out.`}
+        <strong>{file.name}</strong> from {SOURCE[file.source]}: {[countOf(file.items.length, 'task'), comments && countOf(comments, 'comment'), names.projects.length && countOf(names.projects.length, 'project'), names.people.length && countOf(names.people.length, 'person', 'people')].filter(Boolean).join(' · ')}.
+        {file.skipped > 0 && ` ${countOf(file.skipped, 'row')} that weren’t open tasks are left out.`}
       </p>
 
       <ImportPreview plan={plan} />
@@ -112,7 +112,7 @@ export default function ImportReview({ file, onStart, onCancel }: { file: Import
 
       <div className="settings-row">
         <button type="button" className="btn btn-primary" onClick={() => onStart(plan)}>
-          Import {plural(file.items.length, 'task')}
+          Import {countOf(file.items.length, 'task')}
         </button>
         <button type="button" className="btn btn-ghost" onClick={onCancel}>
           Pick another file

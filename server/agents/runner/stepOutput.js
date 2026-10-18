@@ -1,11 +1,10 @@
 import tools from '../../mcp/tools.js';
+import countOf from '../../lib/countOf.js';
 
 const reads = new Set(tools.filter((t) => !t.write).map((t) => t.name));
 const TASK_KEY = /^[A-Za-z0-9]+-\d+$/;
 const COUNTED = [['tasks', 'task'], ['items', 'notification'], ['comments', 'comment']];
 const KEPT = 'Only this summary is kept in the log; the agent got the whole answer.';
-
-const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
 // Task keys an answer names, wherever they sit in it.
 function taskKeys(value, found = new Set()) {
@@ -26,7 +25,7 @@ function taskKeys(value, found = new Set()) {
 export default function stepOutput(name, out, text) {
   if (!out.ok || !reads.has(name)) return text;
   const keys = [...taskKeys(out.data)];
-  const counts = COUNTED.filter(([field]) => Array.isArray(out.data?.[field])).map(([field, word]) => plural(out.data[field].length, word));
+  const counts = COUNTED.filter(([field]) => Array.isArray(out.data?.[field])).map(([field, word]) => countOf(out.data[field].length, word));
   if (!keys.length && !counts.length) return text;
   const summary = keys.length ? `${keys.join(', ')}${counts.length ? ` (${counts.join(', ')})` : ''}` : counts.join(', ');
   return `${summary}\n${KEPT}`;

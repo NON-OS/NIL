@@ -13,6 +13,7 @@ import pendingBody from '../pendingBody.js';
 import sendError from './sendError.js';
 import log from '../../lib/log.js';
 import jsonDepthLimit from '../../lib/jsonDepthLimit.js';
+import countOf from '../../lib/countOf.js';
 
 const router = express.Router();
 const serverUrl = (req) => `${config.appUrl ?? `${req.protocol}://${req.get('host')}`}/api/agent/v1`;
@@ -35,7 +36,7 @@ router.use((req, res, next) => {
   res.setHeader('RateLimit-Reset', rate.resetSeconds);
   if (!rate.allowed) {
     res.setHeader('Retry-After', rate.resetSeconds);
-    return sendError(res, 429, 'rate_limited', `Over the limit of ${rate.limit} requests a minute. Try again in ${rate.resetSeconds} s.`);
+    return sendError(res, 429, 'rate_limited', `Over the limit of ${countOf(rate.limit, 'request')} a minute. Try again in ${rate.resetSeconds} s.`);
   }
   req.principal = principal;
   next();

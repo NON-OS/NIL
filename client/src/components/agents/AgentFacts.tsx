@@ -1,6 +1,7 @@
 import useStore from '../../state/useStore';
 import meta from '../../lib/meta';
 import type Agent from '../../types/Agent';
+import countOf from '../../lib/countOf';
 
 const RUNNER = { external: 'External, over MCP or the REST API', anthropic: 'Built in, on Anthropic', openai: 'Built in, on an OpenAI-compatible endpoint' };
 
@@ -33,7 +34,7 @@ export default function AgentFacts({ agent }: { agent: Agent }) {
           <dd>{agent.doneStatus === 'none' ? 'Leaves the status' : `Moves assigned work to ${meta.status[agent.doneStatus ?? 'in_review']}`}</dd>
           <dt>Limits</dt>
           <dd>
-            {agent.limits.maxSteps} steps and {agent.limits.maxRunTokens.toLocaleString()} tokens per run, {agent.limits.maxDayTokens.toLocaleString()} tokens a day
+            {countOf(agent.limits.maxSteps, 'step')} and {countOf(agent.limits.maxRunTokens, 'token')} per run, {countOf(agent.limits.maxDayTokens, 'token')} a day
           </dd>
           {agent.price && (
             <>
@@ -48,7 +49,7 @@ export default function AgentFacts({ agent }: { agent: Agent }) {
       {!builtIn && agent.limits && (
         <>
           <dt>Rate limit</dt>
-          <dd>{agent.limits.rateLimit} requests a minute</dd>
+          <dd>{countOf(agent.limits.rateLimit, 'request')} a minute</dd>
         </>
       )}
       {agent.instructions && (
