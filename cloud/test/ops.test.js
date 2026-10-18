@@ -6,6 +6,8 @@ import provisionWorkspace from '../provisioning/provisionWorkspace.js';
 import createHealthCheck from '../ops/createHealthCheck.js';
 import checkClaims from '../ops/checkClaims.js';
 import collectUsage from '../ops/collectUsage.js';
+import checkBilling from '../ops/checkBilling.js';
+import readHealthReport from '../runtime/readHealthReport.js';
 import checkHost from '../ops/checkHost.js';
 import nextDailyRun from '../ops/nextDailyRun.js';
 import nameStatus from '../names/nameStatus.js';
@@ -81,6 +83,18 @@ test('usage records disk and the member count the app reports, and flags plans o
   assert.equal(usage.members, 4);
   assert.ok(usage.diskBytes > 4096);
   assert.equal(ctx.alerts.at(-1).event, 'workspace.over_disk');
+});
+
+test('a workspace whose billing watchdog reports a stall alerts the operator in plain words', async () => {
+  const ctx = testContext();
+  const ws = await running(ctx);
+  await checkBilling(ctx);
+  assert.equal(ctx.alerts.length, 0);
+  ctx.driver.containers.get(ws.id).report = { billingStalled: readHealthReport(JSON.stringify({ ok: true, billing: { stalled: ['watch_failing', 'Bad Code!', 'bounty_pending'] } })).billingStalled };
+  assert.deepEqual(ctx.driver.containers.get(ws.id).report.billingStalled, ['watch_failing', 'bounty_pending'], 'only short codes from inside the workspace are kept');
+  await checkBilling(ctx);
+  assert.equal(ctx.alerts.at(-1).event, 'workspace.billing_stalled');
+  assert.match(ctx.alerts.at(-1).message, /payment checks haven’t got through[\s\S]*bounty payment/);
 });
 
 test('host checks catch a degraded RAID mirror', async () => {

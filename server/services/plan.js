@@ -9,7 +9,9 @@ const DAY = 86_400_000;
 
 // Where the workspace's Nil Pro stands. Pro comes from paid time, the trial, or a Zero-State
 // Pass held by an admin; "unlocked" is what gates the paid tools: always in community mode,
-// and otherwise while Pro is active or in the grace period after it.
+// and otherwise while Pro is active or in the grace period after paid time or the trial. Pro by
+// pass has no grace period: it lasts exactly as long as the checks keep finding a pass, so a pass
+// held for a moment can't buy days of Pro.
 const plan = {
   status(now = Date.now()) {
     const enforced = Boolean(config.plan.treasury && config.nox.enabled);
@@ -21,7 +23,7 @@ const plan = {
 
     const sources = [
       { source: 'paid', until: paidUntil, lockAt: paidUntil === null ? null : paidUntil + grace },
-      { source: 'zsp', until: zspUntil, lockAt: zspUntil === null ? null : zspUntil + grace },
+      { source: 'zsp', until: zspUntil, lockAt: zspUntil },
       { source: 'trial', until: trial?.until ?? null, lockAt: trial?.lockAt ?? null },
     ].filter((s) => s.until !== null);
     const activeUntil = sources.length ? Math.max(...sources.map((s) => s.until)) : null;
@@ -64,8 +66,9 @@ const plan = {
   },
 
   // How many people (guests aside) the workspace may have right now. No cap while the trial or
-  // a Zero-State Pass keeps it unlocked; the seats paid for while paid time does; the free
-  // seats once nothing does. Null in community mode.
+  // a Zero-State Pass keeps it unlocked (a pass only while it is found, since it has no grace);
+  // the seats paid for while paid time does; the free seats once nothing does. Null in
+  // community mode.
   seatLimit(sources, now) {
     if (!(config.plan.treasury && config.nox.enabled)) return null;
     const unlocking = sources.filter((s) => s.lockAt > now);

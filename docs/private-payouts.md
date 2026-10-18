@@ -10,7 +10,7 @@ On Ethereum, anyone can look up a wallet and add up everything it has received. 
 
 Your payout keys come from the same personal keys as your encrypted docs, so any wallet you've added to your keys opens them, and your [recovery kit](signing-in.md#keep-a-recovery-kit) holds them too. They're worked out in your browser and stay in that tab. The server stores only your public "meta-address", which admins and you can see. The section only appears when the server has on-chain features turned on.
 
-Switch it off to have new bounties paid to your sign-in wallet again. Payouts you already received stay where they are. If you published your meta-address in the public registry (see below), switching off here doesn't take it out of the registry, so admins who look up your wallet still pay you privately there.
+Switch it off to have new bounties paid to your sign-in wallet again. Payouts you already received stay where they are. Admins in this workspace then pay you publicly, even if your wallet has a meta-address in the public registry. Switching off here doesn't take it out of the registry, so payers outside Nil can still find it.
 
 ## Publish your meta-address in the registry
 
@@ -36,7 +36,7 @@ The admin's pay button says something like "Pay 250 NOX privately to Ana". The a
 
 Where the admin's wallet supports it, all three go out as one transaction that either fully happens or doesn't happen at all. Otherwise the wallet asks for each one in turn. If the announcement doesn't go out, the payment shows as "private, unannounced" in the Payments list, and the admin can send it later with **Announce**.
 
-If you haven't turned private payouts on here, the admin's pay button looks up your wallet in the public registry instead. That's how someone who applied on the [public bounty board](public-bounty-board.md) can be paid privately. If the registry has a valid meta-address for your wallet, the payout works exactly as above, worked out from that meta-address. If it has nothing, or something that isn't a valid meta-address, the bounty goes to your wallet, and the admin sees why it can't be private.
+For someone who has no encryption keys in this workspace, the admin's pay button looks up their wallet in the public registry instead. That's how someone who applied on the [public bounty board](public-bounty-board.md) can be paid privately. People who do have keys here are paid privately only at the meta-address they turned on here, never at a registry entry, which could be left over from before a key reset and point at keys they no longer have. If the registry has a valid meta-address for your wallet, the payout works exactly as above, worked out from that meta-address. If it has nothing, or something that isn't a valid meta-address, the bounty goes to your wallet, and the admin sees why it can't be private.
 
 The admin's browser tells Nil the one-time address, but never the throwaway key it was made with. Before counting the payment, the server checks that the money really went to that address. It can't tell a one-time address from any other, so your browser checks that the address is yours before it moves the payout or shows its key.
 
@@ -54,7 +54,7 @@ A payout sent to a meta-address that another app published for your wallet is li
 
 ## If you start over with new keys
 
-Each payout belongs to the keys that were yours when it was paid. If you lose every wallet that holds your keys, your [recovery kit](signing-in.md#keep-a-recovery-kit) brings those keys back, payouts included. If you start over with new keys instead, Nil can't open payouts sent to the old ones and says "Private payouts were turned on with keys from before your last key reset." Switch private payouts off and on again to receive new payouts at your new keys. The older payouts stay out of reach unless you copied their keys with **Key** beforehand. If you receive private payouts, keep a recovery kit.
+Each payout belongs to the keys that were yours when it was paid. If you lose every wallet that holds your keys, your [recovery kit](signing-in.md#keep-a-recovery-kit) brings those keys back, payouts included. If you start over with new keys instead, Nil can't open payouts sent to the old ones. Starting over also switches private payouts off, so nobody pays you at keys you no longer have: new bounties go to your sign-in wallet until you switch private payouts on again with your new keys. The older payouts stay out of reach unless you copied their keys with **Key** beforehand. If you receive private payouts, keep a recovery kit.
 
 ## What stays visible
 

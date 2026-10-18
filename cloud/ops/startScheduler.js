@@ -1,6 +1,7 @@
 import backupAll from '../backups/backupAll.js';
 import collectUsage from './collectUsage.js';
 import checkClaims from './checkClaims.js';
+import checkBilling from './checkBilling.js';
 import checkHost from './checkHost.js';
 import housekeeping from './housekeeping.js';
 import createHealthCheck from './createHealthCheck.js';
@@ -40,6 +41,7 @@ export default function startScheduler(ctx) {
   const usage = every(ctx.config.usage.intervalMin * 60_000, job('usage', async () => {
     await collectUsage(ctx);
     await checkClaims(ctx);
+    await checkBilling(ctx);
   }));
   const hourly = every(3_600_000, job('housekeeping', () => housekeeping(ctx)));
   // a first pass soon after start, without waiting a full interval

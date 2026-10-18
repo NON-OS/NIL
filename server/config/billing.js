@@ -39,6 +39,11 @@ export default Object.freeze({
   slot,
   invoiceKey: invoiceKey || null,
   logBlocks: envNumber('PLAN_LOG_BLOCKS', 2000, { min: 10 }),
+  // the reconciliation: how often, how many recent blocks it reads again, and for how long it
+  // keeps looking for payments that were given up on
+  reconcileMinutes: envNumber('PLAN_RECONCILE_MINUTES', 60, { min: 5 }),
+  reconcileBlocks: envNumber('PLAN_RECONCILE_BLOCKS', 7200, { min: 100 }),
+  reconcileDays: envNumber('PLAN_RECONCILE_DAYS', 30, { min: 1, max: 365 }),
   treasuryName: (env.PLAN_TREASURY_NAME ?? '').trim().slice(0, 60) || 'the treasury',
   remindDays: Object.freeze([...new Set((env.PLAN_REMIND_DAYS || '7,1').split(',').map((d) => Number(d.trim())).filter((d) => Number.isInteger(d) && d > 0))].sort((a, b) => b - a)),
   proForZsp: envFlag('PRO_FOR_ZSP', true),

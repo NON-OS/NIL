@@ -209,7 +209,7 @@ curl -sI https://nonos.example.com | grep -iE 'strict-transport|content-security
 
 The first should answer `200`. The second should show both headers. If `Strict-Transport-Security` is missing, `TRUST_PROXY` isn't set, or doesn't match the address Caddy connects from.
 
-`/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, and whether the Ethereum node answered the last time it was asked. It holds nothing about the workspace or its people, so it is safe to leave public.
+`/healthz` answers `503` when the database doesn't respond. Its body shows the version, the database schema, when each background job last succeeded and failed, whether the Ethereum node answered the last time it was asked, and the short code of any payment or check the billing watchdog found stalled (see [NOX and Nil Pro](nox-and-nil-pro.md#nothing-waits-for-a-person)). It holds nothing about the workspace or its people, so it is safe to leave public.
 
 The Nil container runs as an unprivileged user with a read-only root filesystem, no Linux capabilities and `no-new-privileges`. Only `/data` and `/tmp` are writable.
 

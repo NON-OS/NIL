@@ -24,8 +24,8 @@ export default function PrivatePayouts() {
       if (on) await stealth.disable();
       else await stealth.enable();
       if (!on) toast.show('Private payouts on. Each bounty now lands on its own one-time address.', { tone: 'success' });
-      // the registry entry outlives the switch: payers who look it up still pay privately
-      else if (registered?.state === 'found') toast.show('Private payouts off in Nil. Your meta-address stays in the public registry, so payers who look it up still pay you privately.', { tone: 'success', timeout: 8000 });
+      // the registry entry outlives the switch, but only payers outside Nil use it
+      else if (registered?.state === 'found') toast.show('Private payouts off. Bounties here go to your sign-in wallet. Your meta-address stays in the public registry for payers outside Nil.', { tone: 'success', timeout: 8000 });
       else toast.show('Private payouts off. New bounties go to your sign-in wallet.', { tone: 'success' });
     } catch (err) {
       toast.error(err);
