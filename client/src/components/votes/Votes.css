@@ -50,6 +50,28 @@
   white-space: pre-wrap;
 }
 
+/* said before the options of a signed vote, so nobody votes thinking it's secret */
+.proposal-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-2);
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.proposal-notice svg {
+  flex: none;
+  width: 15px;
+  height: 15px;
+  margin-top: 2px;
+  color: var(--muted);
+}
+
 .proposal-options {
   display: flex;
   flex-wrap: wrap;

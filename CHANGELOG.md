@@ -142,6 +142,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Changed
 
+- A signed vote says, above its options, that it isn't anonymous: your wallet signs your ballot and admins can see who voted for what. The new vote window says the same before you start one.
 - Every text and control meets WCAG AA contrast. Text fields, the comment box and switches have an edge that stands out by 3:1 instead of 1.5:1. Faint text is as dark as muted text, so it still reads on the greyest surfaces and on hover, warnings are slightly darker so they read on their own pale fill, and the numbers on the sign-in page are Deep Teal, since teal on Paper fell just short.
 - Toasts are read out by screen readers as they arrive, without taking focus. They stay up long enough to read, longer for longer messages, and pause while you hover over or focus them or while the tab is in the background. The × or Escape closes one, and focus goes back to where it was.
 - Every signed-in page has one main region, a Skip to content link as the first thing Tab reaches, and headings in order: the page title, then its sections and cards. Opening another section moves keyboard focus to the new page instead of leaving it behind in the sidebar. The task panel is no longer announced as a second page header.

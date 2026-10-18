@@ -85,6 +85,11 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
           </label>
           <HelpLink topic="votes" label="Which kind of vote to pick" newTab />
         </div>
+        {!form.anonymous && (
+          <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+            Each voter’s wallet signs their ballot. It isn’t secret: admins can see who voted for what, and the audit file lists every wallet with its choice. Turn on anonymous ballots when choices must stay private.
+          </p>
+        )}
         {form.anonymous && form.weighting === 'equal' && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
             Each ballot is a zero-knowledge proof (Semaphore) that some member voted, without saying who. Nobody can see who chose what, not even admins or this server, and each member still gets exactly one vote.

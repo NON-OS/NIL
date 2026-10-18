@@ -1,6 +1,6 @@
 import './Votes.css';
 import { useState } from 'react';
-import { Clock, Coins, Download, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
+import { Clock, Coins, Download, Eye, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
 import Meter from '../charts/Meter';
 import ConfirmButton from '../ui/ConfirmButton';
 import Spinner from '../ui/Spinner';
@@ -60,6 +60,11 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
 
       {proposal.encrypted ? <EncryptedBallot proposal={proposal} open={open} onChange={onChange} /> : proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
 
+      {open && !proposal.anonymous && (
+        <p className="proposal-notice" role="note">
+          <Eye aria-hidden="true" /> Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.
+        </p>
+      )}
       {open && !proposal.anonymous && (
         <div className="proposal-options" role="group" aria-label="Your vote">
           {proposal.options.map((option, i) => (

@@ -35,7 +35,7 @@ Click an option and sign the ballot in your wallet. The ballot must be signed by
 
 Smart wallets, passkey wallets like Coinbase Smart Wallet among them, can vote too. Their signature doesn't reveal who made it, so Nil asks the chain whether the wallet accepts it, the same way as at sign-in, and notes the block it asked at.
 
-Unless the results are sealed, everyone sees the running totals. The app shows each person only their own choice. The audit file, which admins can download, does list every ballot's wallet address and choice, so admins can see who voted what. Use an anonymous vote when that matters.
+Unless the results are sealed, everyone sees the running totals. The app shows each person only their own choice. The audit file, which admins can download, does list every ballot's wallet address and choice, so admins can see who voted what. The vote card says so above the options, and the new vote window says it before you start one. Use an anonymous vote when that matters.
 
 In a vote weighted by voting power, you need some power at the moment the vote opened. Otherwise Nil tells you that you had none then.
 
