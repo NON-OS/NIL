@@ -11,6 +11,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - Bounty payments are shown only to admins and to the person paid, because a transaction reveals the receiving wallet.
 - Guests see only the projects shared with them and the tasks assigned to them.
 - In an anonymous vote, nobody, admins included, can see who chose what.
+- A built-in AI request sent [anonymously](ai-assistants.md#anonymous-requests) isn't tied to anyone in the server's records. Admins see only how many were made each day.
 
 ## What the server operator can read
 
@@ -42,7 +43,7 @@ Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDN
 The server itself contacts other hosts in these cases:
 
 - Its Ethereum node, set by `NOX_RPC_URL`, to check payments, balances, stakes and Zero-State Passes, and to pass on the transactions you sign when you move a private payout. That node sees which addresses and transactions your server looks up, and your server's IP address. A server people reach over the network has to name one; only a server on localhost falls back to a public node. Privacy-minded teams should run their own. `NOX_RPC_URL=off` turns every on-chain feature off.
-- Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs. See [AI assistants](ai-assistants.md#built-in-ai).
+- Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs, never a private task, and never who asked. See [AI assistants](ai-assistants.md#built-in-ai).
 - The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
 
 If you connect your own AI assistant over MCP, the assistant fetches from Nil, and whatever it reads goes on to that assistant's provider.
@@ -71,6 +72,7 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 - In an encrypted vote, two trustees working together could decrypt single ballots. That reveals each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
 - Anonymous votes hide who voted what among the members who voted. In a small team, or with a lopsided result, the totals alone can give choices away.
 - Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.
+- Anonymous AI requests hide which member asked only among the members with a voting key, which in a small team is a handful of people. The server and Anthropic still read each request in full, and its words and the time it arrives can point to the person who sent it. So can its IP address, unless they use Tor. A dishonest server could also hand one person a member list of its own making and recognise their requests by it. [AI assistants](ai-assistants.md#what-anonymous-requests-dont-hide) has the details.
 - Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice.
 - Files on team tasks aren't encrypted, and an encrypted file still shows its size. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
