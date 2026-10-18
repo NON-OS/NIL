@@ -6,7 +6,7 @@ const none = () => 'no-such-thing';
 // Rows of the authorization matrix for private bounty payouts through Privacy Pools. Only admins
 // get past the access check. The matrix server runs with the feature off, so an admin's answer
 // is the 404 that says so, while members, guests and agents are stopped with a 403 first;
-// poolRoutes.test.js runs the same routes with the feature on.
+// poolProxy.test.js and poolPayouts.test.js run the same routes with the feature on.
 export default {
   'GET /api/pools': { allow: ADMINS, ok: [404], denied: [403] },
   'GET /api/pools/:symbol/sets': { allow: ADMINS, symbol: () => 'USDC', ok: [404], denied: [403] },

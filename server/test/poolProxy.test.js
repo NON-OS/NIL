@@ -70,6 +70,9 @@ test('members never see the pool routes; admins get the pools the entry contract
   for (const [method, url] of [['GET', '/api/pools'], ['GET', '/api/pools/USDC/sets'], ['GET', '/api/pool-account'], ['POST', '/api/pools/USDC/events']]) {
     assert.equal((await mia(method, url, method === 'POST' ? {} : undefined)).status, 403, url);
   }
+  // and bootstrap tells only admins that the server pays from pools
+  assert.equal((await mia('GET', '/api/bootstrap')).data.privacyPools, false);
+  assert.equal((await owner('GET', '/api/bootstrap')).data.privacyPools, true);
   chain.answer(ENTRYPOINT, `0x${poolAbi.assetConfig}${pad('0x0a26c80be4e060e688d7c23addb92cbb5d2c9eca')}`, `0x${'0'.repeat(256)}`);
   const res = await owner('GET', '/api/pools');
   assert.equal(res.status, 200);
