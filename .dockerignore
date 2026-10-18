@@ -28,6 +28,7 @@ dist
 
 # not needed to build or run the server
 .git
+ceremony
 **/*.log
 **/.DS_Store
 marketing

@@ -67,7 +67,7 @@ If you connect your own AI assistant over MCP, the assistant fetches from Nil, a
 ## Honest limits
 
 - Nothing is audited. No part of Nil's own code, including how it uses cryptography and smart contracts, has had an independent security audit.
-- Encrypted weighted votes are in beta. The ballot circuit (`circuits/ballot.circom`) hasn't been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2, recorded in `circuits/CEREMONY.json`, was a development ceremony with every contribution made on one machine. Whoever ran it could in principle forge proofs. Rerun phase 2 with independent contributors (see `scripts/zk-ballot.mjs`) before relying on these votes for anything that matters.
+- Encrypted weighted votes are in beta. The ballot circuit (`circuits/ballot.circom`) hasn't been audited. Its Groth16 setup uses the Perpetual Powers of Tau for phase 1, but phase 2, recorded in `circuits/CEREMONY.json`, was a development ceremony with every contribution made on one machine. Whoever ran it could in principle forge proofs. Rerun phase 2 with independent contributors before relying on these votes for anything that matters; [the ballot ceremony](../circuits/CEREMONY.md) in the source code shows how.
 - In an encrypted vote, two trustees working together could decrypt single ballots. That reveals each ballot's choice and weight, but not who cast it. An unusual weight can still point to a person.
 - Anonymous votes hide who voted what among the members who voted. In a small team, or with a lopsided result, the totals alone can give choices away.
 - Anonymous ballots carry no cookie, but the server and any proxy still see the IP address and time each ballot arrives. Use Tor if that matters.

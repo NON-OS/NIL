@@ -449,7 +449,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] Nightly backups run, an encrypted copy leaves the server, and one restore was tested.
 - [ ] A capsule is stored off-site with its passphrase in a password manager.
 - [ ] If built-in AI is on, your team knows what goes to Anthropic and when.
-- [ ] If you plan encrypted weighted votes: your team knows they are beta. The ballot circuit is not audited and its trusted setup in `circuits/CEREMONY.json` is a development ceremony. Rerun phase 2 with independent contributors (`scripts/zk-ballot.mjs`) before relying on them.
+- [ ] If you plan encrypted weighted votes: your team knows they are beta. The ballot circuit is not audited and its trusted setup in `circuits/CEREMONY.json` is a development ceremony. Rerun phase 2 with independent contributors ([circuits/CEREMONY.md](../circuits/CEREMONY.md)) before relying on them.
 - [ ] The host installs security updates (for example `unattended-upgrades`). `docker-compose.yml` rotates Nil's own logs (5 files of 10 MB); rotate the other containers' logs too (`log-opts` in `/etc/docker/daemon.json`).
 - [ ] If you use memory-only mode, swap is off or encrypted.
 

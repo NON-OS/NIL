@@ -5,14 +5,14 @@
 // Phase 1 is the Perpetual Powers of Tau (PSE, 80+ contributors). Phase 2 here adds random
 // contributions (CONTRIBUTORS, default 2) and a public beacon (a recent Ethereum block hash),
 // then verifies the chain. All of these contributions run on this one machine, which makes it a
-// development setup. Before high-stakes use, run phase 2 as a real ceremony: pass the zkey
-// between people who don't trust each other, each running `snarkjs zkey contribute`, then
-// apply the beacon and verify, and replace the files this script writes.
+// development setup. For real use, run phase 2 as a ceremony between people who don't trust
+// each other with the ceremony:start, ceremony:contribute and ceremony:finish scripts (see
+// circuits/CEREMONY.md), which replace the files this one writes.
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
-import { execFileSync } from 'node:child_process';
 import { zKey } from 'snarkjs';
+import compileBallot from './ceremony/compileBallot.mjs';
 
 const ptau = process.env.PTAU;
 if (!ptau || !fs.existsSync(ptau)) throw new Error('Set PTAU to the Perpetual Powers of Tau file (ppot_0080_16.ptau).');
@@ -21,8 +21,7 @@ const out = path.resolve('client/public/zk');
 const build = fs.mkdtempSync(path.join(process.env.TMPDIR || '/tmp', 'nonos-ballot-'));
 const log = { info: console.log, warn: console.warn, error: console.error, debug: () => {} };
 
-execFileSync('node_modules/.bin/circom2', ['circuits/ballot.circom', '--r1cs', '--wasm', '--O2', '-l', 'node_modules/circomlib/circuits', '-l', 'node_modules/@zk-kit/binary-merkle-root.circom/src', '-o', build], { stdio: 'inherit' });
-const r1cs = path.join(build, 'ballot.r1cs');
+const { r1cs, wasm } = compileBallot(build);
 
 const steps = [path.join(build, 'ballot_0.zkey')];
 await zKey.newZKey(r1cs, ptau, steps[0], log);
@@ -45,7 +44,7 @@ if (!(await zKey.verifyFromR1cs(r1cs, ptau, final, log))) throw new Error('The s
 const vkey = await zKey.exportVerificationKey(final, log);
 
 fs.mkdirSync(out, { recursive: true });
-fs.copyFileSync(path.join(build, 'ballot_js/ballot.wasm'), path.join(out, 'ballot.wasm'));
+fs.copyFileSync(wasm, path.join(out, 'ballot.wasm'));
 fs.copyFileSync(final, path.join(out, 'ballot.zkey'));
 fs.writeFileSync('server/votes/ballotKey.json', `${JSON.stringify(vkey, null, 2)}\n`);
 const sha = (f) => crypto.createHash('sha256').update(fs.readFileSync(f)).digest('hex');

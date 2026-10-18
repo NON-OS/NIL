@@ -14,6 +14,7 @@ npm run typecheck   # strict TypeScript for the web app
 npm run build       # production bundle into dist/
 npm run zk:fetch    # download Semaphore circuit files for SEMAPHORE_DEPTH (hash- and proof-checked)
 npm run zk:ballot   # rebuild the encrypted-ballot circuit and rerun its setup (needs PTAU)
+npm run ceremony:start   # run that setup between independent people instead: circuits/CEREMONY.md
 ```
 
 `npm run dev` sends `/api` and `/ws` to `http://localhost:3000`. Set `NONOS_API` in your shell to point it somewhere else.
