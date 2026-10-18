@@ -25,6 +25,7 @@ export default async function recordPayment(actor, taskId, { intentId, txHash, a
   const task = visibleTask(taskId, actor);
   const intent = intentId ? sql.get('SELECT * FROM payment_intents WHERE id = ? AND task_id = ?', String(intentId), task.id) : null;
   if (!intent) throw HttpError.badRequest('Start the payment from Nil first: it gives you the exact amount to send.');
+  if (announce !== null && intent.via === 'pool') throw HttpError.badRequest('A payout from the team’s pool isn’t announced, since the announcement would come from a team wallet.');
 
   const existing = sql.get('SELECT * FROM payments WHERE tx_hash = ?', hash);
   if (existing) {

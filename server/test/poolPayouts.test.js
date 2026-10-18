@@ -221,7 +221,11 @@ test('a pool payout needs the contributor’s private payouts on and a pool for 
   assert.equal(res.status, 409);
   assert.match(res.data.error, /no pool for NOX yet/);
   // members can't quote or relay, even with an intent id in hand
-  const { intent } = await poolIntent();
+  const { intent, task: started } = await poolIntent();
   assert.equal((await mia('POST', `/api/pool-payouts/${intent.id}/quote`)).status, 403);
   assert.equal((await mia('POST', `/api/pool-payouts/${intent.id}/relay`, {})).status, 403);
+  // and nobody records an announcement for a pool payout: it would have to come from a team wallet
+  const announced = await owner('POST', `/api/tasks/${started.id}/payments`, { intentId: intent.id, txHash: tx(), announceTx: tx() });
+  assert.equal(announced.status, 400);
+  assert.match(announced.data.error, /isn’t announced/);
 });
