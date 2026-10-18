@@ -25,6 +25,7 @@
     "zk:ballot": "node scripts/zk-ballot.mjs"
   },
   "dependencies": {
+    "@a16z/helios": "0.12.0",
     "@anthropic-ai/sdk": "0.134.0",
     "@noble/curves": "1.9.7",
     "@noble/hashes": "1.8.0",
