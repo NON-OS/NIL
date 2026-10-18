@@ -15,6 +15,7 @@ const DAY = 86_400_000;
 const tx = () => `0x${crypto.randomBytes(32).toString('hex')}`;
 
 let srv;
+let sql;
 let watchInvoices;
 let permute;
 let pickSuffix;
@@ -23,6 +24,7 @@ const owner = client(() => srv.base);
 
 before(async () => {
   srv = await startServer({ chain, env: { PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '10', PLAN_TRIAL_DAYS: '0', PLAN_NOX_USD: '0.05', PLAN_INVOICE_SLOT: '3/10', PLAN_INVOICE_KEY: KEY } });
+  ({ default: sql } = await import('../db/sql.js'));
   ({ default: watchInvoices } = await import('../jobs/watchInvoices.js'));
   ({ default: permute } = await import('../billing/permute.js'));
   ({ default: pickSuffix } = await import('../billing/pickSuffix.js'));
@@ -145,4 +147,32 @@ test('a transfer with another workspace’s suffix is ignored, whatever its amou
   pay(exact - (exact % 10_000n) + BigInt(foreign));
   await finalize();
   assert.equal((await view(invoice.id)).state, 'waiting');
+});
+
+test('a reorg that moves a payment to another place in its block keeps one payment, and it settles', async () => {
+  const invoice = await create();
+  const exact = BigInt(usdc(invoice).amount);
+  // about half, with the invoice's suffix
+  const half = exact - (exact / 2n / 10_000n) * 10_000n;
+  const payer = wallet().address;
+  const hash = tx();
+  chain.mine(1);
+  chain.addTransfer({ hash, token: USDC, from: payer, to: TREASURY, value: String(half), depth: 1 });
+  await watchInvoices();
+  const rows = () => sql.all('SELECT log_index, status FROM billing_payments WHERE tx_hash = ?', hash).map((r) => [r.log_index, r.status]);
+  assert.deepEqual(rows(), [[0, 'confirming']]);
+
+  // mined again a block later, behind another transfer, so its log moves from 0 to 1
+  chain.mine(1);
+  chain.reorg(chain.blockOf(hash));
+  chain.addTransfers({ hash, depth: 1, transfers: [{ token: USDC, from: payer, to: wallet().address, value: '5' }, { token: USDC, from: payer, to: TREASURY, value: String(half) }] });
+  await watchInvoices();
+  assert.deepEqual(rows(), [[1, 'confirming']]);
+  await finalize();
+  assert.deepEqual(rows(), [[1, 'final']]);
+
+  const settled = await view(invoice.id);
+  assert.equal(settled.state, 'underpaid');
+  assert.equal(usdc(settled).received, String(half), 'counted once');
+  assert.equal((await owner('POST', `/api/plan/invoices/${invoice.id}/cancel`)).status, 200);
 });
