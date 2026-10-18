@@ -41,6 +41,8 @@ export default interface State {
   ai: boolean;
   // members with a voting key send built-in AI requests anonymously while this is on
   aiAnonymous: boolean;
+  // why this browser sends AI requests signed in although you have a voting key, or null
+  aiSignedReason: string | null;
   nox: NoxInfo | null;
   rewards: RewardToken[];
   // true when you're a guest who can see only the projects shared with you

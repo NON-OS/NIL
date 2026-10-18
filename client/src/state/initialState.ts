@@ -18,6 +18,7 @@ const initialState: State = {
   feed: null,
   ai: false,
   aiAnonymous: false,
+  aiSignedReason: null,
   nox: null,
   rewards: [],
   guest: false,

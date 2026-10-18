@@ -73,7 +73,7 @@ Text goes to Anthropic only when someone clicks one of these buttons, and only w
 - For a doc draft: your instruction, and the doc's current text if you leave **Use what's already in this doc as context** on. That text is decrypted in your browser and leaves it for this one request.
 - For a deck: the task titles, names and counts on the slides. Private tasks never go, even when you put them on your slides.
 
-Private tasks can't use the task features at all: the server can't read them, and their AI buttons are hidden. Each person can make up to 12 AI requests a minute and 100 a day, whichever way they're sent (`AI_REQUESTS_PER_MINUTE` and `AI_REQUESTS_PER_DAY`). On a server that charges for Nil Pro, built-in AI needs an active plan.
+Private tasks can't use the task features at all: the server can't read them, and their AI buttons are hidden. Each person can make up to 12 signed-in AI requests a minute and 100 a day (`AI_REQUESTS_PER_MINUTE` and `AI_REQUESTS_PER_DAY`), and the same 100 a day anonymously, as below. On a server that charges for Nil Pro, built-in AI needs an active plan.
 
 ### Anonymous requests
 
@@ -81,9 +81,9 @@ Members can send these requests without the server learning which of them asked.
 
 Every AI button says how its request goes: **Anonymous**, or **Signed in**, which means the server knows it's yours. Hover over it for the details; dialogs spell them out.
 
-To send anonymously, a member needs a voting key, the same one [anonymous votes](votes.md#anonymous-votes) use. Open **Settings → Connect AI** and click **Set up anonymous requests**, or join an anonymous vote. Your wallet signs to unlock your keys, and only the public half of the key goes to the server. Do it a while before you use AI, so the key and your first anonymous request don't arrive together. Guests, and members who haven't set up a key, send their requests signed in.
+To send anonymously, a member needs a voting key, the same one [anonymous votes](votes.md#anonymous-votes) use. Open **Settings → Connect AI** and click **Set up anonymous requests**, or join an anonymous vote. Your wallet signs to unlock your keys, and only the public half of the key goes to the server. Do it a while before you use AI, so the key and your first anonymous request don't arrive together. Guests, and members who haven't set up a key, send their requests signed in. So does a member whose key changed after a key reset while an anonymous vote still holds the old one: the new key can't be registered until that vote closes, and meanwhile the old one is taken out of the group, so it can't be used alongside. The button says **Signed in** and why.
 
-Admins turn anonymous requests on or off for the workspace with the **Anonymous AI requests** switch in the same place. It's on by default. While it's on, a member with a voting key can only send anonymously, so nobody gets two allowances a day. Admins see how many anonymous requests were made each day and nothing else about them.
+Admins turn anonymous requests on or off for the workspace with the **Anonymous AI requests** switch in the same place. It's on by default. While it's on, a member whose key is in the group can only send anonymously. Signed-in requests count against an allowance of their own, per person and per UTC day, kept only for that day. Once a changed key is accepted, the signed-in path closes again, so nobody keeps both allowances. Admins see how many anonymous requests were made each day and nothing else about them.
 
 ### What anonymous requests don't hide
 

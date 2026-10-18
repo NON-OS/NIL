@@ -3,6 +3,7 @@ import { EyeOff, UserRound } from 'lucide-react';
 import useStore from '../../state/useStore';
 import aiMode from '../../actions/aiMode';
 import anonymousAi from '../../actions/anonymousAi';
+import privateKeys from '../../state/privateKeys';
 
 // Says how the next AI request from here goes, before anyone clicks: anonymous, with what that
 // does and doesn't hide, or signed in and why. `compact` is the short tag next to a button,
@@ -10,12 +11,17 @@ import anonymousAi from '../../actions/anonymousAi';
 export default function AiMode({ compact = false, pointer = true }: { compact?: boolean; pointer?: boolean }) {
   const aiAnonymous = useStore((s) => s.aiAnonymous);
   const me = useStore((s) => s.me);
-  const mode = aiMode({ aiAnonymous, me });
+  const aiSignedReason = useStore((s) => s.aiSignedReason);
+  const mode = aiMode({ aiAnonymous, me, aiSignedReason });
+  const could = aiMode({ aiAnonymous, me, aiSignedReason: null }).anonymous;
   const [members, setMembers] = useState<number | null>(null);
 
   useEffect(() => {
-    if (!mode.anonymous) return;
+    if (!could) return;
     let live = true;
+    // with keys already unlocked, check now whether this browser can prove membership, so the
+    // label is right before the click; without them, nothing here asks the wallet
+    if (privateKeys.get()) anonymousAi.identity().catch(() => {});
     anonymousAi
       .credits()
       .then((c) => live && setMembers(c.members.length))
@@ -23,7 +29,7 @@ export default function AiMode({ compact = false, pointer = true }: { compact?: 
     return () => {
       live = false;
     };
-  }, [mode.anonymous]);
+  }, [could, me?.semaphoreCommitment]);
 
   const among = members === null ? 'one of the members with a voting key' : `one of the ${members} members with a voting key`;
   const text = mode.anonymous
