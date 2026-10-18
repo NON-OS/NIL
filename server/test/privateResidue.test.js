@@ -170,7 +170,7 @@ test('retention reaches decided approvals and stored replies, and the write-ahea
   }
   sql.run("INSERT INTO agent_idempotency (principal, key, request_hash, status, response, created_at) VALUES ('agent:x', 'old-key', 'h', 200, '{}', ?)", Date.now() - 3 * DAY);
   await owner('PATCH', '/api/privacy', { retention: { activityDays: 1 } });
-  pruneAgentData();
+  await pruneAgentData();
   assert.equal(fs.statSync(path.join(srv.dataDir, 'nonos.db-wal'), { throwIfNoEntry: false })?.size ?? 0, 0);
   assert.deepEqual(sql.all("SELECT id FROM agent_approvals WHERE id LIKE 'old-%'").map((r) => r.id), ['old-pending']);
   assert.equal(sql.get("SELECT COUNT(*) AS n FROM agent_idempotency WHERE key = 'old-key'").n, 0);

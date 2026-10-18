@@ -41,13 +41,16 @@ const commentQuotes = {
 
   // After the retention sweep erased comments older than `cutoff` on these tasks. A notification
   // comes right after its comment, so one older than the cutoff quotes an erased comment too.
+  // Only these tasks are looked at: every sweep before this one cleaned up after its own.
   swept(taskIds, cutoff) {
-    sql.run(
-      `UPDATE notifications SET data = json_remove(data, '$.excerpt') WHERE type IN ('mention', 'comment') AND json_extract(data, '$.excerpt') IS NOT NULL
-       AND (created_at < ? OR json_extract(data, '$.commentId') NOT IN (SELECT id FROM comments))`,
-      cutoff,
-    );
     for (const taskId of taskIds) {
+      sql.run(
+        `UPDATE notifications SET data = json_remove(data, '$.excerpt') WHERE task_id = ? AND type IN ('mention', 'comment') AND json_extract(data, '$.excerpt') IS NOT NULL
+         AND (created_at < ? OR json_extract(data, '$.commentId') NOT IN (SELECT id FROM comments WHERE task_id = ?))`,
+        taskId,
+        cutoff,
+        taskId,
+      );
       const left = new Set(sql.all('SELECT id FROM comments WHERE task_id = ?', taskId).map((r) => r.id));
       scrubBriefings(taskId, (id) => left.has(id));
     }

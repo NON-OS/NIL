@@ -5,6 +5,8 @@ import snapshots from '../db/snapshots.js';
 import setupToken from '../auth/setupToken.js';
 import checkpoint from '../db/checkpoint.js';
 import dataTables from '../db/dataTables.js';
+import withoutSearchTriggers from '../db/withoutSearchTriggers.js';
+import emptySearchIndex from '../db/emptySearchIndex.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import secretBox from '../agents/secretBox.js';
@@ -25,12 +27,16 @@ export default function wipeWorkspace() {
   db.exec('PRAGMA foreign_keys = OFF');
   try {
     db.exec('BEGIN IMMEDIATE');
-    for (const table of tables) db.exec(`DELETE FROM "${table}"`);
+    // the index is emptied in one pass, not a row at a time by its triggers, which took minutes
+    withoutSearchTriggers(() => {
+      for (const table of tables) db.exec(`DELETE FROM "${table}"`);
+    });
+    emptySearchIndex();
     db.exec('UPDATE billing_invoices SET created_by = NULL');
     db.exec('UPDATE billing_payments SET from_address = NULL');
     db.exec('COMMIT');
   } catch (err) {
-    db.exec('ROLLBACK');
+    if (db.isTransaction) db.exec('ROLLBACK');
     throw err;
   } finally {
     db.exec('PRAGMA foreign_keys = ON');

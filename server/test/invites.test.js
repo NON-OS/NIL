@@ -111,12 +111,12 @@ test('expired links stop working; their history is swept after a while', async (
 
   const unusedExpired = await owner('POST', '/api/invites', { role: 'member', reusable: true });
   sql.run('UPDATE invites SET expires_at = ? WHERE token_hash = ?', Date.now() - 1000, unusedExpired.data.invite.id);
-  purge();
+  await purge();
   assert.equal(sql.get('SELECT 1 FROM invites WHERE token_hash = ?', unusedExpired.data.invite.id), undefined);
   assert.ok(await listed(made.data.invite.id), 'a link people joined through is kept for a while');
 
   sql.run('UPDATE invites SET expires_at = ? WHERE token_hash = ?', Date.now() - 31 * DAY, made.data.invite.id);
-  purge();
+  await purge();
   assert.equal(await listed(made.data.invite.id), undefined);
   assert.equal(sql.get('SELECT COUNT(*) AS n FROM invite_joins WHERE invite_hash = ?', made.data.invite.id).n, 0);
   // the people stay; only the record of the link goes

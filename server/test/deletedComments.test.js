@@ -110,7 +110,7 @@ test('comment retention erases the excerpts and the briefing quotes of expired c
   assert.ok((await inbox()).includes('legacy quote 9931'));
 
   assert.equal((await owner('PATCH', '/api/privacy', { retention: { commentDays: 1 } })).status, 200);
-  purge();
+  await purge();
   const text = await inbox();
   assert.equal(text.includes('37 percent'), false);
   assert.equal(text.includes('legacy quote 9931'), false);

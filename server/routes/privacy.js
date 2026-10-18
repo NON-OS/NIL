@@ -15,10 +15,10 @@ router.get('/privacy', route(() => ({ retention: retention.get(), allowed: reten
 router.patch(
   '/privacy',
   requireAdmin,
-  route((req) => {
+  route(async (req) => {
     const next = retention.set(req.body?.retention ?? {});
-    purge();
-    pruneAgentData();
+    await purge();
+    await pruneAgentData();
     return { retention: next, allowed: retention.allowed };
   }),
 );

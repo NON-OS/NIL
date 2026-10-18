@@ -61,6 +61,7 @@ export default Object.freeze({
   webhookMaxAttempts: envNumber('AGENT_WEBHOOK_MAX_ATTEMPTS', 8, { min: 1, max: 20 }),
   webhookBackoffMs: seconds('AGENT_WEBHOOK_BACKOFF_SECONDS', 30, { min: 1 }),
   webhookDisableAfter: envNumber('AGENT_WEBHOOK_DISABLE_AFTER', 20, { min: 1 }),
+  webhookLogDays: envNumber('AGENT_WEBHOOK_LOG_DAYS', 30, { min: 1 }),
   webhookToleranceSeconds: envNumber('AGENT_WEBHOOK_TOLERANCE_SECONDS', 300, { min: 30 }),
   dueSoonHours: envNumber('AGENT_DUE_SOON_HOURS', 24, { min: 1 }),
   // dollars per million tokens for the cost estimate of Anthropic runs; unset means no estimate

@@ -19,6 +19,7 @@ import holders from './config/holders.js';
 import semaphore from './config/semaphore.js';
 import signIn from './config/signIn.js';
 import jobs from './config/jobs.js';
+import purge from './config/purge.js';
 import tasks from './config/tasks.js';
 import push from './config/push.js';
 import due from './config/due.js';
@@ -73,6 +74,7 @@ const config = Object.freeze({
   readNotificationDays: envNumber('NOTIFICATION_DAYS', 90),
   usedInviteDays: envNumber('USED_INVITE_DAYS', 30),
   jobs,
+  purge,
   nox,
   rewards,
   plan,

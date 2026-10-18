@@ -8,7 +8,8 @@ import scrubAgentTraces from './scrubAgentTraces.js';
 
 // Permanently removes tasks with their comments, files and history. Receipts keep their
 // signed bodies (so exported proofs stay valid) but lose the private data needed to reveal titles.
-export default function eraseTasks(ids) {
+// A sweep that erases batch after batch folds the write-ahead log in once at its end instead.
+export default function eraseTasks(ids, { fold = true } = {}) {
   if (!ids.length) return 0;
   const files = [];
   sql.tx(() => {
@@ -23,6 +24,6 @@ export default function eraseTasks(ids) {
     fs.rm(path.join(uploadDir, id), { force: true }, () => {});
     stagedFile.discard(id);
   }
-  checkpoint();
+  if (fold) checkpoint();
   return ids.length;
 }

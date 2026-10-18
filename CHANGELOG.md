@@ -186,6 +186,8 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Fixed
 
+- The purge and the agent data sweep erased everything in one long statement. On a workspace with 20,000 tasks, the first sweep after choosing a 90-day policy held the server for almost seven minutes, longer than the health check waits, so the container was restarted and the purge started over at every start. Both now erase in batches (`PURGE_BATCH_TASKS`, 25, and `PURGE_BATCH_ROWS`, 500, per transaction), pause `PURGE_BATCH_PAUSE_MS` (10) between them and answer requests meanwhile. A stop keeps what was erased and the next run carries on. The same sweep now takes about 70 seconds with no pause longer than half a second. Comments swept by retention update their task's search entry once instead of once per comment, and runs asked for while one is going wait their turn. The webhook delivery log's 30 days are now `AGENT_WEBHOOK_LOG_DAYS`.
+- Erasing everything took over ten minutes on that workspace, with the server unable to answer, because the search index triggers rewrote a task's entry for every comment removed. It now takes about a second.
 - A long hint in a menu could squeeze the item's label to nothing. Hints now give way and trail off first.
 - A background job that failed, for example on "database is locked" or a full disk, could take the whole server down. Every job now logs its failure (at most once every ten minutes while it keeps failing) and runs again on schedule. Errors in the live-update connection are caught the same way, and an error nothing else handles stops the server cleanly instead of abruptly.
 - Payment checks that failed were dropped without a word. They are logged now, rate-limited.
