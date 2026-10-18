@@ -8,6 +8,10 @@ import calls from '../calls.mjs';
 
 const ZK = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../../../../client/public/zk/privacy-pools');
 const files = (name) => ({ wasm: path.join(ZK, `${name}.wasm`), zkey: path.join(ZK, `${name}.zkey`) });
+// Gas limits for the test wallet's transactions, set rather than estimated. Circle's test USDC
+// on Sepolia used 118,526 gas for approve, more than the 120,000 these steps first allowed, so
+// approve has 300,000. A deposit inserts into the pool's tree, and a ragequit checks a proof.
+const GAS = Object.freeze({ approve: 300_000n, deposit: 1_200_000n, ragequit: 1_000_000n });
 
 // What an admin's browser does for the team pool, step by step with the app's own modules and
 // the app's own API routes. Only the wallet differs: a test key signs and sends raw
@@ -58,8 +62,8 @@ export default function poolSteps({ api, chain, wallet, info, key = crypto.getRa
       const out = noteBook.reserve(book, { symbol: 'USDC', scope: usdc.scope, depositor: wallet.address, amount });
       await save(out.book);
       const precommitment = poolKit.poolSecrets.precommitment(poolKit.poolSecrets.deposit(keys, BigInt(usdc.scope), out.note.index));
-      await mined(await wallet.send({ to: usdc.token, data: calls.approve(info.entrypoint, amount), gas: 120_000n }));
-      const hash = await wallet.send({ to: info.entrypoint, data: poolKit.poolCalls.deposit(usdc.token, amount, precommitment), gas: 1_200_000n });
+      await mined(await wallet.send({ to: usdc.token, data: calls.approve(info.entrypoint, amount), gas: GAS.approve }));
+      const hash = await wallet.send({ to: info.entrypoint, data: poolKit.poolCalls.deposit(usdc.token, amount, precommitment), gas: GAS.deposit });
       await save(noteBook.sent(book, out.note, hash));
       const receipt = await mined(hash);
       const seen = await api.get(`/pools/receipts/${hash}`);
@@ -100,7 +104,7 @@ export default function poolSteps({ api, chain, wallet, info, key = crypto.getRa
 
     async ragequit(note) {
       const proof = await poolKit.proveCommitment({ value: BigInt(note.value), label: BigInt(note.label), secrets: poolKit.noteSecrets(keys, note) }, files('commitment'));
-      const hash = await wallet.send({ to: usdc.pool, data: poolKit.poolCalls.ragequit(proof), gas: 1_000_000n });
+      const hash = await wallet.send({ to: usdc.pool, data: poolKit.poolCalls.ragequit(proof), gas: GAS.ragequit });
       await mined(hash);
       const seen = await api.get(`/pools/receipts/${hash}`);
       if (!seen.events.some((e) => e.type === 'ragequit' && e.label === note.label)) throw new Error('Nil saw no ragequit for our label');
