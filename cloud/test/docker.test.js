@@ -147,7 +147,7 @@ test('each workspace gets an internal network, Caddy attached to it, a volume an
   const spec = workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard', setupToken: 'tok', invoiceSlot: 7 });
   await driver.create(spec);
   const network = JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body);
-  assert.deepEqual(network, { Name: `nil-${ID}`, Driver: 'bridge', Internal: true, Labels: { 'org.nonos.cloud.workspace': ID } });
+  assert.deepEqual(network, { Name: `nil-${ID}`, Driver: 'bridge', Internal: true, EnableIPv6: false, Labels: { 'org.nonos.cloud.workspace': ID } });
   assert.ok(state.connected.has(`nil-${ID}`));
   const body = state.containers.get(`nil-${ID}`).body;
   assert.deepEqual(body, containerBody(spec, { appPort: 3000, tmpfsMb: 64, logMb: 10, logFiles: 3, healthIntervalSec: 30, startTimeoutSec: 120, stopTimeoutSec: 15 }));
@@ -256,8 +256,20 @@ test('an isolated workspace (a restore drill) gets an internal network without C
   const { config: open } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: config.docker.socket, CLOUD_EGRESS: 'open' });
   const spec = workspaceSpec(open, { id: ID, name: 'restore-drill', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-drill`, plan: 'standard' });
   await dockerDriver({ config: open, log: { info() {}, warn() {}, error() {} } }).create({ ...spec, isolated: true });
-  assert.equal(JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body).Internal, true, 'even with open egress');
+  const network = JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body);
+  assert.equal(network.Internal, true, 'even with open egress');
+  assert.equal(network.EnableIPv6, false, 'no IPv6 either');
   assert.equal(state.connected.size, 0, 'Caddy is never attached');
+});
+
+test('with open egress a workspace network routes out over IPv4 only', async (t) => {
+  const { config, seen } = await fakeEngine(t);
+  const { config: open } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: config.docker.socket, CLOUD_EGRESS: 'open' });
+  const spec = workspaceSpec(open, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard' });
+  await dockerDriver({ config: open, log: { info() {}, warn() {}, error() {} } }).create(spec);
+  const network = JSON.parse(seen.find((r) => r.path.endsWith('/networks/create')).body);
+  assert.equal(network.Internal, false);
+  assert.equal(network.EnableIPv6, false, 'the edge network’s IPv6 never reaches a workspace');
 });
 
 test('by default a missing image is an error and nothing is pulled', async (t) => {

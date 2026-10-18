@@ -207,6 +207,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 - The closed sidebar on narrow screens could still be reached with Tab.
 - The docs delete button and the command palette's results list had no accessible name.
 - A workspace without a name showed "Sign in to" with nothing after it, and asked wallets to sign "Sign in to ." Both now say Nil.
+- Hosted Nil and the single-mode deploy answer over IPv6. With Docker's userland proxy off, which keeps each visitor's own address for the sign-up limits, the host's IPv6 ports reached no container on an IPv4-only network, so the AAAA records led nowhere. Caddy's network now has a private IPv6 prefix, `daemon.json` turns on ip6tables, and `provision.sh` wants Docker Engine 27 or newer. Workspace networks stay IPv4 only, and the control plane asks Docker for exactly that. On a server set up before this, run `provision.sh` again, then `upgrade.sh`, and check that `docker network inspect -f '{{.EnableIPv6}}' nil_edge` prints `true`; if it doesn't, run `docker compose down` in `/opt/nil` and `upgrade.sh` once more.
 
 ## 3.0.0 (2026-10-15)
 

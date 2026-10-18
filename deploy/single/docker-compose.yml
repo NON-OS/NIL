@@ -116,7 +116,12 @@ services:
         max-file: "5"
 
 networks:
-  edge: {}
+  # Caddy publishes 80 and 443 from here. With the userland proxy off (see
+  # deploy/host/docker-daemon.json), Docker forwards the host's IPv6 ports only to a container's
+  # IPv6 address, so this network has one: a private ULA /64 Docker picks. Visitors keep their own
+  # IPv6 address as their source.
+  edge:
+    enable_ipv6: true
 
 volumes:
   # named explicitly so the deploy scripts can reach it for checkpoints

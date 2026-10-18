@@ -240,6 +240,14 @@ if ! dpkg -s docker-ce > /dev/null 2>&1; then
   run apt-get update -q
   run apt-get -y -q install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
 fi
+# Caddy's edge network has IPv6, and with the userland proxy off only ip6tables rules carry IPv6
+# visitors to it. That takes Docker Engine 27 or newer: older ones keep ip6tables experimental and
+# can't pick a ULA prefix for a network that names no subnet.
+engine=$(dockerd --version 2> /dev/null | sed -n 's/^Docker version \([0-9]*\)\..*/\1/p' || true)
+if [ "${engine:-0}" -lt 27 ]; then
+  [ "$DRY_RUN" = 1 ] || die "Docker Engine 27 or newer is needed, and this is $(dockerd --version 2>&1 | head -n 1). Upgrade docker-ce from Docker's repository and run this again."
+  log "would check that Docker Engine is 27 or newer (found: ${engine:-none})"
+fi
 if sed "s#@ADDRESS_POOL@#$ADDRESS_POOL#" "$HERE/host/docker-daemon.json" | install_file /etc/docker/daemon.json 644; then
   # live-restore keeps running containers up while the daemon restarts
   run systemctl restart docker
