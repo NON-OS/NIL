@@ -9,7 +9,7 @@ In **Settings → Data & privacy → Zero-state**, admins choose how long each k
 | Setting | What it covers |
 |---|---|
 | Finished and canceled tasks | The tasks, with their comments and files |
-| Comments | Comments on every task, open or not |
+| Comments | Comments on every task, open or not, with the words quoted from them in notifications and in agent briefings |
 | Task history | The activity log: who changed what and when |
 
 Each can be kept forever (the default) or erased after 1, 7, 30, 90, 180 or 365 days. An hourly sweep on the server erases whatever has expired, for good. SQLite's `secure_delete` overwrites the freed space in the database file, and after every sweep, wipe or erase the write-ahead log (`nonos.db-wal`) is folded back in and cut to nothing, so erased text doesn't linger there either. Neither can reach copies the filesystem, a snapshot or a backup already made.

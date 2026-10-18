@@ -56,6 +56,8 @@ Write a comment at the bottom of the panel and press `Ctrl+Enter` (`⌘ Enter` o
 
 People who follow a task hear about new comments and status changes. You follow a task automatically when you create it, when it's assigned to you, when you comment on it and when someone mentions you in it. The bell icon turns this on or off.
 
+A notification about a comment shows its first words. If the comment is edited, the notification shows the new words; if it's deleted, or erased by a [retention policy](zero-state.md), the words go from the notification too.
+
 ## Files
 
 Drop files onto the task panel, or click **Attach**. Files are stored on your server, up to 25 MB each unless the server allows more. Images and PDFs open in the browser. Other files download, so a file can never run inside Nil. Whoever uploaded a file, or an admin, can remove it.

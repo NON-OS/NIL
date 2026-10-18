@@ -436,7 +436,7 @@ None of that is relied on to keep you safe. The server enforces the rules whatev
 
 Every change an agent makes appears in the task's history under the agent's name, with "for <person>" when it acted for someone: the person who assigned or mentioned it, or who approved its request. Each agent's **Audit trail** lists every tool call it made, with the outcome, and every change an admin made to the agent.
 
-Run logs and the audit trail quote task text, so they follow the workspace's retention settings for comments and history, and a run's log is erased with its task. A run's log can quote other tasks the agent read, so guests see how a run went but not its log, and see an approval card's details only when they are asked to decide it.
+Run logs and the audit trail quote task text, so they follow the workspace's retention settings for comments and history, and a run's log is erased with its task. A run's briefing quotes the task's latest comments; when one of them is edited, deleted or erased by the comment retention setting, the briefing shows "(changed or removed since)" in its place. A run's log can quote other tasks the agent read, so guests see how a run went but not its log, and see an approval card's details only when they are asked to decide it.
 
 Webhook secrets and model API keys are sealed with a key kept beside the database (`DATA_DIR/keys/agents-secrets.key`), not in it. Encrypted backups (capsules) carry that key, so a restored server keeps working; erasing the workspace deletes it.
 
