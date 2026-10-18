@@ -1,5 +1,6 @@
 import sql from '../db/sql.js';
 import checkpoint from '../db/checkpoint.js';
+import checkSearchIndex from '../db/checkSearchIndex.js';
 import inBatches from '../db/inBatches.js';
 import deleteSome from '../db/deleteSome.js';
 import config from '../config.js';
@@ -46,6 +47,7 @@ async function sweep(signal) {
   // spent AI credits from days that are over; only each day's total stays
   creditLedger.prune();
   signedAllowance.prune();
+  if (!signal?.aborted) checkSearchIndex();
   // what the policies above erased mustn't survive in the write-ahead log
   checkpoint();
 }
