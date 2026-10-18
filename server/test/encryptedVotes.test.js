@@ -94,6 +94,10 @@ const ballot = (id, body) => fetch(`${srv.base}/api/anonymous-ballots/${id}`, { 
 
 test('an encrypted vote needs three trustees with encryption keys, and a census of weighted members', async () => {
   assert.equal((await who.owner('POST', '/api/proposals', { title: 'x', weighting: 'power', anonymous: true, trustees: [ids.owner, ids.ana] })).status, 400);
+  // without trustees nobody could ever set up the key, and the vote would never open
+  const before = (await who.owner('GET', '/api/proposals')).data.length;
+  for (const trustees of [undefined, null, []]) assert.match((await who.owner('POST', '/api/proposals', { title: 'x', weighting: 'power', anonymous: true, trustees })).data.error, /three different members/);
+  assert.equal((await who.owner('GET', '/api/proposals')).data.length, before);
   const res = await who.owner('POST', '/api/proposals', { title: 'Allocate the Q4 treasury', options: ['Grants', 'Buyback', 'Hold'], weighting: 'power', anonymous: true, trustees: [ids.owner, ids.ana, ids.cy] });
   assert.equal(res.status, 200);
   const vote = res.data.proposal;

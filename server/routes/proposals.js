@@ -20,12 +20,18 @@ import publicWorkspace from '../services/publicWorkspace.js';
 import toProposal from '../mappers/toProposal.js';
 import config from '../config.js';
 import voterGroups from '../votes/voterGroups.js';
-import voteScope from '../votes/voteScope.js';
 import heldBallots from '../votes/heldBallots.js';
-import fieldHash from '../votes/fieldHash.js';
+import voteAudit from '../votes/voteAudit.js';
+import oneLine from '../lib/oneLine.js';
 
 const router = express.Router();
 const DAY = 86_400_000;
+
+// The title and options go into the text a wallet signs, so each has to stay on one line.
+function plainLine(text, what) {
+  if (oneLine.has(text)) throw HttpError.badRequest(`${what} has to be plain text on one line.`);
+  return text;
+}
 
 function openProposal(id) {
   const row = sql.get('SELECT * FROM proposals WHERE id = ?', id);
@@ -48,25 +54,28 @@ router.post(
   requireAdmin,
   route(async (req) => {
     const b = req.body ?? {};
-    const options = (Array.isArray(b.options) && b.options.length ? b.options : ['Yes', 'No', 'Abstain']).map((o) => check.text(o, 'Option', { min: 1, max: 80 }));
+    const title = plainLine(check.text(b.title, 'Title', { min: 1, max: 200 }), 'The question');
+    const options = (Array.isArray(b.options) && b.options.length ? b.options : ['Yes', 'No', 'Abstain']).map((o) => plainLine(check.text(o, 'Option', { min: 1, max: 80 }), 'An option'));
     if (options.length < 2 || options.length > 8) throw HttpError.badRequest('A vote needs between 2 and 8 options.');
+    // no two options may read alike in the signed text either
+    if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) throw HttpError.badRequest('Each option needs different wording.');
     const weighting = check.oneOf(b.weighting ?? 'equal', ['equal', 'power'], 'Weighting');
     if (weighting === 'power' && !config.nox.enabled) throw HttpError.badRequest('Votes weighted by voting power need on-chain features, which are off on this server.');
     const days = check.number(b.days ?? 7, 'Duration', { min: 1, max: 60, integer: true });
     const anonymous = Boolean(b.anonymous);
-    // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three trustees
+    // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three
+    // trustees. Without them the vote key could never be set up and the vote would never open.
     const trustees = anonymous && weighting === 'power' ? b.trustees : null;
-    if (trustees) {
+    if (anonymous && weighting === 'power') {
       const valid = Array.isArray(trustees) && trustees.length === 3 && new Set(trustees).size === 3 && trustees.every((t) => typeof t === 'string');
       const eligible = valid && trustees.every((t) => sql.get("SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0 AND u.role != 'guest' AND u.kind = 'human'", t));
       if (!eligible) throw HttpError.badRequest('Pick three different members who have unlocked encrypted docs as trustees.');
-      if (options.length > 8) throw HttpError.badRequest('Encrypted votes can have at most 8 options.');
     }
     const id = newId();
     const now = Date.now();
     sql.run(
       'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
+      id, title, check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
     );
     if (weighting === 'power') {
       try {
@@ -82,7 +91,7 @@ router.post(
     if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
     // votes are for members; guests can't open them and agents can't vote, so neither hears about them
     const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((u) => u.id);
-    notify(members, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
+    notify(members, 'proposal', null, req.user.id, { proposalId: id, title });
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', id), req.user) };
   }),
@@ -100,7 +109,8 @@ router.post(
     const message = voteMessage({
       workspace: publicWorkspace().name,
       proposal,
-      choice: options[choice],
+      options,
+      choice,
       userId: req.user.id,
       nonce: crypto.randomBytes(12).toString('hex'),
       issuedAt: new Date().toISOString(),
@@ -142,7 +152,8 @@ router.post(
   }),
 );
 
-// Everything needed to recount independently: each signed ballot and the weight it got.
+// Everything needed to recount independently (see voteAudit). A sealed vote's file waits for the
+// close: its ballots would give away the running totals the seal hides.
 router.get(
   '/proposals/:id/audit',
   requireAdmin,
@@ -150,70 +161,8 @@ router.get(
     heldBallots.release({ proposalId: req.params.id });
     const row = sql.get('SELECT * FROM proposals WHERE id = ?', req.params.id);
     if (!row) throw HttpError.notFound('That vote');
-    // anyone can recount an anonymous vote: check each proof against an accepted root, that
-    // every nullifier appears once, and the scope. Names never appear because they're never known.
-    // Ballots list in nullifier order and carry only the hour they were cast in, so neither
-    // their order nor their time can be matched with who was online.
-    if (row.anonymous && row.weighting === 'power') {
-      return {
-        type: 'nonos.encrypted-vote-audit',
-        v: 1,
-        proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
-        circuit: { name: 'circuits/ballot.circom', depth: 16, scope: fieldHash(voteScope(row.id)) },
-        power: { block: row.snapshot_block, zspPower: row.zsp_power, unit: 'whole NOX' },
-        census: voterGroups.members(row.id),
-        roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
-        publicKey: parseJSON(row.public_key, null),
-        trustees: sql.all('SELECT position, commitment, dealing, partial FROM proposal_trustees WHERE proposal_id = ? ORDER BY position', row.id).map((t) => {
-          const dealing = parseJSON(t.dealing, {});
-          return { position: t.position, commitment: t.commitment, commitments: dealing.commitments ?? null, proofs: dealing.proofs ?? null, partial: parseJSON(t.partial, null) };
-        }),
-        ballots: sql.all('SELECT ciphertexts, proof, created_at FROM encrypted_ballots WHERE proposal_id = ? ORDER BY nullifier', row.id).map((b) => ({ ciphertexts: JSON.parse(b.ciphertexts), ...JSON.parse(b.proof), castAt: new Date(heldBallots.hourOf(b.created_at)).toISOString() })),
-      };
-    }
-    if (row.anonymous) {
-      return {
-        type: 'nonos.anonymous-vote-audit',
-        v: 1,
-        proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
-        semaphore: { version: '4', depth: config.semaphore.depth, scope: voteScope(row.id) },
-        group: voterGroups.members(row.id),
-        roots: sql.all('SELECT root, revoked, created_at FROM proposal_roots WHERE proposal_id = ? ORDER BY created_at', row.id).map((r) => ({ root: r.root, revoked: Boolean(r.revoked), at: new Date(r.created_at).toISOString() })),
-        ballots: sql.all('SELECT choice, proof, created_at FROM anonymous_ballots WHERE proposal_id = ? ORDER BY nullifier', row.id).map((b) => ({ choice: b.choice, proof: JSON.parse(b.proof), castAt: new Date(heldBallots.hourOf(b.created_at)).toISOString() })),
-      };
-    }
-    return {
-      type: 'nonos.vote-audit',
-      v: 1,
-      // the network smart-wallet ballots were checked on
-      chainId: config.nox.chainId,
-      proposal: { id: row.id, title: row.title, options: parseJSON(row.options, []), weighting: row.weighting, closesAt: row.closes_at, closedAt: row.closed_at, result: parseJSON(row.result, null) },
-      power:
-        row.weighting === 'power'
-          ? {
-              chainId: config.nox.chainId,
-              block: row.snapshot_block,
-              token: { address: config.nox.token, symbol: config.nox.symbol, decimals: config.nox.decimals },
-              staking: config.power.staking,
-              zsp: config.power.zsp,
-              zspPower: row.zsp_power,
-              members: sql.all('SELECT u.id, (SELECT group_concat(external_id) FROM credentials c WHERE c.user_id = u.id AND c.kind = \'wallet\') AS wallets, p.nox, p.staked, p.zsp, p.power FROM proposal_power p JOIN users u ON u.id = p.user_id WHERE p.proposal_id = ?', row.id)
-                .map((m) => ({ wallets: (m.wallets ?? '').split(',').filter(Boolean), nox: m.nox, staked: m.staked, zsp: m.zsp, power: m.power })),
-            }
-          : null,
-      // a plain wallet's ballot is checked by recovering the signer (ecrecover); a smart wallet's
-      // only on-chain, by asking it (EIP-1271) or the EIP-6492 validator at the block given
-      ballots: sql.all('SELECT address, choice, weight, message, signature, checked_by, checked_block, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({
-        address: v.address,
-        choice: v.choice,
-        weight: v.weight,
-        message: v.message,
-        signature: v.signature,
-        signatureCheck: v.checked_by,
-        ...(v.checked_block !== null ? { checkedAtBlock: v.checked_block } : {}),
-        castAt: new Date(v.created_at).toISOString(),
-      })),
-    };
+    if (row.sealed && !row.closed_at) throw new HttpError(409, 'This vote is sealed, so its audit file is ready once it closes.');
+    return voteAudit(row);
   }),
 );
 

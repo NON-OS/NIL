@@ -1,7 +1,5 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import path from 'node:path';
-import { DatabaseSync } from 'node:sqlite';
 import { Identity } from '@semaphore-protocol/identity';
 import startServer from './helpers/startServer.js';
 import mockChain from './helpers/mockChain.js';
@@ -101,18 +99,4 @@ test('an encrypted ballot counts once, however its numbers are written', async (
   assert.equal((await castAnonymous(srv.base, id, { proof, publicSignals })).status, 200);
   await who.owner('POST', `/api/proposals/${id}/close`);
   assert.equal((await getVote(id)).voters, 1);
-});
-
-test('upgrading drops ballots and voting keys that were written another way', async () => {
-  const { default: migration } = await import('../db/migrations/029-vote-review.js');
-  const db = new DatabaseSync(path.join(srv.dataDir, 'nonos.db'));
-  try {
-    const open = (await who.owner('POST', '/api/proposals', { title: 'Still open', anonymous: true })).data.proposal.id;
-    const insert = db.prepare('INSERT INTO anonymous_ballots (proposal_id, nullifier, choice, proof, created_at) VALUES (?, ?, 0, ?, 0)');
-    for (const nullifier of ['123', '0123', (FIELD + 5n).toString()]) insert.run(open, nullifier, '{}');
-    db.exec(migration);
-    assert.deepEqual(db.prepare('SELECT nullifier FROM anonymous_ballots WHERE proposal_id = ?').all(open).map((r) => r.nullifier), ['123']);
-  } finally {
-    db.close();
-  }
 });

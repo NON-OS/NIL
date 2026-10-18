@@ -89,18 +89,49 @@ test('weighted votes count NOX held, NOX staked and ZSPs, snapshotted when the v
   chain.setBalance(wallets.ben.address, 100n * unit);
   assert.equal((await vote(ben, wallets.ben, proposal.id, 1)).status, 403);
 
+  // Ana links another wallet after the snapshot: the audit still shows what she held then
+  const later = wallet();
+  chain.setBalance(later.address, 70n * unit);
+  assert.equal((await ana.wallet(later, 'add')).status, 200);
+
   const closed = (await owner('POST', `/api/proposals/${proposal.id}/close`)).data.proposal;
   assert.deepEqual(closed.totals, [anaPower, '0']);
 
   const audit = (await owner('GET', `/api/proposals/${proposal.id}/audit`)).data;
   assert.equal(audit.power.zspPower, '500');
   assert.ok(audit.power.block > 0);
-  assert.equal(audit.power.members.length, 3);
-  assert.ok(!audit.power.members.some((m) => m.id === scout.id));
-  const snap = audit.power.members.find((m) => m.wallets.includes(wallets.ana.address.toLowerCase()));
-  assert.deepEqual([snap.nox, snap.staked, snap.zsp, snap.power], [(100n * unit).toString(), (50n * unit).toString(), 2, anaPower]);
+  // only voters appear, so the file says nothing about whose wallets go together for anyone else
+  assert.equal('members' in audit.power, false);
+  assert.equal(audit.ballots.length, 1);
+  const { snapshot } = audit.ballots[0];
+  assert.deepEqual(snapshot.wallets, [{ address: wallets.ana.address.toLowerCase(), nox: (100n * unit).toString(), staked: (50n * unit).toString(), zsp: 2 }]);
+  assert.deepEqual([snapshot.nox, snapshot.staked, snapshot.zsp, snapshot.power], [(100n * unit).toString(), (50n * unit).toString(), 2, anaPower]);
+  assert.equal(audit.ballots[0].weight, snapshot.power);
   for (const b of audit.ballots) assert.equal(siwe.recover(b.message, b.signature), b.address);
   assert.equal((await ana('GET', `/api/proposals/${proposal.id}/audit`)).status, 403);
+});
+
+test('a sealed vote’s audit file waits for the close, since its ballots would show the totals', async () => {
+  const { proposal } = (await owner('POST', '/api/proposals', { title: 'Sealed', options: ['Yes', 'No'], sealed: true })).data;
+  assert.equal((await vote(ana, wallets.ana, proposal.id, 1)).status, 200);
+  const early = await owner('GET', `/api/proposals/${proposal.id}/audit`);
+  assert.equal(early.status, 409);
+  assert.equal(JSON.stringify(early.data).includes(wallets.ana.address.toLowerCase()), false);
+  await owner('POST', `/api/proposals/${proposal.id}/close`);
+  const audit = (await owner('GET', `/api/proposals/${proposal.id}/audit`)).data;
+  assert.deepEqual(audit.ballots.map((b) => b.choice), [1]);
+});
+
+test('the signed text can’t be misread: one line per value, distinct options, and the option’s number', async () => {
+  for (const options of [['Yes', 'Yes'], ['Yes', ' yes ']]) assert.match((await owner('POST', '/api/proposals', { title: 'Twice', options })).data.error, /different wording/);
+  assert.match((await owner('POST', '/api/proposals', { title: 'Q\nChoice: No', options: ['Yes', 'No'] })).data.error, /one line/);
+  assert.match((await owner('POST', '/api/proposals', { title: 'Q', options: ['Yes\u202e', 'No'] })).data.error, /one line/);
+  const { proposal } = (await owner('POST', '/api/proposals', { title: 'Lunch', options: ['Pizza', 'Salad', 'Soup'] })).data;
+  const { message } = (await ana('POST', `/api/proposals/${proposal.id}/ballot`, { choice: 1 })).data;
+  const lines = message.split('\n');
+  assert.ok(lines.includes('Choice: Salad'));
+  assert.ok(lines.includes('Option: 2 of 3'));
+  assert.equal(lines.filter((l) => l.startsWith('Choice:')).length, 1);
 });
 
 test('a closed result survives a voter being erased', async () => {
