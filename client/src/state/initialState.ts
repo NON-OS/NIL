@@ -30,6 +30,8 @@ const initialState: State = {
   docsRev: 0,
   origin: '',
   workspaceKey: '',
+  passkeys: [],
+  recoveryKitAt: null,
   keysRev: 0,
   keyCheck: null,
   deck: { open: false },

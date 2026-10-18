@@ -21,6 +21,7 @@ import type StealthInfo from './StealthInfo';
 import type TaskArchive from './TaskArchive';
 import type FirstRun from './FirstRun';
 import type AgentActivity from './AgentActivity';
+import type Passkey from './Passkey';
 
 export default interface State {
   phase: 'loading' | 'auth' | 'ready';
@@ -55,6 +56,9 @@ export default interface State {
   // the site and workspace key every key message is bound to (from bootstrap, set by APP_URL)
   origin: string;
   workspaceKey: string;
+  // your own passkey wraps, and when you last downloaded a recovery kit for your current keys
+  passkeys: Passkey[];
+  recoveryKitAt: number | null;
   // bumped when anyone publishes keys or this browser confirms one
   keysRev: number;
   // teammates whose new or changed keys are waiting for this person to confirm them

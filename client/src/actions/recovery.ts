@@ -1,4 +1,5 @@
 import ApiError from '../api/ApiError';
+import http from '../api/http';
 import store from '../state/store';
 import keyring from '../state/keyring';
 import ethereum from '../lib/ethereum';
@@ -23,6 +24,11 @@ const recovery = {
     const { origin, workspaceKey, me } = store.get();
     const kit = await recoveryKit.make(identity.seed, { origin, workspaceKey, userId: me!.id, fingerprint: vault.fingerprint()! }, passphrase, onProgress);
     saveBlob(new Blob([JSON.stringify(kit, null, 2)], { type: 'application/json' }), `nil-recovery-kit-${new URL(origin).hostname}.json`);
+    // the server notes only that a kit exists for these keys, so a passkey can be added next to it
+    await http
+      .put<{ savedAt: number }>('/me/recovery-kit', { publicKey: b64u.encode(identity.publicKey) })
+      .then(({ savedAt }) => store.set({ recoveryKitAt: savedAt }))
+      .catch(() => {});
   },
 
   // Restores your identity from a kit and wraps it for the wallet now in the browser. A kit

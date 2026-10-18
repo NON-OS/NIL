@@ -669,6 +669,13 @@ button.file-name:hover {
   font-size: var(--text-sm);
 }
 
+.locked-task > .locked-task-actions {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .comment-locked {
   color: var(--muted);
   font-size: var(--text-sm);
