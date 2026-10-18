@@ -10,6 +10,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - `NOX_RPC_URL` is required on a server people reach over the network. There is no public default any more, because a public node sees every address the server looks up. Set your own node, a provider you trust, or `off`. A server whose `APP_URL` is a localhost address still falls back to a public node, with a startup warning.
 - `TRUST_PROXY` no longer accepts `true`. Give the proxy's address or subnet (`uniquelocal` for Caddy in the same Compose project, `loopback` for a proxy on the same machine) or a hop count. A value it can't use is ignored with a warning.
 - `docker-compose.tor.yml` removes Nil's published port, so an onion-only server no longer answers on its normal IP address.
+- Hosted: the control plane won't start with on-chain features on unless `VERIFIER_KEY` is set in `/opt/nil/.env` and Nil's verifier runs (`docker-compose.verifier.yml` in `COMPOSE_FILE`, `CLOUD_RPC_URL=http://verifier:8545`). Lighthouse in `docker-compose.chain.yml` now serves its beacon API on the internal chain network, where current Lighthouse releases serve the light-client endpoints by default.
 
 ### Security and privacy
 
@@ -26,6 +27,15 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Anyone can check that a server sends exactly the web app of a release. The build is byte for byte the same on any machine, `npm run release:manifest` writes a manifest of every file with its SHA-256 and the release hash that stands for all of them, and `npm run verify:server -- <address>` compares a running server with your own build or a published manifest: every file, the routes the app opens on, and the Content-Security-Policy. See [docs/verify-a-server.md](docs/verify-a-server.md).
 - Private tasks warn when the server sends an older version than this browser has already opened, as docs do. Every save seals the task's words under the next revision number, which the writer's signature covers, so an old version can't be passed off as new. Tasks sealed before this open as revision 0.
 - The ballot circuit's phase 2 setup can now run as a real ceremony between people who don't trust each other: `npm run ceremony:start`, `ceremony:contribute` and `ceremony:finish`, with a beacon block announced in advance and the whole chain verified before anything is installed. [circuits/CEREMONY.md](circuits/CEREMONY.md) is the guide for the coordinator and the contributors.
+
+### Verified chain reads
+
+- Nil's verifier, a new and optional service run once per server (`npm run verifier`, or the `verifier` service in the Compose files): a light client built on Helios 0.12.0 that checks the Ethereum node's answers against the chain the beacon sync committee signed. It proves receipts, logs, blocks, `eth_call`, balances and nonces, relays sending, gas estimates and the pending nonce unproven, and refuses everything else. Each answer comes back sealed with a key it shares with the app.
+- With `NOX_VERIFIER_KEY` set, the server acts only on proven answers. Bounty payments and Nil Pro invoices are credited only from proven receipts, logs and finalized blocks; vote snapshots, the holder door and smart-wallet sign-in work only on proven balances and calls. When an answer can't be verified, nothing is counted or refused on it: payments wait, votes don't open, nobody joins or is turned away, and admins see a notice saying why on Settings → Plan, Bounties and Votes. A node caught in a false answer stays on that notice for `NOX_VERIFY_MISMATCH_HOURS`.
+- A lying node can still leave a log out or say a transaction doesn't exist, so it can hide or hold back a payment but can't fake one. With verification on, a missing transaction is therefore never failed or dropped for being missing; an admin cancels it. Blocks older than about 27 hours (EIP-2935) can't be proven, so such a payment waits with a note.
+- The verifier refuses a checkpoint older than `VERIFIER_CHECKPOINT_MAX_AGE_DAYS` (14 at most), checking the checkpoint's header itself since Helios's own check is off by default, and keeps the newest checkpoint it reaches for the next start. Helios is unaudited.
+- `npm run verifier:mainnet-check` runs it against mainnet with a proxy that tampers with the node's answers, and shows real receipts and balances proven and tampered ones refused.
+- `/healthz` shows `chain.verification`.
 
 ### Encryption keys
 

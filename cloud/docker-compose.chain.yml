@@ -49,8 +49,9 @@ services:
     # Checkpoint sync downloads a recent finalized state once, from the URL below, instead of
     # replaying the whole beacon chain. It is the only request that goes to a fixed third party.
     # The beacon API (--http) is for Nil's verifier, which reads its light-client data from it;
-    # it is reachable on the internal chain network only and never published. Lighthouse 7 and
-    # newer serve the light-client endpoints without further flags.
+    # it is reachable on the internal chain network only and never published. Current Lighthouse
+    # releases serve the light-client endpoints by default (only --disable-light-client-server
+    # turns them off).
     command: >-
       lighthouse bn --network mainnet --datadir /data
       --execution-endpoint http://reth:8551 --execution-jwt /jwt/jwt.hex
