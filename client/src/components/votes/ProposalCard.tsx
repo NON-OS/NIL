@@ -95,9 +95,12 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
         <span className="grow" />
         {isAdmin && (
           <>
-            <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title={proposal.anonymous ? 'Every ballot’s proof, so anyone can recount without learning who voted' : 'Every signed ballot, so anyone can recount'}>
-              <Download /> Audit file
-            </button>
+            {/* a sealed vote's ballots would give its running totals away, so its file waits for the close */}
+            {(!proposal.sealed || proposal.closedAt) && (
+              <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title={proposal.anonymous ? 'Every ballot’s proof, so anyone can recount without learning who voted' : 'Every signed ballot, so anyone can recount'}>
+                <Download /> Audit file
+              </button>
+            )}
             {open && (
               <ConfirmButton className="btn btn-sm" onConfirm={() => run('close', () => votes.close(proposal.id), 'Vote closed.')} confirmLabel="Close now?">
                 {busy === 'close' && <Spinner size={13} />} Close vote

@@ -3,7 +3,7 @@ import { Group } from '@semaphore-protocol/group';
 import { poseidon2 } from 'poseidon-lite/poseidon2';
 import type { Identity } from '@semaphore-protocol/identity';
 import fieldHash from '../semaphore/fieldHash';
-import type Proposal from '../../types/Proposal';
+import type AnonymousVoteView from '../../types/AnonymousVoteView';
 import type Point from './point';
 
 const OPTIONS = 8;
@@ -14,8 +14,8 @@ const DEPTH = 16;
 // leaf (identity, power) is in the census. The key is the one this browser rebuilt from the
 // trustees' commitments (votePublicKey), not the server's copy. Single-threaded, so the page
 // needs no data: workers.
-export default async function proveEncryptedBallot(identity: Identity, vote: Proposal, choice: number, publicKey: Point) {
-  const members = vote.anonymous!.members;
+export default async function proveEncryptedBallot(identity: Identity, vote: AnonymousVoteView, choice: number, publicKey: Point) {
+  const members = vote.members;
   const index = members.findIndex((m) => m.commitment === identity.commitment.toString() && !m.removed);
   if (index < 0) throw new Error('You had no voting power when this vote opened, so you’re not in its census.');
   const group = new Group();
@@ -37,8 +37,8 @@ export default async function proveEncryptedBallot(identity: Identity, vote: Pro
       merkleProofSiblings: Array.from({ length: DEPTH }, (_, i) => merkle.siblings[i] ?? 0n),
       choice,
       randomness,
-      scope: fieldHash(vote.anonymous!.scope),
-      optionCount: vote.options.length,
+      scope: fieldHash(vote.scope),
+      optionCount: vote.optionCount,
       publicKey,
     },
     '/zk/ballot.wasm',

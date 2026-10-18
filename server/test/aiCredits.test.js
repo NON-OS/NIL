@@ -99,6 +99,11 @@ test('a member drafts anonymously, and nothing the server keeps names them', asy
   const again = await credit.send('draft', request);
   assert.equal(again.status, 409);
   assert.match(again.data.error, /already used/);
+  // nor does the same nullifier written another way, which verifies like the first
+  const field = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+  for (const nullifier of [`0${request.proof.nullifier}`, (BigInt(request.proof.nullifier) + field).toString()]) {
+    assert.match((await credit.send('draft', { ...request, proof: { ...request.proof, nullifier } })).data.error, /malformed numbers/);
+  }
   assert.equal(model.requests.length, 1);
 });
 

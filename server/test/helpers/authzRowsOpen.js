@@ -35,6 +35,8 @@ export default {
   'GET /api/proofs/key': { open: true, allow: ALL },
   'POST /api/auth/restore': { open: true, allow: NOBODY, denied: [409] },
   'POST /api/anonymous-ballots/:id': { open: true, allow: NOBODY, id: 'proposal', denied: [404] },
+  // only anonymous votes answer, and only to whoever knows their id; this one is a signed vote
+  'GET /api/anonymous-votes/:id': { open: true, allow: NOBODY, id: 'proposal', denied: [404] },
   // only a proof gets in; a session cookie is refused before anything is read, and this
   // server has no AI configured for anyone who comes without one
   'POST /api/ai-credits/:feature': { open: true, allow: NOBODY, feature: () => 'draft', denied: [400, 503] },

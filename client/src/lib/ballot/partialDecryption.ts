@@ -7,11 +7,12 @@ import type Dealing from './dealing';
 
 const big = (p: Point): [bigint, bigint] => [BigInt(p[0]), BigInt(p[1])];
 
-// A trustee's contribution to the count. It re-checks the shares sealed to this trustee, sums
-// them into x_j, and multiplies every option's summed C1 by it, with a Chaum-Pedersen proof that
-// the same x_j was used each time.
-export default async function partialDecryption(proposalId: string, position: number, dealings: Dealing[], aggregates: { c1: Point }[], identity: { privateKey: Uint8Array; publicKey: Uint8Array }) {
-  const checked = await checkShares(proposalId, position, dealings, identity);
+// A trustee's contribution to the count. It re-checks the dealings and the shares sealed to this
+// trustee, sums them into x_j, and multiplies every option's summed C1 by it, with a
+// Chaum-Pedersen proof that the same x_j was used each time. The sums must be ones this browser
+// added up itself from ballots it checked (see verifyBallots), never the server's say-so.
+export default async function partialDecryption(proposalId: string, position: number, dealings: Dealing[], aggregates: { c1: Point }[], identity: { seed: Uint8Array; privateKey: Uint8Array; publicKey: Uint8Array }, trust?: Parameters<typeof checkShares>[4]) {
+  const checked = await checkShares(proposalId, position, dealings, identity, trust);
   if (!checked.ok) throw new Error(`Trustee ${checked.from}’s share doesn’t match what they committed to. Don’t decrypt; tell the admin.`);
   let x = checked.x;
   const X = mulPointEscalar(Base8, x);

@@ -84,7 +84,7 @@ The tests read the vectors and call Nil's real functions:
 - `client/test/formalRollback.test.js` replays rollback sequences through `isRollback` and `taskVersions`.
 - `client/test/formalStealth.test.js` checks that `stealthKey` gives the payee the key to the address `newStealthPayment` paid.
 
-Two tests are marked as expected to fail, because main still accepts numbers with leading zeros: one for ballot nullifiers and one for voting keys. They pass once the canonical-number fix lands, and should then lose their `todo` mark so they keep guarding it.
+Two of them guard the fix for the leading-zero bug the audit found: ballot nullifiers and voting keys written any way but the canonical one are refused, by both ballot checks and by the voting key route.
 
 If someone changes the code and the tests start failing, either the code no longer does what the proofs are about, or the model needs to change with it and the proofs checked again.
 

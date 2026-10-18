@@ -62,6 +62,24 @@ test('a 3.0.0 database upgrades to the latest schema with its data intact', () =
   }
 });
 
+test('upgrading drops ballots of open votes whose nullifier was written another way', () => {
+  const { db } = fixtureCopy('canonical');
+  try {
+    const field = 21888242871839275222246405745257275088548364400416034343698204186575808495617n;
+    db.exec(`INSERT INTO proposals (id, title, options, created_at, closes_at, anonymous) VALUES ('p-open', 'Open', '["A","B"]', 0, 9000000000000000, 1)`);
+    db.exec(`INSERT INTO proposals (id, title, options, created_at, closes_at, closed_at, anonymous) VALUES ('p-closed', 'Closed', '["A","B"]', 0, 1, 1, 1)`);
+    const insert = db.prepare('INSERT INTO anonymous_ballots (proposal_id, nullifier, choice, proof, created_at) VALUES (?, ?, 0, ?, 0)');
+    for (const id of ['p-open', 'p-closed']) for (const nullifier of ['123', '0123', (field + 5n).toString()]) insert.run(id, nullifier, '{}');
+    migrate(db);
+    const left = (id) => db.prepare('SELECT nullifier FROM anonymous_ballots WHERE proposal_id = ? ORDER BY nullifier').all(id).map((r) => r.nullifier);
+    assert.deepEqual(left('p-open'), ['123']);
+    // a closed vote's ballots stay as they were counted, for its audit file to show
+    assert.equal(left('p-closed').length, 3);
+  } finally {
+    db.close();
+  }
+});
+
 test('only the three newest snapshots are kept, and erasing removes them all', async () => {
   const { dir, db } = fixtureCopy('keep');
   try {
