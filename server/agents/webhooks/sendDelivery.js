@@ -69,16 +69,20 @@ export default async function sendDelivery(id, { manual = false } = {}) {
   const ok = !error;
   const attempts = delivery.attempts + 1;
   const now = Date.now();
-  if (ok) sql.run("UPDATE webhook_deliveries SET status = 'delivered', attempts = ?, last_status = ?, last_error = NULL, delivered_at = ? WHERE id = ?", attempts, status, now, id);
-  else if (manual) sql.run("UPDATE webhook_deliveries SET status = 'failed', attempts = ?, last_status = ?, last_error = ? WHERE id = ?", attempts, status, error, id);
-  else if (attempts >= config.agents.webhookMaxAttempts) sql.run("UPDATE webhook_deliveries SET status = 'failed', attempts = ?, last_status = ?, last_error = ? WHERE id = ?", attempts, status, error, id);
-  else sql.run("UPDATE webhook_deliveries SET status = 'pending', attempts = ?, last_status = ?, last_error = ?, next_attempt_at = ? WHERE id = ?", attempts, status, error, now + retryDelay(attempts), id);
+  // the attempt, the webhook's failure count and switching it off agree, whatever happens
+  sql.tx(() => {
+    if (ok) sql.run("UPDATE webhook_deliveries SET status = 'delivered', attempts = ?, last_status = ?, last_error = NULL, delivered_at = ? WHERE id = ?", attempts, status, now, id);
+    else if (manual) sql.run("UPDATE webhook_deliveries SET status = 'failed', attempts = ?, last_status = ?, last_error = ? WHERE id = ?", attempts, status, error, id);
+    else if (attempts >= config.agents.webhookMaxAttempts) sql.run("UPDATE webhook_deliveries SET status = 'failed', attempts = ?, last_status = ?, last_error = ? WHERE id = ?", attempts, status, error, id);
+    else sql.run("UPDATE webhook_deliveries SET status = 'pending', attempts = ?, last_status = ?, last_error = ?, next_attempt_at = ? WHERE id = ?", attempts, status, error, now + retryDelay(attempts), id);
 
-  if (ok) sql.run('UPDATE agent_webhooks SET failures = 0 WHERE agent_id = ?', hook.agent_id);
-  else {
-    sql.run('UPDATE agent_webhooks SET failures = failures + 1 WHERE agent_id = ?', hook.agent_id);
-    const { failures } = sql.get('SELECT failures FROM agent_webhooks WHERE agent_id = ?', hook.agent_id);
-    if (failures >= config.agents.webhookDisableAfter && !hook.disabled_at) switchOff(hook.agent_id, `${failures} failed attempts in a row. Last: ${error}`);
-  }
+    if (ok) sql.run('UPDATE agent_webhooks SET failures = 0 WHERE agent_id = ?', hook.agent_id);
+    else {
+      sql.run('UPDATE agent_webhooks SET failures = failures + 1 WHERE agent_id = ?', hook.agent_id);
+      // the webhook may have been removed while the attempt was on its way
+      const failures = sql.get('SELECT failures FROM agent_webhooks WHERE agent_id = ?', hook.agent_id)?.failures ?? 0;
+      if (failures >= config.agents.webhookDisableAfter && !hook.disabled_at) switchOff(hook.agent_id, `${failures} failed attempts in a row. Last: ${error}`);
+    }
+  });
   return { ok, status, error, attempts };
 }

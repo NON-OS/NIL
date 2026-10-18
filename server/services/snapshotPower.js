@@ -28,10 +28,14 @@ function shuffle(list) {
 // leave some wallets read from one version of the block and some from another. The node can tell
 // these wallets were read together. What it can't tell is whose wallets belong to the same
 // person: they go out shuffled across members, a few at a time, rather than person by person.
-export default async function snapshotPower(proposalId) {
+//
+// Reading takes a while, so nothing is written here. It returns the function that saves the
+// snapshot for a vote, which the caller runs in the transaction that creates the vote.
+export default async function snapshotPower() {
   const { number: block, hash } = await finalBlockRef();
   const at = { blockHash: hash, requireCanonical: true };
-  const perZsp = BigInt(zspPower.get()) * 10n ** BigInt(config.nox.decimals);
+  const zspInForce = zspPower.get();
+  const perZsp = BigInt(zspInForce) * 10n ** BigInt(config.nox.decimals);
   // votes are for people: agents hold no wallet and never get a row in the snapshot
   const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((m) => m.id);
   const totals = new Map(members.map((id) => [id, { nox: 0n, staked: 0n, zsp: 0n }]));
@@ -51,10 +55,14 @@ export default async function snapshotPower(proposalId) {
     });
   }
 
-  sql.tx(() => {
-    sql.run('UPDATE proposals SET snapshot_block = ?, zsp_power = ? WHERE id = ?', block, zspPower.get(), proposalId);
+  return (proposalId) => {
+    sql.run('UPDATE proposals SET snapshot_block = ?, zsp_power = ? WHERE id = ?', block, zspInForce, proposalId);
     for (const [id, t] of totals) {
-      sql.run('INSERT INTO proposal_power (proposal_id, user_id, nox, staked, zsp, power) VALUES (?, ?, ?, ?, ?, ?)', proposalId, id, String(t.nox), String(t.staked), Number(t.zsp), String(t.nox + t.staked + t.zsp * perZsp));
+      // someone erased while the wallets were being read has no row to point at any more
+      sql.run(
+        'INSERT INTO proposal_power (proposal_id, user_id, nox, staked, zsp, power) SELECT ?, id, ?, ?, ?, ? FROM users WHERE id = ?',
+        proposalId, String(t.nox), String(t.staked), Number(t.zsp), String(t.nox + t.staked + t.zsp * perZsp), id,
+      );
     }
-  });
+  };
 }

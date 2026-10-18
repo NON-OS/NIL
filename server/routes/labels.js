@@ -40,8 +40,10 @@ router.patch(
   route((req) => {
     const { id } = req.params;
     if (!sql.get('SELECT 1 FROM labels WHERE id = ?', id)) throw HttpError.notFound('That label');
-    if ('name' in req.body) sql.run('UPDATE labels SET name = ? WHERE id = ?', uniqueName(check.text(req.body.name, 'Label name', { min: 1, max: 40 }), id), id);
-    if ('color' in req.body) sql.run('UPDATE labels SET color = ? WHERE id = ?', check.color(req.body.color), id);
+    sql.tx(() => {
+      if ('name' in req.body) sql.run('UPDATE labels SET name = ? WHERE id = ?', uniqueName(check.text(req.body.name, 'Label name', { min: 1, max: 40 }), id), id);
+      if ('color' in req.body) sql.run('UPDATE labels SET color = ? WHERE id = ?', check.color(req.body.color), id);
+    });
     return publish(id);
   }),
 );

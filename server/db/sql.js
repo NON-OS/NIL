@@ -1,8 +1,10 @@
 import db from './connection.js';
 import config from '../config.js';
+import log from '../lib/log.js';
 
 const statements = new Map();
 let depth = 0;
+let after = [];
 
 function prepared(text) {
   let stmt = statements.get(text);
@@ -26,21 +28,41 @@ const sql = {
     return statements.size;
   },
 
-  // Nested calls join the outer transaction instead of opening a second one.
+  // Nested calls join the outer transaction instead of opening a second one. When SQLite has
+  // already rolled back by itself (a full disk, say), the error that caused it is what's thrown.
   tx(fn) {
     if (depth > 0) return fn();
     db.exec('BEGIN IMMEDIATE');
     depth++;
+    let out;
     try {
-      const out = fn();
+      out = fn();
       db.exec('COMMIT');
-      return out;
     } catch (err) {
-      db.exec('ROLLBACK');
+      after = [];
+      if (db.isTransaction) db.exec('ROLLBACK');
       throw err;
     } finally {
       depth--;
     }
+    const queued = after;
+    after = [];
+    for (const run of queued) {
+      try {
+        run();
+      } catch (err) {
+        log.error('db', 'A change was saved, but telling people about it failed.', err);
+      }
+    }
+    return out;
+  },
+
+  // Runs `fn` once the transaction this is called in commits, or straight away outside one. A
+  // rollback drops it, so live updates and push notifications never announce a change that
+  // didn't happen.
+  afterCommit(fn) {
+    if (depth > 0) after.push(fn);
+    else fn();
   },
 };
 

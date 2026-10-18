@@ -96,8 +96,10 @@ router.delete(
   route((req) => {
     const reset = openReset(req.params.id);
     if (!reset) throw HttpError.notFound('That reset');
-    sql.run('UPDATE sign_in_resets SET closed_at = ? WHERE id = ?', Date.now(), reset.id);
-    signInAudit('reset.cancelled', { actorId: req.user.id, subjectId: reset.user_id, resetId: reset.id });
+    sql.tx(() => {
+      sql.run('UPDATE sign_in_resets SET closed_at = ? WHERE id = ?', Date.now(), reset.id);
+      signInAudit('reset.cancelled', { actorId: req.user.id, subjectId: reset.user_id, resetId: reset.id });
+    });
     return { ok: true };
   }),
 );

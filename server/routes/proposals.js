@@ -62,27 +62,27 @@ router.post(
       if (!eligible) throw HttpError.badRequest('Pick three different members who have unlocked encrypted docs as trustees.');
       if (options.length > 8) throw HttpError.badRequest('Encrypted votes can have at most 8 options.');
     }
+    const title = check.text(b.title, 'Title', { min: 1, max: 200 });
+    const body = check.text(b.body, 'Details', { max: 10_000 });
+    // No snapshot, no vote: a weighted vote without one couldn't be counted fairly. The power is
+    // read before anything is saved, and the vote, its snapshot, its census and its trustees go
+    // in together, so a failure or a restart midway leaves no vote nobody can count.
+    const savePower = weighting === 'power' ? await snapshotPower() : null;
     const id = newId();
     const now = Date.now();
-    sql.run(
-      'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-      id, check.text(b.title, 'Title', { min: 1, max: 200 }), check.text(b.body, 'Details', { max: 10_000 }), JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
-    );
-    if (weighting === 'power') {
-      try {
-        await snapshotPower(id);
-      } catch (err) {
-        // no snapshot, no vote: a weighted vote without one couldn't be counted fairly
-        sql.run('DELETE FROM proposals WHERE id = ?', id);
-        throw err;
-      }
-    }
-    // the census of an anonymous vote needs the snapshot first when it's weighted
-    if (anonymous) voterGroups.start(id);
-    if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
-    // votes are for members; guests can't open them and agents can't vote, so neither hears about them
-    const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((u) => u.id);
-    notify(members, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
+    sql.tx(() => {
+      sql.run(
+        'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, title, body, JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
+      );
+      savePower?.(id);
+      // the census of an anonymous vote needs the snapshot first when it's weighted
+      if (anonymous) voterGroups.start(id);
+      if (trustees) trustees.forEach((userId, i) => sql.run('INSERT INTO proposal_trustees (proposal_id, position, user_id) VALUES (?, ?, ?)', id, i + 1, userId));
+      // votes are for members; guests can't open them and agents can't vote, so neither hears about them
+      const members = sql.all("SELECT id FROM users WHERE deactivated = 0 AND role != 'guest' AND kind = 'human'").map((u) => u.id);
+      notify(members, 'proposal', null, req.user.id, { proposalId: id, title: b.title });
+    });
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', id), req.user) };
   }),

@@ -39,11 +39,7 @@ function declaredSize(req, limit) {
   return declared || null;
 }
 
-function syncCount(taskId) {
-  const { n } = sql.get('SELECT COUNT(*) AS n FROM attachments WHERE task_id = ?', taskId);
-  sql.run('UPDATE tasks SET attachment_count = ? WHERE id = ?', n, taskId);
-  publishTask(taskId);
-}
+const countFiles = (taskId) => sql.run('UPDATE tasks SET attachment_count = (SELECT COUNT(*) FROM attachments WHERE task_id = ?) WHERE id = ?', taskId, taskId);
 
 // Moving a task's files between encrypted and plain is part of changing who sees it, so it's
 // left to the same two people.
@@ -68,10 +64,16 @@ router.post(
       // the task may have changed hands or been sealed while the file was on its way
       task = visibleTask(req.params.id, req.user);
       file = incomingFile(req.headers, task);
-      sql.run(
-        'INSERT INTO attachments (id, task_id, uploader_id, filename, mime, size, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        id, task.id, req.user.id, file.filename, file.mime, size, file.sealed ? JSON.stringify(file.sealed) : null, Date.now(),
-      );
+      // the file's row, its history entry and the task's count go in together
+      sql.tx(() => {
+        sql.run(
+          'INSERT INTO attachments (id, task_id, uploader_id, filename, mime, size, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+          id, task.id, req.user.id, file.filename, file.mime, size, file.sealed ? JSON.stringify(file.sealed) : null, Date.now(),
+        );
+        // an encrypted task's history says that a file arrived, never what it's called
+        logActivity(task.id, req.user.id, 'attachment', file.sealed ? {} : { filename: file.filename });
+        countFiles(task.id);
+      });
     } catch (err) {
       fs.rmSync(stored, { force: true });
       throw err;
@@ -80,9 +82,7 @@ router.post(
     }
     const attachment = toAttachment(sql.get('SELECT * FROM attachments WHERE id = ?', id));
     toTaskViewers(task.id, { type: 'attachment', attachment });
-    // an encrypted task's history says that a file arrived, never what it's called
-    logActivity(task.id, req.user.id, 'attachment', file.sealed ? {} : { filename: file.filename });
-    syncCount(task.id);
+    publishTask(task.id);
     return { attachment };
   }),
 );
@@ -140,11 +140,14 @@ router.delete(
     if (!row) return { ok: true };
     visibleTask(row.task_id, req.user, { allowDeleted: true });
     if (row.uploader_id !== req.user.id && !req.user.isAdmin) throw HttpError.forbidden('Only the uploader or an admin can remove this file.');
-    sql.run('DELETE FROM attachments WHERE id = ?', row.id);
+    sql.tx(() => {
+      sql.run('DELETE FROM attachments WHERE id = ?', row.id);
+      countFiles(row.task_id);
+    });
     fs.rm(path.join(uploadDir, row.id), { force: true }, () => {});
     stagedFile.discard(row.id);
     toTaskViewers(row.task_id, { type: 'attachment.delete', id: row.id, taskId: row.task_id });
-    syncCount(row.task_id);
+    publishTask(row.task_id);
     return { ok: true };
   }),
 );

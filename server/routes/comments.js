@@ -14,11 +14,6 @@ import commentQuotes from '../services/commentQuotes.js';
 
 const router = express.Router();
 
-function syncCount(taskId) {
-  const { n } = sql.get('SELECT COUNT(*) AS n FROM comments WHERE task_id = ?', taskId);
-  sql.run('UPDATE tasks SET comment_count = ? WHERE id = ?', n, taskId);
-  publishTask(taskId);
-}
 
 function ownComment(req, { allowAdmin = false } = {}) {
   const row = sql.get('SELECT * FROM comments WHERE id = ?', req.params.id);
@@ -36,8 +31,11 @@ router.patch(
     const row = ownComment(req);
     // an encrypted comment stays encrypted; the browser re-seals the edit with the task's key
     const body = row.sealed ? cipherText(req.body.body, 'Encrypted comment', { max: 60_000 }) : check.text(req.body.body, 'Comment', { min: 1, max: 10_000 });
-    sql.run('UPDATE comments SET body = ?, edited_at = ? WHERE id = ?', body, Date.now(), row.id);
-    commentQuotes.edited(row, body);
+    // the quotes of it in notifications and briefings change with it, or not at all
+    sql.tx(() => {
+      sql.run('UPDATE comments SET body = ?, edited_at = ? WHERE id = ?', body, Date.now(), row.id);
+      commentQuotes.edited(row, body);
+    });
     const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', row.id));
     toTaskViewers(row.task_id, { type: 'comment', comment });
     return { comment };
@@ -48,11 +46,14 @@ router.delete(
   '/comments/:id',
   route((req) => {
     const row = ownComment(req, { allowAdmin: true });
-    sql.run('DELETE FROM comments WHERE id = ?', row.id);
-    commentQuotes.removed(row);
+    sql.tx(() => {
+      sql.run('DELETE FROM comments WHERE id = ?', row.id);
+      commentQuotes.removed(row);
+      sql.run('UPDATE tasks SET comment_count = (SELECT COUNT(*) FROM comments WHERE task_id = ?) WHERE id = ?', row.task_id, row.task_id);
+    });
     checkpoint();
     toTaskViewers(row.task_id, { type: 'comment.delete', id: row.id, taskId: row.task_id });
-    syncCount(row.task_id);
+    publishTask(row.task_id);
     return { ok: true };
   }),
 );

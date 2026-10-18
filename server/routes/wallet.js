@@ -126,8 +126,10 @@ router.post(
     if (pending.mode === 'add') {
       const user = currentUser(req);
       if (!user || user.id !== pending.userId) throw new HttpError(401, 'Sign in again to link a wallet.');
-      addCredential(user.id, pending.address);
-      signInAudit('wallet.linked', { actorId: user.id, subjectId: user.id });
+      sql.tx(() => {
+        addCredential(user.id, pending.address);
+        signInAudit('wallet.linked', { actorId: user.id, subjectId: user.id });
+      });
       return { ok: true };
     }
     if (pending.mode === 'reset') return signIn(req, res, useSignInReset(pending.resetId, pending.address));

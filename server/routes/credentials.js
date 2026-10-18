@@ -46,8 +46,11 @@ router.delete(
     if (sql.get('SELECT 1 FROM passkey_wraps WHERE user_id = ?', req.user.id) && !hasWayBack(req.user.id, { without: credential.address })) {
       throw new HttpError(409, 'Your passkeys would be the only way back to your encryption keys. Add another wallet to your keys or download a recovery kit first.');
     }
-    sql.run('DELETE FROM credentials WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
-    signInAudit('wallet.removed', { actorId: req.user.id, subjectId: req.user.id });
+    // a wallet never goes without the audit trail saying so
+    sql.tx(() => {
+      sql.run('DELETE FROM credentials WHERE id = ? AND user_id = ?', req.params.id, req.user.id);
+      signInAudit('wallet.removed', { actorId: req.user.id, subjectId: req.user.id });
+    });
     return overview(req.user.id);
   }),
 );

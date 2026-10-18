@@ -56,12 +56,13 @@ export default function createTask(actor, input, { legacy = false } = {}) {
     );
     watchers.add(id, actor.id);
     watchers.add(id, p.assigneeId);
-    return loadTask(id);
+    // with its history entry, its receipt when it starts out done, and the assignee's notification
+    const made = loadTask(id);
+    logActivity(id, actor.id, 'created');
+    if (made.status === 'done') issueReceipt(made, actor.id);
+    if (made.assigneeId) notify([made.assigneeId], 'assigned', id, actor.id, { title: made.title });
+    return made;
   });
-
-  logActivity(id, actor.id, 'created');
-  if (task.status === 'done') issueReceipt(task, actor.id);
-  if (task.assigneeId) notify([task.assigneeId], 'assigned', id, actor.id, { title: task.title });
   publishTask(id);
   return task;
 }

@@ -24,22 +24,26 @@ export default function addComment(actor, taskId, text, { sealed = false } = {})
   }
   const body = sealed ? cipherText(text, 'Encrypted comment', { max: 60_000 }) : check.text(text, 'Comment', { min: 1, max: 10_000 });
   const id = newId();
-  sql.run('INSERT INTO comments (id, task_id, author_id, body, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, task.id, actor.id, body, sealed ? 1 : 0, Date.now());
-  const comment = toComment(sql.get('SELECT * FROM comments WHERE id = ?', id));
-  toTaskViewers(task.id, { type: 'comment', comment });
+  // the comment, its count, its history entry and its notifications are saved together
+  const comment = sql.tx(() => {
+    sql.run('INSERT INTO comments (id, task_id, author_id, body, sealed, created_at) VALUES (?, ?, ?, ?, ?, ?)', id, task.id, actor.id, body, sealed ? 1 : 0, Date.now());
+    const saved = toComment(sql.get('SELECT * FROM comments WHERE id = ?', id));
+    toTaskViewers(task.id, { type: 'comment', comment: saved });
 
-  watchers.add(task.id, actor.id);
-  logActivity(task.id, actor.id, 'comment', { commentId: id });
+    watchers.add(task.id, actor.id);
+    logActivity(task.id, actor.id, 'comment', { commentId: id });
 
-  // a mention of someone who can't open the task neither tells them about it nor lets them in
-  const mentioned = sealed ? [] : findMentions(body).filter((userId) => canSeeTask(task, { id: userId }));
-  // the comment's id lets the excerpt follow an edit or a delete
-  const preview = sealed ? {} : { title: task.title, excerpt: commentQuotes.excerpt(body), commentId: id };
-  notify(mentioned, 'mention', task.id, actor.id, preview);
-  notify([...watchers.of(task.id), task.assigneeId].filter((u) => !mentioned.includes(u)), 'comment', task.id, actor.id, preview);
-  for (const userId of mentioned) watchers.add(task.id, userId);
+    // a mention of someone who can't open the task neither tells them about it nor lets them in
+    const mentioned = sealed ? [] : findMentions(body).filter((userId) => canSeeTask(task, { id: userId }));
+    // the comment's id lets the excerpt follow an edit or a delete
+    const preview = sealed ? {} : { title: task.title, excerpt: commentQuotes.excerpt(body), commentId: id };
+    notify(mentioned, 'mention', task.id, actor.id, preview);
+    notify([...watchers.of(task.id), task.assigneeId].filter((u) => !mentioned.includes(u)), 'comment', task.id, actor.id, preview);
+    for (const userId of mentioned) watchers.add(task.id, userId);
 
-  sql.run('UPDATE tasks SET comment_count = (SELECT COUNT(*) FROM comments WHERE task_id = ?) WHERE id = ?', task.id, task.id);
+    sql.run('UPDATE tasks SET comment_count = (SELECT COUNT(*) FROM comments WHERE task_id = ?) WHERE id = ?', task.id, task.id);
+    return saved;
+  });
   publishTask(task.id);
   return comment;
 }

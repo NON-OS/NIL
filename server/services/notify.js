@@ -27,13 +27,16 @@ export default function notify(userIds, type, taskId, actorId, data = {}) {
       now,
     );
     const notification = toNotification(sql.get('SELECT * FROM notifications WHERE id = ?', lastInsertRowid));
-    hub.toUser(userId, { type: 'notification', notification });
-    pushNotification(userId, notification);
-    // agents act on some notifications (assignments, mentions); a failure there never blocks people's
-    try {
-      agentEvents.notified(userId, type, taskId, actorId);
-    } catch (err) {
-      log.error('agents', 'A notification couldn’t be handed to an agent.', err);
-    }
+    // inside a transaction, nobody hears about it until it commits
+    sql.afterCommit(() => {
+      hub.toUser(userId, { type: 'notification', notification });
+      pushNotification(userId, notification);
+      // agents act on some notifications (assignments, mentions); a failure there never blocks people's
+      try {
+        agentEvents.notified(userId, type, taskId, actorId);
+      } catch (err) {
+        log.error('agents', 'A notification couldn’t be handed to an agent.', err);
+      }
+    });
   }
 }

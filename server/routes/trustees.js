@@ -52,13 +52,16 @@ router.put(
     if (!trustee.commitment) throw new HttpError(409, 'Commit to your dealing first.');
     if (!seats(proposal.id).every((t) => t.commitment)) throw new HttpError(409, 'Wait until all three trustees have committed.');
     const dealing = parseReveal(proposal.id, trustee, req.body);
-    sql.run('UPDATE proposal_trustees SET dealing = ?, dealt_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify(dealing), Date.now(), proposal.id, trustee.position);
-
-    const dealings = encryptedTally.dealingsOf(proposal.id);
-    if (dealings.every(Boolean)) {
-      const key = dealings.reduce((sum, d) => addPoint(sum, d[0]), [0n, 1n]);
-      sql.run('UPDATE proposals SET public_key = ? WHERE id = ? AND public_key IS NULL', JSON.stringify(key.map(String)), proposal.id);
-    }
+    // the last dealing and the vote's key go in together: a dealing saved without the key would
+    // leave the vote waiting forever, since a dealing can't be sent twice
+    sql.tx(() => {
+      sql.run('UPDATE proposal_trustees SET dealing = ?, dealt_at = ? WHERE proposal_id = ? AND position = ?', JSON.stringify(dealing), Date.now(), proposal.id, trustee.position);
+      const dealings = encryptedTally.dealingsOf(proposal.id);
+      if (dealings.every(Boolean)) {
+        const key = dealings.reduce((sum, d) => addPoint(sum, d[0]), [0n, 1n]);
+        sql.run('UPDATE proposals SET public_key = ? WHERE id = ? AND public_key IS NULL', JSON.stringify(key.map(String)), proposal.id);
+      }
+    });
     hub.broadcast({ type: 'proposals' });
     return { ok: true };
   }),

@@ -154,7 +154,11 @@ export default function updateTask(actor, id, body, { today } = {}) {
   params.push(now);
 
   let staged = [];
-  sql.tx(() => {
+  let spawned = null;
+  // The change, its receipt, its history, its notifications and a repeating task's next copy are
+  // saved together: a crash in between can't leave a finished task without its receipt or a
+  // schedule handed to a copy that was never made.
+  const task = sql.tx(() => {
     sql.run(`UPDATE tasks SET ${sets.join(', ')} WHERE id = ?`, ...params, id);
     if (sealing.rekeyed) {
       resealComments(id, body.comments, { sealed: sealing.commentsSealed });
@@ -165,23 +169,24 @@ export default function updateTask(actor, id, body, { today } = {}) {
     // Made private, reassigned or moved out of a guest's projects: whoever can't open it any
     // more stops following it and loses the notifications that quote its title.
     lostAccess.task(id);
+
+    const saved = loadTask(id);
+    if (statusChange?.after === 'done') issueReceipt(saved, actor.id);
+    else if (statusChange?.before === 'done') revokeReceipts(id);
+    // once sealed, the history keeps no trace of the words that were there
+    // a due moment that only moved with its date isn't news; a new time is
+    const logged = changes.filter((c) => !(saved.sealed && PLAIN.includes(c.key)) && !(c.key === 'dueAt' && !timeSet));
+    logTaskChanges(id, actor.id, logged);
+    notifyTaskChanges(saved, actor.id, changes);
+    if (recurs) spawned = scheduleNext(actor, saved, recurrence, today);
+    return saved;
   });
   // the rows now describe the staged copies, so those take the files' place
   for (const file of staged) stagedFile.commit(file.id, file.sealed);
 
   // the plain text a task had before it was sealed mustn't linger in the write-ahead log
   if (sealing.first) checkpoint();
-  const task = loadTask(id);
-  if (statusChange?.after === 'done') issueReceipt(task, actor.id);
-  else if (statusChange?.before === 'done') revokeReceipts(id);
-  // once sealed, the history keeps no trace of the words that were there
-  // a due moment that only moved with its date isn't news; a new time is
-  const logged = changes.filter((c) => !(task.sealed && PLAIN.includes(c.key)) && !(c.key === 'dueAt' && !timeSet));
-  logTaskChanges(id, actor.id, logged);
-  notifyTaskChanges(task, actor.id, changes);
   publishTask(id, existing);
   if (sealing.rekeyed) publishAttachments(id);
-
-  const spawned = recurs ? scheduleNext(actor, task, recurrence, today) : null;
   return { task, spawned };
 }

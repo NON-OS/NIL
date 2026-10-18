@@ -14,9 +14,12 @@ router.patch(
   '/me',
   route((req) => {
     const b = req.body;
-    if ('name' in b) sql.run('UPDATE users SET name = ? WHERE id = ?', check.text(b.name, 'Name', { min: 1, max: 80 }), req.user.id);
-    if ('title' in b) sql.run('UPDATE users SET title = ? WHERE id = ?', check.text(b.title, 'Role', { max: 80 }), req.user.id);
-    if ('color' in b) sql.run('UPDATE users SET color = ? WHERE id = ?', check.color(b.color), req.user.id);
+    // one field that doesn't pass leaves the others as they were
+    sql.tx(() => {
+      if ('name' in b) sql.run('UPDATE users SET name = ? WHERE id = ?', check.text(b.name, 'Name', { min: 1, max: 80 }), req.user.id);
+      if ('title' in b) sql.run('UPDATE users SET title = ? WHERE id = ?', check.text(b.title, 'Role', { max: 80 }), req.user.id);
+      if ('color' in b) sql.run('UPDATE users SET color = ? WHERE id = ?', check.color(b.color), req.user.id);
+    });
     const row = publishUser(req.user.id);
     return { user: toUser(row, req.viewer) };
   }),
