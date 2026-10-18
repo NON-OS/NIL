@@ -23,8 +23,7 @@ import type SharingPolicy from '../types/SharingPolicy';
 import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
-import privateKeys from '../state/privateKeys';
-import keyring from '../state/keyring';
+import vault from './vault';
 
 interface Bootstrap {
   me: User;
@@ -96,8 +95,8 @@ async function load() {
 function signedOut(message?: string) {
   clearTimeout(resync);
   socket.disconnect();
-  keyring.lock();
-  privateKeys.lock();
+  // the keys, and every private task, comment and file opened with them
+  vault.lock();
   store.reset({ phase: 'auth' });
   history.replaceState(null, '', '/');
   if (message) toast.show(message, { tone: 'error' });
