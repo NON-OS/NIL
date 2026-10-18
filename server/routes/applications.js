@@ -4,6 +4,7 @@ import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
 import requireAdmin from '../auth/requireAdmin.js';
 import visibleTask from '../services/visibleTask.js';
+import publishTask from '../services/publishTask.js';
 import acceptApplication from '../services/acceptApplication.js';
 
 const router = express.Router();
@@ -20,6 +21,20 @@ router.get(
   }),
 );
 
+// A listed bounty can stop taking applications and stay on the board, for when the team has
+// enough to choose from or is being flooded.
+for (const [action, closed] of [['close', true], ['reopen', false]]) {
+  router.post(
+    `/tasks/:id/applications/${action}`,
+    requireAdmin,
+    route((req) => {
+      const task = visibleTask(req.params.id, req.user);
+      sql.run('UPDATE tasks SET applications_closed_at = ? WHERE id = ?', closed ? Date.now() : null, task.id);
+      return { task: publishTask(task.id) };
+    }),
+  );
+}
+
 router.post('/applications/:id/accept', requireAdmin, route((req) => ({ task: acceptApplication(req.user, req.params.id) })));
 
 router.post(
@@ -27,6 +42,17 @@ router.post(
   requireAdmin,
   route((req) => {
     const { changes } = sql.run("UPDATE applications SET status = 'declined', decided_at = ?, decided_by = ? WHERE id = ? AND status = 'pending'", Date.now(), req.user.id, req.params.id);
+    if (!changes) throw HttpError.notFound('That application');
+    return { ok: true };
+  }),
+);
+
+// Gone without a trace: name, pitch and wallet. For spam, which a decline would keep on file.
+router.delete(
+  '/applications/:id',
+  requireAdmin,
+  route((req) => {
+    const { changes } = sql.run('DELETE FROM applications WHERE id = ?', req.params.id);
     if (!changes) throw HttpError.notFound('That application');
     return { ok: true };
   }),

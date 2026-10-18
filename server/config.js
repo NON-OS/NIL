@@ -23,6 +23,7 @@ import tasks from './config/tasks.js';
 import push from './config/push.js';
 import due from './config/due.js';
 import calendarFeeds from './config/calendarFeeds.js';
+import bountyBoard from './config/bountyBoard.js';
 import ai from './config/ai.js';
 import agents from './config/agents.js';
 import PUBLIC_NODE from './config/publicNode.js';
@@ -78,6 +79,7 @@ const config = Object.freeze({
   push,
   due,
   calendarFeeds,
+  bountyBoard,
   signIn,
   billing,
   finality,

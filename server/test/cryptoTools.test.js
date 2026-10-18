@@ -29,6 +29,7 @@ const CRYPTO_ROUTES = [
   ['PUT', '/api/me/stealth', { meta: 'x' }],
   ['GET', '/api/holder-gate'],
   ['POST', '/api/applications/abc/accept'],
+  ['DELETE', '/api/applications/abc'],
 ];
 
 before(async () => {

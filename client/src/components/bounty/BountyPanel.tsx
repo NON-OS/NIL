@@ -49,7 +49,7 @@ export default function BountyPanel({ task }: { task: Task }) {
             )}
           </label>
         )}
-        {task.listedAt && <Applications taskId={task.id} />}
+        {task.listedAt && <Applications task={task} />}
       </>
     );
   } else if (!assignee.address) {
