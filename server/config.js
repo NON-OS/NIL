@@ -11,6 +11,7 @@ import nox from './config/nox.js';
 import rewards from './config/rewardTokens.js';
 import plan from './config/plan.js';
 import stealth from './config/stealth.js';
+import pools from './config/privacyPools.js';
 import power from './config/power.js';
 import billing from './config/billing.js';
 import finality from './config/finality.js';
@@ -77,6 +78,7 @@ const config = Object.freeze({
   rewards,
   plan,
   stealth,
+  pools,
   semaphore,
   tasks,
   power,

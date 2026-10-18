@@ -66,6 +66,14 @@ test('bootstrap sends plain tasks as cards: no notes or checklist, just step cou
   assert.ok('build' in legacy);
 });
 
+test('with pool payouts off, bootstrap says nothing about a team pool to anyone', async () => {
+  for (const who of [owner, ana, guest]) {
+    const { privacyPools, ...rest } = (await who('GET', '/api/bootstrap')).data;
+    assert.equal(privacyPools, false);
+    assert.doesNotMatch(JSON.stringify(rest), /privacy ?pool|relayer|entrypoint|association set/i);
+  }
+});
+
 test('one malformed row costs its own step count, not everyone’s bootstrap', async () => {
   const { task } = (await owner('POST', '/api/tasks', { title: 'Imported from elsewhere', checklist: [{ text: 'One' }] })).data;
   sql.run("UPDATE tasks SET checklist = 'not json' WHERE id = ?", task.id);

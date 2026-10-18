@@ -4,6 +4,7 @@ import startServer from './helpers/startServer.js';
 import client from './helpers/client.js';
 import wallet from './helpers/wallet.js';
 
+const DAY = 86_400_000;
 let srv;
 let sql;
 const base = () => srv.base;
@@ -23,6 +24,8 @@ before(async () => {
     wallets[name] = wallet();
     ids[name] = (await people[name].wallet(wallets[name], 'invite', { name, inviteToken: token })).data.user.id;
   }
+  // only admins who have held the role for a while can approve resetting an owner
+  sql.run("UPDATE users SET admin_since = ? WHERE role IN ('owner', 'admin')", Date.now() - 4 * DAY);
 });
 after(() => srv.close());
 
@@ -128,19 +131,31 @@ test('with two or more other admins, resetting an owner needs a second admin to 
   assert.deepEqual((await actions()).slice(0, 3), ['reset.used', 'reset.approved', 'reset.requested']);
 });
 
-test('with only one other admin, resetting an owner goes ahead after a clear warning', async () => {
-  await people.ada('PATCH', `/api/users/${ids.ben}`, { deactivated: true });
+test('with nobody to approve, resetting an owner waits, and only the asker makes the link', async () => {
+  // removed long enough ago that ben no longer counts as an admin who could approve
+  await people.owner('PATCH', `/api/users/${ids.ben}`, { deactivated: true });
+  sql.run('UPDATE users SET admin_until = ? WHERE id = ?', Date.now() - 4 * DAY, ids.ben);
   const warned = await resetFor('ada', ids.owner);
   assert.equal(warned.status, 409);
-  assert.match(warned.data.error, /no other admin to approve/);
-  const confirmed = await resetFor('ada', ids.owner, { acknowledged: true });
-  assert.equal(confirmed.status, 200);
-  assert.ok(confirmed.data.token);
+  assert.match(warned.data.error, /no other admin to approve.*can be made in 72 hours/);
+  const asked = await resetFor('ada', ids.owner, { acknowledged: true });
+  assert.equal(asked.status, 200);
+  assert.equal(asked.data.token, undefined);
+  assert.ok(asked.data.reset.readyAt > Date.now() + 71 * 3_600_000);
+  assert.equal(asked.data.reset.awaitingApproval, false);
+  assert.equal((await people.ada('POST', `/api/sign-in-resets/${asked.data.reset.id}/link`)).status, 409);
+  sql.run('UPDATE sign_in_resets SET ready_at = ? WHERE id = ?', Date.now() - 1, asked.data.reset.id);
+  assert.equal((await people.mia('POST', `/api/sign-in-resets/${asked.data.reset.id}/link`)).status, 403);
+  const made = await people.ada('POST', `/api/sign-in-resets/${asked.data.reset.id}/link`);
+  assert.equal(made.status, 200);
+  assert.ok(made.data.token);
   const log = (await people.ada('GET', '/api/sign-in-resets')).data.log;
   assert.equal(log[0].action, 'reset.issued');
   assert.equal(log[0].data.unapproved, true);
   assert.equal(log[0].actorId, ids.ada);
   assert.equal(log[0].subjectId, ids.owner);
+  assert.equal(log[1].action, 'reset.requested');
+  assert.equal(log[1].data.waits, true);
 });
 
 test('the log holds who and what, never tokens or wallet addresses', async () => {

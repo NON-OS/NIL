@@ -15,15 +15,19 @@ const PRIVATE = {
   due_today: 'A private task is due',
 };
 
+// Nil's own notices that can't wait for the next visit: someone asked to reset an owner's sign-in.
+const SYSTEM = new Set(['sign_in_reset']);
+const CANCEL = 'If you still have your wallet, cancel it in Settings → Team.';
+
 // What a push notification says, from a notification that was just stored. Only reminders,
-// assignments, mentions and due notes are pushed; anything else returns null.
+// assignments, mentions, due notes and owner sign-in resets are pushed; anything else returns null.
 //
 // A private task never gets more than its generic line and its id, which lets the app open it
 // once the person unlocks. `names` is the device's "Show task names in notifications" choice;
 // with it off, team notifications say only what happened, without task or people's names.
 // Comment text is never included.
 export default function pushPayload({ id, type, task, data = {}, actorName, names }) {
-  if (!(type in PRIVATE)) return null;
+  if (!(type in PRIVATE) && !SYSTEM.has(type)) return null;
   const tag = `nil-${id}`;
   if (task?.private) return { title: PRIVATE[type], task: task.id, tag };
 
@@ -42,9 +46,12 @@ export default function pushPayload({ id, type, task, data = {}, actorName, name
       return named('Due soon', taskTitle);
     case 'due_today':
       return task ? named('Due today', taskTitle) : named(`${data.count} tasks are due today`);
+    case 'sign_in_reset':
+      if (data.own) return named('Someone asked to reset your sign-in', names ? `${data.name} asked. ${CANCEL}` : CANCEL);
+      return named(names ? `${data.name} asked to reset ${data.subject}’s sign-in` : 'Someone asked to reset an owner’s sign-in', 'See Settings → Team → Sign-in resets.');
     default:
       return null;
   }
 }
 
-pushPayload.types = new Set(Object.keys(PRIVATE));
+pushPayload.types = new Set([...Object.keys(PRIVATE), ...SYSTEM]);

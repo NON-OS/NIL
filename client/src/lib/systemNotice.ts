@@ -18,5 +18,10 @@ export default function systemNotice(n: InboxItem): { heading: string; text: str
   if (n.type === 'holder_low') {
     return { heading: 'Holder door', text: `Your linked wallets now hold ${n.data.text}, counting NOX held, staked and Zero-State Passes. Hold enough again by ${day(n.data.until)} to keep signing in.` };
   }
+  if (n.type === 'sign_in_reset') {
+    const when = n.data.readyAt ? `The link can be made on ${day(n.data.readyAt)}.` : 'It waits for a second admin to approve it.';
+    if (n.data.own) return { heading: 'Sign-in reset', text: `${n.data.name} asked to reset your sign-in. ${when} If you still have your wallet, cancel it in Settings → Team.` };
+    return { heading: 'Sign-in reset', text: `${n.data.name} asked to reset ${n.data.subject}’s sign-in. ${when} See Sign-in resets in Settings → Team.` };
+  }
   return null;
 }

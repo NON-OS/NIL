@@ -3,7 +3,7 @@ import type AccessKey from '../types/AccessKey';
 
 const accessKeys = {
   list: () => http.get<AccessKey[]>('/me/tokens'),
-  create: (input: { name: string; scope: 'read' | 'write'; days: number | null }) => http.post<{ token: string; tokens: AccessKey[] }>('/me/tokens', input),
+  create: (input: { name: string; scope: 'read' | 'write'; days: number }) => http.post<{ token: string; tokens: AccessKey[] }>('/me/tokens', input),
   revoke: (id: string) => http.del<AccessKey[]>(`/me/tokens/${id}`),
 };
 

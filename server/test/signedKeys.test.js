@@ -74,6 +74,7 @@ test('identity wraps belong to their owner and to linked wallets only', async ()
   const wrap = { address: wallets.anaSpare.address, nonce: 'abcdef0123456789', issuedAt: new Date().toISOString(), wrapped: blob(60) };
   assert.equal((await ana('PUT', '/api/me/identity-wraps', wrap)).status, 403);
   assert.equal((await owner('PUT', '/api/me/identity-wraps', { ...wrap, address: wallets.owner.address })).status, 409);
+  await ana.wallet(wallets.ana, 'confirm');
   assert.equal((await ana.wallet(wallets.anaSpare, 'add')).status, 200);
   assert.equal((await ana('PUT', '/api/me/identity-wraps', { ...wrap, wrapped: 'too-short' })).status, 400);
   assert.equal((await ana('PUT', '/api/me/identity-wraps', { ...wrap, issuedAt: 'yesterday' })).status, 400);

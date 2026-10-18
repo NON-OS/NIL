@@ -32,7 +32,12 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
                   {tokenAmount(p.amount, p.token, 8)} to {p.payeeId ? users[p.payeeId]?.name ?? 'a former member' : 'a former member'}
                   {p.state === 'underpaid' && p.expected && <span className="muted"> of {tokenAmount(p.expected, p.token, 8)}</span>}
                 </span>
-                {p.stealth && (
+                {p.stealth && p.via === 'pool' && (
+                  <span className="muted" title="Paid from the team’s pool through a relayer to a one-time address">
+                    <EyeOff size={12} style={{ verticalAlign: '-1px' }} /> private, from the pool{p.relayFee ? `, relayer kept ${tokenAmount(p.relayFee, p.token, 8)}` : ''}
+                  </span>
+                )}
+                {p.stealth && p.via !== 'pool' && (
                   <span className="muted" title={p.announced ? 'Paid to a one-time address and announced on-chain' : 'Paid to a one-time address; not announced on-chain yet'}>
                     <EyeOff size={12} style={{ verticalAlign: '-1px' }} /> private{p.announced ? '' : ', unannounced'}
                   </span>
@@ -62,7 +67,7 @@ export default function PaymentList({ payments, onChange }: { payments: Payment[
                   Cancel
                 </button>
               )}
-              {isAdmin && p.stealth && !p.announced && p.status === 'confirmed' && (
+              {isAdmin && p.stealth && p.via !== 'pool' && !p.announced && p.status === 'confirmed' && (
                 <button type="button" className="btn btn-sm" onClick={() => act(() => bounties.announce(p))} title="Lets the contributor find this payout from the chain alone">
                   <Megaphone /> Announce
                 </button>

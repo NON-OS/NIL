@@ -125,6 +125,7 @@ test('every public and sign-in limiter trips', async () => {
 test('personal keys and agent keys are limited, on MCP and REST alike', async () => {
   const admin = client(base, { headers: { 'X-Forwarded-For': '192.0.2.30' } });
   assert.equal((await admin.wallet(ownerWallet, 'login')).status, 200);
+  await admin.wallet(ownerWallet, 'confirm');
   const personal = (await admin('POST', '/api/me/tokens', { name: 'limits', scope: 'read' })).data.token;
   const mcp = (key) =>
     fetch(`${base()}/mcp`, { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` }, body: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}' }).then((r) => r.status);

@@ -94,7 +94,7 @@ test('a challenge older than its five minutes is refused, and says so in its mes
 
 test('the domain and URI come from configuration, never from Host or a foreign Origin', async () => {
   const body = { address: ownerWallet.address, mode: 'login' };
-  const own = await challenge(null, body, { Origin: EXTRA, Host: 'evil.example' });
+  const own = await challenge(null, body, { Origin: EXTRA, Host: 'evil.example', 'X-Forwarded-For': '203.0.113.251' });
   assert.equal(own.status, 200);
   assert.match(own.data.message, /^nil-extra\.example wants you/);
   assert.ok(own.data.message.includes(`URI: ${EXTRA}`));
@@ -102,7 +102,8 @@ test('the domain and URI come from configuration, never from Host or a foreign O
     assert.equal((await challenge(null, body, { Origin: origin })).status, 403, origin);
   }
   // signed for one of this server's names, it still signs in from the other: both are this server
-  const fromOther = await verify(person(), own.data.challengeId, ownerWallet.sign(own.data.message));
+  const sameClient = client(base, { headers: { 'X-Forwarded-For': '203.0.113.251' } });
+  const fromOther = await verify(sameClient, own.data.challengeId, ownerWallet.sign(own.data.message));
   assert.equal(fromOther.status, 200);
 });
 
@@ -141,14 +142,21 @@ test('the workspace name can’t add lines to the message a wallet signs', async
 
 test('a link-wallet challenge belongs to the session that asked for it', async () => {
   const ana = person();
-  assert.equal((await ana.wallet(wallet(), 'invite', { name: 'Ana', inviteToken: await inviteToken() })).status, 200);
+  const anaWallet = wallet();
+  assert.equal((await ana.wallet(anaWallet, 'invite', { name: 'Ana', inviteToken: await inviteToken() })).status, 200);
+  await ana.wallet(anaWallet, 'confirm');
   const extra = wallet();
   const c = await challenge(ana, { address: extra.address, mode: 'add' });
   const signature = extra.sign(c.data.message);
-  // the owner (another session) and a stranger with no session can't complete Ana's link
-  assert.equal((await verify(owner, c.data.challengeId, signature)).status, 401);
+  // the owner (another session, even on Ana's network) and a stranger with no session can't
+  // complete Ana's link; from any other network the challenge doesn't even open
+  const anaNet = { headers: { 'X-Forwarded-For': `198.51.100.${lastIp}` } };
+  const ownerNearby = client(base, anaNet);
+  await ownerNearby.wallet(ownerWallet, 'login');
+  assert.equal((await verify(owner, c.data.challengeId, signature)).status, 400);
+  assert.equal((await verify(ownerNearby, c.data.challengeId, signature)).status, 401);
   const c2 = await challenge(ana, { address: extra.address, mode: 'add' });
-  assert.equal((await verify(person(), c2.data.challengeId, extra.sign(c2.data.message))).status, 401);
+  assert.equal((await verify(client(base, anaNet), c2.data.challengeId, extra.sign(c2.data.message))).status, 401);
   assert.equal((await challenge(person(), { address: extra.address, mode: 'add' })).status, 401);
   // the wallet was linked to nobody, so it signs in to nothing
   assert.equal((await person().wallet(extra, 'login')).status, 404);

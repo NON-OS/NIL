@@ -25,6 +25,7 @@ export default async function recordPayment(actor, taskId, { intentId, txHash, a
   const task = visibleTask(taskId, actor);
   const intent = intentId ? sql.get('SELECT * FROM payment_intents WHERE id = ? AND task_id = ?', String(intentId), task.id) : null;
   if (!intent) throw HttpError.badRequest('Start the payment from Nil first: it gives you the exact amount to send.');
+  if (announce !== null && intent.via === 'pool') throw HttpError.badRequest('A payout from the team’s pool isn’t announced, since the announcement would come from a team wallet.');
 
   const existing = sql.get('SELECT * FROM payments WHERE tx_hash = ?', hash);
   if (existing) {
@@ -41,9 +42,9 @@ export default async function recordPayment(actor, taskId, { intentId, txHash, a
   const id = newId();
   sql.tx(() => {
     sql.run(
-      `INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, expected, grid, token, tx_hash, intent_id, start_block, stealth_ephemeral, stealth_view_tag, announce_tx, created_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, intent.payee_id, intent.to_address, intent.amount, intent.amount, intent.grid, intent.token, hash, intent.id, intent.start_block, intent.stealth_ephemeral, intent.stealth_view_tag, announce, Date.now(),
+      `INSERT INTO payments (id, task_id, task_ref, payer_id, payee_id, to_address, amount, expected, grid, token, tx_hash, intent_id, start_block, stealth_ephemeral, stealth_view_tag, announce_tx, via, pool_address, created_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+      id, task.id, `${publicWorkspace().taskPrefix}-${task.number}`, actor.id, intent.payee_id, intent.to_address, intent.amount, intent.amount, intent.grid, intent.token, hash, intent.id, intent.start_block, intent.stealth_ephemeral, intent.stealth_view_tag, announce, intent.via, intent.pool_address, Date.now(),
     );
     refreshBountyState(task.id);
   });

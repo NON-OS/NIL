@@ -93,7 +93,7 @@ export default function TeamSettings() {
                   )}
                 </div>
               </div>
-              {isAdmin && u.id !== me.id && (u.role !== 'owner' || me.role === 'owner') && (
+              {isAdmin && u.id !== me.id && (me.role === 'owner' || !isAdminUser(u)) && (
                 <div className="member-actions">
                   {!u.deactivated && (
                     <Picker title="Change role" options={me.role === 'owner' ? roleOptions : roleOptions.filter((o) => o.value !== 'owner')} value={u.role} onChange={(v) => people.update(u.id, { role: v as Role })} className="btn btn-sm" width={220} align="end">
@@ -125,8 +125,8 @@ export default function TeamSettings() {
                   {!u.deactivated && <ResetSignInButton user={u} />}
                 </div>
               )}
-              {/* admins can't otherwise manage an owner, but can ask to reset their sign-in */}
-              {isAdmin && me.role !== 'owner' && u.role === 'owner' && !u.deactivated && (
+              {/* only owners manage owners and admins; other admins can still ask to reset their sign-in */}
+              {isAdmin && me.role !== 'owner' && u.id !== me.id && isAdminUser(u) && !u.deactivated && (
                 <div className="member-actions">
                   <ResetSignInButton user={u} />
                 </div>

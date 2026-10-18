@@ -18,14 +18,16 @@ export default {
   'POST /api/public/bounties/:id/challenge': { open: true, allow: NOBODY, id: 'task', denied: [404] },
   'POST /api/public/bounties/:id/apply': { open: true, allow: NOBODY, id: 'task', denied: [400, 404] },
   'POST /api/auth/wallet/challenge': { open: true, allow: ALL, body: () => ({ address: wallet().address, mode: 'login' }) },
-  // a wallet that signs correctly but has no account here gets nothing
+  // a wallet that signs correctly but has no account here gets nothing; a challenge only comes
+  // back from the network it was given to, so both calls come from one address
   'POST /api/auth/wallet/verify': {
     open: true,
     allow: NOBODY,
     denied: [404],
+    headers: { 'X-Forwarded-For': '10.251.0.1' },
     body: async ({ world }) => {
       const w = wallet();
-      const res = await fetch(`${world.base()}/api/auth/wallet/challenge`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-NONOS': '1' }, body: JSON.stringify({ address: w.address, mode: 'login' }) });
+      const res = await fetch(`${world.base()}/api/auth/wallet/challenge`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-NONOS': '1', 'X-Forwarded-For': '10.251.0.1' }, body: JSON.stringify({ address: w.address, mode: 'login' }) });
       const { challengeId, message } = await res.json();
       return { challengeId, signature: w.sign(message) };
     },
@@ -73,6 +75,8 @@ export default {
   'POST /api/users/:id/sign-in-reset': { allow: ADMINS, id: 'ids.member' },
   // a member's reset needs no second admin, so approving it is refused by the route itself
   'POST /api/sign-in-resets/:id/approve': { allow: ADMINS, id: 'fresh.reset', ok: [400], denied: [403] },
+  // and its link exists already, so making one after a wait is refused the same way
+  'POST /api/sign-in-resets/:id/link': { allow: ADMINS, id: 'fresh.reset', ok: [400], denied: [403] },
   'DELETE /api/sign-in-resets/:id': { allow: ADMINS, id: 'fresh.reset' },
   'GET /api/first-run': { allow: PEOPLE },
   'PATCH /api/first-run': { allow: PEOPLE, body: { dismissed: true } },

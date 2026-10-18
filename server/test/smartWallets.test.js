@@ -115,7 +115,9 @@ test('a smart wallet signing for another network is told which one to use', asyn
 
 test('people can link a smart wallet as their backup and sign in with it', async () => {
   const member = client(base);
-  await member.wallet(wallet(), 'invite', { name: 'Gus', inviteToken: await inviteToken() });
+  const plain = wallet();
+  await member.wallet(plain, 'invite', { name: 'Gus', inviteToken: await inviteToken() });
+  await member.wallet(plain, 'confirm');
   const w = smartWallet({ deployed: false });
   chain.addSmartWallet(w);
   assert.equal((await member.wallet(w, 'add')).status, 200);
