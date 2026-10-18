@@ -98,4 +98,6 @@ export default Object.freeze({
   setsCacheMs: envNumber('PRIVACY_POOLS_SETS_CACHE_SECONDS', 60, { min: 5 }) * units.SECOND,
   // blocks per pool event read when a browser rebuilds the team's notes from the chain
   logRangeBlocks: envNumber('PRIVACY_POOLS_LOG_RANGE_BLOCKS', 10_000, { min: 100 }),
+  // blocks per log read when Nil looks on-chain for a payout the relayer didn't confirm
+  searchBlocks: envNumber('PRIVACY_POOLS_SEARCH_BLOCKS', 2000, { min: 10 }),
 });

@@ -100,6 +100,8 @@ Next to **Pay** on a finished task under **Ready to pay**, click **From pool**. 
 
 Click the pay button to go ahead. Your browser proves the withdrawal (this takes a few seconds to a minute), Nil's server hands it to the relayer, and the relayer sends it. No team wallet signs anything. Nil records the transaction straight away and counts the bounty as paid once its block is final, as with any payment.
 
+A relayer can send the withdrawal and still report a problem: 0xbow's does when the swap that buys the contributor's ETH fails after the withdrawal is out. Nil then looks on-chain for a withdrawal to the payout's one-time address and, if there is one, records it and checks it like any other payment. If the relayer's answer never came, or the withdrawal wasn't mined yet, the deposit stays at **Payout being confirmed** under **Team pool**. **Check for the payout** on it looks again later, for the same payout, so don't pay the bounty another way meanwhile.
+
 A withdrawal spends one deposit at a time, so the payout plus its fee has to fit in one approved deposit. Nil picks the smallest one that covers it.
 
 ### Take a deposit back

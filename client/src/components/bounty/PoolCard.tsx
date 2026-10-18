@@ -1,6 +1,6 @@
 import './Pool.css';
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowDownToLine, KeyRound, RefreshCw, Undo2 } from 'lucide-react';
+import { ArrowDownToLine, KeyRound, RefreshCw, Search, Undo2 } from 'lucide-react';
 import PoolDepositModal from './PoolDepositModal';
 import ConfirmButton from '../ui/ConfirmButton';
 import Spinner from '../ui/Spinner';
@@ -10,6 +10,7 @@ import poolAccount, { type PoolState } from '../../actions/poolAccount';
 import poolReview, { type Review } from '../../actions/poolReview';
 import poolRagequit from '../../actions/poolRagequit';
 import poolRebuild from '../../actions/poolRebuild';
+import poolPayout from '../../actions/poolPayout';
 import noteBook from '../../lib/pools/noteBook';
 import tokenAmount from '../../lib/tokenAmount';
 import dates from '../../lib/dates';
@@ -25,6 +26,8 @@ const REVIEW: Record<Review, { label: string; tone: string }> = {
   spent: { label: 'Spent', tone: '' },
   unknown: { label: 'Not approved yet', tone: 'pending' },
 };
+
+const NOT_FOUND = 'Nil found no withdrawal to this payout’s address on-chain yet. If the relayer sent it just now, check again in a minute. If it never went out, Rebuild from the chain frees the deposit.';
 
 function status(n: PoolNote, reviews: Map<string, Review>) {
   if (n.state === 'sending') return { label: n.txHash ? 'Being mined' : 'Not sent', tone: 'pending' };
@@ -93,6 +96,15 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
     setPhrase(null);
     await show(await poolAccount.remove());
   });
+  // a payout handed to the relayer that this browser never heard back about, looked for on-chain
+  const check = (n: PoolNote) =>
+    run('Checking for the payout', async () => {
+      const payment = await poolPayout.find(n);
+      if (!payment) toast.show(NOT_FOUND, { timeout: 9000 });
+      else if (payment.status === 'failed') toast.show(payment.problem ?? 'That payout couldn’t be verified.', { tone: 'error', timeout: 9000 });
+      else toast.show(payment.state === 'paid' ? 'Nil found the payout on-chain, and it’s confirmed.' : 'Nil found the payout on-chain and is checking it.', { tone: 'success', timeout: 9000 });
+      await refresh();
+    })();
   const ragequit = (n: PoolNote) =>
     run('Taking back', async () => {
       const asset = info?.assets.find((a) => a.symbol === n.symbol);
@@ -173,6 +185,11 @@ export default function PoolCard({ onChange }: { onChange: () => void }) {
                     </div>
                     <span className={`pay-status ${s.tone}`}>{s.label}</span>
                     <div className="bounty-actions">
+                      {n.state === 'open' && n.pending && (
+                        <button type="button" className="btn btn-sm" onClick={() => check(n)} disabled={Boolean(busy)} title="Looks on-chain for the withdrawal the relayer was handed, and records it for the same payout">
+                          <Search /> Check for the payout
+                        </button>
+                      )}
                       {n.state === 'open' && n.label && (
                         <ConfirmButton className={reviews.get(n.label) === 'declined' ? 'btn btn-sm btn-primary' : 'btn btn-sm'} confirmLabel="Take it back publicly?" onConfirm={() => ragequit(n)}>
                           <Undo2 /> Take back

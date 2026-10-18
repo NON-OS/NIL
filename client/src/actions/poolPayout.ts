@@ -57,7 +57,8 @@ const poolPayout = {
     return { task, intent, quote: q, note, sets };
   },
 
-  async send(p: PreparedPayout, onStep: (step: string) => void = () => {}): Promise<Payment> {
+  // `recovered` says the relayer reported a problem, but Nil found the withdrawal on-chain.
+  async send(p: PreparedPayout, onStep: (step: string) => void = () => {}): Promise<{ payment: Payment; recovered: boolean }> {
     const key = poolKey.get();
     if (!key) throw new Error('Open the team’s pool first.');
     const { masterKeys, poolSecrets, noteSecrets, treeProof, withdrawalContext, proveWithdrawal } = await kit();
@@ -82,20 +83,31 @@ const poolPayout = {
     await poolAccount.update((book) => noteBook.pending(book, p.note, p.intent.id, gross));
     onStep('Handing it to the relayer');
     try {
-      const { payment } = await http.post<{ payment: Payment }>(`/pool-payouts/${p.intent.id}/relay`, {
+      const out = await http.post<{ payment: Payment; recovered: boolean }>(`/pool-payouts/${p.intent.id}/relay`, {
         withdrawal: { processooor: terms.entrypoint, data: terms.withdrawalData },
         proof: proof.proof,
         publicSignals: proof.publicSignals,
         feeCommitment: terms.feeCommitment,
       });
-      await poolAccount.update((book) => noteBook.withdrew(book, p.note, { gross, intentId: p.intent.id, txHash: payment.txHash }));
-      return payment;
+      await poolAccount.update((book) => noteBook.withdrew(book, p.note, { gross, intentId: p.intent.id, txHash: out.payment.txHash }));
+      return out;
     } catch (err) {
       // refused before the relayer saw it: nothing left the pool. Anything else stays pending
-      // until a rebuild from the chain says what happened.
+      // until Check for the payout or a rebuild from the chain says what happened.
       if (err instanceof ApiError && err.status === 400) await poolAccount.update((book) => noteBook.release(book, p.note));
       throw err;
     }
+  },
+
+  // Check for the payout, on a deposit still waiting on one: Nil looks on-chain for the
+  // withdrawal the relayer was handed, records it for the same payout and the note is settled.
+  // Null while the chain has nothing yet.
+  async find(note: PoolNote): Promise<Payment | null> {
+    if (!note.pending) return null;
+    const { intentId } = note.pending;
+    const { payment } = await http.post<{ payment: Payment | null }>(`/pool-payouts/${intentId}/find`);
+    if (payment) await poolAccount.update((book) => noteBook.found(book, note, { intentId, txHash: payment.txHash }));
+    return payment;
   },
 };
 

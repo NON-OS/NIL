@@ -23,8 +23,12 @@ function proofShape(proof) {
 // asked for: the entry contract as processooor, the relayer's signed terms naming this payout's
 // one-time address, a withdrawn amount that leaves the contributor exactly the asked amount
 // after the fee, and a context bound to those terms and this pool. The proof itself is checked
-// by the relayer and again by the pool; a bad one costs nothing but a refusal. Returns the
-// relayer's transaction hash.
+// by the relayer and again by the pool; a bad one costs nothing but a refusal.
+//
+// A withdrawal that fails these checks throws before the relayer sees it. After that, this
+// returns what the relayer said: the hash of the transaction it confirmed sending, or, when it
+// answered with an error, with success: false or not at all, the words for the admin. The
+// withdrawal may have gone out even then.
 export default async function relayWithdrawal(intent, found, body) {
   const processooor = String(body?.withdrawal?.processooor ?? '').toLowerCase();
   const data = String(body?.withdrawal?.data ?? '').toLowerCase();
@@ -45,11 +49,11 @@ export default async function relayWithdrawal(intent, found, body) {
     method: 'POST',
     timeoutMs: config.pools.relayTimeoutMs,
     json: { withdrawal: { processooor, data }, publicSignals: signals, proof, scope: found.scope.toString(), chainId: config.pools.chainId, feeCommitment: signed },
-  });
-  const hash = String(res.data?.txHash ?? '').toLowerCase();
-  if (res.ok && res.data?.success && TX.test(hash)) return hash;
+  }).catch(() => null);
+  const hash = String(res?.data?.txHash ?? '').toLowerCase();
+  if (res?.ok && res.data?.success && TX.test(hash)) return { txHash: hash };
   // the relayer's words help the admin; they carry no payout data worth hiding, but keep them short
-  const said = typeof res.data?.error === 'string' ? res.data.error.replace(/[^\x20-\x7e]/g, '').slice(0, 200) : '';
-  log.warn('pools', `The relayer refused a withdrawal (HTTP ${res.status}).`);
-  throw new HttpError(502, `The relayer didn’t confirm sending the withdrawal${said ? `: ${said}` : '.'} If it went out after all, rebuilding the pool notes finds it.`);
+  const said = typeof res?.data?.error === 'string' ? res.data.error.replace(/[^\x20-\x7e]/g, '').slice(0, 200) : '';
+  log.warn('pools', res ? `The relayer didn’t confirm a withdrawal (HTTP ${res.status}).` : 'The relayer didn’t answer a withdrawal.');
+  return { txHash: null, problem: `The relayer didn’t confirm sending the withdrawal${said ? `: ${said}` : '.'} If it went out after all, Check for the payout on the deposit under Team pool records it.` };
 }

@@ -103,6 +103,21 @@ test('a pending relay holds its note back, and a ragequit empties it', () => {
   assert.deepEqual([book.notes[0].state, book.notes[0].value, book.notes[0].pending], ['exited', '0', null]);
 });
 
+test('a pending payout found on-chain later is taken off its deposit once', () => {
+  let book = noteBook.empty();
+  let note;
+  ({ book, note } = noteBook.reserve(book, { symbol: 'USDC', scope: SCOPE, depositor: WALLET, amount: 1n }));
+  book = noteBook.mined(book, note, { label: V.label, value: '50' });
+  book = noteBook.pending(book, note, 'i9', 20n);
+  // found for some other payout: nothing changes
+  assert.equal(noteBook.found(book, note, { intentId: 'i8', txHash: '0x08' }), book);
+  book = noteBook.found(book, note, { intentId: 'i9', txHash: '0x09' });
+  const settled = book.notes[0];
+  assert.deepEqual([settled.value, settled.spends, settled.pending, settled.payouts.map((p) => [p.intentId, p.txHash, p.gross])], ['30', 1, null, [['i9', '0x09', '20']]]);
+  // found again, as when two admins check at once: still one payout
+  assert.equal(noteBook.found(book, note, { intentId: 'i9', txHash: '0x09' }), book);
+});
+
 test('two admins’ books merge without losing a deposit or moving a spend backwards', () => {
   let base = noteBook.empty();
   let n0;
