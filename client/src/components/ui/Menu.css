@@ -47,6 +47,14 @@
   white-space: nowrap;
 }
 
+/* a detail wraps under its label instead of being cut off */
+.menu-item .menu-detail {
+  display: block;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: normal;
+}
+
 /* a hint gives way long before its label does, then trails off */
 .menu-item .menu-hint {
   flex: 0 100 auto;

@@ -12,9 +12,11 @@ interface Props {
   searchable?: boolean;
   onCreate?: (query: string) => void;
   createLabel?: (query: string) => string;
+  // what the list is for, for screen readers
+  label?: string;
 }
 
-export default function Menu({ options, selected, onSelect, placeholder = 'Search…', searchable = true, onCreate, createLabel }: Props) {
+export default function Menu({ options, selected, onSelect, placeholder = 'Search…', searchable = true, onCreate, createLabel, label }: Props) {
   const [query, setQuery] = useState('');
   const [active, setActive] = useState(0);
   const listRef = useRef<HTMLUListElement>(null);
@@ -58,9 +60,10 @@ export default function Menu({ options, selected, onSelect, placeholder = 'Searc
   return (
     <div className="menu" onKeyDown={onKeyDown}>
       {searchable && <input className="menu-search" autoFocus placeholder={placeholder} value={query} onChange={(e) => setQuery(e.target.value)} aria-label={placeholder} />}
-      <ul className="menu-list" ref={listRef} role="listbox" tabIndex={searchable ? -1 : 0} autoFocus={!searchable}>
+      {/* the list items are only there for layout; to a screen reader the options sit in the listbox */}
+      <ul className="menu-list" ref={listRef} role="listbox" aria-label={label} tabIndex={searchable ? -1 : 0} autoFocus={!searchable} hidden={!total}>
         {visible.map((o, i) => (
-          <li key={o.value}>
+          <li key={o.value} role="none">
             <button
               type="button"
               className="menu-item"
@@ -72,22 +75,25 @@ export default function Menu({ options, selected, onSelect, placeholder = 'Searc
               onClick={() => choose(i)}
             >
               {o.icon}
-              <span className="menu-label">{o.label}</span>
+              <span className="menu-label">
+                {o.label}
+                {o.detail && <small className="menu-detail">{o.detail}</small>}
+              </span>
               {o.hint && <span className="menu-hint">{o.hint}</span>}
               {chosen.has(o.value) && <Check className="menu-check" />}
             </button>
           </li>
         ))}
         {canCreate && (
-          <li>
+          <li role="none">
             <button type="button" className="menu-item" data-index={visible.length} data-active={active === visible.length} onMouseEnter={() => setActive(visible.length)} onClick={() => choose(visible.length)}>
               <Plus size={14} />
               <span className="menu-label">{createLabel ? createLabel(query.trim()) : `Create “${query.trim()}”`}</span>
             </button>
           </li>
         )}
-        {!total && <li className="menu-empty">No matches</li>}
       </ul>
+      {!total && <p className="menu-empty">No matches</p>}
     </div>
   );
 }

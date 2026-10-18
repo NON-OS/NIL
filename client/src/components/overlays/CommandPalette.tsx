@@ -135,6 +135,15 @@ export default function CommandPalette() {
     const order = q ? ['Tasks', 'Docs', 'Projects', 'Goals', 'Go to', 'Actions'] : ['Actions', 'Go to', 'Projects', 'Goals'];
     return out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || b.score - a.score).slice(0, 40);
   }, [query, tasks, projects, goals, prefix, aiOn, isAdmin, cryptoTools, teamHits]);
+  // the sorted results in runs that share a heading, each keeping its place for the arrow keys
+  const groups = useMemo(() => {
+    const out: { group: string; entries: { item: (typeof items)[number]; i: number }[] }[] = [];
+    items.forEach((item, i) => {
+      if (out.at(-1)?.group !== item.group) out.push({ group: item.group, entries: [] });
+      out.at(-1)!.entries.push({ item, i });
+    });
+    return out;
+  }, [items]);
 
   useArchiveSearch(query);
 
@@ -169,31 +178,38 @@ export default function CommandPalette() {
           }}
         />
       </div>
-      <ul className="palette-results" ref={listRef} role="listbox" aria-label="Results">
-        {items.map((item, i) => (
-          <li key={item.id}>
-            {(i === 0 || items[i - 1].group !== item.group) && <div className="palette-group eyebrow">{item.group}</div>}
-            <button type="button" className="palette-item" data-index={i} data-active={i === active} onMouseMove={() => setActive(i)} onClick={item.run} role="option" aria-selected={i === active}>
-              {item.icon}
-              <span className="palette-text">
-                <span className="title">{q ? <Highlight text={item.title} query={q} /> : item.title}</span>
-                {item.match && (
-                  <span className="palette-snippet">
-                    {item.match.label}: <Highlight text={item.match.text} query={q} />
+      {/* each run of results under one heading is a named group of options */}
+      <ul className="palette-results" ref={listRef} role="listbox" aria-label="Results" hidden={!items.length}>
+        {groups.map(({ group, entries }) => (
+          <li key={group} role="none">
+            <div role="group" aria-label={group}>
+              <div className="palette-group eyebrow" aria-hidden="true">
+                {group}
+              </div>
+              {entries.map(({ item, i }) => (
+                <button key={item.id} type="button" className="palette-item" data-index={i} data-active={i === active} onMouseMove={() => setActive(i)} onClick={item.run} role="option" aria-selected={i === active}>
+                  {item.icon}
+                  <span className="palette-text">
+                    <span className="title">{q ? <Highlight text={item.title} query={q} /> : item.title}</span>
+                    {item.match && (
+                      <span className="palette-snippet">
+                        {item.match.label}: <Highlight text={item.match.text} query={q} />
+                      </span>
+                    )}
                   </span>
-                )}
-              </span>
-              {item.locked && <Lock className="palette-lock" aria-label="Private" />}
-              {item.hint && <span className={item.shortcut ? 'key mono shortcut' : 'key mono'}>{item.hint}</span>}
-            </button>
+                  {item.locked && <Lock className="palette-lock" aria-label="Private" />}
+                  {item.hint && <span className={item.shortcut ? 'key mono shortcut' : 'key mono'}>{item.hint}</span>}
+                </button>
+              ))}
+            </div>
           </li>
         ))}
-        {!items.length && (
-          <li className="palette-group" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <FileText size={14} /> Nothing matches “{query}”.
-          </li>
-        )}
       </ul>
+      {!items.length && (
+        <p className="palette-group" style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <FileText size={14} /> Nothing matches “{query}”.
+        </p>
+      )}
       <div className="palette-foot">
         <span>
           <span className="kbd">↑</span> <span className="kbd">↓</span> to move

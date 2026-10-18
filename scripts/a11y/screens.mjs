@@ -29,6 +29,22 @@ const startOffline = async (page) => {
 };
 const comeBack = (page) => page.context().setOffline(false);
 
+// overlays most screens share: quick add, search, a task's menu and the account menu
+const quickAdd = async (page) => {
+  await page.keyboard.press('c');
+  await page.locator('.quickadd-input').waitFor();
+};
+const search = async (page) => {
+  await page.keyboard.press('Control+k');
+  await page.getByRole('listbox', { name: 'Results' }).waitFor();
+};
+const taskMenu = (page) => page.getByRole('button', { name: 'More actions' }).click();
+const accountMenu = async (page) => {
+  const toggle = page.getByRole('button', { name: 'Open menu' });
+  if (await toggle.isVisible()) await openMenu(page);
+  await page.getByRole('button', { name: 'Account menu' }).click();
+};
+
 // signed out: `ready` is something on the screen once it has loaded
 const signedOut = [
   { name: 'sign-in', path: '/', ready: (page) => page.getByRole('button', { name: 'Sign in with your wallet' }) },
@@ -58,7 +74,12 @@ const signedIn = [
   { name: 'settings-team', path: '/settings?tab=team' },
   { name: 'help', path: '/help' },
   { name: 'task', path: '/board?task=1' },
+  { name: 'task-visibility', path: '/board?task=1', then: (page) => page.getByTitle('Who can see this').click() },
   { name: 'menu', path: '/board', then: openMenu, phoneOnly: true },
+  { name: 'quick-add', path: '/board', then: quickAdd },
+  { name: 'search', path: '/board', then: search },
+  { name: 'task-menu', path: '/board?task=1', then: taskMenu },
+  { name: 'account-menu', path: '/', then: accountMenu },
   { name: 'offline-banner', path: '/board', then: loseNetwork, after: comeBack },
   { name: 'offline-start', path: '/board', then: startOffline, after: comeBack },
 ];

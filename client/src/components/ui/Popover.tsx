@@ -60,8 +60,11 @@ export default function Popover({ anchor, open, onClose, children, width, align 
   useOutsideClick([ref, anchor as RefObject<HTMLElement>], onClose, open);
 
   if (!open) return null;
+  // named after the button that opened it, so a screen reader says what this is
+  const opener = anchor.current;
+  const name = opener?.getAttribute('aria-label') || opener?.title || opener?.textContent?.trim() || undefined;
   return createPortal(
-    <div ref={ref} className="popover" style={{ width, top: pos?.top ?? -9999, left: pos?.left ?? -9999 }} role="dialog">
+    <div ref={ref} className="popover" style={{ width, top: pos?.top ?? -9999, left: pos?.left ?? -9999 }} role="dialog" aria-label={name}>
       {children}
     </div>,
     document.body,

@@ -10,7 +10,7 @@ export default function visibilityOptions(task: Task, meId: string | undefined, 
     .sort((a, b) => Number(b === meId) - Number(a === meId))
     .map(name);
   return {
-    team: { value: 'team', label: 'Everyone in the workspace', hint: task.projectId ? 'Members, and guests on this project' : 'All members' },
-    private: { value: 'private', label: `Only ${people.join(' and ') || 'you'}`, hint: 'Encrypted' },
+    team: { value: 'team', label: 'Everyone in the workspace', detail: task.projectId ? 'Every member, and guests this project is shared with' : 'Every member' },
+    private: { value: 'private', label: `Only ${people.join(' and ') || 'you'}`, detail: 'Encrypted in your browser. Admins can’t see it.' },
   };
 }

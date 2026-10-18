@@ -58,6 +58,7 @@ export default function Picker({ options, value, onChange, children, multi, clas
             })
           }
           createLabel={createLabel}
+          label={title}
           onSelect={(v) => {
             onChange(v);
             if (!multi) close();
