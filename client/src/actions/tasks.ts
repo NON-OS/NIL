@@ -20,7 +20,7 @@ async function sealedNew(input: Partial<Task> & { dueTime?: string | null }) {
   const { title = '', description = '', checklist = [], ...rest } = input;
   const fresh = taskKeys.fresh();
   const keys = await taskKeys.wrap(fresh.key, [store.get().me!.id, input.assigneeId ?? null], { ask: true });
-  return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys) };
+  return { ...rest, private: true, sealed: await taskSeal.seal({ title, description, checklist }, fresh, keys, 1) };
 }
 
 type NewTask = Partial<Task> & { dueTime?: string | null };

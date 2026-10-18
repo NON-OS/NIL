@@ -12,7 +12,7 @@ export default async function taskWords(task: Task): Promise<TaskWords> {
   if (hasWords(task)) return { title: task.title, description: task.description, checklist: task.checklist };
   const { task: full } = await http.get<{ task: Task }>(`/tasks/${task.id}/detail`);
   fillWords(full);
-  const words = full.sealed ? await taskSeal.open(full.sealed) : full;
+  const words = full.sealed ? await taskSeal.open(full.sealed, full.id) : full;
   if (words.description === undefined || words.checklist === undefined) throw new Error('This task came back without its notes. Try again.');
   return { title: words.title, description: words.description, checklist: words.checklist };
 }

@@ -20,6 +20,8 @@ Your keys live only in that browser tab's memory once unlocked. When you close o
 
 Your browser encrypts the title, the description, the checklist, every comment and every attached file, including the file's name and type. Each file gets its own key, which is sealed under the task's key.
 
+Whoever writes signs their words, and each save carries the next revision number under that signature. If the server later sends an older version than one you've already opened in this browser, the task shows a warning that the server may be holding back newer changes.
+
 The server can still see:
 
 - that the task exists, and its key (such as NON-42),

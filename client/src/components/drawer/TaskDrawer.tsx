@@ -78,6 +78,11 @@ export default function TaskDrawer({ number }: { number: number }) {
                 </>
               ) : (
                 <>
+                  {task.rolledBack && (
+                    <p className="drawer-alert" role="alert">
+                      This is an older version of this private task than one you’ve already opened here. The server may be holding back newer changes.
+                    </p>
+                  )}
                   <TitleEditor task={task} />
                   <PropertyGrid task={task} />
                   <BountyPanel task={task} />

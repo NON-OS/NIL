@@ -5,6 +5,8 @@ import taskSeal from './taskSeal';
 import commentText from './commentText';
 import moveFiles from './moveFiles';
 import taskWords from './taskWords';
+import sealedCache from '../state/sealedCache';
+import taskVersions from '../state/taskVersions';
 import type Task from '../types/Task';
 import type TaskPatch from '../types/TaskPatch';
 import type Comment from '../types/Comment';
@@ -49,10 +51,12 @@ export default async function sealedPatch(task: Task, patch: TaskPatch): Promise
   const rest = Object.fromEntries(Object.entries(patch).filter(([k]) => !(WORDS as readonly string[]).includes(k)));
 
   if (opening) return { ...rest, private: false, ...words, ...(await moveContents(task, null)) };
+  // one past the newest revision known here, from this browser's record or the words just opened
+  const rev = Math.max(taskVersions.seen(task.id), task.sealed ? (sealedCache.get(task.sealed)?.rev ?? 0) : 0) + 1;
   if (sealing || rehoming) {
     const fresh = taskKeys.fresh();
     const keys = await taskKeys.wrap(fresh.key, [next.creatorId, next.assigneeId], { ask: true });
-    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys), ...(await moveContents(task, fresh)) };
+    return { ...rest, private: true, sealed: await taskSeal.seal(words, fresh, keys, rev), ...(await moveContents(task, fresh)) };
   }
-  return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys) };
+  return { ...rest, sealed: await taskSeal.seal(words, await taskKeys.open(task.sealed!), task.sealed!.keys, rev) };
 }

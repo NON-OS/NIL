@@ -1,6 +1,6 @@
 // localStorage can throw (private mode, quota, blocked cookies), so every access is guarded.
-// Only UI preferences and public key data (pinned teammate keys, doc version numbers) live
-// here, never task data or anything personal.
+// Only UI preferences and public key data (pinned teammate keys, doc and private task revision
+// numbers) live here, never task data or anything personal.
 const storage = {
   get<T>(key: string, fallback: T): T {
     try {

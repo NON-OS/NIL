@@ -38,6 +38,9 @@ export default interface Task {
   sealed: SealedTask | null;
   // set in the browser: true while a sealed task can't be opened yet (locked keyring)
   locked?: boolean;
+  // set in the browser: true when the server sent an older version of this private task than
+  // one this browser has already opened
+  rolledBack?: boolean;
   // set while the bounty is on the public board
   listedAt: number | null;
   position: number;

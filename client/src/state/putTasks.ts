@@ -3,6 +3,8 @@ import store from './store';
 import revealTask from './revealTask';
 import keepWords from './keepWords';
 import needsOpening from './needsOpening';
+import sealedCache from './sealedCache';
+import taskVersions from './taskVersions';
 import openSealed from '../actions/openSealed';
 import recountArchive from '../actions/recountArchive';
 import isArchived from '../lib/isArchived';
@@ -31,6 +33,13 @@ export default function putTasks(list: Task[]) {
     }
     return { tasks };
   });
+  // A sealed task arriving with the exact ciphertext this tab wrote or opened is held at that
+  // revision now, so it counts as seen: a server that later sends an older one is caught, even
+  // when the newer one was this tab's own save and was never opened again.
+  for (const task of shown) {
+    const known = task.sealed && sealedCache.get(task.sealed);
+    if (known) taskVersions.record(task.id, known.rev);
+  }
   const closed = shown.filter(needsOpening).map((t) => t.id);
   if (closed.length) void openSealed(closed);
 }

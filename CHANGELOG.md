@@ -24,6 +24,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - The AI draft and deck dialogs say that the text passes through the Nil server on its way to Anthropic. The README lists what the server still knows about a private task.
 - `image-size`, which pptxgenjs declares but never loads, is pinned to 2.0.4, past its denial-of-service fixes.
 - Anyone can check that a server sends exactly the web app of a release. The build is byte for byte the same on any machine, `npm run release:manifest` writes a manifest of every file with its SHA-256 and the release hash that stands for all of them, and `npm run verify:server -- <address>` compares a running server with your own build or a published manifest: every file, the routes the app opens on, and the Content-Security-Policy. See [docs/verify-a-server.md](docs/verify-a-server.md).
+- Private tasks warn when the server sends an older version than this browser has already opened, as docs do. Every save seals the task's words under the next revision number, which the writer's signature covers, so an old version can't be passed off as new. Tasks sealed before this open as revision 0.
 
 ### Encryption keys
 

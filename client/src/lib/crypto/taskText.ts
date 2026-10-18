@@ -7,10 +7,14 @@ export type TaskField = 'title' | 'description' | 'checklist' | 'comment';
 
 const aad = (sealId: string, field: TaskField) => `nil/task/${sealId}/${field}`;
 
+// What an author signs for one piece: where it belongs and, from the first revised seal on, which
+// revision of the task it is. Revision 0 is a piece sealed before revisions existed.
+const context = (sealId: string, field: TaskField, rev = 0) => (rev ? `${aad(sealId, field)}/rev/${rev}` : aad(sealId, field));
+
 // Encrypts and decrypts one piece of a private task with that task's key. What goes in is the
 // author's signed text (see signedText), so the server can't swap in words it made up.
 const taskText = {
-  context: aad,
+  context,
 
   async seal(key: Uint8Array, sealId: string, field: TaskField, payload: string) {
     return b64u.encode(await aesGcm.seal(key, new TextEncoder().encode(payload), utf8ToBytes(aad(sealId, field))));

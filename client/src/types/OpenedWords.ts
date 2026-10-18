@@ -6,4 +6,7 @@ export default interface OpenedWords {
   title: string;
   checklist: ChecklistItem[];
   description?: string;
+  // the revision these words were sealed as, and whether it's older than one seen before
+  rev: number;
+  rollback?: boolean;
 }

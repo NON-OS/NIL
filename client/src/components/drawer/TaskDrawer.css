@@ -99,6 +99,16 @@
   padding: 18px 20px max(32px, env(safe-area-inset-bottom));
 }
 
+/* a private task the server sent in an older version than this browser has opened */
+.drawer-alert {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--warning-soft);
+  font-size: var(--text-sm);
+}
+
 .drawer-title {
   display: block;
   width: 100%;

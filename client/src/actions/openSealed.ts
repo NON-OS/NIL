@@ -13,13 +13,14 @@ export default async function openSealed(ids?: string[]) {
   const waiting = Object.values(store.get().tasks).filter((t) => needsOpening(t) && (!ids || ids.includes(t.id)));
   for (const task of waiting) {
     try {
-      const words = await taskSeal.open(task.sealed!);
+      const words = await taskSeal.open(task.sealed!, task.id);
       store.set((s) => {
         const now = s.tasks[task.id];
         if (now?.sealed?.title !== task.sealed!.title) return {};
         // a task that's already open only gains its notes, so an edit in progress stays put
-        const opened = now.locked ? { ...words, steps: countSteps(words.checklist) } : { description: words.description };
-        return { tasks: records.put(s.tasks, { ...now, ...opened, locked: false }) };
+        const notes = words.description === undefined ? {} : { description: words.description };
+        const opened = now.locked ? { title: words.title, checklist: words.checklist, ...notes, steps: countSteps(words.checklist) } : notes;
+        return { tasks: records.put(s.tasks, { ...now, ...opened, rolledBack: words.rollback, locked: false }) };
       });
     } catch {
       // not shared with this person's key yet; it stays locked
