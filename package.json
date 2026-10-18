@@ -14,6 +14,7 @@
     "build": "vite build",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "check:quality": "node scripts/check-quality.mjs",
+    "formal": "node scripts/formal.mjs",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "node --disable-warning=ExperimentalWarning --experimental-strip-types --import ./scripts/test/registerTs.mjs --test server/test/*.test.js client/test/*.test.js client/test/*.test.ts",
     "ceremony:start": "node --disable-warning=DEP0137 scripts/ceremony/start.mjs",
