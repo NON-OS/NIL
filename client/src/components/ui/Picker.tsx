@@ -19,7 +19,9 @@ interface Props {
   disabled?: boolean;
 }
 
-// A button that opens a searchable menu. Multi-select pickers stay open while you toggle.
+// A button that opens a searchable menu. Multi-select pickers stay open while you toggle. The
+// button is named by what it shows, so a screen reader hears the current value; the title only
+// names it when it shows an icon with no words.
 export default function Picker({ options, value, onChange, children, multi, className = 'prop-btn', title, placeholder, onCreate, createLabel, width = 240, align, disabled }: Props) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
@@ -32,7 +34,6 @@ export default function Picker({ options, value, onChange, children, multi, clas
         type="button"
         className={className}
         title={title}
-        aria-label={title}
         aria-haspopup="listbox"
         aria-expanded={open}
         disabled={disabled}

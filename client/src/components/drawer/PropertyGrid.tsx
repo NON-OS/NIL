@@ -23,6 +23,7 @@ import dates from '../../lib/dates';
 import type Task from '../../types/Task';
 import isAdminUser from '../../lib/isAdmin';
 import recurrenceRule from '../../lib/recurrenceRule';
+import visibilityOptions from '../../lib/visibilityOptions';
 import useCryptoTools from '../../hooks/useCryptoTools';
 
 const ESTIMATES = [0, 1, 2, 3, 5, 8, 13].map((n) => ({ value: String(n), label: n === 0 ? 'No estimate' : `${n} point${n === 1 ? '' : 's'}` }));
@@ -45,10 +46,13 @@ export default function PropertyGrid({ task }: { task: Task }) {
   const goal = useStore((s) => (task.goalId ? s.goals[task.goalId] : undefined));
   const isAdmin = useStore((s) => isAdminUser(s.me));
   const meId = useStore((s) => s.me?.id);
+  const users = useStore((s) => s.users);
   const cryptoTools = useCryptoTools();
   const canSetPrivacy = meId === task.creatorId || meId === task.assigneeId;
   const update = (patch: Parameters<typeof taskActions.update>[1]) => taskActions.update(task.id, patch);
   const empty = (text: string) => <span className="placeholder-text">{text}</span>;
+  const audience = visibilityOptions(task, meId, users);
+  const seenBy = (task.private ? audience.private : audience.team).label;
 
   return (
     <div className="prop-grid">
@@ -118,18 +122,15 @@ export default function PropertyGrid({ task }: { task: Task }) {
         {canSetPrivacy ? (
           <Picker
             title="Who can see this"
-            options={[
-              { value: 'team', label: 'Everyone in the workspace' },
-              { value: 'private', label: 'Only the creator and assignee', hint: 'Encrypted' },
-            ]}
+            options={[audience.team, audience.private]}
             value={task.private ? 'private' : 'team'}
             onChange={(v) => update({ private: v === 'private' })}
-            width={260}
+            width={300}
           >
-            <span>{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
+            <span>{seenBy}</span>
           </Picker>
         ) : (
-          <span className="prop-static">{task.private ? 'Only creator and assignee' : 'Everyone'}</span>
+          <span className="prop-static">{seenBy}</span>
         )}
         <HelpLink topic="private-tasks" label="How private tasks work" />
       </Row>
