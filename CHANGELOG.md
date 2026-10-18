@@ -142,6 +142,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Changed
 
+- Under **List on the public bounty board**, the bounty panel says that anyone on the internet can see a listed bounty's title, reward, due date and the start of its description, and that people, comments and files stay private.
 - The task's **Visible to** menu names who can see it: **Only you and Sam** for a private task, and **Everyone in the workspace** with "Members, and guests on this project" for a team task. Property buttons in the task panel are named by the value they show, so screen readers hear the current status, priority or visibility, not only the field's name.
 - A signed vote says, above its options, that it isn't anonymous: your wallet signs your ballot and admins can see who voted for what. The new vote window says the same before you start one.
 - Every text and control meets WCAG AA contrast. Text fields, the comment box and switches have an edge that stands out by 3:1 instead of 1.5:1. Faint text is as dark as muted text, so it still reads on the greyest surfaces and on hover, warnings are slightly darker so they read on their own pale fill, and the numbers on the sign-in page are Deep Teal, since teal on Paper fell just short.

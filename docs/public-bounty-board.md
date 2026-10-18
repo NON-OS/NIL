@@ -11,7 +11,7 @@ Only admins can list a bounty, and only when the task has a bounty, has no assig
 
 On a server that charges for [Nil Pro](nox-and-nil-pro.md), listing needs an active plan.
 
-The listing shows the task key, the title, the first 600 characters of the description, the reward, the due date, when it was listed and how many people have applied. It never shows people, the project, comments or files, so check the description before you list.
+The listing shows the task key, the title, the first 600 characters of the description, the reward, the due date, when it was listed and how many people have applied. It never shows people, the project, comments or files, so check the description before you list. The bounty panel says this under the switch, before you list and while the bounty is listed.
 
 A listing comes off the board by itself when the task is assigned, made private, finished, canceled or deleted. You can also switch it off.
 
