@@ -23,7 +23,7 @@ export default async function createInvoice(actor, { kind, periods, people, retr
   if (recent >= config.billing.invoicesPerDay) throw new HttpError(429, `This workspace made ${recent} invoices today, the most allowed. Pay or reuse one that’s open, or try again tomorrow.`);
 
   const q = await quote({ kind, periods, people });
-  if (!q.tokens.length) throw new HttpError(503, 'No token can be priced right now, so no invoice can be made. Try again in a few minutes.');
+  if (!q.tokens.length) throw new HttpError(409, 'No token can be priced right now, so no invoice can be made. Try again in a few minutes.');
   const startBlock = await headBlock();
 
   const id = newId();

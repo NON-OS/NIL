@@ -52,6 +52,7 @@ A server that sets a treasury, such as the hosted service the NØNOS foundation 
 
 - A Zero-State Pass gives Pro. If the owner or an admin holds a Zero-State Pass in a wallet linked to their account, the workspace has Nil Pro without paying. It's checked every few hours and whenever an invoice is made. If the pass is sold, Pro ends at the next check and the grace period follows.
 - Staking takes money off. When an admin stakes NOX in the official staking contract, invoices cost less: 10% off from 10,000 NOX staked, 25% off from 100,000, by default (`PLAN_STAKER_TIERS`). The highest tier any one admin reaches applies; two admins can't add their stakes together. The discount is read when the invoice is made and locked into it.
+- A staking or pass contract that refuses to answer (paused or replaced, say) counts as no stake and no pass, the same as in a vote snapshot, so invoices can always be made. When NOX can't be priced and no manual rate is set, invoices are offered in USDC only, with a notice saying so.
 - Paying in NOX costs less than paying in USDC.
 
 ### Pay for Nil Pro

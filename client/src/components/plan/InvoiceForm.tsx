@@ -99,7 +99,8 @@ export default function InvoiceForm({ onCreated }: { onCreated: (invoice: Invoic
               </li>
             ))}
           </ul>
-          {quote.tokens.length < (status.tokens?.length ?? 0) && <p className="muted plan-fine">NOX can’t be priced right now, so this invoice can be paid in USDC only.</p>}
+          {quote.tokens.length > 0 && quote.tokens.length < (status.tokens?.length ?? 0) && <p className="muted plan-fine">NOX can’t be priced right now, so this invoice can be paid in USDC only.</p>}
+          {quote.tokens.length === 0 && <p className="plan-callout warn">NOX can’t be priced right now and no other token is accepted here, so no invoice can be made. Try again in a few minutes.</p>}
           {quote.zsp && <p className="plan-callout">An admin holds a Zero-State Pass, so this workspace already has Nil Pro. Pay only if you want paid time on top.</p>}
           <div className="settings-row">
             <button type="button" className="btn btn-primary" disabled={busy} onClick={create}>

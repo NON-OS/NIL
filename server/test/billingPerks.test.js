@@ -8,6 +8,7 @@ import wallet from './helpers/wallet.js';
 
 const USDC = '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48';
 const ZSP = '0x7b575dd8e8b111c52ab1e872924d4efd4df403df';
+const STAKING = '0xa94d6009790ba13597a1e1b7cf4e1531ea513613';
 const TREASURY = '0x7777777777777777777777777777777777777777';
 const NOX = 10n ** 18n;
 const DAY = 86_400_000;
@@ -103,15 +104,35 @@ test('a Zero-State Pass held by an admin gives the workspace Pro, re-checked on 
 
 test('an unreachable node neither grants nor removes the pass perk', async () => {
   const before = billingState.get('zsp');
-  chain.breakContract(ZSP);
+  const lift = chain.refuse((method, params) => method === 'eth_call' && params[0].to?.toLowerCase() === ZSP, { status: 503, error: { code: -32603, message: 'Service unavailable' } });
   billingState.set('zsp', { ...before, checkedAt: Date.now() - 7 * HOUR });
   await checkPerks();
   assert.equal(billingState.get('zsp').until, before.until);
-  chain.fixContract(ZSP);
+  lift();
   chain.setTokenBalance(ZSP, ownerWallet.address, 0);
   billingState.set('zsp', { until: Date.now() - 30 * DAY, checkedAt: Date.now() - 7 * HOUR });
   await checkPerks();
   assert.equal((await owner('GET', '/api/plan')).data.unlocked, false);
+});
+
+test('a staking or pass contract that reverts means no discount and no pass, never a failed invoice', async () => {
+  chain.setStake(ownerWallet.address, 100_000n * NOX);
+  chain.setTokenBalance(ZSP, ownerWallet.address, 1);
+  chain.breakContract(STAKING);
+  chain.breakContract(ZSP);
+  try {
+    const q = await quote();
+    assert.deepEqual([q.stakerPercent, q.zsp], [0, false]);
+    const made = await owner('POST', '/api/plan/invoices', {});
+    assert.equal(made.status, 200, made.data.error);
+    assert.equal(made.data.invoice.price.stakerPercent, 0);
+    await owner('POST', `/api/plan/invoices/${made.data.invoice.id}/cancel`);
+  } finally {
+    chain.fixContract(STAKING);
+    chain.fixContract(ZSP);
+    chain.setStake(ownerWallet.address, 0n);
+    chain.setTokenBalance(ZSP, ownerWallet.address, 0);
+  }
 });
 
 test('admins are reminded 7 days and 1 day before Pro runs out, once each', async () => {
