@@ -20,8 +20,8 @@ function mismatch(message) {
 
 // Checks that `address` (lowercase) signed `message`. A plain wallet's signature is checked
 // here by recovering the signer, with no network call. Only when that fails is the chain asked
-// whether the address is a smart-contract wallet that accepts the signature.
-export default async function walletSignature(address, message, signature) {
+// whether the address is a smart-contract wallet that accepts the signature, at `block` if given.
+export default async function walletSignature(address, message, signature, { block = null } = {}) {
   if (typeof signature !== 'string' || !HEX.test(signature) || signature.length > 2 + MAX_SIGNATURE_BYTES * 2) {
     throw new HttpError(401, 'That signature doesn’t match the wallet.');
   }
@@ -31,5 +31,5 @@ export default async function walletSignature(address, message, signature) {
     if (signature.length === PLAIN_LENGTH) throw mismatch(message);
     throw new HttpError(401, 'This looks like a smart wallet. This server isn’t connected to Ethereum, so it can’t check smart-wallet signatures. Sign in with a regular wallet, or ask your admin.');
   }
-  if (!(await contractSignature(address, personalHash(message), signature))) throw mismatch(message);
+  if (!(await contractSignature(address, personalHash(message), signature, block))) throw mismatch(message);
 }

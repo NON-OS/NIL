@@ -45,6 +45,7 @@ test('smart wallets cast signed votes, checked on-chain, and the audit file says
   assert.equal((await vote(ben.c, proposal.id, 0, ana.w.sign, ana.w.address)).status, 401);
 
   const head = chain.head();
+  const from = chain.calls.length;
   assert.equal((await vote(ana.c, proposal.id, 0, ana.w.sign, ana.w.address)).status, 200);
   assert.equal((await vote(ben.c, proposal.id, 1, ben.w.sign, ben.w.address)).status, 200);
   assert.equal((await vote(owner, proposal.id, 0, ownerWallet.sign, ownerWallet.address)).status, 200);
@@ -55,6 +56,10 @@ test('smart wallets cast signed votes, checked on-chain, and the audit file says
   const byAddress = Object.fromEntries(audit.ballots.map((b) => [b.address, b]));
   assert.deepEqual([byAddress[ana.w.address].signatureCheck, byAddress[ana.w.address].checkedAtBlock], ['eip1271', head]);
   assert.deepEqual([byAddress[ben.w.address].signatureCheck, byAddress[ben.w.address].checkedAtBlock], ['eip6492', head]);
+  // each wallet was asked at the block its ballot names, not at whatever block was latest
+  const asked = chain.calls.slice(from).filter((c) => c.method === 'eth_call');
+  assert.equal(asked.length, 2);
+  for (const c of asked) assert.equal(c.params[1], `0x${head.toString(16)}`);
   const plain = byAddress[ownerWallet.address.toLowerCase()];
   assert.equal(plain.signatureCheck, 'ecrecover');
   assert.equal('checkedAtBlock' in plain, false);

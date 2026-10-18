@@ -51,6 +51,7 @@ import aiCredits from './aiCredits.js';
 import aiCreditInfo from './aiCreditInfo.js';
 import votingKey from './votingKey.js';
 import trustees from './trustees.js';
+import shareChecks from './shareChecks.js';
 import push from './push.js';
 import calendarFeed from './calendarFeed.js';
 import calendarFeedSettings from './calendarFeedSettings.js';
@@ -88,7 +89,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, identityWraps, passkeyWraps, tokens, shareLinks, applications, planRoutes, stealth, pools, poolPayouts, poolAccount, votingKey, trustees, push, calendarFeedSettings, search, firstRun, signInResets, agentRoutes, aiCreditInfo]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, encryptionKeys, identityWraps, passkeyWraps, tokens, shareLinks, applications, planRoutes, stealth, pools, poolPayouts, poolAccount, votingKey, trustees, shareChecks, push, calendarFeedSettings, search, firstRun, signInResets, agentRoutes, aiCreditInfo]) {
   api.use(router);
 }
 
