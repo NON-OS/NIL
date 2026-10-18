@@ -78,7 +78,7 @@ If you start over with new keys (see [Encrypted docs](encrypted-docs.md#if-unloc
 | Someone handed this task on | The previous assignee gave it away and made its current key. The next edit gives it a new key. If that person was never on the task, don't rely on what it says |
 | Someone signed this with an earlier key | They wrote it before their key changed, and you had confirmed that earlier key. The note shows its fingerprint |
 
-Comments and files carry the same kind of note. A comment can also say it's an older version than one you've already seen here, or that it was deleted and the server sent it again.
+Comments and files carry the same kind of note. A comment can also say it's an older version than one you've already seen here, that it was deleted and the server sent it again, or that someone other than its author signed it. That last one is normal for comments written before the task turned private: whoever made it private signs them.
 
 ## How it works
 

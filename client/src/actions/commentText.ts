@@ -27,13 +27,13 @@ async function payload(task: Task, comment: Comment) {
   if (!facts) {
     const author = await keyDirectory.author(signed.by, null, (k) => signedText.verify(signed, olderContext(task.id, comment.authorId), k));
     if (!author) throw failed();
-    return { json, body: signed.text, edit: 0, olderFormat: true, oldKey: null };
+    return { json, body: signed.text, by: signed.by, edit: 0, olderFormat: true, oldKey: null };
   }
   const f = commentFacts.parse(facts);
   const statement = { kind: commentFacts.kind, place: commentFacts.place(task.id, comment.id, comment.authorId), facts: commentFacts.list(f) };
   const author = await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k));
   if (!author) throw failed();
-  return { json, body: signed.text, edit: f.edit, olderFormat: false, oldKey: author.old };
+  return { json, body: signed.text, by: signed.by, edit: f.edit, olderFormat: false, oldKey: author.old };
 }
 
 // Comments on private tasks, signed and encrypted under the task's key. A comment that fails its
@@ -58,7 +58,8 @@ const commentText = {
       const seen = commentVersions.seen(comment.id);
       if (seen === 'deleted') return { ...comment, body: '', locked: true, stale: 'deleted' };
       commentVersions.record(comment.id, opened.edit);
-      return { ...comment, body: opened.body, locked: false, edit: opened.edit, olderFormat: opened.olderFormat, oldKey: opened.oldKey, stale: opened.edit < seen ? 'older' : null };
+      const sealedBy = opened.by === comment.authorId ? null : opened.by;
+      return { ...comment, body: opened.body, locked: false, edit: opened.edit, olderFormat: opened.olderFormat, oldKey: opened.oldKey, sealedBy, stale: opened.edit < seen ? 'older' : null };
     } catch {
       return { ...comment, body: '', locked: true };
     }

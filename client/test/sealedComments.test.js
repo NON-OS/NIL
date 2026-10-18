@@ -70,6 +70,16 @@ test('a comment deleted here and served again doesn’t come back as if nothing 
   assert.deepEqual([again.locked, again.stale, again.body], [true, 'deleted', '']);
 });
 
+test('a comment signed by someone other than its author says who signed it', async () => {
+  const own = await post('Venue booked');
+  assert.equal((await commentText.open(task, own)).sealedBy, null);
+  // Wen's plain comment, sealed by Vic as the task turned private
+  const plain = { id: 'c-plain-from-wen', taskId: 't1', authorId: 'w', body: 'I can do Friday', sealed: false, createdAt: 1, editedAt: null };
+  const moved = { ...plain, sealed: true, body: await commentText.move(task, plain, key) };
+  const opened = await commentText.open(task, moved);
+  assert.deepEqual([opened.body, opened.sealedBy], ['I can do Friday', 'v']);
+});
+
 test('a comment in the older format still opens, marked as such', async () => {
   const json = signedText.seal('From before', { context: 'nil/comment/t1/w', by: 'w', signingPrivate: W.signingPrivate });
   const old = { id: 'c-old', taskId: 't1', authorId: 'w', sealed: true, body: await taskText.seal(key.key, key.id, 'comment', json), createdAt: 1, editedAt: null };
