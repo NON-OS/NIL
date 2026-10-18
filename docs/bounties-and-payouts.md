@@ -24,7 +24,7 @@ When the work is done, an admin opens the task, or finds it under **Ready to pay
 
 The contributor gets a notification and a signed payment receipt in their [proof of work](proof-of-work.md).
 
-The money goes to the first wallet linked to the contributor's account, unless they turned on [private payouts](private-payouts.md). Then the button says **privately** and the money goes to a new one-time address that only they can open.
+The money goes to the first wallet linked to the contributor's account, unless they turned on [private payouts](private-payouts.md) or their wallet has a meta-address in the public stealth registry. Then the button says **privately** and the money goes to a new one-time address that only they can open.
 
 To pay, the task needs an assignee with a linked wallet. If nobody is assigned yet, assign someone or list the bounty on the [public bounty board](public-bounty-board.md).
 

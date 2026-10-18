@@ -13,6 +13,7 @@
 | Encrypted weighted vote | An anonymous vote where each ballot carries the voter's power, encrypted, and only the totals are ever decrypted. In beta |
 | ERC-20 | The common standard for tokens on Ethereum. NOX and USDC are ERC-20 tokens |
 | ERC-5564 | The standard for stealth addresses, which private payouts use |
+| ERC-6538 | The stealth meta-address registry, a public contract where a wallet can publish its meta-address so anyone can pay it privately |
 | Finality | The point after which a block can no longer be undone by a chain reorganisation. Nil counts a payment only once its block is final |
 | Fingerprint | A short code that identifies a key, so two people can compare it out loud. A person's key fingerprint has five groups of four characters, such as `5c1e-90ab-3f27-d4e8-a061`, and is under **Encryption keys** in **Settings → Sign-in & security**. The workspace's signing key has a shorter one, such as `dac6-f4fb-e063-2afb`. See [Encryption and trust](encryption.md) |
 | Grace period | Days after a Nil Pro plan runs out during which the paid tools keep working. 7 by default |

@@ -86,7 +86,7 @@ export default function StealthRegistry({ metaAddress, onRead }: { metaAddress: 
         </strong>
         <br />
         <span className="muted">
-          The registry (ERC-6538) lets anyone who knows your wallet address look up your meta-address and pay you privately, from Nil or any other app. It’s public by design: anyone can see that your wallet published this meta-address. Each payment still goes to a fresh one-time address that nobody can link to you.
+          The registry (ERC-6538) lets anyone who knows your wallet address look up your meta-address and pay you privately. It’s public by design: anyone can see that your wallet published this meta-address. Each payment still goes to a fresh one-time address that nobody can link to you. Nil lists the payouts made through this server; it doesn’t look for payments sent to this meta-address from anywhere else.
         </span>
       </span>
       <span role="status">{problem ?? (entry ? describe(entry, current) : 'Checking the registry…')}</span>
