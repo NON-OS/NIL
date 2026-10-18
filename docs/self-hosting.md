@@ -52,7 +52,7 @@ Every setting is an environment variable. All of them are optional except `APP_U
 | `DATA_DIR` | `./data` (`/data` in Docker) | Database, uploads and the signing key |
 | `SOURCE_URL` | none | A link to your source code, shown in the app. The AGPL asks you to offer it if you run a modified version for others |
 | `NOX_RPC_URL` | required, except on localhost | The Ethereum node to use, or `off` to turn on-chain features off. A server whose `APP_URL` is a localhost address falls back to a public node, with a warning |
-| `NOX_VERIFIER_KEY` | none | Set it, with `NOX_RPC_URL` pointing at Nil's verifier, and the server acts only on chain reads the verifier proved. See [Verified chain reads](#verified-chain-reads) |
+| `NOX_VERIFIER_MODE`, `NOX_VERIFIER_KEY` | `off` | With Nil's verifier: `shadow` checks the node's answers on the side, `enforce` acts only on answers the verifier proved. See [Verified chain reads](#verified-chain-reads) |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |
 | `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro, in USDC or NOX. Unset means community mode |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | none | Both together turn on built-in AI. There's no default model |
@@ -69,7 +69,17 @@ The server checks payments, balances, stakes and passes through `NOX_RPC_URL`. W
 
 ### Verified chain reads
 
-A node can also be wrong, or lie. Nil acts on what it says: a payment counts once the node shows the transfer, a vote counts the NOX the node says a wallet held, the holder door opens on a balance, and a smart wallet signs in when the node says its contract agreed. Nil's verifier lets Nil check those answers instead of trusting them. It is a light client built on [Helios](https://github.com/a16z/helios) that you run next to Nil, once per server however many workspaces it has (about 200 MB of memory). It follows the beacon chain from a checkpoint you choose and checks every answer from your execution node against blocks the beacon chain's sync committee signed: state reads through Merkle proofs, receipts and logs against each block's receipts root. Each answer it proved goes back sealed with a key that only it and Nil hold, and with `NOX_VERIFIER_KEY` set Nil acts on nothing else.
+A node can also be wrong, or lie. Nil acts on what it says: a payment counts once the node shows the transfer, a vote counts the NOX the node says a wallet held, the holder door opens on a balance, and a smart wallet signs in when the node says its contract agreed. Nil's verifier lets Nil check those answers instead of trusting them. It is a light client built on [Helios](https://github.com/a16z/helios) that you run next to Nil, once per server however many workspaces it has (about 200 MB of memory). It follows the beacon chain from a checkpoint you choose and checks every answer from your execution node against blocks the beacon chain's sync committee signed: state reads through Merkle proofs, receipts and logs against each block's receipts root. Each answer it proved goes back sealed with a key that only it and Nil hold.
+
+`NOX_VERIFIER_MODE` says what Nil does with it:
+
+| Mode | Where Nil's answers come from | When the verifier proves an answer false | When it can't check one |
+|---|---|---|---|
+| `off` (default) | the node in `NOX_RPC_URL` | nothing checks | nothing checks |
+| `shadow` | still the node, as before; each answer is also checked through the verifier at `NOX_VERIFIER_URL`, on the side | Nil has already acted on it; admins see a notice for a day and the log gets an error line (on hosted servers, an operator alert) | it is logged, nothing else |
+| `enforce` | only the verifier, in `NOX_RPC_URL` | it is thrown away and nothing is counted on it; the notice shows | payments wait, votes don't open, nobody joins or is turned away |
+
+Shadow can't stop a lie, but it tells you whether your node lies before anything depends on the verifier: a verifier that is down, behind or wrong never holds up a payment in shadow mode. Run shadow first, and switch to enforce once your node is synced and a week of shadow shows no mismatches (`/healthz` shows `"mismatchAt": null` under `chain.verification`, and the log has no `[verification]` error lines).
 
 To turn it on with Docker Compose:
 
@@ -90,8 +100,9 @@ To turn it on with Docker Compose:
    VERIFIER_KEY=<the key>
    ```
 
-4. In `.env`, set `NOX_RPC_URL=http://verifier:8545`, `NOX_VERIFIER_KEY` to the same key, and `COMPOSE_PROFILES=verifier` (Compose reads that one; Nil ignores it).
-5. `docker compose up -d --build`. `docker compose exec verifier wget -qO- http://127.0.0.1:8545/healthz` answers `"ok":true` once the light client is in step, usually within seconds, and Nil's own `/healthz` shows `"verification"` with `"ok": true`.
+4. In `.env`, set `NOX_VERIFIER_KEY` to the same key, `NOX_VERIFIER_MODE=shadow`, `NOX_VERIFIER_URL=http://verifier:8545`, and `COMPOSE_PROFILES=verifier` (Compose reads that one; Nil ignores it). Leave `NOX_RPC_URL` at your node.
+5. `docker compose up -d --build`. `docker compose exec verifier wget -qO- http://127.0.0.1:8545/healthz` answers `"ok":true` once the light client is in step, usually within seconds, and Nil's own `/healthz` shows `"verification"` with `"mode": "shadow"`.
+6. A week later, with no mismatch: set `NOX_VERIFIER_MODE=enforce` and `NOX_RPC_URL=http://verifier:8545` (the verifier relays the few requests it doesn't prove, see below), drop `NOX_VERIFIER_URL`, and recreate the container.
 
 Without Docker, run `npm run verifier` with the same settings in its environment. Keep its port away from the internet: only your Nil server should reach it.
 
@@ -113,16 +124,19 @@ What Nil reads, and what rests on it:
 
 The verifier refuses every other method.
 
-When Nil can't verify (the verifier is down or still catching up, its checkpoint is too old, the node's answer failed its proof), it neither counts nor refuses anything on it. Payments and invoices wait and are checked again every minute, new token-weighted votes don't open, nobody joins through the holder door and nobody already in is turned out, and a smart wallet is asked to try again. Admins see a notice on Settings → Plan, on Bounties and on Votes that says why. An answer that failed its proof stays on that notice for a day (`NOX_VERIFY_MISMATCH_HOURS`), since it means the node said something false.
+In shadow mode Nil checks the answers it used: a state read (`eth_call`, a balance) against the verifier's proof of the same read at the newest block the verifier has, since the node and the verifier may be a block apart; a receipt or a log against the proven receipts of its own block; a block against the proven hash for its height. A check that can't be made is logged and dropped. At most `NOX_VERIFIER_SHADOW_MAX` checks run at once.
+
+In enforce mode, when Nil can't verify (the verifier is down or still catching up, its checkpoint is too old, the node's answer failed its proof), it neither counts nor refuses anything on it. Payments and invoices wait and are checked again every minute, new token-weighted votes don't open, nobody joins through the holder door and nobody already in is turned out, and a smart wallet is asked to try again. Admins see a notice on Settings → Plan, on Bounties and on Votes that says why. An answer that failed its proof stays on that notice for a day (`NOX_VERIFY_MISMATCH_HOURS`), since it means the node said something false.
 
 What the verifier doesn't do, plainly:
 
-- It proves that what the node says is true, not that the node said everything. The node can leave a transfer out of `eth_getLogs`, or say a transaction doesn't exist. So a lying node can hide a payment, or hold it back, but it can't fake one. Since a missing transaction can't be proven missing, Nil never fails or drops a payment over one while verification is on; an admin who knows a transaction was never sent cancels the payment. Colibri (`@corpus-core/colibri-stateless`) can prove a list of logs complete up to a pinned block; Nil doesn't use it yet.
-- It can't prove anything about blocks older than about 27 hours: Ethereum keeps the hashes of the last 8,191 blocks in its state (EIP-2935), and that is how the verifier ties an older block to the chain it follows. A payment first checked after that waits with a note on it and isn't counted by itself. The treasury scan stays inside that window too.
+- Shadow mode prevents nothing: it finds a lie after Nil acted on it. Only enforce keeps a false answer from counting.
+- It proves that what the node says is true, not that the node said everything. The node can leave a transfer out of `eth_getLogs`, or say a transaction doesn't exist. So in enforce mode a lying node can hide a payment, or hold it back, but it can't fake one; shadow mode can't notice either. Since a missing transaction can't be proven missing, Nil in enforce mode never fails or drops a payment over one; an admin who knows a transaction was never sent cancels the payment. Shadow mode also can't catch a node that says a block is final too early, only one that gives the wrong block for a height. Colibri (`@corpus-core/colibri-stateless`) can prove a list of logs complete up to a pinned block; Nil doesn't use it yet.
+- It can't prove anything about blocks older than about 27 hours: Ethereum keeps the hashes of the last 8,191 blocks in its state (EIP-2935), and that is how the verifier ties an older block to the chain it follows. In enforce mode a payment first checked after that waits with a note on it and isn't counted by itself (see [the troubleshooting entry](deploy.md#a-payment-says-it-is-older-than-nils-verifier-can-check) for what an operator can do), and the treasury scan stays inside that window too.
 - The checkpoint is trusted. Started from a wrong one, the light client can follow a chain only the checkpoint's signers vouch for. Take it from two sources that agree, and keep it younger than two weeks: the verifier refuses an older one outright (`VERIFIER_CHECKPOINT_MAX_AGE_DAYS`, 14 at most). Helios's own age check is off by default and can't be turned on from Node, so the verifier does it itself: it hashes the checkpoint's beacon header to the checkpoint and takes the age from that header's slot. It keeps the newest checkpoint it reaches in `VERIFIER_DATA_DIR`, so a restart needs no new one unless it was stopped for close to two weeks.
 - The consensus API can't make it accept a false answer, since every light-client update carries the sync committee's signatures. It can keep the verifier from following the chain, and then nothing is verified. Helios's default consensus API is run by a16z; the verifier has no default, so you choose one.
 - Helios is unaudited. Nil pins version 0.12.0 exactly. A bug in it could let a false answer through. Nil still checks what it can on top (the real token contract, the receiver, the exact amount), but the proof is Helios's.
-- The verifier itself is trusted: Nil believes anything sealed with `NOX_VERIFIER_KEY`. Run your own, on the same server or private network as Nil, and keep the key as secret as a password.
+- The verifier itself is trusted: in enforce mode Nil believes anything sealed with `NOX_VERIFIER_KEY`. Run your own, on the same server or private network as Nil, and keep the key as secret as a password.
 - It changes nothing for privacy. It asks your execution node about the same addresses Nil looks up, plus the proofs that check them. The consensus API only learns that a light client follows the chain.
 
 ### Charging or not
