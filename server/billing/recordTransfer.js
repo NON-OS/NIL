@@ -42,7 +42,7 @@ export default function recordTransfer(transfer, { named = false, feeBps = 0 } =
 
   const id = newId();
   sql.tx(() => {
-    sql.run("DELETE FROM billing_payments WHERE tx_hash = ? AND log_index = -1 AND status IN ('seen', 'unmatched')", hash);
+    sql.run("DELETE FROM billing_payments WHERE tx_hash = ? AND log_index = -1 AND status IN ('seen', 'unmatched', 'dropped')", hash);
     sql.run(
       "INSERT INTO billing_payments (id, invoice_id, tx_hash, log_index, token, from_address, amount, token_fee, status, block_number, block_hash, created_at, checked_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'confirming', ?, ?, ?, ?)",
       id, match.invoiceId, hash, transfer.logIndex, transfer.token, transfer.from, String(transfer.value), String(match.fee), transfer.blockNumber, transfer.blockHash, Date.now(), Date.now(),

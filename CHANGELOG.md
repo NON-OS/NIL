@@ -27,6 +27,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Private tasks warn when the server sends an older version than this browser has already opened, as docs do. Every save seals the task's words under the next revision number, which the writer's signature covers, so an old version can't be passed off as new. Tasks sealed before this open as revision 0.
 - The ballot circuit's phase 2 setup can now run as a real ceremony between people who don't trust each other: `npm run ceremony:start`, `ceremony:contribute` and `ceremony:finish`, with a beacon block announced in advance and the whole chain verified before anything is installed. [circuits/CEREMONY.md](circuits/CEREMONY.md) is the guide for the coordinator and the contributors.
 - A chain reorganisation that moved a Nil Pro payment to another place in its block left it confirming forever, so its invoice could neither settle, expire nor be cancelled, and the transfer could be counted a second time. The payment now moves with the transfer.
+- One empty answer from the Ethereum node for a Nil Pro payment's receipt, even after its block was final, dropped the payment for good: the treasury scan never reads a final block twice, and pasting the hash again did nothing. Such a payment now stops counting but is looked for again on every run for `PLAN_LATE_DAYS`, pasting its hash again looks once more, and one receipt the node refuses no longer stops the other payments from being checked.
 
 ### Encryption keys
 

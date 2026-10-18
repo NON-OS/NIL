@@ -69,6 +69,8 @@ Send the exact amount. Its last few digits (for example the 4817 in 12.004817 US
 
 The invoice then shows where it stands: **Waiting for payment**, **Seen, not mined yet**, **Confirming** (the payment is in a block that isn't final yet, usually under 15 minutes on Ethereum), and **Paid**. A payment counts only once its block is final.
 
+If a chain reorganisation takes the transaction out of its block, or the server's node briefly can't find it, the payment stops counting toward the invoice, but Nil keeps looking for it for 7 days (`PLAN_LATE_DAYS`) and counts it as soon as it's in a block again. Pasting its hash under the invoice again looks once more, even after that.
+
 - Underpaid: if less arrived, the invoice shows what's missing and the exact amount to send to finish. It ends in the same digits, so it's matched to the same invoice.
 - Overpaid: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
 - Expired or cancelled: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.

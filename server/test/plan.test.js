@@ -201,12 +201,12 @@ test('a reorg before finality moves the payment to its new block; a dropped one 
   assert.equal(moved.block_number, first.block_number + 1);
   assert.notEqual(moved.block_hash, first.block_hash);
 
-  // and then it disappears from the chain before it was final
+  // and then it disappears from the chain before it was final: it stops counting, but is watched
   chain.drop(hash);
   await watchInvoices();
   const dropped = await view(invoice.id);
   assert.equal(dropped.state, 'waiting');
-  assert.equal(dropped.payments[0].status, 'dropped');
+  assert.deepEqual([dropped.payments[0].status, dropped.payments[0].blockNumber], ['confirming', null]);
   await finalize();
   assert.equal((await view(invoice.id)).state, 'waiting');
 
