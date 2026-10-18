@@ -9,6 +9,17 @@ const DAY = 86_400_000;
 export default function expiredRows(now, policy) {
   const history = now - config.usedInviteDays * DAY;
   const dead = now - config.keep.expiredDays * DAY;
+  // an admin whose own sign-in was reset can't approve an owner's reset for a while, which
+  // reads used resets, so they stay at least that long
+  const resets = Math.min(dead, now - config.signIn.ownerResetWaitMs);
+  const closedVotes = now - config.keep.votePowerDays * DAY;
+  // what a member who didn't vote held, once a weighted vote is long over
+  const nonVoters = (table) => [
+    table,
+    `proposal_id IN (SELECT id FROM proposals WHERE closed_at < ? AND result IS NOT NULL)
+     AND NOT EXISTS (SELECT 1 FROM votes v WHERE v.proposal_id = ${table}.proposal_id AND v.user_id = ${table}.user_id)`,
+    closedVotes,
+  ];
   const rows = [
     ['notifications', 'read_at IS NOT NULL AND read_at < ?', now - config.readNotificationDays * DAY],
     ['sessions', 'expires_at < ?', now],
@@ -18,18 +29,14 @@ export default function expiredRows(now, policy) {
     // a sent reminder lives on as its notification; the row and its note have no use left
     ['reminders', 'sent_at IS NOT NULL'],
     ['share_links', 'revoked_at < ? OR expires_at < ?', dead, dead],
-    ['sign_in_resets', 'closed_at < ? OR used_at < ? OR expires_at < ?', dead, dead, dead],
+    ['sign_in_resets', 'closed_at < ? OR used_at < ? OR expires_at < ?', resets, resets, resets],
     ['api_tokens', 'expires_at < ?', dead],
     // A private payout's one-time address must never be handed out twice. Once a payment was
     // recorded, the payment row carries the address; one nobody recorded stays, since it may
     // have been paid all the same.
     ['payment_intents', 'expires_at < ? AND (stealth_ephemeral IS NULL OR id IN (SELECT intent_id FROM payments WHERE intent_id IS NOT NULL))', dead],
-    [
-      'proposal_power',
-      `proposal_id IN (SELECT id FROM proposals WHERE closed_at < ? AND result IS NOT NULL)
-       AND NOT EXISTS (SELECT 1 FROM votes v WHERE v.proposal_id = proposal_power.proposal_id AND v.user_id = proposal_power.user_id)`,
-      now - config.keep.votePowerDays * DAY,
-    ],
+    nonVoters('proposal_power'),
+    nonVoters('proposal_wallet_power'),
     // a notice only stops a second one for the same due date, which is past; a day's margin
     // covers time zones
     ['agent_due_notices', 'due_date < ?', calendar.addDays(calendar.today(), -1)],

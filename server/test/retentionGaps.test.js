@@ -40,8 +40,10 @@ test('links, keys, reminders and payments that have done their job are erased', 
   link('link-revoked', { cols: ', revoked_at', vals: ', ?', params: [LONG_AGO] });
   link('link-expired', { cols: ', expires_at', vals: ', ?', params: [LONG_AGO] });
   link('link-live', { cols: ', expires_at', vals: ', ?', params: [now + DAY] });
-  for (const [id, used] of [['reset-used', LONG_AGO], ['reset-open', null]]) {
-    sql.run('INSERT INTO sign_in_resets (id, user_id, token_hash, requested_by, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, ?, ?, ?)', id, ids.owner, `t-${id}`, ids.owner, LONG_AGO, used ? LONG_AGO : now + DAY, used);
+  // used two days ago: past EXPIRED_DAYS, but approving an owner's reset still looks for it
+  const lately = now - 2 * DAY;
+  for (const [id, used, at] of [['reset-used', LONG_AGO, LONG_AGO], ['reset-open', null, LONG_AGO], ['reset-lately', lately, lately]]) {
+    sql.run('INSERT INTO sign_in_resets (id, user_id, token_hash, requested_by, created_at, expires_at, used_at) VALUES (?, ?, ?, ?, ?, ?, ?)', id, ids.owner, `t-${id}`, ids.owner, at, used ? at + 3_600_000 : now + DAY, used);
   }
   for (const [id, expires] of [['key-expired', LONG_AGO], ['key-forever', null]]) {
     sql.run("INSERT INTO api_tokens (id, user_id, name, token_hash, created_at, expires_at) VALUES (?, ?, 'Script', ?, ?, ?)", id, ids.owner, `k-${id}`, LONG_AGO, expires);
@@ -59,7 +61,7 @@ test('links, keys, reminders and payments that have done their job are erased', 
   await purge();
 
   assert.deepEqual(sql.all("SELECT id FROM share_links WHERE id LIKE 'link-%'").map((r) => r.id), ['link-live']);
-  assert.deepEqual(sql.all("SELECT id FROM sign_in_resets WHERE id LIKE 'reset-%'").map((r) => r.id), ['reset-open']);
+  assert.deepEqual(sql.all("SELECT id FROM sign_in_resets WHERE id LIKE 'reset-%' ORDER BY id").map((r) => r.id), ['reset-lately', 'reset-open']);
   assert.deepEqual(sql.all("SELECT id FROM api_tokens WHERE id LIKE 'key-%'").map((r) => r.id), ['key-forever']);
   assert.deepEqual(sql.all('SELECT id FROM reminders').map((r) => r.id), ['waiting']);
   // a private payout nobody recorded keeps its one-time address, so it is never handed out again
@@ -100,14 +102,19 @@ test('a closed vote keeps the voting power its ballots were counted with, and on
   const member = client(base);
   ids.member = (await member.wallet(wallet(), 'invite', { name: 'Mo Member', inviteToken: other })).data.user.id;
   for (const p of ['closed-long-ago', 'still-open', 'encrypted-undecided']) {
-    for (const u of [ids.owner, ids.member]) sql.run("INSERT INTO proposal_power (proposal_id, user_id, nox, staked, zsp, power) VALUES (?, ?, '5', '0', 0, '5')", p, u);
+    for (const u of [ids.owner, ids.member]) {
+      sql.run("INSERT INTO proposal_power (proposal_id, user_id, nox, staked, zsp, power) VALUES (?, ?, '5', '0', 0, '5')", p, u);
+      sql.run("INSERT INTO proposal_wallet_power (proposal_id, address, user_id, nox, staked, zsp) VALUES (?, ?, ?, '5', '0', 0)", p, `0x${u}`, u);
+    }
   }
   sql.run("INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, created_at) VALUES ('closed-long-ago', ?, 0, '5', '0x1', 'm', 's', ?)", ids.owner, LONG_AGO);
   await purge();
-  const left = (p) => sql.all('SELECT user_id FROM proposal_power WHERE proposal_id = ? ORDER BY user_id', p).map((r) => r.user_id);
-  assert.deepEqual(left('closed-long-ago'), [ids.owner]);
-  assert.equal(left('still-open').length, 2);
-  assert.equal(left('encrypted-undecided').length, 2, 'an encrypted vote keeps it until its totals are decrypted');
+  for (const table of ['proposal_power', 'proposal_wallet_power']) {
+    const left = (p) => sql.all(`SELECT user_id FROM ${table} WHERE proposal_id = ? ORDER BY user_id`, p).map((r) => r.user_id);
+    assert.deepEqual(left('closed-long-ago'), [ids.owner], table);
+    assert.equal(left('still-open').length, 2, table);
+    assert.equal(left('encrypted-undecided').length, 2, `${table}: an encrypted vote keeps it until its totals are decrypted`);
+  }
 });
 
 test('copies taken before upgrades go after UPGRADE_COPY_DAYS, or sooner under a shorter policy', async () => {
