@@ -52,6 +52,7 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 ## Reference
 
 - [Proof file format](proof-format.md): the receipt and proof file format, for anyone writing a verifier.
+- [Formal verification](formal-verification.md): what the Lean proofs cover, what they leave out, and how tests tie them to the code.
 - [FAQ](faq.md): short answers to common questions.
 - [Glossary](glossary.md): the terms used in Nil and these pages.
 
