@@ -14,7 +14,7 @@ cd nil-check
 git checkout v3.0.0
 npm ci
 npm run build
-npm run verify:server -- https://nil.nonos.software
+npm run verify:server -- https://nonos.nil.nonos.app
 ```
 
 The check prints the release hash of the build you just made. Then it asks the server for every file of the web app, compares each one byte for byte, after undoing any compression the server or its proxy applied, and ends with **All match** or with a list of each file that came back different. It exits with 1 if anything differs, so you can run it from a script or a scheduled job.
@@ -22,7 +22,7 @@ The check prints the release hash of the build you just made. Then it asks the s
 If you'd rather not build, compare with the manifest published for the release:
 
 ```bash
-npm run verify:server -- https://nil.nonos.software --manifest release/web-3.0.0.json
+npm run verify:server -- https://nonos.nil.nonos.app --manifest release/web-3.0.0.json
 ```
 
 That trusts the manifest instead of your own build. Building is the stronger check, because then you rely on nothing but source code you can read.
