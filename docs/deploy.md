@@ -253,6 +253,8 @@ Then review these settings:
 
 Nil can also be reached as a Tor onion service. Details are in [Tor onion service](tor.md). Since v3, a wallet is the only way to sign in, and Tor Browser ships without wallet extensions, so plan how your team will sign in first.
 
+The Tor container is built from a Debian image pinned by digest, and runs with a read-only root, `no-new-privileges` and only the capabilities it needs to hand its key folder to Tor's own user, which Tor then switches to.
+
 ### Onion and HTTPS together
 
 When you pass `-f`, Compose stops loading the override file automatically, so list it:
