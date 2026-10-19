@@ -62,10 +62,16 @@ step "Settings"
 fresh=()
 for pair in "${settings[@]}"; do
   file=${pair%%:*}
-  if [ ! -f "$NIL_DIR/$file" ]; then
+  [ -f "$NIL_DIR/$file" ] && continue
+  if [ "$file" = workspace.env ]; then
+    # read inside the control plane's container, as uid 1000 with the docker group added
+    gid=$(env_get "$NIL_DIR/.env" DOCKER_GID)
+    [ -n "$gid" ] || die "DOCKER_GID is missing from $NIL_DIR/.env. Run deploy/provision.sh first."
+    run install -m 640 -g "$gid" "$NIL_DIR/${pair##*:}" "$NIL_DIR/$file"
+  else
     run install -m 600 "$NIL_DIR/${pair##*:}" "$NIL_DIR/$file"
-    fresh+=("$NIL_DIR/$file")
   fi
+  fresh+=("$NIL_DIR/$file")
 done
 # the first release becomes the running version; later ones are switched to by upgrade.sh
 [ -n "$NIL_VERSION" ] || env_set "$NIL_DIR/.env" NIL_VERSION "$VERSION"

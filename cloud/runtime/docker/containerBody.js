@@ -24,7 +24,9 @@ export default function containerBody(spec, settings) {
       StartInterval: ns(2),
     },
     HostConfig: {
-      Mounts: [{ Type: 'volume', Source: spec.volume, Target: dataLayout.mount }],
+      // NoCopy: Docker would otherwise copy the image's /data owner (uid 1000) onto the still
+      // empty volume as it mounts, undoing ownVolume, and the app couldn't write its database
+      Mounts: [{ Type: 'volume', Source: spec.volume, Target: dataLayout.mount, VolumeOptions: { NoCopy: true } }],
       NetworkMode: network,
       ReadonlyRootfs: true,
       Tmpfs: { '/tmp': `rw,noexec,nosuid,nodev,size=${settings.tmpfsMb}m` },

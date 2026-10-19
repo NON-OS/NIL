@@ -163,7 +163,7 @@ test('each workspace gets an internal network, Caddy attached to it, a volume an
   assert.deepEqual(helper.HostConfig.CapAdd, ['CHOWN', 'DAC_READ_SEARCH']);
   assert.equal(helper.HostConfig.NetworkMode, 'none');
   assert.equal(helper.HostConfig.ReadonlyRootfs, true);
-  assert.deepEqual(helper.HostConfig.Mounts, [{ Type: 'volume', Source: `nil-${ID}-data`, Target: '/data' }]);
+  assert.deepEqual(helper.HostConfig.Mounts, [{ Type: 'volume', Source: `nil-${ID}-data`, Target: '/data', VolumeOptions: { NoCopy: true } }]);
   assert.deepEqual(state.waited, [`nil-${ID}-owner`]);
   assert.ok(state.removed.includes(`nil-${ID}-owner`));
   assert.equal(state.containers.has(`nil-${ID}-owner`), false);
@@ -175,7 +175,7 @@ test('each workspace gets an internal network, Caddy attached to it, a volume an
   assert.equal(body.HostConfig.NanoCpus, 1e9);
   assert.equal(body.HostConfig.PidsLimit, 256);
   assert.match(body.HostConfig.Tmpfs['/tmp'], /noexec,nosuid,nodev,size=64m/);
-  assert.deepEqual(body.HostConfig.Mounts, [{ Type: 'volume', Source: `nil-${ID}-data`, Target: '/data' }]);
+  assert.deepEqual(body.HostConfig.Mounts, [{ Type: 'volume', Source: `nil-${ID}-data`, Target: '/data', VolumeOptions: { NoCopy: true } }]);
   assert.deepEqual(body.Healthcheck.Test, ['CMD', 'wget', '-qO-', '-T', '5', 'http://127.0.0.1:3000/healthz']);
   assert.ok(body.Env.includes('SETUP_TOKEN=tok'));
 

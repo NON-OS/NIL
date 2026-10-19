@@ -90,7 +90,14 @@ services:
       OVH_APPLICATION_SECRET: ${OVH_APPLICATION_SECRET:-}
       OVH_CONSUMER_KEY: ${OVH_CONSUMER_KEY:-}
     volumes:
-      - caddy-config:/etc/caddy:ro
+      # nocopy: Docker would copy Caddy's own root-owned /etc/caddy onto the empty volume, and the
+      # control plane, which writes the Caddyfile there as uid 1000, couldn't
+      - type: volume
+        source: caddy-config
+        target: /etc/caddy
+        read_only: true
+        volume:
+          nocopy: true
       - caddy-data:/data
       - caddy-state:/config
     # edge: the control plane. chain: the verifier and the optional Ethereum node. The control plane attaches

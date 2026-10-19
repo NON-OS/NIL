@@ -46,7 +46,7 @@ run docker volume create "$name" > /dev/null
 run docker run --detach --pull never --name "$name" --network "$name" --volume "$name:/data" \
   --read-only --tmpfs /tmp:rw,noexec,nosuid,nodev,size=64m --cap-drop ALL --security-opt no-new-privileges \
   --user 1000:1000 --memory 768m --pids-limit 256 --init \
-  --env NOX_RPC_URL=off --env "SETUP_TOKEN=$token" "$image" > /dev/null
+  --env APP_URL=http://127.0.0.1:3000 --env NOX_RPC_URL=off --env "SETUP_TOKEN=$token" "$image" > /dev/null
 wait_healthy "$name" 120 || {
   run docker logs --tail 50 "$name" >&2
   die "The throwaway workspace didn't become healthy."

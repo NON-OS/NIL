@@ -1,11 +1,12 @@
 import dataLayout from '../dataLayout.js';
 
-// A new volume starts out owned by the image's own user (uid 1000), and so do the files of a
-// workspace created before each had its own uid. Before the workspace's container is created, a
-// short-lived helper from the same image hands the whole volume to the workspace's uid. It runs
-// as root with only the two capabilities chown needs (CHOWN, and DAC_READ_SEARCH to enter
-// private folders), no network, a read-only root and nothing but the volume mounted. Symbolic
-// links are changed themselves, never followed.
+// Docker copies the image's /data owner (uid 1000) onto an empty volume each time a container
+// mounts it, so every mount of a workspace volume says NoCopy. A new volume then starts out owned
+// by root, and the files of a workspace created before each had its own uid by uid 1000. Before
+// the workspace's container is created, a short-lived helper from the same image hands the whole
+// volume to the workspace's uid. It runs as root with only the two capabilities chown needs
+// (CHOWN, and DAC_READ_SEARCH to enter private folders), no network, a read-only root and nothing
+// but the volume mounted. Symbolic links are changed themselves, never followed.
 export default async function ownVolume(client, spec) {
   const name = `nil-${spec.id}-owner`;
   await client.quiet('DELETE', `/containers/${name}`, { query: { force: 'true' } });
@@ -19,7 +20,7 @@ export default async function ownVolume(client, spec) {
       Labels: { 'org.nonos.cloud.role': 'helper', 'org.nonos.cloud.workspace': spec.id },
       NetworkDisabled: true,
       HostConfig: {
-        Mounts: [{ Type: 'volume', Source: spec.volume, Target: dataLayout.mount }],
+        Mounts: [{ Type: 'volume', Source: spec.volume, Target: dataLayout.mount, VolumeOptions: { NoCopy: true } }],
         NetworkMode: 'none',
         ReadonlyRootfs: true,
         CapDrop: ['ALL'],
