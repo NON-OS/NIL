@@ -7,6 +7,7 @@ import contentSecurityPolicy from './contentSecurityPolicy.js';
 import sendJson from './sendJson.js';
 import readJson from './readJson.js';
 import staticAssets from './staticAssets.js';
+import etagMatches from './etagMatches.js';
 import renderPages from './renderPages.js';
 
 const NOTICES = {
@@ -69,7 +70,12 @@ export default function createPublicServer(ctx, flow) {
     if (req.method === 'GET' || req.method === 'HEAD') {
       const asset = assets.get(url.pathname);
       if (asset) {
-        res.writeHead(200, { 'content-type': asset.type, 'cache-control': 'public, max-age=86400', 'content-length': asset.body.length });
+        const cached = { etag: asset.etag, 'cache-control': asset.cache };
+        if (etagMatches(req.headers['if-none-match'], asset.etag)) {
+          res.writeHead(304, cached);
+          return res.end();
+        }
+        res.writeHead(200, { 'content-type': asset.type, ...cached, 'content-length': asset.body.length });
         return res.end(req.method === 'HEAD' ? undefined : asset.body);
       }
       if (url.pathname === '/unavailable') return unavailable(req, res);
