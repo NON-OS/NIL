@@ -36,8 +36,8 @@ before(async () => {
 });
 after(() => srv.close());
 
-test('a Uniswap V2 pair is priced only once Nil has recorded it for a whole window', async () => {
-  assert.equal((await nox()).rateSource, 'manual', 'nothing recorded yet');
+test('a Uniswap V2 pair younger than the window is priced only once Nil has recorded it for a whole window', async () => {
+  assert.equal((await nox()).rateSource, 'manual', 'nothing recorded yet, and no history to read back');
   await recordPoolPrice();
   chain.mine(WINDOW_BLOCKS - 2);
   assert.equal((await nox()).rateSource, 'manual', 'recorded, but not a whole window ago');
@@ -63,15 +63,59 @@ test('one trade can’t move the price; holding a pushed price for the whole win
   assert.equal(BigInt(pushed.rate), 2n * 10n ** 16n);
 });
 
-test('after a recording gap longer than two windows, the price waits for a fresh window', async () => {
+test('after a recording gap, the pair’s own history fills the window, unless the node won’t serve old state', async () => {
   chain.tradePair(PAIR, CALM);
   chain.mine(3 * WINDOW_BLOCKS);
-  assert.equal((await nox()).rateSource, 'manual', 'the last recording is too old to average from');
-  await recordPoolPrice();
-  chain.mine(WINDOW_BLOCKS);
+  // the way public nodes answer a read at an old block without an archive plan
+  const lift = chain.refuse((method, params) => method === 'eth_call' && /^0x[0-9a-f]+$/.test(params[1]) && Number(params[1]) < chain.head());
+  try {
+    assert.equal((await nox()).rateSource, 'manual', 'the last recording is too old and the node refuses old state');
+  } finally {
+    lift();
+  }
+  // tried again once the head has moved on
+  chain.mine(5);
   const back = await nox();
   assert.equal(back.rateSource, 'oracle');
   assert.ok(Math.abs(usd(back.rate) - 0.05) < 0.0001, String(usd(back.rate)));
+});
+
+test('a pair Nil never recorded is priced at once from the chain’s history, with the same arithmetic', async () => {
+  const { default: pairTwap } = await import('../billing/pairTwap.js');
+  const { default: poolObservations } = await import('../billing/poolObservations.js');
+  const FRESH = '0x3333333333333333333333333333333333333333';
+  const [a, b] = [{ reserve0: 1_000_000n * E18, reserve1: 20n * E18 }, { reserve0: 1_000_000n * E18, reserve1: 30n * E18 }];
+  const q = ({ reserve0, reserve1 }) => (reserve1 << 112n) / reserve0;
+  chain.setPair(FRESH, { token0: NOX, token1: WETH, ...a });
+
+  // no trade for longer than the window: the seed's last update predates it, so the pair's
+  // cumulative price is carried forward at its reserves, as Uniswap's oracle library does
+  chain.mine(3 * WINDOW_BLOCKS);
+  const flat = await pairTwap(FRESH, 300);
+  const span = BigInt(flat.den >> 112n);
+  assert.ok(span >= 300n && span < 340n, `a window of ${span} s`);
+  assert.equal(flat.num, q(a) * span, 'exactly the price held for the whole window');
+  const seeded = poolObservations.before(FRESH, chain.blockTime(chain.head()), 300);
+  assert.ok(seeded, 'the reading read from history is kept');
+
+  // a trade halfway through a fresh window: the average weighs both prices by their seconds
+  const FRESH2 = '0x4444444444444444444444444444444444444444';
+  chain.setPair(FRESH2, { token0: NOX, token1: WETH, ...a });
+  chain.mine(3 * WINDOW_BLOCKS);
+  chain.tradePair(FRESH2, b);
+  const traded = chain.blockTime(chain.head());
+  chain.mine(12);
+  const mixed = await pairTwap(FRESH2, 300);
+  const end = BigInt(chain.blockTime(chain.head()));
+  const start = end - (mixed.den >> 112n);
+  assert.equal(mixed.num, q(a) * (BigInt(traded) - start) + q(b) * (end - BigInt(traded)));
+
+  // once Nil's own minute readings cover the window, they take over from the seed
+  const { default: pairState } = await import('../chain/pairState.js');
+  const local = await pairState(FRESH2, chain.head());
+  poolObservations.add(FRESH2, local, 3600);
+  chain.mine(WINDOW_BLOCKS);
+  assert.equal(poolObservations.before(FRESH2, chain.blockTime(chain.head()), 300).time, local.time);
 });
 
 test('the average is exact integer arithmetic, with the pair’s tokens either way round', async () => {

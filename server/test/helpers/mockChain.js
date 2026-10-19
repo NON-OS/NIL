@@ -90,6 +90,8 @@ export default function mockChain() {
 
   const blockHash = (n) => `0x${pad(`${(forks.get(n) ?? 0).toString(16)}b10c${n.toString(16)}`)}`;
   const blockTime = (n) => times.get(n) ?? genesis + (n - 1000) * 12;
+  // a pair as it stood at block `at` (the head for a tag), or null before it existed
+  const pairAt = (contract, at) => pairs.get(contract)?.findLast((s) => s.from <= (/^0x[0-9a-f]+$/i.test(at ?? '') ? Number(at) : block)) ?? null;
   const receiptOut = (hash, r) => ({
     transactionHash: hash,
     status: r.status,
@@ -114,7 +116,7 @@ export default function mockChain() {
         return `0x${word(64)}${word(64 + 32 * 3)}${word(2)}${word(BigInt(pool.tick) * (now - seconds))}${word(BigInt(pool.tick) * now)}${word(2)}${word(0)}${word(0)}`;
       }
     }
-    const pair = pairs.get(contract);
+    const pair = pairAt(contract, at);
     if (pair) {
       if (data === GET_RESERVES) return `0x${word(pair.reserve0)}${word(pair.reserve1)}${word(pair.last)}`;
       if (data === PRICE0) return `0x${word(pair.price0)}`;
@@ -267,18 +269,22 @@ export default function mockChain() {
     // a Uniswap V3 pool whose time-weighted average tick is `tick`
     setPool: (address, { token0, token1, tick, fail = false }) => pools.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), tick, fail }),
     // A Uniswap V2 pair holding these reserves since the current head, with its cumulative prices
-    // starting from zero.
+    // starting from zero. Reads at an earlier block find no contract there.
     setPair(address, { token0, token1, reserve0, reserve1 }) {
-      pairs.set(address.toLowerCase(), { token0: token0.toLowerCase(), token1: token1.toLowerCase(), reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), price0: 0n, price1: 0n, last: BigInt(blockTime(block)) });
+      pairs.set(address.toLowerCase(), [{ from: block, token0: token0.toLowerCase(), token1: token1.toLowerCase(), reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), price0: 0n, price1: 0n, last: BigInt(blockTime(block)) }]);
     },
     // A trade in the head block that leaves the pair with new reserves. Like the real contract it
-    // first adds the old price for the time since the last trade to the cumulative prices.
+    // first adds the old price for the time since the last trade to the cumulative prices. Reads
+    // at earlier blocks still see the pair as it was then.
     tradePair(address, { reserve0, reserve1 }) {
-      const pair = pairs.get(address.toLowerCase());
+      const history = pairs.get(address.toLowerCase());
+      const pair = { ...history.at(-1) };
       const now = BigInt(blockTime(block));
       pair.price0 += ((pair.reserve1 << 112n) / pair.reserve0) * (now - pair.last);
       pair.price1 += ((pair.reserve0 << 112n) / pair.reserve1) * (now - pair.last);
-      Object.assign(pair, { reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), last: now });
+      Object.assign(pair, { from: block, reserve0: BigInt(reserve0), reserve1: BigInt(reserve1), last: now });
+      if (history.at(-1).from === block) history[history.length - 1] = pair;
+      else history.push(pair);
     },
     // a Chainlink feed answering `answer` with `decimals`, last updated at `updatedAt` (seconds)
     setFeed: (address, { answer, decimals = 8, updatedAt = Math.floor(Date.now() / 1000) }) => feeds.set(address.toLowerCase(), { answer: BigInt(answer), decimals, updatedAt }),

@@ -12,11 +12,15 @@ const poolObservations = {
     return stored?.pool === pool ? stored.list.map(fromStored) : [];
   },
 
+  // Readings go in time order whenever they were taken, so one read back from the chain's own
+  // history (seedObservation.js) can sit before the ones recorded since.
   add(pool, { time, price0, price1 }, keepSeconds) {
     const list = poolObservations.list(pool);
-    if (list.length && list.at(-1).time >= time) return;
+    if (list.some((o) => o.time === time)) return;
     list.push({ time, price0, price1 });
-    const kept = list.filter((o) => o.time >= time - keepSeconds).map((o) => ({ time: o.time, price0: String(o.price0), price1: String(o.price1) }));
+    list.sort((a, b) => a.time - b.time);
+    const newest = list.at(-1).time;
+    const kept = list.filter((o) => o.time >= newest - keepSeconds).map((o) => ({ time: o.time, price0: String(o.price0), price1: String(o.price1) }));
     billingState.set('poolObservations', { pool, list: kept });
   },
 
