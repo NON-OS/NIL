@@ -8,7 +8,8 @@ import isPhone from '../../lib/isPhone';
 
 // For someone trying to sign in on a device with no wallet. Everything here is a link the person
 // chooses to open; Nil itself loads nothing from any wallet maker. Where the server offers phone
-// wallets, a computer can also use the wallet app on the person's phone over WalletConnect.
+// wallets, a computer or a tablet can also use the wallet app on the person's phone over
+// WalletConnect (PhoneWalletOffer shows nothing on a phone itself).
 export default function NoWalletPanel({ onBack, onPhone }: { onBack: () => void; onPhone?: () => void }) {
   const here = location.href;
   const phone = isPhone();
@@ -26,20 +27,23 @@ export default function NoWalletPanel({ onBack, onPhone }: { onBack: () => void;
       <p>That’s why Nil never needs your email or a password: there’s nothing for anyone to leak or steal. Signing in costs nothing and sends nothing.</p>
 
       {phone ? (
-        <section className="no-wallet-step">
-          <h2>Open Nil in your wallet app</h2>
-          <p>Tap the wallet you have. Nil opens inside it, ready to sign in.</p>
-          <div className="wallet-apps">
-            {walletApps.map(({ name, openIn }) =>
-              openIn ? (
-                <a key={name} className="btn" href={openIn(here)} target="_blank" rel="noopener noreferrer">
-                  {name}
-                </a>
-              ) : null,
-            )}
-          </div>
-          <p className="method-hint">No wallet app yet? Install one of these from your app store, then come back to this page.</p>
-        </section>
+        <>
+          {onPhone && <PhoneWalletOffer onPhone={onPhone} />}
+          <section className="no-wallet-step">
+            <h2>Open Nil in your wallet app</h2>
+            <p>Tap the wallet you have. Nil opens inside it, ready to sign in.</p>
+            <div className="wallet-apps">
+              {walletApps.map(({ name, openIn }) =>
+                openIn ? (
+                  <a key={name} className="btn" href={openIn(here)} target="_blank" rel="noopener noreferrer">
+                    {name}
+                  </a>
+                ) : null,
+              )}
+            </div>
+            <p className="method-hint">No wallet app yet? Install one of these from your app store, then come back to this page.</p>
+          </section>
+        </>
       ) : (
         <>
           {onPhone && <PhoneWalletOffer onPhone={onPhone} />}

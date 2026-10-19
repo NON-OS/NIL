@@ -232,6 +232,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Fixed
 
+- Phone wallets weren't offered on tablets: an iPad was treated as a phone, so the sign-up page and the workspace sign-in hid **Use a wallet on your phone** there. Only phones skip it now; a tablet without a wallet shows the code like a computer does.
 - Hosted: a certificate Caddy failed to renew raised no alert until visitors got errors. The control plane now checks the sign-up host and the wildcard hourly like a visitor would, warns 21 days before expiry, raises a critical alert at 7 days or when a certificate doesn't verify (`CLOUD_CERT_WARN_DAYS`, `CLOUD_CERT_CRITICAL_DAYS`, `CLOUD_CERT_CHECK_ADDRESS`).
 - Hosted: `restore-drill` could leave its throwaway copy, a decrypted backup, on the server while saying it had been removed. Removing a workspace now waits until Docker has really let go, removes helpers left behind and retries what is still in use (`CLOUD_DOCKER_REMOVE_TRIES`, `CLOUD_DOCKER_REMOVE_WAIT_MS`). A drill that still can't remove its copy lists what is left with the commands that remove it, exits with 1 and sends a critical alert.
 - Tasks you make with quick add have no assignee, so My work left them out and never counted them under **Finished this week**. My work, the time page and your calendar feed now treat a task as yours when it is assigned to you or when you made it without giving it to anyone, and the list on My work is called **My tasks**.

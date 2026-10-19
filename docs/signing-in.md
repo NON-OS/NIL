@@ -24,7 +24,7 @@ Hardware wallets such as Ledger and Trezor work when you connect them through an
 
 ### Use a wallet on your phone
 
-On a computer without a wallet extension, such as a work computer you can't install anything on, you can use the wallet app on your phone instead and keep working on the computer. This works when whoever runs the server has set a WalletConnect project ID (`WALLETCONNECT_PROJECT_ID`). Without one, the option doesn't show.
+On a computer or tablet without a wallet, such as a work computer you can't install anything on or an iPad, you can use the wallet app on your phone instead and keep working there. This works when whoever runs the server has set a WalletConnect project ID (`WALLETCONNECT_PROJECT_ID`). Without one, the option doesn't show.
 
 1. Click **Use a wallet on your phone**, under the sign-in button or on the screen that explains wallets.
 2. Open the wallet app on your phone and scan the code with its own scan button. Most wallet apps can, MetaMask, Rainbow and Trust Wallet among them. If you can't scan, copy the link under the code into the wallet app.
@@ -37,7 +37,7 @@ Your computer and your phone talk through WalletConnect's relay, a service run b
 
 ### No wallet yet
 
-If the device has no wallet, **Sign in with your wallet** explains what a wallet is and how to get one. On a computer it offers **Use a wallet on your phone** when the server has it on, links to a few wallets' official sites and shows a QR code that opens the same page on your phone. On a phone, including an iPhone and Nil installed on the home screen, it offers **Open Nil in your wallet app** for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Those links open the wallet app's own browser at the page you were on, so an invite link still works there. Nil loads nothing from these wallets.
+If the device has no wallet, **Sign in with your wallet** explains what a wallet is and how to get one. On a computer or tablet it offers **Use a wallet on your phone** when the server has it on. On a computer it also links to a few wallets' official sites and shows a QR code that opens the same page on your phone. On a phone or tablet, including an iPhone, an iPad and Nil installed on the home screen, it offers **Open Nil in your wallet app** for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Those links open the wallet app's own browser at the page you were on, so an invite link still works there. Nil loads nothing from these wallets.
 
 ## Link a second wallet
 

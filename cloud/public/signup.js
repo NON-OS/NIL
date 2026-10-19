@@ -143,13 +143,14 @@
     throw new Error('This is taking longer than it should. Your workspace may still appear; if it doesn’t, contact the host.');
   }
 
-  // A phone wallet over WalletConnect, when the host offers one: computers only, since on a phone
-  // the wallet app is on the same screen and opening this page in its browser is the way in.
+  // A phone wallet over WalletConnect, when the host offers one: computers and tablets, not phones,
+  // since on a phone the wallet app is on the same screen and opening this page in its browser is
+  // the way in. The same rule as the workspace app's (client/src/lib/isHandset.ts).
   // WalletConnect's client and the dialog's code load on first use, from this site.
   const phoneButton = $('phone');
   const phoneDialog = $('phone-dialog');
   const ua = navigator.userAgent;
-  const onPhone = Boolean(navigator.userAgentData?.mobile) || /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const onPhone = Boolean(navigator.userAgentData?.mobile) || /iPhone|iPod|Android.*Mobile/.test(ua);
   const phoneOn = Boolean(phoneButton && phoneDialog && app.dataset.phoneProject) && !onPhone;
   let phone = null;
 
