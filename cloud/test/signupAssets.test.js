@@ -34,6 +34,26 @@ test('the page’s code and styles are checked again on every visit, fonts and t
   }
 });
 
+test('the page names its script and styles by their content, so a new release never runs an old copy', async () => {
+  const { base, close } = await serve();
+  try {
+    const html = await (await fetch(`${base}/`)).text();
+    for (const path of ['/assets/signup.js', '/assets/signup.css']) {
+      const tag = (await fetch(`${base}${path}`)).headers.get('etag');
+      const named = html.match(new RegExp(`${path.replace(/[./]/g, '\\$&')}\\?v=([\\w-]+)`));
+      assert.ok(named, path);
+      assert.equal(named[1], tag.slice(1, 17), path);
+      const versioned = await fetch(`${base}${path}?v=${named[1]}`);
+      assert.equal(versioned.status, 200, path);
+      assert.equal(versioned.headers.get('etag'), tag, path);
+    }
+    const notice = await (await fetch(`${base}/unavailable`, { headers: { host: 'gone.nil.test' } })).text();
+    assert.match(notice, /href="\/assets\/signup\.css\?v=[\w-]{16}"/);
+  } finally {
+    await close();
+  }
+});
+
 test('a browser with the current copy gets a 304 and no body; one with an older copy gets the new one', async () => {
   const { base, close } = await serve();
   try {

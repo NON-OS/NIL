@@ -3,7 +3,8 @@
 // Sign-up in the browser: check the address, have the wallet sign the server's message, and
 // show the setup code once. No framework and no third-party code; the wallet is whatever
 // EIP-1193 provider the browser injects (MetaMask, Rabby, a wallet's own browser), or a phone
-// wallet where the host offers one (WalletConnect's client, in /assets/phone.js, loads only then).
+// wallet where the host offers one (WalletConnect's client, in /assets/phone.js, loads only then;
+// the page names it with its version, in data-phone-src).
 (() => {
   const app = document.getElementById('app');
   if (!app) return;
@@ -174,7 +175,7 @@
     }
     phoneDialog.showModal();
     try {
-      phone ??= (await import('/assets/phone.js')).default({ dialog: phoneDialog, projectId: app.dataset.phoneProject, relayUrl: app.dataset.phoneRelay, signUp: create });
+      phone ??= (await import(app.dataset.phoneSrc)).default({ dialog: phoneDialog, projectId: app.dataset.phoneProject, relayUrl: app.dataset.phoneRelay, signUp: create });
     } catch {
       phoneDialog.close();
       return showError(new Error('Couldn’t reach the server. Check your connection and try again.'));

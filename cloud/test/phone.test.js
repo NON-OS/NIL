@@ -56,12 +56,12 @@ test('with phone wallets off, the sign-up site is what it always was', async () 
 test('with phone wallets on, the page offers them and the policy adds the relay and nothing else', async () => {
   const on = await site({ WALLETCONNECT_PROJECT_ID: PROJECT });
   assert.equal(on.csp, STRICT.replace("connect-src 'self'", "connect-src 'self' wss://relay.walletconnect.org"));
-  assert.match(on.html, new RegExp(`<main id="app" data-domain="nil\\.test" data-pow="4" data-phone-project="${PROJECT}" data-phone-relay="wss://relay\\.walletconnect\\.org">`));
+  assert.match(on.html, new RegExp(`<main id="app" data-domain="nil\\.test" data-pow="4" data-phone-project="${PROJECT}" data-phone-relay="wss://relay\\.walletconnect\\.org" data-phone-src="/assets/phone\\.js\\?v=[\\w-]{16}">`));
   assert.match(on.html, /<button type="button" id="phone" class="secondary" hidden>Use a wallet on your phone<\/button>/);
   assert.match(on.html, /<dialog id="phone-dialog" class="dialog" aria-labelledby="phone-title">/);
   assert.match(on.html, /<p id="phone-status" class="phone-status" role="status">/);
   assert.match(on.html, /talks to WalletConnect’s relay/);
-  assert.doesNotMatch(on.html, /\{\{|<script(?![^>]*src="\/assets\/signup\.js")|style=/);
+  assert.doesNotMatch(on.html, /\{\{|<script(?![^>]*src="\/assets\/signup\.js\?v=[\w-]{16}")|style=/);
   assert.equal(on.script.status, 200);
   assert.equal(on.script.type, 'text/javascript; charset=utf-8');
   assert.match(on.script.body, /relay\.walletconnect\.org/);

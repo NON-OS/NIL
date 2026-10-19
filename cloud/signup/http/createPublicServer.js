@@ -32,7 +32,7 @@ const REASONS = {
 export default function createPublicServer(ctx, flow) {
   const phone = ctx.config.walletConnect;
   const assets = staticAssets({ phone: Boolean(phone) });
-  const pages = renderPages(ctx.config);
+  const pages = renderPages(ctx.config, assets);
   const csp = contentSecurityPolicy(phone?.relayUrl);
   const origin = `https://${ctx.config.signupHost}`;
 
