@@ -10,9 +10,10 @@ const TASKS = [
 ];
 // 250 NOX, in the token's smallest unit as the API takes it
 const BOUNTY = { title: 'Translate the help pages', amount: `250${'0'.repeat(18)}` };
-// one of each kind a member meets: signed, anonymous, sealed until it closes, and closed
+// one of each kind a member meets: signed with public ballots (and one cast, so the list has a
+// row), anonymous, sealed until it closes, and closed
 const VOTES = [
-  { title: 'Move the weekly call to Thursday?', body: 'Thursday suits the people in Asia better.', options: ['Yes', 'No'], days: 7 },
+  { title: 'Move the weekly call to Thursday?', body: 'Thursday suits the people in Asia better.', options: ['Yes', 'No'], days: 7, publicBallots: true, cast: 0 },
   { title: 'Pick the offsite city', options: ['Lisbon', 'Porto', 'Madeira'], days: 7, anonymous: true },
   { title: 'Raise the bounty budget?', options: ['Yes', 'No'], days: 7, sealed: true },
   { title: 'Adopt the new label set?', options: ['Yes', 'No'], days: 3, close: true },
@@ -27,6 +28,17 @@ export const api = (page, method, url, body) =>
     },
     [method, url, body],
   );
+
+// A signed ballot, the way the app casts one: the server writes the text, the page's wallet signs.
+const signBallot = async (page, id, choice) => {
+  const { ballotId, message } = await api(page, 'POST', `/proposals/${id}/ballot`, { choice });
+  const signature = await page.evaluate(async (text) => {
+    const [address] = await window.ethereum.request({ method: 'eth_accounts' });
+    const hex = `0x${[...new TextEncoder().encode(text)].map((b) => b.toString(16).padStart(2, '0')).join('')}`;
+    return window.ethereum.request({ method: 'personal_sign', params: [hex, address] });
+  }, message);
+  await api(page, 'POST', `/proposals/${id}/vote`, { ballotId, signature });
+};
 
 export default async function seed(page, world) {
   await page.goto(world.base);
@@ -44,8 +56,9 @@ export default async function seed(page, world) {
   const { task } = await api(page, 'POST', '/tasks', { title: BOUNTY.title, status: 'todo', projectId: project });
   await api(page, 'PATCH', `/tasks/${task.id}`, { bounty: BOUNTY.amount });
   await api(page, 'PATCH', `/tasks/${task.id}`, { listed: true });
-  for (const { close, ...vote } of VOTES) {
+  for (const { close, cast, ...vote } of VOTES) {
     const { proposal } = await api(page, 'POST', '/proposals', vote);
+    if (cast !== undefined) await signBallot(page, proposal.id, cast);
     if (close) await api(page, 'POST', `/proposals/${proposal.id}/close`);
   }
   return { me, project };

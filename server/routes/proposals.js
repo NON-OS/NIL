@@ -64,6 +64,9 @@ router.post(
     if (weighting === 'power' && !config.nox.enabled) throw HttpError.badRequest('Votes weighted by voting power need on-chain features, which are off on this server.');
     const days = check.number(b.days ?? 7, 'Duration', { min: 1, max: 60, integer: true });
     const anonymous = Boolean(b.anonymous);
+    // who voted what, shown to every member: signed votes only, and only when asked for, so a
+    // caller that doesn't know the setting keeps the old rule of admins only
+    const publicBallots = !anonymous && b.publicBallots === true;
     // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three
     // trustees. Without them the vote key could never be set up and the vote would never open.
     const trustees = anonymous && weighting === 'power' ? b.trustees : null;
@@ -81,8 +84,8 @@ router.post(
     const now = Date.now();
     sql.tx(() => {
       sql.run(
-        'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        id, title, body, JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, req.user.id, now, now + days * DAY,
+        'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, public_ballots, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, title, body, JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, publicBallots ? 1 : 0, req.user.id, now, now + days * DAY,
       );
       savePower?.(id);
       // the census of an anonymous vote needs the snapshot first when it's weighted
@@ -152,15 +155,16 @@ router.post(
   }),
 );
 
-// Everything needed to recount independently (see voteAudit). A sealed vote's file waits for the
-// close: its ballots would give away the running totals the seal hides.
+// Everything needed to recount independently (see voteAudit). Admins can always have it; every
+// member can when the vote's ballots are public. A sealed vote's file waits for the close: its
+// ballots would give away the running totals the seal hides.
 router.get(
   '/proposals/:id/audit',
-  requireAdmin,
   route((req) => {
     heldBallots.release({ proposalId: req.params.id });
     const row = sql.get('SELECT * FROM proposals WHERE id = ?', req.params.id);
     if (!row) throw HttpError.notFound('That vote');
+    if (!req.user.isAdmin && !row.public_ballots) throw HttpError.forbidden('Only admins can download this vote’s audit file.');
     if (row.sealed && !row.closed_at) throw new HttpError(409, 'This vote is sealed, so its audit file is ready once it closes.');
     return voteAudit(row);
   }),

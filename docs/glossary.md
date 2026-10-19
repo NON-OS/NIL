@@ -4,7 +4,7 @@
 |---|---|
 | AES-256-GCM | The cipher Nil uses to encrypt docs, private tasks, capsules and recovery kits. It also detects any change to the encrypted text |
 | Anonymous vote | A vote where each ballot is a zero-knowledge proof, so nobody can tell who cast it. See [Votes](votes.md) |
-| Audit file | A file admins download from a vote so anyone can recount it |
+| Audit file | A file admins download from a vote, and every member for a vote with public ballots, so anyone can recount it |
 | Bounty | A reward on a task, paid in NOX or another listed token. See [Bounties and payouts](bounties-and-payouts.md) |
 | Capsule | One encrypted file with the whole workspace, used for backups and moving servers. See [Backups and moving](backups-and-moving.md) |
 | Commitment | A value that stands in for something without revealing it, such as a hashed task title in a receipt or the public part of a voting key |

@@ -75,6 +75,7 @@ const signedIn = [
   { name: 'time', path: '/time' },
   { name: 'bounties', path: '/bounties' },
   { name: 'votes', path: '/votes' },
+  { name: 'votes-ballots', path: '/votes', then: (page) => page.locator('.ballot-list summary').first().click() },
   { name: 'proofs', path: '/proofs' },
   { name: 'project', path: ({ project }) => `/projects/${project}` },
   { name: 'settings', path: '/settings' },

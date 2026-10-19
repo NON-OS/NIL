@@ -81,6 +81,8 @@ test('every row of a full 3.0.0 database survives the upgrade, and the result ch
     assert.equal(db.prepare("SELECT status FROM billing_payments WHERE id = 'pp-one'").get().status, 'final');
     assert.equal(db.prepare("SELECT 1 FROM settings WHERE key = 'plan'").get(), undefined);
     assert.ok(db.prepare("SELECT 1 FROM invite_joins WHERE invite_hash = 'i-hash' AND user_id = 'u-member'").get(), 'who joined through the invite');
+    // 037: a vote from before public ballots keeps showing choices to admins only
+    assert.equal(db.prepare("SELECT public_ballots FROM proposals WHERE id = 'v-one'").get().public_ballots, 0);
 
     // the search index came from the rows: team tasks are found, the private one isn't
     db.exec("INSERT INTO task_search (task_search, rank) VALUES ('integrity-check', 0)");

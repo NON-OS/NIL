@@ -122,3 +122,48 @@
   margin-left: 8px;
   vertical-align: middle;
 }
+
+/* who voted what, on a vote whose ballots are public */
+.ballot-list summary {
+  cursor: pointer;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.ballot-list table {
+  width: 100%;
+  margin-top: 8px;
+  border-collapse: collapse;
+  font-size: var(--text-sm);
+}
+
+.ballot-list th {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  color: var(--muted);
+  font-weight: 500;
+  text-align: left;
+}
+
+.ballot-list td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line);
+  vertical-align: middle;
+}
+
+.ballot-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ballot-who .mono {
+  display: block;
+  font-size: var(--text-xs);
+}
+
+.ballot-wait {
+  margin: 0;
+  font-size: var(--text-sm);
+}

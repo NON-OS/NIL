@@ -12,7 +12,7 @@ const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d ===
 
 export default function NewProposalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const nox = useStore((s) => s.nox);
-  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, days: 7, trustees: [] as string[] });
+  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, publicBallots: true, days: 7, trustees: [] as string[] });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
@@ -20,7 +20,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
   const create = async () => {
     setBusy(true);
     try {
-      await votes.create({ ...form, options, trustees: form.anonymous && form.weighting === 'power' ? form.trustees : undefined });
+      await votes.create({ ...form, options, publicBallots: !form.anonymous && form.publicBallots, trustees: form.anonymous && form.weighting === 'power' ? form.trustees : undefined });
       toast.show('Vote started. Everyone was notified.', { tone: 'success' });
       onCreated();
       onClose();
@@ -83,9 +83,20 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous })} aria-label="Anonymous ballots" />
             Anonymous ballots
           </label>
+          {!form.anonymous && (
+            <label className="filter-toggle">
+              <button type="button" className="toggle" role="switch" aria-checked={form.publicBallots} onClick={() => set({ publicBallots: !form.publicBallots })} aria-label="Members can see who voted what" />
+              Members can see who voted what
+            </label>
+          )}
           <HelpLink topic="votes" label="Which kind of vote to pick" newTab />
         </div>
-        {!form.anonymous && (
+        {!form.anonymous && form.publicBallots && (
+          <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+            Each voter’s wallet signs their ballot. Everyone in the workspace sees who voted for what, and any member can download the audit file with every wallet and its choice. Guests see nothing. Turn on anonymous ballots when choices must stay private.
+          </p>
+        )}
+        {!form.anonymous && !form.publicBallots && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
             Each voter’s wallet signs their ballot. It isn’t secret: admins can see who voted for what, and the audit file lists every wallet with its choice. Turn on anonymous ballots when choices must stay private.
           </p>

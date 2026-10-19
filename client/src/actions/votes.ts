@@ -11,6 +11,8 @@ interface NewProposal {
   weighting: 'equal' | 'power';
   sealed: boolean;
   anonymous: boolean;
+  // signed votes only: every member sees who voted what
+  publicBallots: boolean;
   days: number;
   // three members who hold the decryption key together (encrypted, weighted votes only)
   trustees?: string[];

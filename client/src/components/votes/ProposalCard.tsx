@@ -15,6 +15,7 @@ import type Proposal from '../../types/Proposal';
 import isAdminUser from '../../lib/isAdmin';
 import AnonymousBallot from './AnonymousBallot';
 import EncryptedBallot from './EncryptedBallot';
+import BallotList from './BallotList';
 
 const percent = (part: bigint, whole: bigint) => (whole ? Number((part * 1000n) / whole) / 10 : 0);
 
@@ -53,6 +54,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
           <span>{proposal.weighting === 'power' ? <><Coins /> weighted by voting power</> : <><Users /> one person, one vote</>}</span>
           {proposal.sealed && <span><EyeOff /> sealed until it closes</span>}
           {proposal.anonymous && <span><ShieldCheck /> anonymous</span>}
+          {proposal.publicBallots && <span><Eye /> ballots public to members</span>}
           {author && <span>by {author.name}</span>}
         </div>
       </div>
@@ -62,7 +64,10 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
 
       {open && !proposal.anonymous && (
         <p className="proposal-notice" role="note">
-          <Eye aria-hidden="true" /> Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.
+          <Eye aria-hidden="true" />{' '}
+          {proposal.publicBallots
+            ? 'Not anonymous. Your wallet signs your ballot, and everyone in the workspace can see who voted for what.'
+            : 'Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.'}
         </p>
       )}
       {open && !proposal.anonymous && (
@@ -87,20 +92,23 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
         </p>
       )}
 
+      {proposal.publicBallots && <BallotList proposal={proposal} weight={weight} />}
+
       <div className="proposal-foot">
         <span>
           {proposal.voters} voter{proposal.voters === 1 ? '' : 's'}
           {proposal.myVote && ` · you voted ${proposal.options[proposal.myVote.choice]} with ${weight(proposal.myVote.weight)}`}
         </span>
         <span className="grow" />
+        {/* admins always, every member when the ballots are public; a sealed vote's ballots would give
+            its running totals away, so its file waits for the close */}
+        {(isAdmin || proposal.publicBallots) && (!proposal.sealed || proposal.closedAt) && (
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title={proposal.anonymous ? 'Every ballot’s proof, so anyone can recount without learning who voted' : 'Every signed ballot, so anyone can recount'}>
+            <Download /> Audit file
+          </button>
+        )}
         {isAdmin && (
           <>
-            {/* a sealed vote's ballots would give its running totals away, so its file waits for the close */}
-            {(!proposal.sealed || proposal.closedAt) && (
-              <button type="button" className="btn btn-sm btn-ghost" onClick={() => votes.audit(proposal).catch(toast.error)} title={proposal.anonymous ? 'Every ballot’s proof, so anyone can recount without learning who voted' : 'Every signed ballot, so anyone can recount'}>
-                <Download /> Audit file
-              </button>
-            )}
             {open && (
               <ConfirmButton className="btn btn-sm" onConfirm={() => run('close', () => votes.close(proposal.id), 'Vote closed.')} confirmLabel="Close now?">
                 {busy === 'close' && <Spinner size={13} />} Close vote

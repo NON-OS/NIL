@@ -1,5 +1,6 @@
 import type AnonymousVote from './AnonymousVote';
 import type EncryptedVote from './EncryptedVote';
+import type Ballot from './Ballot';
 
 export default interface Proposal {
   id: string;
@@ -9,6 +10,8 @@ export default interface Proposal {
   // 'power' counts the voting power snapshotted when the vote opened: NOX held, staked, and ZSPs
   weighting: 'equal' | 'power';
   sealed: boolean;
+  // a signed vote whose ballots every member can see, wallet and choice, like a DAO's
+  publicBallots: boolean;
   createdBy: string | null;
   createdAt: number;
   closesAt: number;
@@ -17,6 +20,8 @@ export default interface Proposal {
   // null while a sealed vote is still open
   totals: string[] | null;
   myVote: { choice: number; weight: string } | null;
+  // every ballot, when the ballots are public; null while a sealed vote is open, or when they're not
+  ballots: Ballot[] | null;
   // set for anonymous votes, whose ballots are Semaphore proofs instead of signatures
   anonymous: AnonymousVote | null;
   // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three trustees

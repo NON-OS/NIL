@@ -8,11 +8,12 @@ Nil has three kinds of vote. You choose between them with two settings when you 
 
 | Kind | Settings | Who can see each choice | How ballots count |
 |---|---|---|---|
-| Signed | Anonymous ballots off | Admins, through the audit file | One per person, or by voting power |
+| Signed, ballots public | Anonymous ballots off, Members can see who voted what on | Every member, in the app and the audit file | One per person, or by voting power |
+| Signed | Anonymous ballots off, Members can see who voted what off | Admins, through the audit file | One per person, or by voting power |
 | Anonymous | Anonymous ballots on, One person, one vote | Nobody | One per person |
 | Encrypted weighted (beta) | Anonymous ballots on, Voting power, three trustees | Nobody; only the totals are ever decrypted | By voting power |
 
-Use a signed vote when openness is fine and you want each ballot tied to a wallet. Use an anonymous vote when choices must stay secret, even from admins.
+Use a signed vote with public ballots for decisions the whole team should be able to check, the way a DAO's votes are open: everyone sees each wallet's choice. Use an anonymous vote when choices must stay secret, even from admins.
 
 ## Start a vote
 
@@ -24,6 +25,7 @@ Only admins can start a vote. On **Votes**, click **New vote**, then:
 4. Choose how long the vote is open: 1, 3, 7, 14 or 30 days.
 5. Turn on **Seal results until it closes** to hide the running totals until the end.
 6. Turn on **Anonymous ballots** for an anonymous or encrypted vote.
+7. For a signed vote, **Members can see who voted what** starts on. Leave it on to show every member each ballot, or turn it off to keep choices to admins.
 
 Click **Start vote**. Everyone is notified.
 
@@ -35,7 +37,13 @@ Click an option and sign the ballot in your wallet. The ballot must be signed by
 
 Smart wallets, passkey wallets like Coinbase Smart Wallet among them, can vote too. Their signature doesn't reveal who made it, so Nil asks the chain whether the wallet accepts it, the same way as at sign-in. It asks at one block and notes that block with the ballot.
 
-Unless the results are sealed, everyone sees the running totals. The app shows each person only their own choice. The audit file, which admins can download, does list every ballot's wallet address and choice, so admins can see who voted what. The vote card says so above the options, and the new vote window says it before you start one. For a sealed vote, the audit file is ready once the vote closes. Use an anonymous vote when that matters.
+Unless the results are sealed, everyone sees the running totals.
+
+With **Members can see who voted what** on, every member sees each ballot under **Who voted** on the vote card: the member, their wallet, their choice, their voting power in a weighted vote, and when they voted or last changed their mind. Any member can download the audit file too. Guests never see votes at all. The vote card says above the options that everyone in the workspace can see each choice, and the new vote window says it before you start one.
+
+With it off, the app shows each person only their own choice. The audit file, which only admins can download then, still lists every ballot's wallet address and choice, so admins can see who voted what. The vote card and the new vote window say that instead.
+
+Either way, a sealed vote shows its ballots, in the list and in the audit file, once it closes. Votes started before this setting existed keep the rule they were started under: admins only. Use an anonymous vote when choices must stay secret.
 
 In a vote weighted by voting power, you need some power at the moment the vote opened. Otherwise Nil tells you that you had none then.
 
@@ -87,7 +95,7 @@ If the server's Ethereum node can't answer for every wallet while the power is r
 
 A vote closes by itself at its end time. An admin can close it early with **Close vote**, or delete it with **Delete**. Sealed results appear once it closes.
 
-Admins can download an **Audit file** for any vote, so anyone can recount it:
+Admins can download an **Audit file** for any vote, and every member can for a signed vote with public ballots, so anyone can recount it:
 
 - for a signed vote, every ballot with its signed message, signature, wallet, choice and weight, and for a weighted vote the block and the contracts, and with each ballot the voter's wallets as they were read at that block, what each held, and the power they add up to. Members who didn't vote aren't listed. Each ballot says how its signature was checked in `signatureCheck`. A plain wallet's ballot (`ecrecover`) can be recounted from the file alone, by recovering the signer from the signature. A smart wallet's ballot can't: it's checked on-chain, and the file gives the network (`chainId`) and the block it was checked at (`checkedAtBlock`). To recount one, ask the wallet with `isValidSignature(hash, signature)` at that block (`eip1271`, which needs a node that keeps old state), or run the EIP-6492 validator on it (`eip6492`), where hash is the EIP-191 hash of the message,
 - for an anonymous vote, the voter group, every group root and every proof, with no names. A ballot's message is the hour it was made in, counted from 1 January 1970, times eight, plus its option's number counting from 0. When you check that no nullifier appears twice, compare them as numbers,

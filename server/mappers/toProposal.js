@@ -39,13 +39,17 @@ function encryptedView(row, viewer) {
   };
 }
 
-// Who voted what is never sent to anyone but the voter. Sealed votes hide even the totals
+// Who voted what goes to the voter alone, unless the vote's ballots are public: then every member
+// gets the list (guests never reach votes at all). Sealed votes hide the totals and that list
 // until they close, so early results can't sway the rest.
 export default function toProposal(row, viewer) {
   const closed = Boolean(row.closed_at);
   const mine = sql.get('SELECT choice, weight FROM votes WHERE proposal_id = ? AND user_id = ?', row.id, viewer.id);
   const result = tally(row);
   const visible = closed || !row.sealed;
+  const ballots = row.public_ballots && visible
+    ? sql.all('SELECT user_id, address, choice, weight, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({ userId: v.user_id, address: v.address, choice: v.choice, weight: v.weight, castAt: v.created_at }))
+    : null;
   return {
     id: row.id,
     title: row.title,
@@ -53,6 +57,7 @@ export default function toProposal(row, viewer) {
     options: parseJSON(row.options, []),
     weighting: row.weighting,
     sealed: Boolean(row.sealed),
+    publicBallots: Boolean(row.public_ballots),
     createdBy: row.created_by,
     createdAt: row.created_at,
     closesAt: row.closes_at,
@@ -60,6 +65,7 @@ export default function toProposal(row, viewer) {
     voters: result?.voters ?? 0,
     totals: visible ? result?.totals ?? null : null,
     myVote: mine ? { choice: mine.choice, weight: mine.weight } : null,
+    ballots,
     // what every member's browser needs to prove a ballot, sent to all alike so fetching it
     // says nothing about who is about to vote; nullifiers let you spot your own ballot
     anonymous: row.anonymous
