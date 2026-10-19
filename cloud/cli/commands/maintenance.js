@@ -35,9 +35,9 @@ const tools = {
   },
 
   async 'alert-test'(ctx, { print }) {
-    if (!ctx.config.alerts.webhook) throw new Error('CLOUD_ALERT_WEBHOOK is not set.');
+    if (!ctx.config.alerts.webhook && !ctx.config.alerts.telegram) throw new Error('Neither CLOUD_ALERT_WEBHOOK nor a Telegram bot (CLOUD_ALERT_TELEGRAM_TOKEN and CLOUD_ALERT_TELEGRAM_CHAT) is set.');
     const sent = await ctx.alert('test', { message: 'A test alert from the Nil control plane. If you can read this, alerts work.', repeatMin: 0 });
-    print(sent ? 'Test alert sent.' : 'The webhook didn’t accept the alert; see the log line above.');
+    print(sent ? 'Test alert sent.' : 'No alert channel accepted the alert; see the log lines above.');
     return sent ? 0 : 1;
   },
 };

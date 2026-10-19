@@ -62,7 +62,7 @@ Operations
   routes [--print]                       rewrite and reload the Caddy configuration
   check                                  run health, disk, RAID, usage and claim checks now
   setup-token <name>                     show the setup code of a workspace nobody has claimed
-  alert-test                             send a test alert to CLOUD_ALERT_WEBHOOK
+  alert-test                             send a test alert to the webhook and Telegram
 `;
 
 const COMMANDS = {

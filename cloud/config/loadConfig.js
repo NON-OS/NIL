@@ -6,6 +6,7 @@ import parseBackupTarget from './parseBackupTarget.js';
 import parseEnvFile from './parseEnvFile.js';
 import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
+import readTelegram from './readTelegram.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -193,6 +194,7 @@ export default function loadConfig(env = process.env) {
     alerts: Object.freeze({
       webhook: read.url('CLOUD_ALERT_WEBHOOK', { protocols: ['https:', 'http:'] }),
       token: read.text('CLOUD_ALERT_TOKEN'),
+      telegram: readTelegram(read),
       repeatMin: read.number('CLOUD_ALERT_REPEAT_MIN', 30, { min: 1 }),
     }),
     logs: Object.freeze({
