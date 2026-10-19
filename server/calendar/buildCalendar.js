@@ -8,12 +8,14 @@ import taskEvent from './taskEvent.js';
 // Calendar apps keep their own copy, so a cap only stops a runaway feed, not real use.
 const MAX_EVENTS = 2000;
 
-// The ICS text of one person's feed: open tasks assigned to them that have a due date.
+// The ICS text of one person's feed: their open tasks that have a due date. Theirs means the same
+// as on My work (client/src/lib/isMine.ts): assigned to them, or made by them with no assignee.
 export default function buildCalendar(userId, { appUrl, now = Date.now() }) {
   const visible = visibleSql(userId);
   const tasks = sql
     .all(
-      `SELECT * FROM tasks WHERE assignee_id = ? AND due_date IS NOT NULL AND deleted_at IS NULL AND status NOT IN ('done', 'canceled') AND ${visible.where} ORDER BY due_date LIMIT ?`,
+      `SELECT * FROM tasks WHERE (assignee_id = ? OR (assignee_id IS NULL AND creator_id = ?)) AND due_date IS NOT NULL AND deleted_at IS NULL AND status NOT IN ('done', 'canceled') AND ${visible.where} ORDER BY due_date LIMIT ?`,
+      userId,
       userId,
       ...visible.params,
       MAX_EVENTS,

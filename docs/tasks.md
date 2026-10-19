@@ -27,7 +27,7 @@ A few details:
 
 Turn on **Create more** to keep the box open for the next task. Click **Private** to make the task [private and encrypted](private-tasks.md) from its first save.
 
-On **My work**, the box at the top of **Assigned to me** creates a task for yourself and understands the same words.
+On **My work**, the box at the top of **My tasks** creates a task for yourself and understands the same words.
 
 ## The task panel
 

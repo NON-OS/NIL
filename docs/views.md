@@ -4,9 +4,9 @@ The same tasks appear in several views. Pick the one that fits what you're doing
 
 ## My work
 
-My work is your home page. It lists the open tasks assigned to you in sections: New for you, Overdue, Today, Next 7 days, Later and No due date. "New for you" holds tasks someone else gave you in the last three days. The tiles at the top count what's due today, what's overdue and what you finished this week compared with last week.
+My work is your home page. It lists your open tasks, meaning the ones assigned to you and the ones you made without giving them to anyone, in sections: New for you, Overdue, Today, Next 7 days, Later and No due date. "New for you" holds tasks someone else gave you in the last three days. The tiles at the top count what's due today, what's overdue and what you finished this week compared with last week.
 
-The box at the top of **Assigned to me** adds a task for yourself. It understands the same shortcuts as the new task box, described in [Tasks](tasks.md).
+The box at the top of **My tasks** adds a task for yourself. It understands the same shortcuts as the new task box, described in [Tasks](tasks.md).
 
 ## My Day
 
@@ -58,7 +58,7 @@ The Calendar puts tasks on a month grid by due date. Tasks with a due time show 
 
 ### Your tasks in your own calendar app
 
-In **Settings → Notifications**, under **Calendar feed**, click **Create calendar link**. Paste the link into Google Calendar, Apple Calendar or Outlook as a calendar to subscribe to, or click **Open in calendar app**. It lists the open tasks assigned to you that have a due date. Calendar apps check it every so often, usually within a few hours, so changes show up there late.
+In **Settings → Notifications**, under **Calendar feed**, click **Create calendar link**. Paste the link into Google Calendar, Apple Calendar or Outlook as a calendar to subscribe to, or click **Open in calendar app**. It lists your open tasks that have a due date, the same ones My work shows. Calendar apps check it every so often, usually within a few hours, so changes show up there late.
 
 The link works without signing in, so anyone who has it sees those tasks: their names, dates and links. A private task shows only as "Private task", with no title, link or project. Keep the link to yourself. **Make a new link** stops the old one at once, and **Turn off** deletes it. It also stops working if you leave the workspace.
 

@@ -14,6 +14,7 @@ import formatDuration from '../lib/formatDuration';
 import taskKey from '../lib/taskKey';
 import meta from '../lib/meta';
 import cx from '../lib/cx';
+import isMine from '../lib/isMine';
 import type TimeEntry from '../types/TimeEntry';
 
 const DAY = 86_400_000;
@@ -55,7 +56,7 @@ export default function TimeView() {
   const weekTotal = days.reduce((sum, d) => sum + d.total, 0);
   // an hour is the smallest full bar, so a short day doesn't look like a long one
   const longest = Math.max(...days.map((d) => d.total), 3600_000);
-  const mine = useMemo(() => tasks.filter((t) => t.assigneeId === me.id && !meta.isClosed(t.status)), [tasks, me.id]);
+  const mine = useMemo(() => tasks.filter((t) => isMine(t, me.id) && !meta.isClosed(t.status)), [tasks, me.id]);
 
   const log = async (e: FormEvent) => {
     e.preventDefault();

@@ -27,7 +27,7 @@ before(async () => {
 });
 after(() => srv.close());
 
-test('the feed lists open tasks assigned to you with a due date, and a private task only as "Private task"', async () => {
+test('the feed lists your open tasks with a due date, and a private task only as "Private task"', async () => {
   assert.deepEqual((await ben('GET', '/api/me/calendar-feed')).data, { enabled: true, feed: null });
   const made = (await ben('POST', '/api/me/calendar-feed')).data.feed;
   assert.match(made.url, /^http:\/\/127\.0\.0\.1:\d+\/api\/calendar\/[\w-]{43}\.ics$/);
@@ -39,6 +39,8 @@ test('the feed lists open tasks assigned to you with a due date, and a private t
     (await owner('POST', '/api/tasks', { title: 'Ship v2, final; really', assigneeId: ids.ben, dueDate: '2026-10-20' })).data.task,
     (await owner('POST', '/api/tasks', { title: 'Call Ana', assigneeId: ids.ben, dueDate: '2026-10-21', dueTime: '15:00', timeZone: 'Europe/Stockholm' })).data.task,
     (await owner('POST', '/api/tasks', { title: longTitle, assigneeId: ids.ben, dueDate: '2026-10-23' })).data.task,
+    // made by Ben for nobody in particular, which counts as his own
+    (await ben('POST', '/api/tasks', { title: 'Book the room', dueDate: '2026-10-24' })).data.task,
   ];
   const secret = (await ben('POST', '/api/tasks', { private: true, sealed: sealed(ids.ben), assigneeId: ids.ben, dueDate: '2026-10-22' })).data.task;
   const done = (await owner('POST', '/api/tasks', { title: 'Already finished', assigneeId: ids.ben, dueDate: '2026-10-20', status: 'done' })).data.task;
@@ -46,6 +48,7 @@ test('the feed lists open tasks assigned to you with a due date, and a private t
   await owner('DELETE', `/api/tasks/${trashed.id}`);
   await owner('POST', '/api/tasks', { title: 'Someday maybe', assigneeId: ids.ben });
   await owner('POST', '/api/tasks', { title: 'Not Ben’s', assigneeId: ids.owner, dueDate: '2026-10-20' });
+  await owner('POST', '/api/tasks', { title: 'Nobody’s yet', dueDate: '2026-10-20' });
 
   const feed = await fetchFeed(made.url);
   assert.equal(feed.status, 200);
@@ -55,9 +58,10 @@ test('the feed lists open tasks assigned to you with a due date, and a private t
   for (const line of feed.text.split('\r\n')) assert.ok(Buffer.byteLength(line) <= 75, line);
 
   const all = events(feed.text);
-  assert.equal(all.length, 4);
+  assert.equal(all.length, 5);
   for (const absent of [done, trashed]) assert.equal(feed.text.includes(absent.id), false);
-  assert.equal(/Someday|Not Ben|Already finished|Trashed/.test(feed.text), false);
+  assert.equal(/Someday|Not Ben|Nobody|Already finished|Trashed/.test(feed.text), false);
+  assert.ok(all.some((e) => e.includes(`UID:${shown[3].id}@`)));
 
   const [dated, timed, long] = shown.map((t) => all.find((e) => e.includes(`UID:${t.id}@127.0.0.1`)));
   assert.match(dated, /SUMMARY:Ship v2\\, final\\; really\r\n/);
