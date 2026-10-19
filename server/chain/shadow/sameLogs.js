@@ -6,16 +6,19 @@ const MAX_BLOCKS = 4;
 
 // Logs as the node gave them, each against its block's receipts as the verifier proves them: a
 // log that isn't in its transaction's proven receipt is the node lying. Logs the node left out
-// can't be noticed this way; that is the one lie a light client can't catch.
+// can't be noticed this way; that is the one lie a light client can't catch, and an empty answer
+// leaves nothing to check at all.
 export default async function sameLogs(method, params, answer) {
-  if (!Array.isArray(answer.result) || !answer.result.length) return 'unknown';
+  if (!Array.isArray(answer.result)) return { reason: 'unreadable' };
+  if (!answer.result.length) return 'skipped';
   const byBlock = new Map();
   for (const log of answer.result) byBlock.set(log.blockHash, [...(byBlock.get(log.blockHash) ?? []), log]);
-  let outcome = 'unknown';
+  let outcome = null;
   for (const [blockHash, logs] of [...byBlock].slice(0, MAX_BLOCKS)) {
     const block = await provenReceipts(blockHash);
     if (!block.receipts) {
       if (block.outcome === 'differs') return 'differs';
+      outcome ??= block.outcome;
       continue;
     }
     for (const log of logs) {

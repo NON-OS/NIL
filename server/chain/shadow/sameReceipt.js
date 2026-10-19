@@ -2,12 +2,13 @@ import provenReceipts from './provenReceipts.js';
 import sameLog from './sameLog.js';
 
 // A receipt as the node gave it, against the receipts of its own block as the verifier proves
-// them. A receipt the node says it doesn't have can't be checked (nothing proves absence), and
-// one that names a block the verifier can't prove is "unknown". Inside a proven block, a
-// transaction that isn't there, or a status or a log that differs, is the node lying.
+// them. A receipt the node says it doesn't have leaves nothing to check (nothing proves absence),
+// and one that names a block the verifier can't prove comes back with why. Inside a proven block,
+// a transaction that isn't there, or a status or a log that differs, is the node lying.
 export default async function sameReceipt(method, params, answer) {
   const told = answer.result;
-  if (!told || typeof told !== 'object') return 'unknown';
+  if (told === null) return 'skipped';
+  if (!told || typeof told !== 'object') return { reason: 'unreadable' };
   const block = await provenReceipts(told.blockHash);
   if (!block.receipts) return block.outcome;
   const proven = block.receipts.get(String(told.transactionHash ?? params[0]).toLowerCase());

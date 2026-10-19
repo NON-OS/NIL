@@ -51,4 +51,6 @@ export default Object.freeze({
   mismatchNoticeMs: envNumber('NOX_VERIFY_MISMATCH_HOURS', 24, { min: 1 }) * units.HOUR,
   // shadow checks running at once; past that a read goes unchecked rather than queueing
   shadowMax: envNumber('NOX_VERIFIER_SHADOW_MAX', 8, { min: 1 }),
+  // how long a shadow check waits before asking a busy verifier once more
+  shadowRetryMs: envNumber('NOX_VERIFIER_SHADOW_RETRY_MS', 2000, { min: 0, max: 60_000 }),
 });
