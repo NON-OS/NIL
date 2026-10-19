@@ -17,13 +17,27 @@ Nil works with a wallet that your browser offers to web pages:
 - a browser extension, such as MetaMask, Rabby or Coinbase Wallet,
 - the wallet built into Brave,
 - the browser inside a wallet's phone app,
-- smart wallets, including passkey wallets such as Coinbase Smart Wallet, when your browser offers them.
+- smart wallets, including passkey wallets such as Coinbase Smart Wallet, when your browser offers them,
+- the wallet app on your phone, used from a computer through WalletConnect, when the server has it on (see [Use a wallet on your phone](#use-a-wallet-on-your-phone)).
 
-WalletConnect, where you scan a QR code with your phone, isn't supported. Hardware wallets such as Ledger and Trezor work when you connect them through an extension that supports them. Smart wallets can sign you in but can't hold [encryption keys](#the-signatures-for-encryption-keys) yet.
+Hardware wallets such as Ledger and Trezor work when you connect them through an extension that supports them. Smart wallets can sign you in but can't hold [encryption keys](#the-signatures-for-encryption-keys) yet.
+
+### Use a wallet on your phone
+
+On a computer without a wallet extension, such as a work computer you can't install anything on, you can use the wallet app on your phone instead and keep working on the computer. This works when whoever runs the server has set a WalletConnect project ID (`WALLETCONNECT_PROJECT_ID`). Without one, the option doesn't show.
+
+1. Click **Use a wallet on your phone**, under the sign-in button or on the screen that explains wallets.
+2. Open the wallet app on your phone and scan the code with its own scan button. Most wallet apps can, MetaMask, Rainbow and Trust Wallet among them. If you can't scan, copy the link under the code into the wallet app.
+3. Approve the connection in the wallet app. Nil shows the wallet's name and address. Check that it's the address your phone shows, then click **Continue with this wallet**.
+4. Confirm the sign-in message on your phone.
+
+From then on Nil sends every signature to your phone: signing in, the [encryption-key messages](#the-signatures-for-encryption-keys), linking a wallet and payments. A notice in the corner says **Confirm on your phone** and what the wallet is asking for. Nil waits 5 minutes for each request, then stops waiting and says so; **Stop waiting** stops sooner. The connection lasts through a reload. **Disconnect**, under the sign-in button or under **Your wallets** in **Settings → Sign-in & security**, ends it, and so does signing out. When something needs a wallet and this browser has none, Nil offers the same code. On a phone it isn't offered: open Nil in your wallet app instead (see below).
+
+Your computer and your phone talk through WalletConnect's relay, a service run by WalletConnect's operator (Reown). Their messages are encrypted end to end with keys only the two of them hold, so the relay can't read what you sign. It does see connection details: the IP addresses of your computer and your phone, when each message passes and how large it is, which browser and system the computer runs, the workspace's address and the server's project ID. Wallet apps built on WalletConnect's own software also tell it the hash of a transaction they send. Nil's side tells the relay nothing more: it turns off WalletConnect's Verify check and its usage reports, and reads nothing from the chain through WalletConnect. Because Verify is off, your wallet app may call the site unverified, so check the address in the message itself. While you use a phone wallet, the relay is the only host besides your server that the page connects to, and the keys for the connection stay in this browser until you disconnect or sign out. Your wallet app makes its own requests, which Nil doesn't control.
 
 ### No wallet yet
 
-If the device has no wallet, **Sign in with your wallet** explains what a wallet is and how to get one. On a computer it links to a few wallets' official sites and shows a QR code that opens the same page on your phone. On a phone, including an iPhone and Nil installed on the home screen, it offers **Open Nil in your wallet app** for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Those links open the wallet app's own browser at the page you were on, so an invite link still works there. Nil loads nothing from these wallets.
+If the device has no wallet, **Sign in with your wallet** explains what a wallet is and how to get one. On a computer it offers **Use a wallet on your phone** when the server has it on, links to a few wallets' official sites and shows a QR code that opens the same page on your phone. On a phone, including an iPhone and Nil installed on the home screen, it offers **Open Nil in your wallet app** for MetaMask, Coinbase Wallet, Rainbow and Trust Wallet. Those links open the wallet app's own browser at the page you were on, so an invite link still works there. Nil loads nothing from these wallets.
 
 ## Link a second wallet
 
@@ -58,7 +72,7 @@ Resetting an owner needs a second admin to approve. When nobody can approve, the
 
 ## Sign out
 
-Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. It also offers to revoke your access keys, so AI assistants and scripts using them stop working. Leave that ticked if someone else may have used your account. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them.
+Click your name at the bottom of the sidebar, then **Sign out**. To end your sessions on every device at once, click **Sign out on all devices** in **Settings → Sign-in & security**. It also offers to revoke your access keys, so AI assistants and scripts using them stop working. Leave that ticked if someone else may have used your account. Signing out also locks your encryption keys in that tab and forgets the docs, private tasks and comments opened with them, and it ends the connection to a [wallet on your phone](#use-a-wallet-on-your-phone).
 
 ## The signatures for encryption keys
 
@@ -132,10 +146,13 @@ A passkey belongs to the web address it was made on. If the workspace moves to a
 | The NOX in this wallet counted for someone already in this workspace | That wallet's NOX let someone else in recently, and one stack can only keep one person in. It's free again 3 days after it last counted for them. |
 | This invite can't be used | The link expired or someone already used it. Ask for a new one. |
 | Your wallet warns that the request doesn't match the site | The server's configured address differs from the one in your address bar. Don't sign. Tell whoever runs the server. |
+| That code ran out before your phone used it | A code for a phone wallet works for 5 minutes. Click **Show a new code**. |
+| Your phone didn't answer within 5 minutes | Nil stopped waiting for your phone wallet. Open the wallet app, reject the old request if it's still there, and try again. |
+| Nil couldn't reach the WalletConnect relay | The computer can't reach WalletConnect's relay, often because a company network blocks it. Ask whoever runs the network, or open Nil in your wallet app on the phone instead. |
 
 ## How it works
 
-Nil finds the wallets in your browser through EIP-6963 and falls back to `window.ethereum` for wallets that don't announce themselves. It accepts a wallet's icon only as an embedded image, so showing it never loads anything.
+Nil finds the wallets in your browser through EIP-6963 and falls back to `window.ethereum` for wallets that don't announce themselves. It accepts a wallet's icon only as an embedded image, so showing it never loads anything. A phone wallet joins them through WalletConnect's sign client, which the page loads only when someone connects one. The server hands the browser its project ID and relay when the page starts, so the web app is the same on every server, and its Content-Security-Policy allows that relay only while the project ID is set. Only `personal_sign`, `eth_sendTransaction` and `wallet_switchEthereumChain` go to the phone; the account and network come from what it approved when it connected, and a phone wallet sends payouts one transaction at a time.
 
 Nil uses Sign-In with Ethereum (EIP-4361). The server writes the whole message, including a one-time nonce that expires after 5 minutes. It doesn't keep the message waiting in a list where other people's requests could push it out: it hands it to your browser together with an HMAC over the message, your network and the expiry, made with a key that never leaves the server, and checks that when you sign. So you finish signing from the same network you started on: the same IPv4 address, or the same IPv6 /64. Each message works once, and the server remembers the used ones only until they would have expired anyway. Your wallet signs the message with `personal_sign`, and the server recovers the signing address (EIP-191 on secp256k1) and compares it with the address the message was written for. If that doesn't match, and the server is connected to Ethereum, it asks the configured chain whether the address is a smart-contract wallet that accepts the signature: through `isValidSignature` (EIP-1271) for a deployed wallet, or the EIP-6492 validator in a single `eth_call` for one that isn't deployed yet. That check has its own timeout, `SIGNIN_CHAIN_TIMEOUT_SECONDS`.
 

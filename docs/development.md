@@ -24,7 +24,7 @@ npm run ceremony:start   # run that setup between independent people instead: ci
 
 ## Accessibility check
 
-`npm run check:a11y` builds nothing itself, so run `npm run build` first. It starts Nil from this checkout with a throwaway workspace and a test wallet made on the spot, fills it with a project, tasks, a listed bounty and a vote, then opens every main screen straight from its address, signed out and signed in, at 1440 by 900 and on a 390 by 844 phone. axe checks each one, and the run fails on any serious or critical problem. `--shots <folder>` also saves a screenshot of each screen and the full report, and `--only <screen>` checks one screen. It uses the Chromium that Playwright installs (`npx playwright-core install chromium`, or set `CHROMIUM_PATH`) and port 3989 (`A11Y_PORT`).
+`npm run check:a11y` builds nothing itself, so run `npm run build` first. It starts Nil from this checkout with a throwaway workspace and a test wallet made on the spot, fills it with a project, tasks, a listed bounty and a vote, then opens every main screen straight from its address, signed out and signed in, at 1440 by 900 and on a 390 by 844 phone. axe checks each one, and the run fails on any serious or critical problem. `--shots <folder>` also saves a screenshot of each screen and the full report, and `--only <screen>` checks one screen. It uses the Chromium that Playwright installs (`npx playwright-core install chromium`, or set `CHROMIUM_PATH`) and port 3989 (`A11Y_PORT`). Phone wallets are on during the check, against a stand-in for WalletConnect's relay on this machine, so the code and its dialog are checked too.
 
 ## Live agent checks
 
@@ -50,6 +50,19 @@ scripts/live/agents/run.sh service runner injection limits
 `ui` drives Settings → Agents and the task timeline in Chromium. It needs `npm run build` first and Playwright's browser (`npx --prefix scripts/live/agents playwright install chromium`). With `LIVE_UI_RUN=1` it also starts a built-in run and opens its log.
 
 To try the Python examples from the agents guide, install `openai-agents`, `langchain`, `langchain-openai`, `langgraph` and `requests` in a virtual environment and run `scripts/live/agents/frameworks/openaiAgents.py` or `langchainAgent.py` against a running server, with `NIL` and `NIL_AGENT_KEY` set.
+
+## Live phone wallet check
+
+`npm test` checks the phone wallet code with a mocked WalletConnect client, and the real client against a stand-in relay on this machine. `scripts/live/walletconnect/check.mjs` checks the whole thing in Chromium with no wallet extension, against WalletConnect's own relay. A headless "phone" wallet in Node, WalletConnect's sign client with a throwaway key made in memory and never printed, takes the pairing link from the page as if it had scanned the code. The check creates a workspace and signs in through it, reloads and unlocks the encryption keys (three signatures on the phone), signs out, checks that the phone heard and the browser kept nothing, and signs in again. It runs axe on the code, the connected wallet and the **Confirm on your phone** notice, and fails if the page reaches any host but Nil and the relay. It's opt-in and never part of `npm test`.
+
+It needs `npm run build`, a Chromium (`CHROMIUM_PATH`) and a WalletConnect project ID. If the relay turns away the check's `http://localhost` address, add it to the project's allowed domains.
+
+```bash
+WALLETCONNECT_PROJECT_ID=<project id> node scripts/live/walletconnect/check.mjs
+node scripts/live/walletconnect/check.mjs --local   # the same against a relay on this machine
+```
+
+Without a project ID it says so and stops. Nil runs on port 3931 (`LIVE_PORT`). Behind a proxy set in `HTTPS_PROXY`, Chromium reaches the relay through it.
 
 ## Project layout
 
@@ -84,7 +97,7 @@ client/src/
 client/public/zk/ circuit files served to browsers
 docs/             these pages, also bundled into the app as its help center
 circuits/         encrypted-ballot circuit and its setup record
-scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live checks for agents and the chain (scripts/live/)
+scripts/          zk:fetch, zk:ballot, brand tools and the opt-in live checks for agents, the chain and phone wallets (scripts/live/)
 deploy/tor/       Tor onion service image
 ```
 

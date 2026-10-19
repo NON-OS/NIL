@@ -43,6 +43,8 @@ The server also hands out everyone's public keys. Teammates' browsers check thos
 
 Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDNs, third-party fonts or third-party scripts. The fonts and the zero-knowledge circuit files are served by your own server. The Content Security Policy only allows connections to the server itself, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, which Nil doesn't control.
 
+The one exception is a [wallet on your phone](signing-in.md#use-a-wallet-on-your-phone). On a server that sets `WALLETCONNECT_PROJECT_ID`, the policy also allows WalletConnect's relay, and a browser connects to it only while someone uses a phone wallet. The relay, run by WalletConnect's operator, carries end-to-end encrypted messages between the computer and the phone. It can't read them, but it sees connection metadata: both IP addresses, timing and message sizes, the browser, the workspace's address and the project ID, and, from wallet apps built on WalletConnect's software, the hash of a transaction they send.
+
 The server itself contacts other hosts in these cases:
 
 - Its Ethereum node, set by `NOX_RPC_URL`, to check payments, balances, stakes and Zero-State Passes, and to pass on the transactions you sign when you move a private payout. That node sees which addresses and transactions your server looks up, and your server's IP address. A server people reach over the network has to name one; only a server on localhost falls back to a public node. Privacy-minded teams should run their own. `NOX_RPC_URL=off` turns every on-chain feature off.

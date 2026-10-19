@@ -16,7 +16,7 @@ Your encryption keys work the same way. Any wallet or passkey you've added to th
 
 ## Can I use Nil on my phone?
 
-Yes. Open your workspace's address in the browser inside your wallet app, then install it from there if you like. WalletConnect isn't supported, so a phone can't sign in for a desktop browser.
+Yes. Open your workspace's address in the browser inside your wallet app, then install it from there if you like. On a computer without a wallet, a server with WalletConnect on also lets the wallet app on your phone sign for the computer: see [Use a wallet on your phone](signing-in.md#use-a-wallet-on-your-phone).
 
 ## Why does my wallet ask me to sign twice?
 
