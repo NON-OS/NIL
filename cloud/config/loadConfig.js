@@ -192,6 +192,12 @@ export default function loadConfig(env = process.env) {
       maxRestartsPerHour: read.number('CLOUD_MAX_RESTARTS_PER_HOUR', 3, { min: 1 }),
       diskFreeAlertPercent: read.number('CLOUD_DISK_FREE_ALERT_PERCENT', 15, { max: 99 }),
     }),
+    certs: Object.freeze({
+      // 0 turns the check off, for a machine without public certificates
+      warnDays: read.number('CLOUD_CERT_WARN_DAYS', 21, { max: 365 }),
+      criticalDays: read.number('CLOUD_CERT_CRITICAL_DAYS', 7, { max: 365 }),
+      checkAddress: read.text('CLOUD_CERT_CHECK_ADDRESS'),
+    }),
     usage: Object.freeze({
       intervalMin: read.number('CLOUD_USAGE_INTERVAL_MIN', 15, { min: 1 }),
       suspendPercent: read.number('CLOUD_DISK_SUSPEND_PERCENT', 120, { max: 10_000 }),

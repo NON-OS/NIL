@@ -3,6 +3,7 @@ import collectUsage from './collectUsage.js';
 import checkClaims from './checkClaims.js';
 import checkBilling from './checkBilling.js';
 import checkHost from './checkHost.js';
+import checkCertificates from './checkCertificates.js';
 import housekeeping from './housekeeping.js';
 import checkIdle from './checkIdle.js';
 import createHealthCheck from './createHealthCheck.js';
@@ -48,8 +49,10 @@ export default function startScheduler(ctx) {
     await housekeeping(ctx);
     await checkIdle(ctx);
   }));
+  // certificates last weeks, so once an hour is plenty
+  const certificates = every(3_600_000, job('certificates', () => checkCertificates(ctx)));
   // a first pass soon after start, without waiting a full interval
-  timers.push(setTimeout(() => (usage(), hourly()), 30_000));
+  timers.push(setTimeout(() => (usage(), hourly(), certificates()), 30_000));
 
   if (ctx.backups && ctx.config.backup.time) {
     const run = job('backup', () => backupAll(ctx));
