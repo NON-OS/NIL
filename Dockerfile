@@ -15,6 +15,8 @@ COPY tsconfig.json vite.config.ts ./
 COPY client ./client
 # the in-app help is built from the same Markdown files as the docs folder
 COPY docs ./docs
+# the web app checks ballot proofs against the ceremony's key, which lives with the server code
+COPY server/votes/ballotKey.json ./server/votes/ballotKey.json
 RUN npm run build
 # .dockerignore already keeps local data out of the build. This is a second guard: anything that
 # still slipped into the server folder (a database, uploads, keys, settings) is removed here, in
