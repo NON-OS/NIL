@@ -17,7 +17,7 @@
       <span class="by">hosted by NØNOS</span>
     </header>
 
-    <main id="app" data-domain="{{domain}}" data-pow="{{powBits}}">
+    <main id="app" data-domain="{{domain}}" data-pow="{{powBits}}"{{phoneData}}>
       <h1>A workspace for your team, hosted by NØNOS</h1>
       <p class="lead">Tasks, docs, bounties and votes, with docs and private tasks encrypted in your browser. Free to start. Nil Pro is paid from inside your workspace. You sign in with your wallet: no email, no password.</p>
 
@@ -30,7 +30,7 @@
             <span class="suffix">.{{domain}}</span>
           </div>
           <p id="name-hint" class="hint" aria-live="polite">Lowercase letters, digits and dashes, {{nameMin}} to {{nameMax}} characters.</p>
-          <button type="submit" id="go" class="primary"{{disabled}}>Create with my wallet</button>
+          <button type="submit" id="go" class="primary"{{disabled}}>Create with my wallet</button>{{phoneButton}}
           <p class="fine">Your wallet asks you to sign a short message that names the address. Signing is free and sends no transaction.</p>
         </form>
       </section>
@@ -54,14 +54,14 @@
         </ol>
       </section>
 
-      <p id="error" class="error" role="alert" hidden></p>
+      <p id="error" class="error" role="alert" hidden></p>{{phoneDialog}}
 
       <section class="facts">
         <h2>What NØNOS can and can’t see</h2>
         <ul>
-          <li><strong>Encrypted in your browser.</strong> Docs and private tasks, titles and comments included. NØNOS stores them and can’t read them.</li>
-          <li><strong>Stored in plain form.</strong> Team tasks and their comments, files, goals and the member list. They live in your workspace’s own storage on NØNOS’s server. NØNOS doesn’t look at them, but as the host it could.</li>
-          <li><strong>Nothing else.</strong> This page sets no cookies, loads nothing from other sites and runs no analytics.</li>
+          <li>Docs and private tasks are encrypted in your browser, titles and comments included. NØNOS stores them and can’t read them.</li>
+          <li>Team tasks and their comments, files, goals and the member list are stored in plain form, in your workspace’s own storage on NØNOS’s server. NØNOS doesn’t look at them, but as the host it could.</li>
+          <li>NØNOS sees nothing else. This page sets no cookies, loads nothing from other sites and runs no analytics.{{phoneFact}}</li>
         </ul>
         <p>You can always move to your own server with an encrypted export, and self-hosting Nil stays free.</p>
       </section>

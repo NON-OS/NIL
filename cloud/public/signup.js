@@ -2,7 +2,8 @@
 
 // Sign-up in the browser: check the address, have the wallet sign the server's message, and
 // show the setup code once. No framework and no third-party code; the wallet is whatever
-// EIP-1193 provider the browser injects (MetaMask, Rabby, a wallet's own browser).
+// EIP-1193 provider the browser injects (MetaMask, Rabby, a wallet's own browser), or a phone
+// wallet where the host offers one (WalletConnect's client, in /assets/phone.js, loads only then).
 (() => {
   const app = document.getElementById('app');
   if (!app) return;
@@ -142,13 +143,64 @@
     throw new Error('This is taking longer than it should. Your workspace may still appear; if it doesn’t, contact the host.');
   }
 
-  form.addEventListener('submit', async (event) => {
-    event.preventDefault();
+  // A phone wallet over WalletConnect, when the host offers one: computers only, since on a phone
+  // the wallet app is on the same screen and opening this page in its browser is the way in.
+  // WalletConnect's client and the dialog's code load on first use, from this site.
+  const phoneButton = $('phone');
+  const phoneDialog = $('phone-dialog');
+  const ua = navigator.userAgent;
+  const onPhone = Boolean(navigator.userAgentData?.mobile) || /Android|iPhone|iPad|iPod/i.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1);
+  const phoneOn = Boolean(phoneButton && phoneDialog && app.dataset.phoneProject) && !onPhone;
+  let phone = null;
+
+  async function usePhone() {
     errorBox.hidden = true;
     const name = input.value.trim();
+    if (!name || !input.checkValidity()) {
+      input.focus();
+      return showHint(defaultHint, 'bad');
+    }
+    // a name that can't be had is said before the phone is asked for anything
+    let free;
+    try {
+      free = await api('GET', `/api/names/${encodeURIComponent(name)}`);
+    } catch (err) {
+      return showError(err);
+    }
+    if (!free.available) {
+      input.focus();
+      return showHint(free.reason, 'bad');
+    }
+    phoneDialog.showModal();
+    try {
+      phone ??= (await import('/assets/phone.js')).default({ dialog: phoneDialog, projectId: app.dataset.phoneProject, relayUrl: app.dataset.phoneRelay, signUp: create });
+    } catch {
+      phoneDialog.close();
+      return showError(new Error('Couldn’t reach the server. Check your connection and try again.'));
+    }
+    if (phoneDialog.open) phone.open();
+  }
+
+  if (phoneOn) {
+    phoneButton.hidden = false;
+    phoneButton.addEventListener('click', () => void usePhone());
+  }
+
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    errorBox.hidden = true;
     const wallet = provider();
+    if (!wallet && phoneOn) return void usePhone();
     if (!wallet) return showError(new Error('No wallet found. Install a wallet extension such as MetaMask or Rabby, or open this page in your wallet’s browser.'));
+    void create(wallet);
+  });
+
+  // The sign-up with a wallet: the browser's own, or the phone's. `signed` hears once the wallet
+  // has answered the signature request, either way.
+  async function create(wallet, signed) {
+    const name = input.value.trim();
     button.disabled = true;
+    if (phoneOn) phoneButton.disabled = true;
     try {
       let address;
       let chainId;
@@ -165,9 +217,12 @@
       }
       const [nonce, signature] = await Promise.all([
         solve(challenge.pow.salt, challenge.pow.bits),
-        wallet.request({ method: 'personal_sign', params: [toHex(challenge.message), address] }).catch((err) => {
-          throw walletError(err);
-        }),
+        wallet
+          .request({ method: 'personal_sign', params: [toHex(challenge.message), address] })
+          .catch((err) => {
+            throw walletError(err);
+          })
+          .finally(() => signed?.()),
       ]);
       const created = await api('POST', '/api/verify', { challengeId: challenge.challengeId, signature, nonce });
       if (created.queued) showDone(created, true);
@@ -176,8 +231,9 @@
       if (!codeShown) step('step-name');
       showError(err);
       button.disabled = false;
+      if (phoneOn) phoneButton.disabled = false;
     }
-  });
+  }
 
   $('copy').addEventListener('click', async () => {
     try {

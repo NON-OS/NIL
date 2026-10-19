@@ -14,6 +14,19 @@ function footer(config) {
   return links.join('\n');
 }
 
+// With phone wallets on: the project ID and relay for the page's script, the button, the dialog
+// it opens and a line in the facts. With them off, every one of these is empty.
+function phoneParts(phone, disabled) {
+  if (!phone) return { phoneData: '', phoneButton: '', phoneDialog: '', phoneFact: '' };
+  return {
+    phoneData: ` data-phone-project="${escapeHtml(phone.projectId)}" data-phone-relay="${escapeHtml(phone.relayUrl)}"`,
+    // shown by the page's script on computers; on a phone the wallet app is on the same screen
+    phoneButton: `\n          <button type="button" id="phone" class="secondary" hidden${disabled}>Use a wallet on your phone</button>`,
+    phoneDialog: `\n${template('phone.html').trimEnd()}`,
+    phoneFact: ' With a wallet on your phone, the page also talks to WalletConnect’s relay, which passes encrypted messages between this page and your phone and can’t read them.',
+  };
+}
+
 function fill(text, values) {
   return text.replace(/\{\{(\w+)\}\}/g, (match, key) => {
     if (!(key in values)) throw new Error(`Template value missing: ${key}`);
@@ -31,6 +44,7 @@ export default function renderPages(config) {
     index: (closedReason) =>
       fill(index, {
         ...common,
+        ...phoneParts(config.walletConnect, closedReason ? ' disabled' : ''),
         nameMin: String(config.signup.nameMin),
         nameMax: String(config.signup.nameMax),
         powBits: String(config.signup.powBits),

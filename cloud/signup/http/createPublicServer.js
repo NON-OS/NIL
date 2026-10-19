@@ -3,6 +3,7 @@ import HttpError from '../../lib/HttpError.js';
 import states from '../../provisioning/states.js';
 import clientIp from '../clientIp.js';
 import securityHeaders from './securityHeaders.js';
+import contentSecurityPolicy from './contentSecurityPolicy.js';
 import sendJson from './sendJson.js';
 import readJson from './readJson.js';
 import staticAssets from './staticAssets.js';
@@ -28,8 +29,10 @@ const REASONS = {
 // plus the notice shown for workspaces that aren't running. No cookies are ever set: the
 // sign-up session is a ticket the page keeps in memory.
 export default function createPublicServer(ctx, flow) {
-  const assets = staticAssets();
+  const phone = ctx.config.walletConnect;
+  const assets = staticAssets({ phone: Boolean(phone) });
   const pages = renderPages(ctx.config);
+  const csp = contentSecurityPolicy(phone?.relayUrl);
   const origin = `https://${ctx.config.signupHost}`;
 
   // Cross-site pages can't add custom headers without a CORS preflight, which is never
@@ -61,7 +64,7 @@ export default function createPublicServer(ctx, flow) {
   async function handle(req, res) {
     const url = new URL(req.url, 'http://localhost');
     const ip = clientIp(req, ctx.config.trustProxy);
-    securityHeaders(res, ctx.config.trustProxy > 0 && req.headers['x-forwarded-proto'] === 'https');
+    securityHeaders(res, ctx.config.trustProxy > 0 && req.headers['x-forwarded-proto'] === 'https', csp);
 
     if (req.method === 'GET' || req.method === 'HEAD') {
       const asset = assets.get(url.pathname);

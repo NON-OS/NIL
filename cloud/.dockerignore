@@ -1,5 +1,7 @@
 # Only the control plane's code goes into its image: no tests, no local data, no keys.
 **/node_modules
+# the phone wallet script comes from the image's own build stage, never from a local build
+dist
 test
 data
 caddy

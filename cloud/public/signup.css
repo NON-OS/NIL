@@ -53,9 +53,14 @@ a {
 }
 
 a:focus-visible,
-button:focus-visible {
+button:focus-visible,
+.code input:focus-visible {
   outline: 2px solid var(--teal);
   outline-offset: 2px;
+}
+
+[hidden] {
+  display: none !important;
 }
 
 .top,
@@ -203,6 +208,25 @@ button.primary:hover:not(:disabled) {
   background: var(--cyan-hover);
 }
 
+button.secondary,
+.phone-actions button:not(.primary) {
+  padding: 12px 20px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  background: #ffffff;
+  color: var(--ink);
+  font-weight: 500;
+}
+
+button.secondary {
+  margin-left: 10px;
+}
+
+button.secondary:hover:not(:disabled),
+.phone-actions button:not(.primary):hover {
+  background: var(--surface-2);
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.55;
@@ -302,6 +326,107 @@ button:disabled {
   font-weight: 500;
 }
 
+/* The phone wallet dialog: a code, the steps beside it, the link under it. Same rules and
+   surfaces as the cards; the backdrop only dims the page. */
+.dialog {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  padding: 28px;
+  border: 1px solid var(--line-strong);
+  border-radius: 14px;
+  background: #ffffff;
+  color: var(--ink);
+  overflow-y: auto;
+}
+
+.dialog::backdrop {
+  background: rgba(10, 11, 13, 0.45);
+}
+
+.dialog h2 + p {
+  margin: 0 0 18px;
+  color: var(--ink-2);
+}
+
+.phone-code {
+  display: flex;
+  gap: 22px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+}
+
+.qr {
+  display: block;
+  flex: none;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.qr rect {
+  fill: #ffffff;
+}
+
+.qr path {
+  fill: var(--ink);
+}
+
+.phone-steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.phone-steps li {
+  margin-bottom: 10px;
+}
+
+.phone-steps strong {
+  display: block;
+  font-weight: 600;
+}
+
+.phone-steps span {
+  color: var(--ink-2);
+}
+
+.code input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--paper);
+  color: var(--ink);
+  font: 13px var(--mono);
+}
+
+.phone-who {
+  display: grid;
+  gap: 2px;
+  margin-bottom: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+}
+
+.phone-who .mono {
+  font-size: 13.5px;
+  overflow-wrap: anywhere;
+}
+
+.phone-status {
+  min-height: 1.5em;
+  margin: 14px 0;
+  color: var(--ink-2);
+}
+
+.phone-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .facts {
   margin-top: 40px;
   padding-top: 24px;
@@ -351,5 +476,19 @@ button:disabled {
     padding: 8px 14px;
     border-top: 1px solid var(--line);
     border-left: 0;
+  }
+
+  button.secondary {
+    display: block;
+    margin: 10px 0 0;
+  }
+
+  .dialog {
+    padding: 20px;
+  }
+
+  .phone-code {
+    flex-direction: column;
+    align-items: center;
   }
 }

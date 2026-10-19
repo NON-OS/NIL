@@ -1,0 +1,23 @@
+      <dialog id="phone-dialog" class="dialog" aria-labelledby="phone-title">
+        <h2 id="phone-title">Use a wallet on your phone</h2>
+        <p>Scan the code with the wallet app on your phone and keep working here. The sign-up message waits until you confirm it on your phone. The two talk through WalletConnect’s relay, encrypted end to end.</p>
+        <div id="phone-code" class="phone-code" hidden>
+          <div id="phone-qr"></div>
+          <ol class="phone-steps">
+            <li><strong>Open your wallet app</strong><span>On your phone: MetaMask, Rainbow, Trust Wallet or another wallet that works with WalletConnect.</span></li>
+            <li><strong>Scan this code</strong><span>Use the scan button inside the wallet app. The phone’s camera app usually can’t open it.</span></li>
+            <li><strong>Approve the connection</strong><span>Your wallet shows the name Nil and this site’s address. Then come back to this screen.</span></li>
+          </ol>
+        </div>
+        <div id="phone-copy-row" class="phone-copy" hidden>
+          <label for="phone-link">Or copy the link into your wallet app</label>
+          <div class="code"><input id="phone-link" type="text" readonly spellcheck="false" autocomplete="off" /><button type="button" id="phone-copy">Copy</button></div>
+        </div>
+        <div id="phone-who" class="phone-who" hidden><strong id="phone-name"></strong><span id="phone-address" class="mono"></span></div>
+        <p id="phone-status" class="phone-status" role="status">Getting a code from WalletConnect…</p>
+        <p id="phone-error" class="error" role="alert" hidden></p>
+        <div class="phone-actions">
+          <button type="button" id="phone-retry" class="primary" hidden>Show a new code</button>
+          <button type="button" id="phone-cancel">Cancel</button>
+        </div>
+      </dialog>

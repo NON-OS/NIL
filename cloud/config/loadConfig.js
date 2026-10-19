@@ -7,6 +7,7 @@ import parseEnvFile from './parseEnvFile.js';
 import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
 import readTelegram from './readTelegram.js';
+import readWalletConnect from './readWalletConnect.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -166,6 +167,8 @@ export default function loadConfig(env = process.env) {
       streamCloseDelayMin: read.number('CLOUD_STREAM_CLOSE_DELAY_MIN', 5, { max: 120 }),
     }),
     signup: signupRules(read),
+    // phone wallets on the sign-up page; null leaves the page and its policy as they always were
+    walletConnect: readWalletConnect(read),
     lifecycle: Object.freeze({
       deleteGraceDays: read.number('CLOUD_DELETE_GRACE_DAYS', 14),
       upgradeMaxFailures: read.number('CLOUD_UPGRADE_MAX_FAILURES', 1),
