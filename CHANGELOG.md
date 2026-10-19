@@ -232,6 +232,7 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 
 ### Fixed
 
+- Hosted: `restore-drill` could leave its throwaway copy, a decrypted backup, on the server while saying it had been removed. Removing a workspace now waits until Docker has really let go, removes helpers left behind and retries what is still in use (`CLOUD_DOCKER_REMOVE_TRIES`, `CLOUD_DOCKER_REMOVE_WAIT_MS`). A drill that still can't remove its copy lists what is left with the commands that remove it, exits with 1 and sends a critical alert.
 - Tasks you make with quick add have no assignee, so My work left them out and never counted them under **Finished this week**. My work, the time page and your calendar feed now treat a task as yours when it is assigned to you or when you made it without giving it to anyone, and the list on My work is called **My tasks**.
 - Every picker menu (status, priority, assignee, visibility and the rest) and the search window were confusing for screen readers: the menus had no name, and their options sat inside list items that broke the list they belonged to. Menus are now named after the button that opened them, options belong to their list, and search results are grouped under their headings.
 - Counts said "1 tasks" and the like: the board header, label usage, share pages, imports, agent limits and runs, Nil Pro prices, invoices and seat messages, the status deck's notes and a few server messages. They now use the singular for one, and an import no longer counts "persons".

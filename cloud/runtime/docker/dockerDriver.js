@@ -9,6 +9,7 @@ import rewriteTar from '../../lib/tar/rewriteTar.js';
 import tarEntry from '../../lib/tar/tarEntry.js';
 import tarBlocks from '../../lib/tar/tarBlocks.js';
 import SNAPSHOT_SCRIPT from './snapshotScript.js';
+import dockerRemoval from './dockerRemoval.js';
 
 const { mount, db: DB, snapshotDir, checkpointDir } = dataLayout;
 
@@ -139,12 +140,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
     remove: (id) => client.quiet('DELETE', `/containers/${containerName(id)}`, { query: { force: 'true' } }),
     removeVolume: (volume) => client.quiet('DELETE', `/volumes/${encodeURIComponent(volume)}`),
 
-    async destroy(id, volumes) {
-      await driver.remove(id);
-      if (caddy.container) await client.quiet('POST', `/networks/${containerName(id)}/disconnect`, { body: { Container: caddy.container, Force: true } }, [404, 403]);
-      await client.quiet('DELETE', `/networks/${containerName(id)}`);
-      for (const volume of volumes) await driver.removeVolume(volume);
-    },
+    ...dockerRemoval({ client, docker, caddy, containerName }),
 
     async status(id) {
       const info = await client.quiet('GET', `/containers/${containerName(id)}/json`);

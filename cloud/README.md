@@ -423,6 +423,8 @@ docker compose exec control rm /tmp/k
 
 With an S3 target, `docker compose exec control node cli.js info nonos` lists each backup's `s3://` location. Download one to your machine with your provider's tools and a key that can read the bucket (for example `aws s3 cp <location> . --endpoint-url <CLOUD_S3_ENDPOINT>`) and check it there the same way, then give `restore-drill` the location instead of a path.
 
+The drill says "The copy has been removed" only once Docker no longer has its container, network or volume. If something stays, it lists what, prints the `docker` commands that remove it, exits with 1 and sends a critical `drill.cleanup_failed` alert, because that volume holds the backup decrypted. Run those commands straight away.
+
 Don't drill with `restore` into a new name: that creates a real workspace, and the copy of a customer's data would be online at its address.
 
 ### 10. Monitoring and alerts

@@ -9,6 +9,10 @@ import waitHealthy from './waitHealthy.js';
 // no way in or out at all, and the chain is off. It is started and has to pass its health
 // check, which proves the database in the backup opens (and migrates), and then it is removed
 // with its volume, whatever happened. A customer's data is never published by a drill.
+//
+// The copy's volume holds the backup decrypted, so its removal is never assumed: `removed` says
+// whether it really went, `leftovers` names what didn't and how to remove it, and a copy that
+// stays raises a critical alert.
 export default async function drillRestore(ctx, { tar, manifest = null }) {
   const id = newWorkspaceId();
   const image = await restoreImage(ctx, manifest?.image);
@@ -18,6 +22,8 @@ export default async function drillRestore(ctx, { tar, manifest = null }) {
   const uid = ctx.config.app.uidBase ? ctx.config.app.uidBase - 1 : 1000;
   const spec = { ...base, isolated: true, user: `${uid}:${uid}`, env: { ...env, NOX_RPC_URL: 'off', PUSH_NOTIFICATIONS: 'off' } };
   ctx.log.info('drill.started', { workspace: id, image });
+  let outcome = null;
+  let failure = null;
   try {
     await ctx.driver.ensureImage(image);
     await ctx.driver.create(spec);
@@ -25,8 +31,28 @@ export default async function drillRestore(ctx, { tar, manifest = null }) {
     await ctx.driver.start(id);
     const status = await waitHealthy(ctx, id);
     ctx.log.info('drill.passed', { workspace: id, image });
-    return { id, image, report: status.report };
-  } finally {
-    await ctx.driver.destroy(id, [spec.volume]).catch((err) => ctx.log.warn('drill.cleanup_failed', { workspace: id, error: err }));
+    outcome = { id, image, report: status.report };
+  } catch (err) {
+    failure = err;
   }
+
+  let leftovers = null;
+  try {
+    await ctx.driver.destroy(id, [spec.volume]);
+  } catch (err) {
+    leftovers = err.leftovers ?? { containers: [], networks: [], volumes: [spec.volume], commands: [] };
+    const what = [...leftovers.containers, ...leftovers.networks, ...leftovers.volumes].join(', ');
+    ctx.log.error('drill.cleanup_failed', { workspace: id, error: err });
+    await ctx.alert('drill.cleanup_failed', {
+      severity: 'critical',
+      repeatMin: 0,
+      message: `A restore drill couldn’t remove its throwaway copy, which holds a decrypted backup: ${what}. Remove it now${leftovers.commands.length ? `: ${leftovers.commands.join('; ')}` : ''}.`,
+    });
+  }
+
+  if (failure) {
+    if (!leftovers) throw failure;
+    throw new Error(`${failure.message} Its decrypted copy couldn’t be removed either; remove it now${leftovers.commands.length ? `: ${leftovers.commands.join('; ')}` : ''}.`, { cause: failure });
+  }
+  return { ...outcome, removed: !leftovers, leftovers };
 }

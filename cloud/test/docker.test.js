@@ -31,7 +31,7 @@ const frame = (stream, text) => {
 async function fakeEngine(t) {
   const socket = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-docker-')), 'docker.sock');
   const seen = [];
-  const state = { networks: new Set(), connected: new Set(), containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
+  const state = { networks: new Set(), volumes: new Set(), busy: new Map(), stuck: new Set(), lingering: new Map(), connected: new Set(), containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
   const json = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json' });
     res.end(body === undefined ? '' : JSON.stringify(body));
@@ -53,12 +53,33 @@ async function fakeEngine(t) {
       state.connected.add(m[1]);
       return json(res, 200);
     }
-    if (route === 'POST /volumes/create') return json(res, 201, { Name: JSON.parse(body).Name });
+    if (route === 'POST /volumes/create') {
+      state.volumes.add(JSON.parse(body).Name);
+      return json(res, 201, { Name: JSON.parse(body).Name });
+    }
+    // something Docker can't let go of yet: `busy` answers 409 that many times, `stuck` always
+    const inUse = (name) => {
+      if (state.stuck.has(name)) return true;
+      const left = state.busy.get(name) ?? 0;
+      if (left) state.busy.set(name, left - 1);
+      return left > 0;
+    };
+    if (route === 'GET /containers/json') {
+      const [label] = JSON.parse(url.searchParams.get('filters')).label;
+      const [key, value] = label.split('=');
+      return json(res, 200, [...state.containers].filter(([, c]) => c.body.Labels?.[key] === value).map(([name]) => ({ Id: name, Names: [`/${name}`] })));
+    }
     if (route === 'POST /containers/create') {
       state.containers.set(url.searchParams.get('name'), { running: false, body: JSON.parse(body) });
       return json(res, 201, { Id: 'c1' });
     }
     if ((m = /^GET \/containers\/([^/]+)\/json$/.exec(route))) {
+      // a forced removal that is still finishing: Docker keeps showing the container a while
+      const lingers = state.lingering.get(m[1]) ?? 0;
+      if (lingers) {
+        state.lingering.set(m[1], lingers - 1);
+        return json(res, 200, { Config: {}, State: { Running: false } });
+      }
       if (m[1] === 'nil-caddy') return json(res, 200, { NetworkSettings: { Networks: Object.fromEntries([...state.connected].map((n) => [n, {}])) } });
       const c = state.containers.get(m[1]);
       if (!c) return json(res, 404, { message: `No such container: ${m[1]}` });
@@ -87,11 +108,16 @@ async function fakeEngine(t) {
       return json(res, 204);
     }
     if ((m = /^DELETE \/containers\/([^/]+)$/.exec(route))) {
+      if (inUse(m[1])) return json(res, 409, { message: `removal of container ${m[1]} is already in progress` });
       if (!state.containers.delete(m[1])) return json(res, 404, { message: 'No such container' });
       state.removed.push(m[1]);
       return json(res, 204);
     }
-    if ((m = /^DELETE \/(networks|volumes)\/([^/]+)$/.exec(route))) return json(res, 404, { message: 'not found' });
+    if ((m = /^DELETE \/(networks|volumes)\/([^/]+)$/.exec(route))) {
+      if (inUse(m[2])) return json(res, 409, { message: `${m[2]} is in use` });
+      return state[m[1]].delete(m[2]) ? json(res, 204) : json(res, 404, { message: 'not found' });
+    }
+    if ((m = /^GET \/(networks|volumes)\/([^/]+)$/.exec(route))) return state[m[1]].has(m[2]) ? json(res, 200, { Name: m[2] }) : json(res, 404, { message: 'not found' });
     if ((m = /^POST \/networks\/([^/]+)\/disconnect$/.exec(route))) return json(res, 404, { message: 'network not found' });
     if ((m = /^POST \/containers\/([^/]+)\/exec$/.exec(route))) {
       const id = `e${state.execs.size + 1}`;
@@ -137,7 +163,7 @@ async function fakeEngine(t) {
   });
   await new Promise((resolve) => server.listen(socket, resolve));
   t.after(() => server.close());
-  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_IMAGE_PULL: 'missing' });
+  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_IMAGE_PULL: 'missing', CLOUD_DOCKER_REMOVE_WAIT_MS: '1' });
   const log = { info() {}, warn() {}, error() {} };
   return { config, seen, state, driver: dockerDriver({ config, log }) };
 }
@@ -234,6 +260,39 @@ test('pull failures reported mid-stream, missing things on removal, and Caddy re
   await driver.destroy('ffffffffffffffff', ['nil-ffffffffffffffff-data']);
   await assert.rejects(caddyReloader({ ...config, caddy: { ...config.caddy, container: 'nil-caddy' } })(), /Caddy rejected the configuration: Error: adapting config/);
   assert.equal(await caddyReloader({ ...config, caddy: { ...config.caddy, container: null } })(), false);
+});
+
+test('removing a workspace waits out what Docker still holds and sweeps up helpers left behind', async (t) => {
+  const { driver, state, config, seen } = await fakeEngine(t);
+  const volume = `nil-${ID}-drill`;
+  await driver.create({ ...workspaceSpec(config, { id: ID, name: 'restore-drill', image: 'nonos/nil:1.0.0', volume, plan: 'standard' }), isolated: true });
+  // a helper an interrupted import left behind still holds the volume
+  state.containers.set(`nil-${ID}-import`, { running: false, body: { Labels: { 'org.nonos.cloud.role': 'helper', 'org.nonos.cloud.workspace': ID } } });
+  state.lingering.set(`nil-${ID}`, 2);
+  state.busy.set(`nil-${ID}`, 1);
+  state.busy.set(volume, 2);
+
+  await driver.destroy(ID, [volume]);
+  assert.equal(state.containers.size, 0, 'the workspace and the forgotten helper are both gone');
+  assert.equal(state.networks.has(`nil-${ID}`), false);
+  assert.equal(state.volumes.has(volume), false);
+  assert.equal(seen.filter((r) => r.method === 'DELETE' && r.path.endsWith(`/volumes/${volume}`)).length, 3, 'two refusals, then removed');
+  assert.ok(seen.filter((r) => r.method === 'GET' && r.path.endsWith(`/containers/nil-${ID}/json`)).length >= 3, 'it waited until Docker no longer knew the container');
+});
+
+test('what can’t be removed is named, with the commands that remove it by hand', async (t) => {
+  const { driver, state, config, seen } = await fakeEngine(t);
+  const volume = `nil-${ID}-drill`;
+  await driver.create({ ...workspaceSpec(config, { id: ID, name: 'restore-drill', image: 'nonos/nil:1.0.0', volume, plan: 'standard' }), isolated: true });
+  state.stuck.add(volume);
+  await assert.rejects(driver.destroy(ID, [volume]), (err) => {
+    assert.match(err.message, /left something behind/);
+    assert.deepEqual(err.leftovers, { containers: [], networks: [], volumes: [volume], commands: [`docker volume rm ${volume}`] });
+    return true;
+  });
+  assert.equal(seen.filter((r) => r.method === 'DELETE' && r.path.endsWith(`/volumes/${volume}`)).length, config.docker.removeTries, 'retried a bounded number of times');
+  assert.equal(state.containers.size, 0, 'everything else still went');
+  assert.equal(state.networks.has(`nil-${ID}`), false);
 });
 
 test('a helper that can’t hand over the volume stops the create; last writes come from file times only', async (t) => {

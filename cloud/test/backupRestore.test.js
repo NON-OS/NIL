@@ -13,6 +13,7 @@ import createWorkspace from '../provisioning/createWorkspace.js';
 import provisionWorkspace from '../provisioning/provisionWorkspace.js';
 import restoreWorkspace from '../provisioning/restoreWorkspace.js';
 import drillRestore from '../provisioning/drillRestore.js';
+import restoreDrill from '../cli/commands/restoreDrill.js';
 import readTar from './helpers/readTar.js';
 import testContext from './helpers/testContext.js';
 
@@ -117,6 +118,8 @@ test('a restore drill boots the backup where nobody can reach it, then removes i
   const { manifest, rest } = await open();
   const result = await drillRestore(ctx, { tar: rest, manifest });
   assert.equal(result.report.ok, true);
+  assert.equal(result.removed, true);
+  assert.equal(result.leftovers, null);
   const [created] = ctx.driver.calls.filter(([op]) => op === 'create').slice(-1);
   assert.equal(created[1], result.id);
   assert.equal(ctx.store.workspaces.list().length, rows, 'the drill is never in the control database, so never routed');
@@ -129,6 +132,44 @@ test('a restore drill boots the backup where nobody can reach it, then removes i
   const again = await open();
   await assert.rejects(drillRestore(ctx, { tar: again.rest, manifest: again.manifest }), /didn’t become healthy/);
   assert.deepEqual(new Set(ctx.driver.containers.keys()), containers);
+});
+
+test('a drill whose decrypted copy stays behind says so, alerts, and the command exits with 1', async () => {
+  const ctx = testContext({ backups: true });
+  const ws = createWorkspace(ctx, { name: 'customer', owner: OWNER });
+  await provisionWorkspace(ctx, ws.id);
+  const { location } = await backupWorkspace(ctx, ctx.store.workspaces.get(ws.id), 'manual');
+  const identity = path.join(ctx.dataDir, 'backup.key');
+  fs.writeFileSync(identity, ctx.secretKey, { mode: 0o600 });
+  const drill = async () => {
+    const lines = [];
+    const code = await restoreDrill(ctx, { args: [location], options: { identity }, print: (line) => lines.push(line) });
+    return { code, out: lines.join('\n') };
+  };
+
+  const fine = await drill();
+  assert.equal(fine.code, 0);
+  assert.match(fine.out, /The copy has been removed\./);
+
+  // Docker refuses to let go of the drill's volume for good
+  const destroy = ctx.driver.destroy;
+  ctx.driver.destroy = async (id, volumes) => {
+    if (!volumes.every((v) => v.endsWith('-drill'))) return destroy(id, volumes);
+    await destroy(id, []);
+    throw Object.assign(new Error('volume in use'), { leftovers: { containers: [], networks: [], volumes, commands: volumes.map((v) => `docker volume rm ${v}`) } });
+  };
+  const stuck = await drill();
+  assert.equal(stuck.code, 1);
+  assert.doesNotMatch(stuck.out, /has been removed/);
+  assert.match(stuck.out, /could NOT be fully removed/);
+  assert.match(stuck.out, /docker volume rm nil-[0-9a-f]+-drill/);
+  const [alert] = ctx.alerts.filter((a) => a.event === 'drill.cleanup_failed');
+  assert.equal(alert.severity, 'critical');
+  assert.match(alert.message, /decrypted backup: nil-[0-9a-f]+-drill\. Remove it now: docker volume rm nil-[0-9a-f]+-drill/);
+
+  // a drill that fails and can't clean up says both
+  ctx.driver.unhealthy.add(ctx.config.app.image);
+  await assert.rejects(drill(), /didn’t become healthy[\s\S]*couldn’t be removed either; remove it now: docker volume rm/);
 });
 
 test('the nightly run backs up every workspace and the control database, and prunes old files', async () => {

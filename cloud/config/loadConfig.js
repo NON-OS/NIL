@@ -128,6 +128,9 @@ export default function loadConfig(env = process.env) {
       apiVersion: /^1\.\d{2}$/.test(read.raw('CLOUD_DOCKER_API')) ? read.raw('CLOUD_DOCKER_API') : '1.44',
       // images arrive with deploy/release.sh; pulling is for a registry the operator controls
       pull: read.oneOf('CLOUD_IMAGE_PULL', ['missing', 'never', 'always'], 'never'),
+      // Docker answers 409 for a moment while something it is removing is still in use
+      removeTries: read.number('CLOUD_DOCKER_REMOVE_TRIES', 6, { min: 1, max: 50 }),
+      removeWaitMs: read.number('CLOUD_DOCKER_REMOVE_WAIT_MS', 500, { min: 1, max: 60_000 }),
     }),
     app: Object.freeze({
       image,

@@ -11,7 +11,11 @@ import dockerDriver from './docker/dockerDriver.js';
 //                               With spec.isolated, the reverse proxy isn't attached either
 //   start(id) stop(id) restart(id)
 //   remove(id)                  remove the workload, keep its volume
-//   destroy(id, volumes)        remove the workload, its network and the given volumes
+//   destroy(id, volumes)        remove the workload, any helpers, its network and the given
+//                               volumes; if some of it stays, throws with err.leftovers =
+//                               { containers, networks, volumes, commands } naming what's
+//                               left and the commands that remove it by hand
+//   leftovers(id, volumes)      what of those is still there, in the same shape minus commands
 //   removeVolume(volume)
 //   status(id)                  { exists, running, health, report } where health is one of
 //                               healthy, unhealthy, starting, none

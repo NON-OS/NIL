@@ -13,7 +13,9 @@ export default async function housekeeping(ctx) {
     try {
       await purgeWorkspace(ctx, workspace.id);
     } catch (err) {
-      await ctx.alert('workspace.purge_failed', { workspace, message: err.message });
+      // it is tried again next hour; the commands are for when it keeps failing
+      const commands = err.leftovers?.commands ?? [];
+      await ctx.alert('workspace.purge_failed', { workspace, message: commands.length ? `${err.message}. Left on the server, removable with: ${commands.join('; ')}` : err.message });
     }
   }
   const expired = now - ctx.config.lifecycle.checkpointKeepDays * DAY;
