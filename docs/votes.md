@@ -67,7 +67,7 @@ To vote there, a visitor picks an option and connects a wallet: the one in their
 
 A wallet's power is the NOX it held, plus NOX staked, plus its Zero-State Passes times the power per pass, all read at the vote's snapshot block. A wallet with no power then can't vote. Each wallet has one ballot, and signing again while the vote is open replaces it. Since the power follows the tokens, spreading them over more wallets gains nothing. Reading what a wallet held days ago needs an Ethereum node that keeps old state; if the server's node can't answer, the ballot is refused rather than counted as zero.
 
-Members count once, here or there. A wallet that was linked to a member when the vote opened, or is linked to one now, votes as that member: its ballot is the member's one ballot, with all the power of the wallets they had linked at the snapshot, and it replaces the ballot they cast in the app, or the other way round. That's the same rule as a weighted vote in the app, where a member's wallets add up to one ballot. A guest's wallet votes like anyone else's.
+Members count once, here or there. A wallet that was linked to a member when the vote opened, or is linked to one now, votes as that member: its ballot is the member's one ballot, with what all their wallets held at the snapshot block, and it replaces the ballot they cast in the app, or the other way round. That's the same rule as a weighted vote in the app, where a member's wallets add up to one ballot. Since a public vote counts tokens, not membership, someone who joins or links a wallet after it opens keeps the power those wallets held at the snapshot block: voting from outside, joining and voting again counts the same, and the new ballot takes the place of the old one. A guest's wallet votes like anyone else's.
 
 Visitors get no account, no session and no cookie. Asking for a ballot and casting one is limited per network, counted the way sign-in counts it, and a ballot request has a size limit. Each ballot text is single use, works for five minutes, and only from the network that asked for it.
 
@@ -118,7 +118,7 @@ In a vote weighted by voting power, each member's power is read from the blockch
 voting power = NOX in linked wallets + NOX staked + Zero-State Passes held × power per pass
 ```
 
-Tokens moved after that don't change anything, and people who join later have no power in that vote. [NOX, voting power and Nil Pro](nox-and-nil-pro.md#voting-power) explains each part.
+Tokens moved after that don't change anything, and people who join later have no power in that vote, except in a [public vote](#public-votes), where every wallet counts what it held at that block, whoever it belongs to. [NOX, voting power and Nil Pro](nox-and-nil-pro.md#voting-power) explains each part.
 
 If the server's Ethereum node can't answer for every wallet while the power is read, because it's down or won't serve that block, the vote doesn't open and the admin is asked to try again. Nobody is ever counted as holding nothing because of a node problem. A contract that refuses the read itself, such as a paused staking contract, does count as zero for everyone, and the audit file shows it.
 

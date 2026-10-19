@@ -11,7 +11,6 @@ import challenges from '../auth/challenges.js';
 import hub from '../realtime/hub.js';
 import notify from '../services/notify.js';
 import voteMessage from '../services/voteMessage.js';
-import voteWeight from '../services/voteWeight.js';
 import snapshotPower from '../services/snapshotPower.js';
 import ballotSigner from '../services/ballotSigner.js';
 import zspPower from '../services/zspPower.js';
@@ -22,6 +21,8 @@ import config from '../config.js';
 import voterGroups from '../votes/voterGroups.js';
 import heldBallots from '../votes/heldBallots.js';
 import voteAudit from '../votes/voteAudit.js';
+import memberPower from '../votes/memberPower.js';
+import dropOutsideBallots from '../votes/dropOutsideBallots.js';
 import oneLine from '../lib/oneLine.js';
 
 const router = express.Router();
@@ -136,14 +137,19 @@ router.post(
     const proposal = openProposal(req.params.id);
     const signer = typeof req.body?.signature === 'string' ? await ballotSigner(req.user.id, ballot.message, req.body.signature, req.body?.address) : null;
     if (!signer) throw new HttpError(401, 'Sign the vote with a wallet linked to your account.');
-    const weight = voteWeight(req.user.id, proposal);
+    const weight = await memberPower(req.user.id, proposal);
     if (weight === '0') throw HttpError.forbidden(`This vote counts voting power from when it opened (${config.nox.symbol} held or staked, and Zero-State Passes), and you had none then.`);
-    sql.run(
-      `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
-         message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
-      proposal.id, req.user.id, ballot.choice, weight, signer.address, ballot.message, req.body.signature, signer.checkedBy, signer.block, Date.now(),
-    );
+    // a public vote's chain reads take a moment, so it may have closed meanwhile
+    openProposal(proposal.id);
+    sql.tx(() => {
+      sql.run(
+        `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
+           message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
+        proposal.id, req.user.id, ballot.choice, weight, signer.address, ballot.message, req.body.signature, signer.checkedBy, signer.block, Date.now(),
+      );
+      dropOutsideBallots(proposal.id, req.user.id);
+    });
     hub.broadcast({ type: 'proposals' });
     return { proposal: toProposal(sql.get('SELECT * FROM proposals WHERE id = ?', proposal.id), req.user) };
   }),

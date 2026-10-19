@@ -209,3 +209,78 @@ test('ballots are capped in size and rate limited by network', async () => {
   // another network still gets through
   assert.equal((await visitor(10)('POST', `/api/public/votes/${slug}/challenge`, { address: wallet().address, choice: 0 })).status, 200);
 });
+
+// someone who becomes a member partway through, from their own network
+async function join(w, name, n) {
+  const inv = await owner('POST', '/api/invites', { role: 'member' });
+  const c = client(base, { headers: { 'X-Forwarded-For': `10.88.${n}.1` } });
+  assert.equal((await c.wallet(w, 'invite', { name, inviteToken: inv.data.token })).status, 200);
+  return c;
+}
+
+async function voteInApp(c, w, proposal, choice) {
+  const ballot = await c('POST', `/api/proposals/${proposal.id}/ballot`, { choice });
+  return c('POST', `/api/proposals/${proposal.id}/vote`, { ballotId: ballot.data.ballotId, signature: w.sign(ballot.data.message) });
+}
+
+test('a wallet that votes from outside and then joins keeps its power and its one ballot', async () => {
+  const lena = wallet();
+  chain.setBalance(lena.address, 2000n * NOX);
+  const proposal = await startPublic();
+  const slug = proposal.publicVote.slug;
+  const page = visitor(20);
+  assert.equal((await castAs(page, slug, lena, 0)).status, 200);
+
+  await join(lena, 'Lena Berg', 1);
+  const again = await castAs(page, slug, lena, 1);
+  assert.equal(again.status, 200, again.data.error);
+  assert.equal(again.data.counted.weight, String(2000n * NOX));
+  const view = (await page('GET', `/api/public/votes/${slug}`)).data;
+  assert.equal(view.voters, 1);
+  assert.deepEqual(view.totals, ['0', String(2000n * NOX)]);
+  assert.deepEqual(view.ballots.map((b) => [b.address, b.choice, b.weight]), [[lena.address.toLowerCase(), 1, String(2000n * NOX)]]);
+  // the audit file counts her once, as a member, with the holdings her power came from
+  const audit = (await page('GET', `/api/public/votes/${slug}/audit`)).data;
+  assert.deepEqual(audit.outsideBallots, []);
+  assert.equal(audit.ballots.length, 1);
+  assert.equal(audit.ballots[0].snapshot.power, String(2000n * NOX));
+  assert.deepEqual(audit.ballots[0].snapshot.wallets.map((w) => w.address), [lena.address.toLowerCase()]);
+});
+
+test('someone who joins after a public vote opens votes in the app with what their wallets held at its snapshot', async () => {
+  const kai = wallet();
+  chain.setBalance(kai.address, 75n * NOX);
+  const proposal = await startPublic();
+  const kaiApp = await join(kai, 'Kai Sato', 2);
+  const vote = await voteInApp(kaiApp, kai, proposal, 0);
+  assert.equal(vote.status, 200, vote.data.error);
+  assert.deepEqual(vote.data.proposal.myVote, { choice: 0, weight: String(75n * NOX) });
+  // a second ballot replaces the first and reads nothing again
+  const from = chain.calls.length;
+  assert.equal((await voteInApp(kaiApp, kai, proposal, 1)).data.proposal.myVote.weight, String(75n * NOX));
+  assert.equal(chain.calls.slice(from).filter((c) => c.method === 'eth_call').length, 0);
+});
+
+test('a member who was there when a public vote opened keeps the census, and no power means no vote', async () => {
+  const proposal = await startPublic();
+  const from = chain.calls.length;
+  const vote = await voteInApp(ana, wallets.ana, proposal, 0);
+  assert.equal(vote.status, 200, vote.data.error);
+  assert.equal(vote.data.proposal.myVote.weight, String(300n * NOX));
+  assert.equal(chain.calls.slice(from).filter((c) => c.method === 'eth_call').length, 0);
+
+  const empty = wallet();
+  const emptyApp = await join(empty, 'Noor Haddad', 3);
+  assert.equal((await voteInApp(emptyApp, empty, proposal, 0)).status, 403);
+});
+
+test('a vote that isn’t public still counts only the members it opened with', async () => {
+  const late = wallet();
+  chain.setBalance(late.address, 500n * NOX);
+  const res = await owner('POST', '/api/proposals', { title: 'Members only', options: ['Yes', 'No'], weighting: 'power' });
+  assert.equal(res.status, 200, res.data.error);
+  const lateApp = await join(late, 'Ola Nilsen', 4);
+  const refused = await voteInApp(lateApp, late, res.data.proposal, 0);
+  assert.equal(refused.status, 403);
+  assert.match(refused.data.error, /had none then/);
+});

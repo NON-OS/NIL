@@ -4,8 +4,9 @@ import siwe from '../auth/siwe.js';
 import walletSignature from '../auth/walletSignature.js';
 import headBlock from '../chain/headBlock.js';
 import HttpError from '../lib/HttpError.js';
-import voteWeight from '../services/voteWeight.js';
 import outsidePower from './outsidePower.js';
+import memberPower from './memberPower.js';
+import dropOutsideBallots from './dropOutsideBallots.js';
 
 const COUNTERFACTUAL = '6492'.repeat(16);
 
@@ -35,22 +36,27 @@ function stillOpen(proposalId) {
 }
 
 // One ballot from a public vote's page, from the wallet that signed `pending.message`. A member's
-// wallet replaces that member's ballot, with their power. Any other wallet has one ballot of its
+// wallet replaces that member's ballot, with the power their wallets held at the snapshot block,
+// however long they have been a member, and takes over any ballot those wallets cast from
+// outside before they were theirs. Any other wallet has one ballot of its
 // own, weighted by what it held at the snapshot block, and a later one replaces it while the vote
 // is open. Splitting tokens over more wallets gains nothing: the power follows the tokens.
 export default async function castPublicBallot(proposal, pending, signature) {
   const check = await signedBy(pending.address, pending.message, signature);
   const userId = memberOf(proposal.id, pending.address);
   if (userId) {
-    const weight = voteWeight(userId, proposal);
-    if (weight === '0') throw HttpError.forbidden(`This wallet belongs to a member who had no voting power when the vote opened (${config.nox.symbol} held or staked, and Zero-State Passes), so it can’t vote.`);
+    const weight = await memberPower(userId, proposal);
+    if (weight === '0') throw HttpError.forbidden(`This wallet belongs to a member whose wallets held no ${config.nox.symbol}, no staked ${config.nox.symbol} and no Zero-State Passes at block ${proposal.snapshot_block}, when the vote opened, so it can’t vote.`);
     stillOpen(proposal.id);
-    sql.run(
-      `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-       ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
-         message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
-      proposal.id, userId, pending.choice, weight, pending.address, pending.message, signature, check.checkedBy, check.block, Date.now(),
-    );
+    sql.tx(() => {
+      sql.run(
+        `INSERT INTO votes (proposal_id, user_id, choice, weight, address, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+         ON CONFLICT (proposal_id, user_id) DO UPDATE SET choice = excluded.choice, weight = excluded.weight, address = excluded.address,
+           message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
+        proposal.id, userId, pending.choice, weight, pending.address, pending.message, signature, check.checkedBy, check.block, Date.now(),
+      );
+      dropOutsideBallots(proposal.id, userId);
+    });
     return { weight };
   }
   const held = await outsidePower(pending.address, proposal);
