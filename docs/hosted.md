@@ -18,7 +18,7 @@ The NØNOS foundation runs Nil for anyone who doesn't want to run their own serv
 
 On busy days, or when the server is nearly full, NØNOS opens new workspaces by hand. The sign-up page then says so and shows your setup code straight away; keep it, because the page won't show it again. Your workspace's address opens once the request is approved.
 
-A workspace nobody sets up within a week is removed, and its address becomes free again. A workspace whose data hasn't changed in six months is paused, and its address shows a notice with the date it will be deleted, a month later. Ask NØNOS before then to bring it back.
+A workspace nobody sets up within 30 days is removed, and its address becomes free again. A workspace that has been set up is never paused or deleted just because it has been quiet.
 
 ## What NØNOS can and cannot see
 
