@@ -43,6 +43,7 @@ const ProofsView = lazy(() => import('./views/ProofsView'));
 const VerifyView = lazy(() => import('./views/VerifyView'));
 const SharePage = lazy(() => import('./views/SharePage'));
 const OpenBountiesPage = lazy(() => import('./views/OpenBountiesPage'));
+const PublicVotePage = lazy(() => import('./views/PublicVotePage'));
 const ShortcutsHelp = lazy(() => import('./components/overlays/ShortcutsHelp'));
 const ExtractModal = lazy(() => import('./components/overlays/ExtractModal'));
 const DeckModal = lazy(() => import('./components/decks/DeckModal'));
@@ -126,6 +127,16 @@ export default function App() {
       <Suspense fallback={<LoadingScreen />}>
         <SharePage token={segments[1]} />
       </Suspense>
+    );
+  }
+  if (segments[0] === 'vote' && segments[1]) {
+    return (
+      <>
+        <Suspense fallback={<LoadingScreen />}>
+          <PublicVotePage slug={segments[1]} />
+        </Suspense>
+        <PhoneWalletHost />
+      </>
     );
   }
   if (segments[0] === 'open') {

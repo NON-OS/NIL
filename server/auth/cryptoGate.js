@@ -12,6 +12,7 @@ const PATHS = [
   '/tasks/:id/applications',
   '/applications',
   '/public/bounties',
+  '/public/votes',
   '/proposals',
   '/vote-power',
   '/anonymous-ballots',

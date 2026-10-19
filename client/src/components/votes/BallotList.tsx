@@ -24,7 +24,7 @@ export default function BallotList({ proposal, weight }: { proposal: Proposal; w
         <caption className="sr-only">Every ballot in this vote, newest first</caption>
         <thead>
           <tr>
-            <th scope="col">Member</th>
+            <th scope="col">Voter</th>
             <th scope="col">Choice</th>
             {proposal.weighting === 'power' && <th scope="col">Power</th>}
             <th scope="col">When</th>
@@ -32,14 +32,15 @@ export default function BallotList({ proposal, weight }: { proposal: Proposal; w
         </thead>
         <tbody>
           {newest.map((b) => {
-            const user = users[b.userId];
+            const user = b.userId ? users[b.userId] : undefined;
+            const who = b.userId ? (user?.name ?? 'Former member') : 'Outside wallet';
             return (
-              <tr key={b.userId}>
+              <tr key={b.userId ?? b.address}>
                 <td>
                   <span className="ballot-who">
-                    <Avatar user={user} size={20} title={user?.name ?? 'Former member'} />
+                    <Avatar user={user} size={20} title={who} />
                     <span>
-                      {user?.name ?? 'Former member'}
+                      {who}
                       <span className="muted mono" title={b.address}>
                         {shortAddress(b.address)}
                       </span>

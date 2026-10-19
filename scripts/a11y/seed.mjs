@@ -17,6 +17,8 @@ const VOTES = [
   { title: 'Pick the offsite city', options: ['Lisbon', 'Porto', 'Madeira'], days: 7, anonymous: true },
   { title: 'Raise the bounty budget?', options: ['Yes', 'No'], days: 7, sealed: true },
   { title: 'Adopt the new label set?', options: ['Yes', 'No'], days: 3, close: true },
+  // public: any holder votes on its own page, which the signed-out screens check
+  { title: 'Open the grants round to holders?', options: ['Yes', 'No'], days: 7, weighting: 'power', publicVote: true },
 ];
 
 export const api = (page, method, url, body) =>
@@ -56,10 +58,12 @@ export default async function seed(page, world) {
   const { task } = await api(page, 'POST', '/tasks', { title: BOUNTY.title, status: 'todo', projectId: project });
   await api(page, 'PATCH', `/tasks/${task.id}`, { bounty: BOUNTY.amount });
   await api(page, 'PATCH', `/tasks/${task.id}`, { listed: true });
+  let publicVote = null;
   for (const { close, cast, ...vote } of VOTES) {
     const { proposal } = await api(page, 'POST', '/proposals', vote);
+    publicVote ??= proposal.publicVote?.slug ?? null;
     if (cast !== undefined) await signBallot(page, proposal.id, cast);
     if (close) await api(page, 'POST', `/proposals/${proposal.id}/close`);
   }
-  return { me, project };
+  return { me, project, publicVote };
 }

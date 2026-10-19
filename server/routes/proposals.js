@@ -66,7 +66,11 @@ router.post(
     const anonymous = Boolean(b.anonymous);
     // who voted what, shown to every member: signed votes only, and only when asked for, so a
     // caller that doesn't know the setting keeps the old rule of admins only
-    const publicBallots = !anonymous && b.publicBallots === true;
+    // a public vote: any NOX holder can vote on its own page and anyone can watch. Only signed
+    // votes weighted by power, since the power is what makes an outside wallet's ballot count.
+    const publicVote = b.publicVote === true;
+    if (publicVote && (anonymous || weighting !== 'power')) throw HttpError.badRequest('A public vote is a signed vote weighted by voting power: turn off anonymous ballots and count voting power.');
+    const publicBallots = publicVote || (!anonymous && b.publicBallots === true);
     // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three
     // trustees. Without them the vote key could never be set up and the vote would never open.
     const trustees = anonymous && weighting === 'power' ? b.trustees : null;
@@ -84,8 +88,8 @@ router.post(
     const now = Date.now();
     sql.tx(() => {
       sql.run(
-        'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, public_ballots, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        id, title, body, JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, publicBallots ? 1 : 0, req.user.id, now, now + days * DAY,
+        'INSERT INTO proposals (id, title, body, options, weighting, sealed, anonymous, public_ballots, public_slug, created_by, created_at, closes_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, title, body, JSON.stringify(options), weighting, b.sealed ? 1 : 0, anonymous ? 1 : 0, publicBallots ? 1 : 0, publicVote ? crypto.randomBytes(16).toString('base64url') : null, req.user.id, now, now + days * DAY,
       );
       savePower?.(id);
       // the census of an anonymous vote needs the snapshot first when it's weighted

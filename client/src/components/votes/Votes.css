@@ -167,3 +167,57 @@
   margin: 0;
   font-size: var(--text-sm);
 }
+
+/* a public vote's own page */
+.public-vote {
+  display: grid;
+  gap: 14px;
+}
+
+.public-vote h1 {
+  margin: 0;
+  font-size: var(--text-2xl);
+  font-weight: 500;
+}
+
+.public-vote h2 {
+  margin: 0 0 8px;
+  font-size: var(--text-md);
+  font-weight: 500;
+}
+
+.public-vote-sealed {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.public-ballots-scroll {
+  overflow-x: auto;
+}
+
+.public-ballots td.mono {
+  font-size: var(--text-xs);
+  word-break: break-all;
+}
+
+.public-vote-facts dl {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+}
+
+.public-vote-facts dl div {
+  display: grid;
+  grid-template-columns: minmax(120px, 180px) 1fr;
+  gap: 12px;
+  font-size: var(--text-sm);
+}
+
+.public-vote-facts dt {
+  color: var(--muted);
+}
+
+.public-vote-facts dd {
+  margin: 0;
+  word-break: break-all;
+}

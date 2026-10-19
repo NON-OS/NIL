@@ -7,6 +7,7 @@ import voterGroups from '../votes/voterGroups.js';
 import encryptedTally from '../votes/encrypted/encryptedTally.js';
 import publicDealings from '../votes/encrypted/publicDealings.js';
 import shareComplaints from '../votes/encrypted/shareComplaints.js';
+import ballotRows from '../votes/ballotRows.js';
 
 // The trustee side of an encrypted vote. Every member gets each trustee's signed commitments
 // and proofs of knowledge, so voters rebuild the vote key themselves instead of taking the
@@ -47,9 +48,7 @@ export default function toProposal(row, viewer) {
   const mine = sql.get('SELECT choice, weight FROM votes WHERE proposal_id = ? AND user_id = ?', row.id, viewer.id);
   const result = tally(row);
   const visible = closed || !row.sealed;
-  const ballots = row.public_ballots && visible
-    ? sql.all('SELECT user_id, address, choice, weight, created_at FROM votes WHERE proposal_id = ? ORDER BY created_at', row.id).map((v) => ({ userId: v.user_id, address: v.address, choice: v.choice, weight: v.weight, castAt: v.created_at }))
-    : null;
+  const ballots = row.public_ballots && visible ? ballotRows(row.id) : null;
   return {
     id: row.id,
     title: row.title,
@@ -58,6 +57,8 @@ export default function toProposal(row, viewer) {
     weighting: row.weighting,
     sealed: Boolean(row.sealed),
     publicBallots: Boolean(row.public_ballots),
+    // the page anyone can vote on and watch, for a public vote
+    publicVote: row.public_slug ? { slug: row.public_slug } : null,
     createdBy: row.created_by,
     createdAt: row.created_at,
     closesAt: row.closes_at,

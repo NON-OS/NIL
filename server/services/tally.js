@@ -10,9 +10,10 @@ export default function tally(proposal) {
   const options = parseJSON(proposal.options, []);
   const totals = options.map(() => 0n);
   // anonymous ballots count one each: they carry no weight because they carry no identity
+  // a public vote also counts the wallets that belong to no member, each with its own power
   const votes = proposal.anonymous
     ? sql.all('SELECT choice, \'1\' AS weight FROM anonymous_ballots WHERE proposal_id = ?', proposal.id)
-    : sql.all('SELECT choice, weight FROM votes WHERE proposal_id = ?', proposal.id);
+    : sql.all('SELECT choice, weight FROM votes WHERE proposal_id = ? UNION ALL SELECT choice, weight FROM outside_votes WHERE proposal_id = ?', proposal.id, proposal.id);
   for (const v of votes) totals[v.choice] += BigInt(v.weight);
   return { totals: totals.map(String), voters: votes.length };
 }

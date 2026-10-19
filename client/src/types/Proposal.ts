@@ -12,6 +12,8 @@ export default interface Proposal {
   sealed: boolean;
   // a signed vote whose ballots every member can see, wallet and choice, like a DAO's
   publicBallots: boolean;
+  // a public vote: any NOX holder votes on its page at /vote/<slug>, and anyone can watch
+  publicVote: { slug: string } | null;
   createdBy: string | null;
   createdAt: number;
   closesAt: number;

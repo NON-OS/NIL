@@ -17,6 +17,11 @@ export default {
   // a task nobody listed on the board: unknown to everyone, signed in or not
   'POST /api/public/bounties/:id/challenge': { open: true, allow: NOBODY, id: 'task', denied: [404] },
   'POST /api/public/bounties/:id/apply': { open: true, allow: NOBODY, id: 'task', denied: [400, 404] },
+  // a public vote is reached by its unguessable address alone; one nobody made is unknown to all
+  'GET /api/public/votes/:slug': { open: true, allow: NOBODY, slug: () => 'no-such-vote-aaaaaaaaa', denied: [404] },
+  'GET /api/public/votes/:slug/audit': { open: true, allow: NOBODY, slug: () => 'no-such-vote-aaaaaaaaa', denied: [404] },
+  'POST /api/public/votes/:slug/challenge': { open: true, allow: NOBODY, slug: () => 'no-such-vote-aaaaaaaaa', denied: [404], body: { address: wallet().address, choice: 0 } },
+  'POST /api/public/votes/:slug/ballot': { open: true, allow: NOBODY, slug: () => 'no-such-vote-aaaaaaaaa', denied: [404], body: { challengeId: 'x', signature: '0x00' } },
   'POST /api/auth/wallet/challenge': { open: true, allow: ALL, body: () => ({ address: wallet().address, mode: 'login' }) },
   // a wallet that signs correctly but has no account here gets nothing; a challenge only comes
   // back from the network it was given to, so both calls come from one address

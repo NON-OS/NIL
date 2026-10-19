@@ -82,7 +82,7 @@ try {
     const visitor = await open(size);
     for (const screen of screens.signedOut.filter((s) => wanted(s.name) && !(s.desktopOnly && size !== 'desktop'))) {
       await check(visitor, size, screen.name, async () => {
-        await visitor.goto(`${app.base}${screen.path}`);
+        await visitor.goto(`${app.base}${typeof screen.path === 'function' ? screen.path(made) : screen.path}`);
         await screen.ready(visitor).first().waitFor();
         await settle(visitor);
         if (screen.then) await screen.then(visitor);

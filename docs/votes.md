@@ -8,6 +8,7 @@ Nil has three kinds of vote. You choose between them with two settings when you 
 
 | Kind | Settings | Who can see each choice | How ballots count |
 |---|---|---|---|
+| Public | Anonymous ballots off, Voting power, Public vote on | Anyone with the link, on the vote's own page | By voting power, for members and any other NOX holder |
 | Signed, ballots public | Anonymous ballots off, Members can see who voted what on | Every member, in the app and the audit file | One per person, or by voting power |
 | Signed | Anonymous ballots off, Members can see who voted what off | Admins, through the audit file | One per person, or by voting power |
 | Anonymous | Anonymous ballots on, One person, one vote | Nobody | One per person |
@@ -26,6 +27,7 @@ Only admins can start a vote. On **Votes**, click **New vote**, then:
 5. Turn on **Seal results until it closes** to hide the running totals until the end.
 6. Turn on **Anonymous ballots** for an anonymous or encrypted vote.
 7. For a signed vote, **Members can see who voted what** starts on. Leave it on to show every member each ballot, or turn it off to keep choices to admins.
+8. For a signed vote counted by voting power, turn on **Public vote: any NOX holder can vote, anyone can watch** to open it beyond the workspace (see [Public votes](#public-votes)). It's off unless you turn it on.
 
 Click **Start vote**. Everyone is notified.
 
@@ -46,6 +48,35 @@ With it off, the app shows each person only their own choice. The audit file, wh
 Either way, a sealed vote shows its ballots, in the list and in the audit file, once it closes. Votes started before this setting existed keep the rule they were started under: admins only. Use an anonymous vote when choices must stay secret.
 
 In a vote weighted by voting power, you need some power at the moment the vote opened. Otherwise Nil tells you that you had none then.
+
+## Public votes
+
+A public vote is a signed vote weighted by voting power that anyone can watch and any NOX holder can vote in, the way DAO votes work. It gets a page of its own at an address nobody can guess, `/vote/` followed by 22 random characters. **Copy public link** on the vote card copies it. Closing the vote ends voting on the page too, and deleting it takes the page down.
+
+The page needs no account. Anyone who opens it sees:
+
+- the question, the details and the options,
+- the running totals, unless the vote is sealed,
+- every ballot: the wallet that signed it, its choice, its voting power and when it was cast, also held back until the close for a sealed vote,
+- the snapshot block and the contracts the power was read from (the token, the staking contract and the Zero-State Pass), with the power per pass,
+- an **Audit file** button, for a file with every ballot's signed text and signature, so anyone can recount.
+
+The page shows no member names or account ids and nothing else about the workspace: only its name, which also goes into the text each wallet signs.
+
+To vote there, a visitor picks an option and connects a wallet: the one in their browser, or on a computer or tablet the wallet app on their phone through the QR code, when the server has phone wallets on. The wallet signs a short text that names the site, the workspace, the vote, the choice and the wallet itself. Signing costs nothing and sends no transaction. The server checks the signature the way it checks members' ballots: a plain wallet by recovering who signed, and a smart wallet by asking it on-chain at one block, which the audit file notes.
+
+A wallet's power is the NOX it held, plus NOX staked, plus its Zero-State Passes times the power per pass, all read at the vote's snapshot block. A wallet with no power then can't vote. Each wallet has one ballot, and signing again while the vote is open replaces it. Since the power follows the tokens, spreading them over more wallets gains nothing. Reading what a wallet held days ago needs an Ethereum node that keeps old state; if the server's node can't answer, the ballot is refused rather than counted as zero.
+
+Members count once, here or there. A wallet that was linked to a member when the vote opened, or is linked to one now, votes as that member: its ballot is the member's one ballot, with all the power of the wallets they had linked at the snapshot, and it replaces the ballot they cast in the app, or the other way round. That's the same rule as a weighted vote in the app, where a member's wallets add up to one ballot. A guest's wallet votes like anyone else's.
+
+Visitors get no account, no session and no cookie. Asking for a ballot and casting one is limited per network, counted the way sign-in counts it, and a ballot request has a size limit. Each ballot text is single use, works for five minutes, and only from the network that asked for it.
+
+What others learn when someone votes on the page:
+
+- Everyone with the link sees the wallet, its choice, its power and the time. Anyone can look the wallet up on the chain. Don't vote from a wallet you want to keep apart from the rest of your activity.
+- The server sees the visitor's IP address, as it does for any page. It keeps it in memory only, to count requests against the limits for a few minutes, and never writes it to its database. Whatever runs in front of the server sees it too: a CDN such as Cloudflare, if the host uses one, and the host's own logs.
+- The server's Ethereum node, set by `NOX_RPC_URL`, is asked what the wallet held at the snapshot block and, for a smart wallet, whether it accepts the signature. It sees those lookups and the server's IP address, never the visitor's.
+- With a phone wallet, WalletConnect's relay sees what it always does (see [Signing in](signing-in.md#use-a-wallet-on-your-phone)).
 
 ## Anonymous votes
 

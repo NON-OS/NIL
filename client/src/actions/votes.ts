@@ -13,6 +13,8 @@ interface NewProposal {
   anonymous: boolean;
   // signed votes only: every member sees who voted what
   publicBallots: boolean;
+  // weighted signed votes only: open to any NOX holder on a page anyone can watch
+  publicVote: boolean;
   days: number;
   // three members who hold the decryption key together (encrypted, weighted votes only)
   trustees?: string[];

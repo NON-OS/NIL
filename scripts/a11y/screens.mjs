@@ -59,6 +59,7 @@ const signedOut = [
   { name: 'open-bounties', path: '/open', ready: (page) => page.getByRole('heading', { level: 1 }) },
   { name: 'help-signed-out', path: '/help', ready: (page) => page.locator('.help') },
   { name: 'verify-signed-out', path: '/verify', ready: (page) => page.getByRole('heading', { level: 1 }) },
+  { name: 'public-vote', path: ({ publicVote }) => `/vote/${publicVote}`, ready: (page) => page.getByRole('heading', { level: 1 }) },
 ];
 
 // signed in as the workspace owner; a path can depend on what the seed made

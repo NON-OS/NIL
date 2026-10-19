@@ -1,6 +1,6 @@
 import './Votes.css';
 import { useState } from 'react';
-import { Clock, Coins, Download, Eye, EyeOff, Lock, ShieldCheck, Users } from 'lucide-react';
+import { Clock, Coins, Download, Eye, EyeOff, Globe, Link2, Lock, ShieldCheck, Users } from 'lucide-react';
 import Meter from '../charts/Meter';
 import ConfirmButton from '../ui/ConfirmButton';
 import Spinner from '../ui/Spinner';
@@ -11,6 +11,7 @@ import dates from '../../lib/dates';
 import timeLeft from '../../lib/timeLeft';
 import formatUnits from '../../lib/formatUnits';
 import cx from '../../lib/cx';
+import copyText from '../../lib/copyText';
 import type Proposal from '../../types/Proposal';
 import isAdminUser from '../../lib/isAdmin';
 import AnonymousBallot from './AnonymousBallot';
@@ -54,7 +55,7 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
           <span>{proposal.weighting === 'power' ? <><Coins /> weighted by voting power</> : <><Users /> one person, one vote</>}</span>
           {proposal.sealed && <span><EyeOff /> sealed until it closes</span>}
           {proposal.anonymous && <span><ShieldCheck /> anonymous</span>}
-          {proposal.publicBallots && <span><Eye /> ballots public to members</span>}
+          {proposal.publicVote ? <span><Globe /> public</span> : proposal.publicBallots && <span><Eye /> ballots public to members</span>}
           {author && <span>by {author.name}</span>}
         </div>
       </div>
@@ -65,7 +66,9 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
       {open && !proposal.anonymous && (
         <p className="proposal-notice" role="note">
           <Eye aria-hidden="true" />{' '}
-          {proposal.publicBallots
+          {proposal.publicVote
+            ? 'A public vote. Anyone with the link sees each wallet’s choice and power, and any holder can vote there. Your ballot counts once, here or there.'
+            : proposal.publicBallots
             ? 'Not anonymous. Your wallet signs your ballot, and everyone in the workspace can see who voted for what.'
             : 'Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.'}
         </p>
@@ -100,6 +103,11 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
           {proposal.myVote && ` · you voted ${proposal.options[proposal.myVote.choice]} with ${weight(proposal.myVote.weight)}`}
         </span>
         <span className="grow" />
+        {proposal.publicVote && (
+          <button type="button" className="btn btn-sm btn-ghost" onClick={() => void copyText(`${location.origin}/vote/${proposal.publicVote!.slug}`, 'Link to the public vote copied.')}>
+            <Link2 /> Copy public link
+          </button>
+        )}
         {/* admins always, every member when the ballots are public; a sealed vote's ballots would give
             its running totals away, so its file waits for the close */}
         {(isAdmin || proposal.publicBallots) && (!proposal.sealed || proposal.closedAt) && (

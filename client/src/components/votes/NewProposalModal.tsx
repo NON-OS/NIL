@@ -12,15 +12,18 @@ const DURATIONS = [1, 3, 7, 14, 30].map((d) => ({ value: String(d), label: d ===
 
 export default function NewProposalModal({ onClose, onCreated }: { onClose: () => void; onCreated: () => void }) {
   const nox = useStore((s) => s.nox);
-  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, publicBallots: true, days: 7, trustees: [] as string[] });
+  const [form, setForm] = useState({ title: '', body: '', options: 'Yes\nNo\nAbstain', weighting: 'equal' as 'equal' | 'power', sealed: false, anonymous: false, publicBallots: true, publicVote: false, days: 7, trustees: [] as string[] });
   const [busy, setBusy] = useState(false);
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
+  // open to any NOX holder: only a signed vote counted by voting power can be
+  const canBePublic = Boolean(nox) && form.weighting === 'power' && !form.anonymous;
+  const publicVote = canBePublic && form.publicVote;
 
   const create = async () => {
     setBusy(true);
     try {
-      await votes.create({ ...form, options, publicBallots: !form.anonymous && form.publicBallots, trustees: form.anonymous && form.weighting === 'power' ? form.trustees : undefined });
+      await votes.create({ ...form, options, publicVote, publicBallots: publicVote || (!form.anonymous && form.publicBallots), trustees: form.anonymous && form.weighting === 'power' ? form.trustees : undefined });
       toast.show('Vote started. Everyone was notified.', { tone: 'success' });
       onCreated();
       onClose();
@@ -83,15 +86,26 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
             <button type="button" className="toggle" role="switch" aria-checked={form.anonymous} onClick={() => set({ anonymous: !form.anonymous })} aria-label="Anonymous ballots" />
             Anonymous ballots
           </label>
-          {!form.anonymous && (
+          {!form.anonymous && !publicVote && (
             <label className="filter-toggle">
               <button type="button" className="toggle" role="switch" aria-checked={form.publicBallots} onClick={() => set({ publicBallots: !form.publicBallots })} aria-label="Members can see who voted what" />
               Members can see who voted what
             </label>
           )}
+          {canBePublic && (
+            <label className="filter-toggle">
+              <button type="button" className="toggle" role="switch" aria-checked={form.publicVote} onClick={() => set({ publicVote: !form.publicVote })} aria-label="Public vote: any NOX holder can vote, anyone can watch" />
+              Public vote: any {nox?.symbol ?? 'NOX'} holder can vote, anyone can watch
+            </label>
+          )}
           <HelpLink topic="votes" label="Which kind of vote to pick" newTab />
         </div>
-        {!form.anonymous && form.publicBallots && (
+        {publicVote && (
+          <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
+            The vote gets a page of its own, with a link you share. Anyone who opens it sees the question, the totals and every ballot: each wallet, its choice and its power. Anyone holding {nox?.symbol ?? 'NOX'}, staked {nox?.symbol ?? 'NOX'} or Zero-State Passes when the vote opens can vote there with their wallet, without an account. Members can vote there or here, and count once either way.
+          </p>
+        )}
+        {!form.anonymous && !publicVote && form.publicBallots && (
           <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
             Each voter’s wallet signs their ballot. Everyone in the workspace sees who voted for what, and any member can download the audit file with every wallet and its choice. Guests see nothing. Turn on anonymous ballots when choices must stay private.
           </p>

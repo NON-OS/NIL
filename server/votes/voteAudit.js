@@ -76,7 +76,7 @@ function signed(row) {
     v: 2,
     // the network smart-wallet ballots were checked on
     chainId: config.nox.chainId,
-    proposal: summary(row, { weighting: row.weighting }),
+    proposal: summary(row, { weighting: row.weighting, ...(row.public_slug ? { public: true } : {}) }),
     power: weighted
       ? { chainId: config.nox.chainId, block: row.snapshot_block, token: { address: config.nox.token, symbol: config.nox.symbol, decimals: config.nox.decimals }, staking: config.power.staking, zsp: config.power.zsp, zspPower: row.zsp_power }
       : null,
@@ -91,7 +91,24 @@ function signed(row) {
       ...(weighted ? { snapshot: snapshotOf(row.id, v.user_id) } : {}),
       castAt: new Date(v.created_at).toISOString(),
     })),
+    // a public vote's ballots from wallets that belong to no member: each counts what that one
+    // wallet held at the snapshot block, which anyone can read again from a node with old state
+    ...(row.public_slug ? { outsideBallots: outsideBallots(row.id) } : {}),
   };
+}
+
+function outsideBallots(proposalId) {
+  return sql.all('SELECT address, choice, nox, staked, zsp, weight, message, signature, checked_by, checked_block, created_at FROM outside_votes WHERE proposal_id = ? ORDER BY created_at', proposalId).map((v) => ({
+    address: v.address,
+    choice: v.choice,
+    weight: v.weight,
+    message: v.message,
+    signature: v.signature,
+    signatureCheck: v.checked_by,
+    ...(v.checked_block !== null ? { checkedAtBlock: v.checked_block } : {}),
+    snapshot: { nox: v.nox, staked: v.staked, zsp: v.zsp, power: v.weight },
+    castAt: new Date(v.created_at).toISOString(),
+  }));
 }
 
 // Everything needed to recount a vote independently, by kind.
