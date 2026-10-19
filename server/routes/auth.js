@@ -22,6 +22,8 @@ router.get(
     user: currentUser(req),
     workspace: publicWorkspace(),
     holderGate: holderGate.get().enabled ? { minimum: holderGate.get().minimum, symbol: config.nox.symbol, decimals: config.nox.decimals } : null,
+    // read here at runtime, so the web build stays the same on every server
+    walletConnect: config.walletConnect.enabled ? { projectId: config.walletConnect.projectId, relayUrl: config.walletConnect.relayUrl, chainId: config.nox.chainId } : null,
   })),
 );
 

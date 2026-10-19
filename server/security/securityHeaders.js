@@ -1,22 +1,11 @@
-const CSP = [
-  "default-src 'self'",
-  // wasm-unsafe-eval lets the browser compile WebAssembly (the zero-knowledge prover) and nothing else: no eval of JavaScript
-  "script-src 'self' 'wasm-unsafe-eval'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
-  "font-src 'self'",
-  "connect-src 'self'",
-  "media-src 'self'",
-  "object-src 'none'",
-  "frame-src 'none'",
-  "frame-ancestors 'none'",
-  "base-uri 'none'",
-  "form-action 'self'",
-  'upgrade-insecure-requests',
-].join('; ');
+import walletConnect from '../config/walletConnect.js';
+import contentSecurityPolicy from './contentSecurityPolicy.js';
+
+const relay = walletConnect.enabled ? walletConnect.relayUrl : null;
+const CSP = { secure: contentSecurityPolicy({ secure: true, relay }), plain: contentSecurityPolicy({ secure: false, relay }) };
 
 export default function securityHeaders(req, res, next) {
-  res.setHeader('Content-Security-Policy', req.secure ? CSP : CSP.replace('; upgrade-insecure-requests', ''));
+  res.setHeader('Content-Security-Policy', req.secure ? CSP.secure : CSP.plain);
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('X-Frame-Options', 'DENY');
   res.setHeader('Referrer-Policy', 'no-referrer');
