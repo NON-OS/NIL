@@ -85,6 +85,9 @@ test('only key messages built in this browser skip the check', () => {
     assert.ok(f === path.join('lib', 'signServerText.ts') || buildsKeyMessage, `${f} signs with ethereum.sign directly; use signServerText for text from the server`);
   }
   assert.ok(callers.length >= 3);
-  const personalSign = files.filter((f) => /'personal_sign'/.test(fs.readFileSync(path.join(src, f), 'utf8')));
+  // the phone wallet bridge names the method only to pass on what lib/ethereum.ts asks for
+  const bridge = [path.join('lib', 'phone', 'phoneProtocol.ts'), path.join('lib', 'phone', 'createPhoneProvider.ts')];
+  const personalSign = files.filter((f) => /'personal_sign'/.test(fs.readFileSync(path.join(src, f), 'utf8')) && !bridge.includes(f));
   assert.deepEqual(personalSign, [path.join('lib', 'ethereum.ts')]);
+  for (const f of bridge) assert.ok(!/ethereum\.sign\(|signServerText/.test(fs.readFileSync(path.join(src, f), 'utf8')), `${f} only forwards requests`);
 });

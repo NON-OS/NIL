@@ -1,13 +1,15 @@
 import './Wallets.css';
 import { ExternalLink, RotateCw } from 'lucide-react';
 import QrCode from '../ui/QrCode';
+import PhoneWalletOffer from '../phone/PhoneWalletOffer';
 import walletApps from '../../lib/walletApps';
 import wallets from '../../lib/wallets';
 import isPhone from '../../lib/isPhone';
 
 // For someone trying to sign in on a device with no wallet. Everything here is a link the person
-// chooses to open; Nil itself loads nothing from any wallet maker.
-export default function NoWalletPanel({ onBack }: { onBack: () => void }) {
+// chooses to open; Nil itself loads nothing from any wallet maker. Where the server offers phone
+// wallets, a computer can also use the wallet app on the person's phone over WalletConnect.
+export default function NoWalletPanel({ onBack, onPhone }: { onBack: () => void; onPhone?: () => void }) {
   const here = location.href;
   const phone = isPhone();
   const tryAgain = () => {
@@ -40,6 +42,7 @@ export default function NoWalletPanel({ onBack }: { onBack: () => void }) {
         </section>
       ) : (
         <>
+          {onPhone && <PhoneWalletOffer onPhone={onPhone} />}
           <section className="no-wallet-step">
             <h2>Add a wallet to this browser</h2>
             <p>Get one from its official site, then come back here.</p>

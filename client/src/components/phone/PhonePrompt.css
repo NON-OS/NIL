@@ -1,0 +1,63 @@
+/* bottom left on wide screens, clear of the signing guide on the right; along the top on narrow ones */
+.phone-prompt {
+  position: fixed;
+  left: max(20px, env(safe-area-inset-left));
+  bottom: max(20px, env(safe-area-inset-bottom));
+  z-index: 86;
+  display: grid;
+  gap: 8px;
+  width: min(360px, calc(100vw - 32px));
+  padding: 14px 16px;
+  border: 1px solid var(--line-strong);
+  border-top: 2px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+  color: var(--ink);
+  animation: rise-in 0.18s ease-out;
+}
+
+.phone-prompt-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.phone-prompt-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--accent-line);
+}
+
+.phone-prompt p {
+  margin: 0;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+}
+
+.phone-prompt-who .mono {
+  color: var(--ink);
+}
+
+.phone-prompt .phone-prompt-foot {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+.phone-prompt-stop {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  text-decoration: underline;
+}
+
+@media (max-width: 599px) {
+  .phone-prompt {
+    top: max(16px, env(safe-area-inset-top));
+    right: 16px;
+    bottom: auto;
+    left: 16px;
+    width: auto;
+  }
+}

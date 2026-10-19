@@ -20,6 +20,8 @@ const ICON = /^data:image\/(png|jpeg|gif|webp|svg\+xml)[;,]/i;
 const announced = new Map<string, WalletOption>();
 const listeners = new Set<() => void>();
 let snapshot: WalletOption[] = [];
+// a wallet app on the person's phone, connected over WalletConnect and confirmed
+let phone: WalletOption | null = null;
 let settled = false;
 let started = false;
 
@@ -34,7 +36,8 @@ function injected(): WalletOption | null {
 function refresh() {
   // window.ethereum is usually one of the announced wallets again, so it only counts when none announce
   const fallback = injected();
-  snapshot = announced.size ? [...announced.values()] : fallback ? [fallback] : [];
+  const found = announced.size ? [...announced.values()] : fallback ? [fallback] : [];
+  snapshot = phone ? [...found, phone] : found;
   listeners.forEach((listener) => listener());
 }
 
@@ -91,6 +94,14 @@ const wallets = {
 
   choose(id: string) {
     storage.set(CHOICE, id);
+    refresh();
+  },
+
+  // The phone wallet joins the list once the person confirms it, and leaves when it disconnects,
+  // taking the choice with it so the next wallet button asks again.
+  setPhone(option: WalletOption | null) {
+    if (!option && phone && wallets.chosenId() === phone.id) storage.set(CHOICE, null);
+    phone = option;
     refresh();
   },
 

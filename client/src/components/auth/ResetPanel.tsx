@@ -7,6 +7,8 @@ import useWalletFlow from '../../hooks/useWalletFlow';
 import WalletPicker from './WalletPicker';
 import WalletStatus from './WalletStatus';
 import NoWalletPanel from './NoWalletPanel';
+import PhoneWalletCard from '../phone/PhoneWalletCard';
+import PhoneWalletButton from '../phone/PhoneWalletButton';
 
 interface ResetInfo {
   valid: boolean;
@@ -49,7 +51,8 @@ export default function ResetPanel({ token }: { token: string }) {
       </div>
     );
   }
-  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} />;
+  if (flow.stage === 'phone') return <PhoneWalletCard onDone={flow.phoneDone} onBack={flow.back} />;
+  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} onPhone={() => flow.phone()} />;
   if (flow.stage === 'pick') return <WalletPicker wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} onBack={flow.back} />;
 
   return (
@@ -64,6 +67,7 @@ export default function ResetPanel({ token }: { token: string }) {
       <button type="button" className="btn btn-primary btn-lg" onClick={() => flow.start(relink)} disabled={busy}>
         {busy ? <Spinner size={15} /> : <Wallet />} Link a new wallet and sign in
       </button>
+      <PhoneWalletButton onClick={() => flow.phone(relink)} disabled={busy} />
       <WalletStatus flow={flow} />
       <p className="method-hint">Signing proves the new wallet is yours. It costs nothing and sends nothing. The link works once, and using it signs you out on every other device.</p>
     </div>

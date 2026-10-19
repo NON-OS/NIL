@@ -11,6 +11,7 @@ import { chromium } from 'playwright-core';
 import AxeBuilder from '@axe-core/playwright';
 import seed from './seed.mjs';
 import screens from './screens.mjs';
+import fakeRelay from '../../server/test/helpers/fakeRelay.js';
 
 const { values: opt } = parseArgs({ options: { shots: { type: 'string' }, only: { type: 'string' }, port: { type: 'string', default: process.env.A11Y_PORT ?? '3989' } } });
 const world = createRequire(import.meta.url)('./world.cjs');
@@ -22,7 +23,9 @@ const FAILING = new Set(['serious', 'critical']);
 // Built-in AI and pool payouts on, so their buttons and cards are checked too. The AI and pool
 // service addresses are a closed local port: nothing is ever sent anywhere.
 const NOWHERE = 'http://127.0.0.1:9';
-const FEATURES = { ANTHROPIC_API_KEY: 'stand-in', ANTHROPIC_MODEL: 'stand-in', ANTHROPIC_BASE_URL: NOWHERE, PRIVACY_POOLS: 'on', PRIVACY_POOLS_RELAYER_URL: NOWHERE, PRIVACY_POOLS_ASP_URL: NOWHERE };
+// Phone wallets too, against a WalletConnect relay on this machine, with a placeholder project ID.
+const relay = await fakeRelay();
+const FEATURES = { ANTHROPIC_API_KEY: 'stand-in', ANTHROPIC_MODEL: 'stand-in', ANTHROPIC_BASE_URL: NOWHERE, PRIVACY_POOLS: 'on', PRIVACY_POOLS_RELAYER_URL: NOWHERE, PRIVACY_POOLS_ASP_URL: NOWHERE, WALLETCONNECT_PROJECT_ID: '0'.repeat(32), WALLETCONNECT_RELAY_URL: relay.url };
 
 if (opt.shots) fs.mkdirSync(opt.shots, { recursive: true });
 const wanted = (name) => !opt.only || opt.only === name;
@@ -77,17 +80,18 @@ try {
 
   for (const size of Object.keys(SIZES)) {
     const visitor = await open(size);
-    for (const screen of screens.signedOut.filter((s) => wanted(s.name))) {
+    for (const screen of screens.signedOut.filter((s) => wanted(s.name) && !(s.desktopOnly && size !== 'desktop'))) {
       await check(visitor, size, screen.name, async () => {
         await visitor.goto(`${app.base}${screen.path}`);
         await screen.ready(visitor).first().waitFor();
         await settle(visitor);
+        if (screen.then) await screen.then(visitor);
       });
     }
     await visitor.context().close();
     const page = await open(size, { cookies, key });
     for (const screen of screens.signedIn) {
-      if (!wanted(screen.name) || (screen.phoneOnly && size !== 'phone')) continue;
+      if (!wanted(screen.name) || (screen.phoneOnly && size !== 'phone') || (screen.desktopOnly && size !== 'desktop')) continue;
       await check(page, size, screen.name, async () => {
         await page.goto(`${app.base}${typeof screen.path === 'function' ? screen.path(made) : screen.path}`);
         await settle(page);
@@ -101,6 +105,7 @@ try {
 } finally {
   await browser.close();
   app.stop();
+  await relay.close();
 }
 
 let failing = 0;

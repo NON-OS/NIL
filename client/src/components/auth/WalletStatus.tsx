@@ -1,10 +1,13 @@
 import './Wallets.css';
 import WalletIcon from './WalletIcon';
+import PhoneWalletStatus from '../phone/PhoneWalletStatus';
+import phoneProtocol from '../../lib/phone/phoneProtocol';
 import type useWalletFlow from '../../hooks/useWalletFlow';
 
 // The line under a wallet button: which wallet will be used when there's a choice, or where to
 // start when this device has none.
 export default function WalletStatus({ flow }: { flow: ReturnType<typeof useWalletFlow> }) {
+  if (flow.chosen?.id === phoneProtocol.walletId) return <PhoneWalletStatus onChange={flow.list.length > 1 ? flow.change : undefined} />;
   if (flow.list.length > 1 && flow.chosen) {
     return (
       <p className="wallet-status">

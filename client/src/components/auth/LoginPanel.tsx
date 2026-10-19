@@ -8,6 +8,8 @@ import useWalletFlow from '../../hooks/useWalletFlow';
 import WalletPicker from './WalletPicker';
 import WalletStatus from './WalletStatus';
 import NoWalletPanel from './NoWalletPanel';
+import PhoneWalletCard from '../phone/PhoneWalletCard';
+import PhoneWalletButton from '../phone/PhoneWalletButton';
 
 export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void }) {
   const workspaceName = useStore((s) => s.workspace.name.trim());
@@ -28,7 +30,8 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
     }
   };
 
-  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} />;
+  if (flow.stage === 'phone') return <PhoneWalletCard onDone={flow.phoneDone} onBack={flow.back} />;
+  if (flow.stage === 'guide') return <NoWalletPanel onBack={flow.back} onPhone={() => flow.phone()} />;
   if (flow.stage === 'pick') return <WalletPicker wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} onBack={flow.back} />;
 
   return (
@@ -39,6 +42,7 @@ export default function LoginPanel({ onHolderJoin }: { onHolderJoin?: () => void
       <button type="button" className="btn btn-primary btn-lg" onClick={() => flow.start(signIn)} disabled={busy}>
         {busy ? <Spinner size={15} /> : <Wallet />} Sign in with your wallet
       </button>
+      <PhoneWalletButton onClick={() => flow.phone(signIn)} disabled={busy} />
       <WalletStatus flow={flow} />
       <div className="auth-links">
         {onHolderJoin ? (

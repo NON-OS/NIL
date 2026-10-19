@@ -9,6 +9,7 @@ import ProjectModal from './components/overlays/ProjectModal';
 import Toasts from './components/ui/Toasts';
 import KeyCheckModal from './components/keys/KeyCheckModal';
 import SigningGuide from './components/keys/SigningGuide';
+import PhoneWalletHost from './components/phone/PhoneWalletHost';
 import BrandArt from './components/brand/BrandArt';
 import Spinner from './components/ui/Spinner';
 import MyWorkView from './views/MyWorkView';
@@ -129,9 +130,12 @@ export default function App() {
   }
   if (segments[0] === 'open') {
     return (
-      <Suspense fallback={<LoadingScreen />}>
-        <OpenBountiesPage />
-      </Suspense>
+      <>
+        <Suspense fallback={<LoadingScreen />}>
+          <OpenBountiesPage />
+        </Suspense>
+        <PhoneWalletHost />
+      </>
     );
   }
 
@@ -145,6 +149,7 @@ export default function App() {
         <Suspense fallback={<LoadingScreen />}>
           {segments[0] === 'verify' ? <VerifyView standalone /> : segments[0] === 'help' ? <HelpView standalone /> : <AuthView />}
         </Suspense>
+        <PhoneWalletHost />
         <Toasts />
       </>
     );
@@ -173,6 +178,7 @@ export default function App() {
       <UpdatePrompt />
       {keyCheck && <KeyCheckModal />}
       <SigningGuide />
+      <PhoneWalletHost />
       <BackupWalletNudge />
       <Toasts />
     </div>

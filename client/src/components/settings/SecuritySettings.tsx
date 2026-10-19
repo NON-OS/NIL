@@ -15,6 +15,8 @@ import BackupWalletSteps from './BackupWalletSteps';
 import WalletChoices from '../auth/WalletChoices';
 import WalletStatus from '../auth/WalletStatus';
 import useWalletFlow from '../../hooks/useWalletFlow';
+import PhoneWalletButton from '../phone/PhoneWalletButton';
+import PhoneWalletDialog from '../phone/PhoneWalletDialog';
 import useRoute from '../../hooks/useRoute';
 import HelpLink from '../help/HelpLink';
 import WalletAddress from './WalletAddress';
@@ -120,10 +122,12 @@ export default function SecuritySettings() {
           <button type="button" className={data.credentials.length === 1 || confirmed ? 'btn btn-primary' : 'btn'} disabled={linking} onClick={() => flow.start(link)}>
             {linking ? <Spinner size={14} /> : <Wallet />} {confirmed ? 'Link the new wallet' : 'Link another wallet'}
           </button>
+          <PhoneWalletButton className="btn" onClick={() => flow.phone()} disabled={linking} />
           <SignOutEverywhere />
         </div>
         {flow.stage === 'pick' && <WalletChoices wallets={flow.list} chosenId={flow.chosen?.id ?? null} onPick={flow.pick} />}
-        {flow.stage === 'guide' && <p className="muted">There’s no wallet in this browser. Add one, reload this page, then link it here.</p>}
+        {flow.stage === 'guide' && <p className="muted">There’s no wallet in this browser. Add one, reload this page, then link it here, or use a wallet on your phone.</p>}
+        {flow.stage === 'phone' && <PhoneWalletDialog onDone={flow.phoneDone} onClose={flow.back} />}
         <WalletStatus flow={flow} />
       </section>
 

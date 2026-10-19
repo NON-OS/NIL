@@ -11,6 +11,9 @@ import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import plan from '../../actions/plan';
 import ethereum from '../../lib/ethereum';
+import wallets from '../../lib/wallets';
+import phoneProtocol from '../../lib/phone/phoneProtocol';
+import usePhoneWallet from '../../hooks/usePhoneWallet';
 import formatUnits from '../../lib/formatUnits';
 import shortAddress from '../../lib/shortAddress';
 import timeLeft from '../../lib/timeLeft';
@@ -58,6 +61,9 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
     run('hash', () => plan.name(invoice.id, hash.trim()));
   };
   const inFlight = invoice.payments.some((p) => p.status === 'seen' || p.status === 'confirming');
+  // the phone wallet that's connected, or the one offered when this browser has none
+  const phone = usePhoneWallet();
+  const onPhone = phone.confirmed ? wallets.active()?.id === phoneProtocol.walletId : phone.enabled && !ethereum.available();
 
   return (
     <div className="settings-card invoice">
@@ -94,8 +100,8 @@ export default function InvoiceCard({ invoice, onChange }: { invoice: Invoice; o
               <CopyValue label={`To ${status.treasuryName ?? 'the treasury'}`} value={status.treasury ?? ''} shown={shortAddress(status.treasury ?? '')} />
               <CopyValue label="Payment link" value={amount.link} shown="ethereum: link for a wallet" />
               <div className="settings-row">
-                <button type="button" className="btn btn-primary" disabled={busy !== null || !ethereum.available()} onClick={() => run('wallet', () => plan.payWithWallet(invoice, amount))}>
-                  {busy === 'wallet' ? <Spinner size={14} /> : <Wallet />} Pay {amount.symbol} from this browser’s wallet
+                <button type="button" className="btn btn-primary" disabled={busy !== null || !(ethereum.available() || onPhone)} onClick={() => run('wallet', () => plan.payWithWallet(invoice, amount))}>
+                  {busy === 'wallet' ? <Spinner size={14} /> : <Wallet />} Pay {amount.symbol} from {onPhone ? 'your phone wallet' : 'this browser’s wallet'}
                 </button>
               </div>
               <p className="muted plan-fine">

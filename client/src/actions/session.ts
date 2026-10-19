@@ -29,6 +29,8 @@ import type TaskArchive from '../types/TaskArchive';
 import type Passkey from '../types/Passkey';
 import vault from './vault';
 import offline from './offline';
+import phoneConfig from '../lib/phone/phoneConfig';
+import phoneWallet from '../lib/phone/phoneWallet';
 import unreachable from '../lib/unreachable';
 
 interface Bootstrap {
@@ -127,6 +129,8 @@ function signedOut(message?: string) {
   // the keys, and every private task, comment and file opened with them
   vault.lock();
   keyScope.reset();
+  // a phone wallet goes with the sign-in: the phone is told, and its keys are forgotten here
+  void phoneWallet.end();
   pinsChecked = false;
   // a count never used before, so the key directory isn't served from this account's pins
   store.reset({ phase: 'auth', keysRev: store.get().keysRev + 1 });
@@ -143,8 +147,10 @@ const session = {
 
   async boot() {
     try {
-      const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null; holderGate: HolderGate | null }>('/auth/state');
+      const s = await http.get<{ needsSetup: boolean; user: User | null; workspace: Workspace | null; holderGate: HolderGate | null; walletConnect?: unknown }>('/auth/state');
       offline.answered();
+      phoneConfig.set(s.walletConnect);
+      void phoneWallet.restore();
       if (s.workspace) store.set({ workspace: s.workspace });
       if (s.user) await load();
       else store.set({ phase: 'auth', needsSetup: s.needsSetup, holderGate: s.holderGate });

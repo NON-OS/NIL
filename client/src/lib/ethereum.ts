@@ -1,4 +1,5 @@
 import wallets from './wallets';
+import phoneWallet from './phone/phoneWallet';
 import type Eip1193Provider from '../types/Eip1193Provider';
 
 const provider = (): Eip1193Provider | null => wallets.active()?.provider ?? null;
@@ -16,7 +17,8 @@ const ethereum = {
   available: () => provider() !== null,
 
   async account(): Promise<{ address: string; chainId: number }> {
-    const p = provider();
+    // with no wallet in this browser, a wallet app on the phone where the server allows it
+    const p = provider() ?? (await phoneWallet.offer());
     if (!p) throw new Error('No wallet found on this device. Add one to your browser, or open Nil in your wallet app.');
     try {
       const [address] = await p.request({ method: 'eth_requestAccounts' });

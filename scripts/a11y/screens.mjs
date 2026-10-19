@@ -45,9 +45,17 @@ const accountMenu = async (page) => {
   await page.getByRole('button', { name: 'Account menu' }).click();
 };
 
-// signed out: `ready` is something on the screen once it has loaded
+// the code a phone wallet scans, on a computer (phones keep their own way in)
+const phoneCode = async (page) => {
+  await page.getByRole('button', { name: 'Use a wallet on your phone' }).first().click();
+  await page.getByRole('img', { name: 'Code for your phone wallet to scan' }).waitFor();
+};
+const closeDialog = (page) => page.keyboard.press('Escape');
+
+// signed out: `ready` is something on the screen once it has loaded, `then` as signed in
 const signedOut = [
   { name: 'sign-in', path: '/', ready: (page) => page.getByRole('button', { name: 'Sign in with your wallet' }) },
+  { name: 'phone-wallet', path: '/', ready: (page) => page.getByRole('button', { name: 'Sign in with your wallet' }), then: phoneCode, desktopOnly: true },
   { name: 'open-bounties', path: '/open', ready: (page) => page.getByRole('heading', { level: 1 }) },
   { name: 'help-signed-out', path: '/help', ready: (page) => page.locator('.help') },
   { name: 'verify-signed-out', path: '/verify', ready: (page) => page.getByRole('heading', { level: 1 }) },
@@ -71,6 +79,7 @@ const signedIn = [
   { name: 'project', path: ({ project }) => `/projects/${project}` },
   { name: 'settings', path: '/settings' },
   { name: 'settings-security', path: '/settings?tab=security' },
+  { name: 'phone-wallet-dialog', path: '/settings?tab=security', then: phoneCode, after: closeDialog, desktopOnly: true },
   { name: 'settings-team', path: '/settings?tab=team' },
   { name: 'help', path: '/help' },
   { name: 'task', path: '/board?task=1' },

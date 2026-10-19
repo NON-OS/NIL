@@ -1,0 +1,84 @@
+.phone-wallet {
+  display: grid;
+  gap: 14px;
+  color: var(--ink-2);
+}
+
+.phone-wallet-code {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.phone-wallet-link {
+  display: grid;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.phone-wallet-copy {
+  display: flex;
+  gap: 8px;
+}
+
+.phone-wallet-copy .input {
+  flex: 1;
+  min-width: 0;
+  font-size: var(--text-xs);
+}
+
+.phone-wallet-state {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.phone-wallet-who {
+  display: grid;
+  grid-template-columns: 20px minmax(0, 1fr);
+  align-items: start;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-strong);
+  border-left: 3px solid var(--accent-line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  color: var(--ink);
+}
+
+.phone-wallet-who svg {
+  width: 18px;
+  height: 18px;
+  margin-top: 2px;
+  color: var(--accent-line);
+}
+
+.phone-wallet-who div {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+}
+
+.phone-wallet-who .mono {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+.phone-wallet-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+/* the code above the steps on narrow windows, so it never shrinks below what a phone can scan */
+@media (max-width: 480px) {
+  .phone-wallet-code {
+    grid-template-columns: 1fr;
+    justify-items: center;
+  }
+}
