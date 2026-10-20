@@ -41,6 +41,15 @@ test('reserved names and look-alikes of wallet brands are refused', () => {
   for (const name of ['metadata', 'coin-club', 'ledger-books', 'seeds']) assert.equal(nameCheck(name, rules).ok, true, name);
 });
 
+test('names that pass for NØNOS, Nil or NOX, or for staff, are refused', () => {
+  const rules = testContext({ env: { CLOUD_BLOCKED_PARTS: 'zsp' } }).config.signup;
+  for (const name of ['nonos-official', 'nonosteam', 'n0nos', 'the-n0n0s-dao', 'nil-support', 'nox-treasury', 'nil-team', 'my-nox', 'n1l-hq', 'team-admin', 'official-help', 'zsp-holders']) {
+    assert.match(nameCheck(name, rules).reason, /isn’t available/, name);
+  }
+  // the short brand words only count as a whole part, so ordinary words that contain them stay open
+  for (const name of ['equinox', 'vanilla', 'nilsson', 'daniel', 'noxious-plants']) assert.equal(nameCheck(name, rules).ok, true, name);
+});
+
 test('a name is taken while in use, then quarantined for a while after deletion', () => {
   let now = Date.UTC(2026, 0, 1);
   const ctx = testContext({ now: () => now });

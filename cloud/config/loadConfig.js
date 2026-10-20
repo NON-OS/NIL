@@ -99,6 +99,16 @@ export default function loadConfig(env = process.env) {
   const tls = read.oneOf('CLOUD_TLS', ['on-demand', 'wildcard'], 'on-demand');
   const dnsProvider = read.text('CLOUD_DNS_PROVIDER');
   if (tls === 'wildcard' && !/^[a-z0-9_]+$/.test(dnsProvider ?? '')) read.fail('CLOUD_TLS=wildcard needs CLOUD_DNS_PROVIDER, the name of the Caddy DNS module (for example hetzner, cloudflare or ovh).');
+  const signup = signupRules(read);
+  // On-demand certificates come from Let's Encrypt one workspace at a time, at most 50 a week for
+  // the domain, so open sign-ups can use them up for everyone, and each workspace's name lands in
+  // the public certificate logs. Only a warning (and an alert at start), so a server already
+  // running this way keeps running; CLOUD_TLS_STRICT=on refuses to start instead.
+  if (tls === 'on-demand' && signup.open) {
+    const advice = 'CLOUD_TLS=on-demand with open sign-ups: Let’s Encrypt issues at most 50 certificates a week for the domain, so a few dozen throwaway sign-ups leave real workspaces without one, and every workspace name lands in public certificate logs. Switch to CLOUD_TLS=wildcard, or set CLOUD_SIGNUP=closed.';
+    if (read.oneOf('CLOUD_TLS_STRICT', ['on', 'off'], 'off') === 'on') read.fail(advice);
+    else read.warn(advice);
+  }
   const controlUpstream = read.text('CLOUD_CADDY_CONTROL', `control:${port}`);
   const askUpstream = read.text('CLOUD_CADDY_ASK', `control:${internalPort}`);
   for (const [name, value] of [['CLOUD_CADDY_CONTROL', controlUpstream], ['CLOUD_CADDY_ASK', askUpstream]]) {
@@ -178,7 +188,7 @@ export default function loadConfig(env = process.env) {
       verifierRelayPort: read.number('CLOUD_VERIFIER_RELAY_PORT', 8546, { min: 1, max: 65535 }),
       streamCloseDelayMin: read.number('CLOUD_STREAM_CLOSE_DELAY_MIN', 5, { max: 120 }),
     }),
-    signup: signupRules(read),
+    signup,
     // phone wallets on the sign-up page; null leaves the page and its policy as they always were
     walletConnect: readWalletConnect(read),
     lifecycle: Object.freeze({

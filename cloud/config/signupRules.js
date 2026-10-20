@@ -1,6 +1,7 @@
 import readWordList from './readWordList.js';
 import reservedNames from '../names/reservedNames.js';
 import blockedWords from '../names/blockedWords.js';
+import blockedParts from '../names/blockedParts.js';
 
 // The sign-up settings: who may create a workspace, how often, and which addresses. Limits on
 // networks count IPv6 per /56 and, more loosely, per /48 block (see signup/ipKey.js).
@@ -21,6 +22,8 @@ export default function signupRules(read) {
     // past either of these, a sign-up waits for the operator instead of starting at once
     perDay: read.number('CLOUD_SIGNUPS_PER_DAY', 100, { min: 1 }),
     approvalAbovePercent: read.number('CLOUD_APPROVAL_ABOVE_PERCENT', 90, { min: 1, max: 100 }),
+    // below this much free disk, new sign-ups pause until there's room again; 0 never pauses
+    minFreeDiskPercent: read.number('CLOUD_SIGNUP_MIN_FREE_DISK_PERCENT', 10, { max: 99 }),
     requestDays: read.number('CLOUD_SIGNUP_REQUEST_DAYS', 7, { min: 1 }),
     challengesPerIp: read.number('CLOUD_CHALLENGES_PER_IP', 20, { min: 1 }),
     challengesPerBlock: read.number('CLOUD_CHALLENGES_PER_BLOCK', 60, { min: 1 }),
@@ -30,6 +33,7 @@ export default function signupRules(read) {
     nameMax,
     reserved: Object.freeze(new Set([...reservedNames, ...read.list('CLOUD_RESERVED_NAMES').map((n) => n.toLowerCase())])),
     blocked: Object.freeze([...blockedWords, ...readWordList(read.text('CLOUD_BLOCKLIST_FILE'), read)]),
+    blockedParts: Object.freeze([...blockedParts, ...read.list('CLOUD_BLOCKED_PARTS').map((p) => p.toLowerCase())]),
     quarantineDays: read.number('CLOUD_NAME_QUARANTINE_DAYS', 90),
     unclaimedDays: read.number('CLOUD_UNCLAIMED_DAYS', 7),
     // a claimed workspace whose data hasn't changed for this long is paused with a notice, and

@@ -10,6 +10,8 @@ const baseEnv = Object.freeze({
   CLOUD_VERIFIER_URL: 'http://verifier:8545',
   CLOUD_SOURCE_URL: 'https://source.test/nil',
   CLOUD_POW_BITS: '4',
+  // the test machine's own disk says nothing about sign-ups; tests that care set it
+  CLOUD_SIGNUP_MIN_FREE_DISK_PERCENT: '0',
 });
 
 export default baseEnv;

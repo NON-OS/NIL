@@ -41,8 +41,11 @@ const dataLayout = {
     return name;
   },
 
-  // A backup is authenticated before it gets here, so this is defence in depth: only plain files
-  // and folders below /data, never links or devices, and no leftovers from the app's scratch work.
+  // By the time a backup gets here its encryption has been checked, so it wasn't cut short or
+  // changed after it was sealed. That proves nothing about who sealed it: backups are sealed to a
+  // public key, so anyone who can write to the backup storage can seal one of their own, with any
+  // owner, name and database in it. So these checks don't trust the contents: only plain files and
+  // folders below /data, never links or devices, and no leftovers from the app's scratch work.
   restoreDecide: (entry) => {
     if (!entry.name || entry.name === MANIFEST) return null;
     safe(entry);

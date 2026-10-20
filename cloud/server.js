@@ -7,6 +7,7 @@ import provisionWorkspace from './provisioning/provisionWorkspace.js';
 import startScheduler from './ops/startScheduler.js';
 import recoverInterrupted from './ops/recoverInterrupted.js';
 import checkBackupTarget from './ops/checkBackupTarget.js';
+import checkTlsMode from './ops/checkTlsMode.js';
 
 const config = configOrExit();
 const ctx = createContext(config, { role: 'server' });
@@ -20,6 +21,7 @@ ctx.routes.sync().catch(() => {});
 // say so. The scheduler repeats the check hourly for anything else left stuck.
 recoverInterrupted(ctx, { startup: true }).catch((err) => ctx.log.error('recover.failed', { error: err }));
 checkBackupTarget(ctx).catch((err) => ctx.log.warn('backup.protection_unknown', { error: err }));
+checkTlsMode(ctx).catch((err) => ctx.log.warn('tls.check_failed', { error: err }));
 
 const flow = createSignupFlow(ctx, { provision: (id) => provisionWorkspace(ctx, id) });
 const site = createPublicServer(ctx, flow);

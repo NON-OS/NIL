@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import loadConfig from '../config/loadConfig.js';
 import backupKeys from '../backups/backupKeys.js';
 import workspaceSpec from '../runtime/workspaceSpec.js';
+import checkTlsMode from '../ops/checkTlsMode.js';
 import baseEnv from './helpers/baseEnv.js';
 
 test('each workspace has its own uid, never 1000, unless set back for a rollback', () => {
@@ -27,7 +28,9 @@ test('missing required settings are all reported at once', () => {
 test('a complete configuration has no errors and sensible defaults', () => {
   const { config, errors, warnings } = loadConfig(baseEnv);
   assert.deepEqual(errors, []);
-  assert.deepEqual(warnings, ['Backups are off: set CLOUD_BACKUP_TARGET and CLOUD_BACKUP_RECIPIENTS.']);
+  assert.equal(warnings.length, 2);
+  assert.ok(warnings.includes('Backups are off: set CLOUD_BACKUP_TARGET and CLOUD_BACKUP_RECIPIENTS.'));
+  assert.ok(warnings.some((w) => w.startsWith('CLOUD_TLS=on-demand with open sign-ups')));
   assert.equal(config.signupHost, 'nil.test');
   assert.equal(config.caddy.tls, 'on-demand');
   assert.equal(config.app.egress, 'rpc-only');
@@ -120,4 +123,20 @@ test('the treasury is taken with a valid checksum, and one with none is accepted
   const lower = loadConfig({ ...baseEnv, CLOUD_PLAN_TREASURY: '0xc4155a7bce81a5dfe03919ef81a02a44f30cfbee' });
   assert.deepEqual(lower.errors, []);
   assert.ok(lower.warnings.some((w) => /no checksum|carries no checksum/.test(w)));
+});
+
+test('on-demand certificates with open sign-ups warn and alert, and refuse to start only when asked to', async () => {
+  const tlsWarning = (w) => w.startsWith('CLOUD_TLS=on-demand with open sign-ups');
+  assert.ok(loadConfig(baseEnv).warnings.some(tlsWarning));
+  assert.ok(loadConfig({ ...baseEnv, CLOUD_TLS_STRICT: 'on' }).errors.some(tlsWarning));
+  assert.ok(!loadConfig({ ...baseEnv, CLOUD_SIGNUP: 'closed', CLOUD_TLS_STRICT: 'on' }).warnings.some(tlsWarning));
+  const wildcard = loadConfig({ ...baseEnv, CLOUD_TLS: 'wildcard', CLOUD_DNS_PROVIDER: 'cloudflare', CLOUD_TLS_STRICT: 'on' });
+  assert.deepEqual(wildcard.errors, []);
+  assert.ok(!wildcard.warnings.some(tlsWarning));
+
+  const alerts = [];
+  const alert = async (event, details) => alerts.push({ event, ...details });
+  assert.equal(await checkTlsMode({ config: loadConfig(baseEnv).config, alert }), true);
+  assert.equal(await checkTlsMode({ config: wildcard.config, alert }), false);
+  assert.deepEqual(alerts.map((a) => a.event), ['tls.on_demand_signups']);
 });
