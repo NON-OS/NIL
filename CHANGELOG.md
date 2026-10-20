@@ -80,6 +80,9 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - `cli.js restore-drill` restores a backup into a throwaway workspace nobody can reach and removes it. The drill the guide described before put a live copy of a customer's workspace online.
 - Push notifications are off in hosted workspaces, which have no route to the push services, and [docs/tor.md](docs/tor.md) lists the push services among an onion server's outgoing requests.
 - Invoice slots come from a counter that only goes up, so a slot is never handed out twice, and running out of them raises an alert.
+- A free workspace could fill the disk every hosted workspace shares with docs alone, since only attachments counted toward its quota: about 30 MB a second from one browser, checked only every 15 minutes. `UPLOAD_QUOTA_MB` now counts the database too, and once it's full new writes get a 413 while reading, deleting and exporting keep working. Docs saved and comments written are limited to `CONTENT_WRITES_PER_MINUTE` (120) per person. Each hosted workspace takes a capsule no larger than its plan (`MAX_CAPSULE_MB`), and a restore needs free disk for twice the capsule. Hosted sign-ups pause by themselves below `CLOUD_SIGNUP_MIN_FREE_DISK_PERCENT` (10) of free disk, with a notice on the page and a critical alert.
+- A wallet that joined a member and voted in the app while its ballot from a public vote's page was being read could count twice. Who the wallet belongs to is now asked again in the same transaction as the outside ballot.
+- Read-only access keys and read-only agents can no longer follow tasks or mark their inbox read. Both change something, which a read-only key promises not to do.
 - Running `provision.sh` again no longer takes the Ethereum node down by handing its engine API secret to the deploy user. Docker waits for the backup share at boot, and the control plane sees the share even when it mounts late.
 
 ### Verified chain reads

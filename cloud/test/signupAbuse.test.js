@@ -56,3 +56,18 @@ test('invoice slots are never reused, not even once the highest-slot row is forg
   assert.notEqual(c.invoiceSlot, b.invoiceSlot);
   assert.equal(c.invoiceSlot, b.invoiceSlot + 1);
 });
+
+test('sign-ups pause by themselves when the shared disk runs low, and say so on the page', async () => {
+  const ctx = testContext({ env: { CLOUD_SIGNUP_MIN_FREE_DISK_PERCENT: '10' } });
+  let free = 4;
+  const flow = createSignupFlow(ctx, { provision: () => Promise.resolve(), freeDisk: () => free });
+  assert.match(flow.closed(), /paused while this server makes room/);
+  assert.throws(() => signUp(flow, wallet(), 'full-disk', '198.51.100.9'), (err) => err.status === 503);
+  assert.ok(ctx.alerts.some((a) => a.event === 'signup.disk_low' && a.severity === 'critical'));
+
+  // once there's room again they resume, with nobody touching anything
+  free = 40;
+  assert.equal(flow.closed(), null);
+  signUp(flow, wallet(), 'room-again', '198.51.100.9');
+  assert.ok(ctx.store.workspaces.byName('room-again'));
+});

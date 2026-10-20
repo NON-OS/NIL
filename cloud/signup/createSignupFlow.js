@@ -8,6 +8,7 @@ import challengeToken from './challengeToken.js';
 import signupLimits from './signupLimits.js';
 import proofOfWork from './proofOfWork.js';
 import siwe from './siwe.js';
+import freeDiskPercent from '../ops/freeDiskPercent.js';
 
 const DAY = 86_400_000;
 const CHALLENGE_MS = 5 * 60_000;
@@ -18,7 +19,7 @@ const MAX_TICKETS = 5000;
 // only ever reach the in-memory limiters; wallets are counted from the control database.
 // Challenges are sealed tokens rather than server-side entries (see challengeToken.js). Past the
 // daily cap, or when the server is nearly full, a signed sign-up waits for the operator.
-export default function createSignupFlow(ctx, { provision, now = () => Date.now() }) {
+export default function createSignupFlow(ctx, { provision, now = () => Date.now(), freeDisk = () => freeDiskPercent(ctx.config.dataDir) }) {
   const { config } = ctx;
   const rules = config.signup;
   const limits = signupLimits(rules, now);
@@ -36,6 +37,14 @@ export default function createSignupFlow(ctx, { provision, now = () => Date.now(
   function closed() {
     if (!rules.open) return 'Sign-ups are closed right now. Please try again later.';
     if (ctx.store.workspaces.countLive() >= rules.maxWorkspaces) return 'This server is full for now. Please try again later.';
+    // every workspace shares this disk, so a new one waits rather than help fill it
+    if (rules.minFreeDiskPercent) {
+      const free = freeDisk();
+      if (free < rules.minFreeDiskPercent) {
+        ctx.alert('signup.disk_low', { severity: 'critical', message: `New sign-ups are paused: only ${free.toFixed(1)}% of the disk is free, under CLOUD_SIGNUP_MIN_FREE_DISK_PERCENT (${rules.minFreeDiskPercent}). Make room and they resume by themselves.` });
+        return 'New sign-ups are paused while this server makes room. Please try again later.';
+      }
+    }
     return null;
   }
 

@@ -17,6 +17,9 @@ export default function workspaceSpec(config, workspace) {
     // the plan's disk, as the quota the app enforces on uploads (Docker can't cap a volume); at
     // least 1, since 0 turns the app's quota off
     UPLOAD_QUOTA_MB: String(Math.max(1, Math.floor(plan.diskBytes / 1024 ** 2))),
+    // and the largest capsule a fresh workspace takes in, so a restore can't bring more than the
+    // plan holds; the app also checks there's room on disk for the upload and its unpacked copy
+    MAX_CAPSULE_MB: String(Math.max(1, Math.floor(plan.diskBytes / 1024 ** 2))),
   };
   if (rpc !== 'off' && app.verifierMode !== 'off') {
     env.NOX_VERIFIER_MODE = app.verifierMode;

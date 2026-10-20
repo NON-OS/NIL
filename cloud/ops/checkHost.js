@@ -1,4 +1,5 @@
 import fs from 'node:fs';
+import freeDiskPercent from './freeDiskPercent.js';
 
 // Two things that take every workspace down at once and are easy to miss on a dedicated
 // server: a RAID mirror running on one disk, and the disk filling up. /proc/mdstat is not
@@ -14,8 +15,7 @@ export default async function checkHost(ctx, { mdstat = '/proc/mdstat' } = {}) {
   }
   if (degraded.length) await ctx.alert('host.raid_degraded', { severity: 'critical', message: `RAID array ${degraded.join(', ')} is degraded. Replace the failed disk soon.` });
 
-  const stats = fs.statfsSync(ctx.config.dataDir);
-  const freePercent = (stats.bavail / stats.blocks) * 100;
+  const freePercent = freeDiskPercent(ctx.config.dataDir);
   if (freePercent < ctx.config.health.diskFreeAlertPercent) {
     await ctx.alert('host.disk_low', { severity: freePercent < 5 ? 'critical' : 'warning', message: `Only ${freePercent.toFixed(1)}% of the disk holding the workspaces is free.` });
   }

@@ -2,7 +2,7 @@ import fs from 'node:fs';
 
 // Settings the control plane owns for every workspace. Letting the shared env file override them
 // would break routing, data placement or the setup claim, so those lines are refused.
-const MANAGED = new Set(['APP_URL', 'TRUST_PROXY', 'PLAN_TREASURY', 'SOURCE_URL', 'NOX_RPC_URL', 'NOX_VERIFIER_MODE', 'NOX_VERIFIER_KEY', 'NOX_VERIFIER_URL', 'SETUP_TOKEN', 'PLAN_INVOICE_SLOT', 'PLAN_INVOICE_KEY', 'DATA_DIR', 'DB_FILE', 'PORT', 'HOST']);
+const MANAGED = new Set(['APP_URL', 'TRUST_PROXY', 'PLAN_TREASURY', 'SOURCE_URL', 'NOX_RPC_URL', 'NOX_VERIFIER_MODE', 'NOX_VERIFIER_KEY', 'NOX_VERIFIER_URL', 'SETUP_TOKEN', 'PLAN_INVOICE_SLOT', 'PLAN_INVOICE_KEY', 'UPLOAD_QUOTA_MB', 'MAX_CAPSULE_MB', 'DATA_DIR', 'DB_FILE', 'PORT', 'HOST']);
 
 // KEY=VALUE lines passed to every hosted workspace (for example PLAN_PRICE or PLAN_FREE_SEATS).
 // Same rules as .env: comments on their own lines, no quotes needed.

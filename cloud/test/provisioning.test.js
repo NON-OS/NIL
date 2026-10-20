@@ -46,8 +46,9 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     NOX_VERIFIER_MODE: 'shadow',
     NOX_VERIFIER_KEY: 'v'.repeat(64),
     NOX_VERIFIER_URL: 'http://nil-caddy:8546',
-    // the standard plan's 5 GB, as the app's upload quota
+    // the standard plan's 5 GB, as the app's storage quota and its largest capsule
     UPLOAD_QUOTA_MB: '5120',
+    MAX_CAPSULE_MB: '5120',
     PLAN_TREASURY: `0x${'7'.repeat(40)}`,
     // the first workspace's slice of the invoice amounts, with the key every workspace shares
     PLAN_INVOICE_SLOT: '0/1000',
