@@ -2,7 +2,8 @@ import findTaskByKey from '../../services/findTaskByKey.js';
 import watchers from '../../services/watchers.js';
 import toTaskViewers from '../../services/toTaskViewers.js';
 
-// Following a task only changes what the caller hears about, so a read-only key may use it too.
+// Following a task only changes what the caller hears about, but that is still a change, so a
+// read-only key can't (agents/changesSomething.js).
 export default {
   name: 'watch_task',
   title: 'Watch a task',

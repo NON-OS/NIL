@@ -4,6 +4,7 @@ import runTool from '../agents/runTool.js';
 import pendingText from '../agents/pendingText.js';
 import pendingBody from '../agents/pendingBody.js';
 import tools from './tools.js';
+import changesSomething from '../agents/changesSomething.js';
 
 const VERSIONS = ['2025-11-25', '2025-06-18', '2025-03-26'];
 
@@ -11,16 +12,16 @@ const reply = (id, result) => ({ jsonrpc: '2.0', id, result });
 const fail = (id, code, message) => ({ jsonrpc: '2.0', id: id ?? null, error: { code, message } });
 
 // People see every tool and get a readable refusal when their key can't use one. An agent sees
-// only the tools an admin gave it, and only the read tools when it is read-only.
+// only the tools an admin gave it, and only the ones that change nothing when it is read-only.
 function listing({ agent, scope }) {
   return tools
-    .filter((t) => !agent || (agent.tools.includes(t.name) && (!t.write || scope === 'write')))
+    .filter((t) => !agent || (agent.tools.includes(t.name) && (!changesSomething(t) || scope === 'write')))
     .map((t) => ({
       name: t.name,
       title: t.title,
       description: t.description,
       inputSchema: t.inputSchema,
-      annotations: { readOnlyHint: !t.write && !t.mutates, destructiveHint: Boolean(t.destructive), openWorldHint: false },
+      annotations: { readOnlyHint: !changesSomething(t), destructiveHint: Boolean(t.destructive), openWorldHint: false },
     }));
 }
 

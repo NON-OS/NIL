@@ -19,7 +19,7 @@ export default {
   'GET /api/agent/v1/summary': { allow: READERS },
   'GET /api/agent/v1/me/assignments': { allow: READERS },
   'GET /api/agent/v1/me/inbox': { allow: READERS },
-  'POST /api/agent/v1/me/inbox/read': { allow: READERS, body: { all: true } },
+  'POST /api/agent/v1/me/inbox/read': { allow: WRITERS, body: { all: true } },
   'GET /api/agent/v1/tasks': { allow: READERS },
   'GET /api/agent/v1/tasks/search': { allow: READERS, query: () => 'query=Shared' },
   'GET /api/agent/v1/projects': { allow: READERS },
@@ -33,7 +33,7 @@ export default {
   'PATCH /api/agent/v1/tasks/:key': { allow: WRITERS, key, body: { priority: 'high' } },
   'POST /api/agent/v1/tasks/:key/claim': { allow: WRITERS, key: freshKey },
   'POST /api/agent/v1/tasks/:key/comments': { allow: WRITERS, key, body: { text: 'From a key' } },
-  'PUT /api/agent/v1/tasks/:key/watch': { allow: READERS, key, body: {} },
+  'PUT /api/agent/v1/tasks/:key/watch': { allow: WRITERS, key, body: {} },
   'DELETE /api/agent/v1/tasks/:key': { allow: WRITERS, key: freshKey, ok: { agentWrite: [202] } },
   'GET /api/agent/v1/approvals/:id': { allow: READERS, id: () => 'no-such-approval', ok: [404] },
 };

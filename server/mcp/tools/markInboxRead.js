@@ -2,7 +2,8 @@ import sql from '../../db/sql.js';
 import HttpError from '../../lib/HttpError.js';
 import hub from '../../realtime/hub.js';
 
-// Only touches the caller's own notifications, so a read-only key may use it too.
+// Only touches the caller's own notifications, but that is still a change, so a read-only key
+// can't (agents/changesSomething.js).
 export default {
   name: 'mark_inbox_read',
   title: 'Mark inbox items read',

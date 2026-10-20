@@ -11,6 +11,7 @@ import createApproval from './createApproval.js';
 import audit from './audit.js';
 import taskIdOfKey from './taskIdOfKey.js';
 import log from '../lib/log.js';
+import changesSomething from './changesSomething.js';
 
 const byName = new Map(tools.map((t) => [t.name, t]));
 
@@ -43,7 +44,7 @@ export default function runTool(principal, name, args, { via, runId = null, acti
       return fail(blocked.status, blocked.code, blocked.message);
     }
   }
-  if (tool.write && scope !== 'write') {
+  if (changesSomething(tool) && scope !== 'write') {
     record('denied', { reason: 'read-only' });
     return fail(403, 'read_only', agent ? 'This agent is read-only. An admin can give it write access in Settings → Agents.' : 'This key is read-only. Create a key with write access in Nil settings to change things.');
   }

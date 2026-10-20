@@ -159,7 +159,8 @@ test('the remaining tools work over the other transport too', async () => {
   assert.deepEqual(watching.data, { key: k(ids.task), watching: true });
   assert.ok((await ana('GET', `/api/tasks/${ids.task.id}/detail`)).data.watchers.includes(ids.helper));
   assert.equal((await tool(keys.helper, 'watch_task', { key: k(ids.task), watching: false })).structuredContent.watching, false);
-  assert.equal((await tool(keys.reader, 'watch_task', { key: k(ids.task) })).structuredContent.watching, true, 'watching is fine for a read-only agent');
+  const readerWatch = await tool(keys.reader, 'watch_task', { key: k(ids.task) });
+  assert.equal(readerWatch.isError, true, 'following a task is still a change, which a read-only agent can’t make');
 
   const deletion = await rest(keys.helper, 'DELETE', `/tasks/${k(free)}`);
   assert.equal(deletion.status, 202);
@@ -236,8 +237,11 @@ test('read-only agents and tool allowlists are enforced', async () => {
   assert.equal(denied.status, 403);
   assert.equal(denied.data.error.code, 'read_only');
   assert.equal((await tool(keys.reader, 'create_task', { title: 'Nope' })).isError, true);
-  // marking its own inbox read changes nothing in the workspace, so a read-only agent may
-  assert.equal((await rest(keys.reader, 'POST', '/me/inbox/read', { all: true })).status, 200);
+  // marking its own inbox read is still a change, so a read-only agent can't, and doesn't see the tool
+  const marked = await rest(keys.reader, 'POST', '/me/inbox/read', { all: true });
+  assert.equal(marked.status, 403);
+  assert.equal(marked.data.error.code, 'read_only');
+  assert.ok(!listed.includes('watch_task') && !listed.includes('mark_inbox_read'));
   assert.equal((await rest(keys.reader, 'GET', '/tasks?project=Beta')).data.count, 2);
 
   await owner('PATCH', `/api/agents/${ids.helper}`, { tools: ['whoami', 'get_task'] });

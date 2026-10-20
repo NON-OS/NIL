@@ -25,12 +25,13 @@ import runnerTools from './runnerTools.js';
 import checklistDone from './checklistDone.js';
 import ProviderError from './ProviderError.js';
 import log from '../../lib/log.js';
+import changesSomething from '../changesSomething.js';
 
 const RESULT_CAP = 20_000;
 const RETRY_BASE_MS = 30_000;
 const byName = new Map(tools.map((t) => [t.name, t]));
 
-const toolset = ({ agent, scope }) => runnerTools(tools.filter((t) => agent.tools.includes(t.name) && (!t.write || scope === 'write')));
+const toolset = ({ agent, scope }) => runnerTools(tools.filter((t) => agent.tools.includes(t.name) && (!changesSomething(t) || scope === 'write')));
 const refusalText = (refused) => refused.map((r) => `Not ticked: “${r.text}”, because ${r.reason}.`).join('\n');
 
 function resultText(out) {
