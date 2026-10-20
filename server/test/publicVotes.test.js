@@ -284,3 +284,27 @@ test('a vote that isn’t public still counts only the members it opened with', 
   assert.equal(refused.status, 403);
   assert.match(refused.data.error, /had none then/);
 });
+
+test('a wallet that joins and votes in the app while its outside ballot is being read counts once', async () => {
+  const mira = wallet();
+  chain.setBalance(mira.address, 700n * NOX);
+  const proposal = await startPublic();
+  const slug = proposal.publicVote.slug;
+  const page = visitor(31);
+  const challenge = await page('POST', `/api/public/votes/${slug}/challenge`, { address: mira.address, choice: 0 });
+  assert.equal(challenge.status, 200, challenge.data.error);
+
+  // the outside ballot's holdings read is slow; while it runs she joins and votes in the app
+  chain.setCallDelay(800);
+  const outside = page('POST', `/api/public/votes/${slug}/ballot`, { challengeId: challenge.data.challengeId, signature: mira.sign(challenge.data.message) });
+  await new Promise((r) => setTimeout(r, 200));
+  chain.setCallDelay(0);
+  const app = await join(mira, 'Mira Sato', 9);
+  assert.equal((await voteInApp(app, mira, proposal, 1)).status, 200);
+
+  const late = await outside;
+  assert.equal(late.status, 409, 'the outside ballot sees she is a member now and steps aside');
+  const view = (await page('GET', `/api/public/votes/${slug}`)).data;
+  assert.equal(view.voters, 1);
+  assert.deepEqual(view.totals, ['0', String(700n * NOX)]);
+});

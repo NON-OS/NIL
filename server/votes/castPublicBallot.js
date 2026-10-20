@@ -63,12 +63,17 @@ export default async function castPublicBallot(proposal, pending, signature) {
   if (held.power === 0n) {
     throw HttpError.forbidden(`This wallet held no ${config.nox.symbol}, no staked ${config.nox.symbol} and no Zero-State Passes at block ${proposal.snapshot_block}, when the vote opened, so it has no voting power here.`);
   }
-  stillOpen(proposal.id);
-  sql.run(
-    `INSERT INTO outside_votes (proposal_id, address, choice, nox, staked, zsp, weight, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-     ON CONFLICT (proposal_id, address) DO UPDATE SET choice = excluded.choice, nox = excluded.nox, staked = excluded.staked, zsp = excluded.zsp, weight = excluded.weight,
-       message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
-    proposal.id, pending.address, pending.choice, String(held.nox), String(held.staked), Number(held.zsp), String(held.power), pending.message, signature, check.checkedBy, check.block, Date.now(),
-  );
+  // The wallet may have become a member's while its holdings were read, and that member may have
+  // voted already, so who it belongs to is asked again in the same transaction as the insert.
+  sql.tx(() => {
+    if (memberOf(proposal.id, pending.address)) throw new HttpError(409, 'This wallet now belongs to a member of the workspace. Sign again to vote as them.');
+    stillOpen(proposal.id);
+    sql.run(
+      `INSERT INTO outside_votes (proposal_id, address, choice, nox, staked, zsp, weight, message, signature, checked_by, checked_block, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+       ON CONFLICT (proposal_id, address) DO UPDATE SET choice = excluded.choice, nox = excluded.nox, staked = excluded.staked, zsp = excluded.zsp, weight = excluded.weight,
+         message = excluded.message, signature = excluded.signature, checked_by = excluded.checked_by, checked_block = excluded.checked_block, created_at = excluded.created_at`,
+      proposal.id, pending.address, pending.choice, String(held.nox), String(held.staked), Number(held.zsp), String(held.power), pending.message, signature, check.checkedBy, check.block, Date.now(),
+    );
+  });
   return { weight: String(held.power) };
 }
