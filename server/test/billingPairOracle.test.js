@@ -91,7 +91,7 @@ test('a pair Nil never recorded is priced at once from the chain’s history, wi
   // no trade for longer than the window: the seed's last update predates it, so the pair's
   // cumulative price is carried forward at its reserves, as Uniswap's oracle library does
   chain.mine(3 * WINDOW_BLOCKS);
-  const flat = await pairTwap(FRESH, 300);
+  const flat = await pairTwap(FRESH, 300, 1);
   const span = BigInt(flat.den >> 112n);
   assert.ok(span >= 300n && span < 340n, `a window of ${span} s`);
   assert.equal(flat.num, q(a) * span, 'exactly the price held for the whole window');
@@ -105,7 +105,7 @@ test('a pair Nil never recorded is priced at once from the chain’s history, wi
   chain.tradePair(FRESH2, b);
   const traded = chain.blockTime(chain.head());
   chain.mine(12);
-  const mixed = await pairTwap(FRESH2, 300);
+  const mixed = await pairTwap(FRESH2, 300, 1);
   const end = BigInt(chain.blockTime(chain.head()));
   const start = end - (mixed.den >> 112n);
   assert.equal(mixed.num, q(a) * (BigInt(traded) - start) + q(b) * (end - BigInt(traded)));
@@ -122,7 +122,7 @@ test('the average is exact integer arithmetic, with the pair’s tokens either w
   const { default: pairTwap } = await import('../billing/pairTwap.js');
   const { default: pairState } = await import('../chain/pairState.js');
   const { default: poolObservations } = await import('../billing/poolObservations.js');
-  const calm = await pairTwap(PAIR, 300);
+  const calm = await pairTwap(PAIR, 300, 1);
   // 0.00002 WETH per NOX, in billionths, give or take the last unit of the 112-bit fraction
   const perNox = (calm.num * 10n ** 9n) / calm.den;
   assert.ok(perNox === 20_000n || perNox === 19_999n, String(perNox));
@@ -131,7 +131,27 @@ test('the average is exact integer arithmetic, with the pair’s tokens either w
   chain.setPair(REVERSED, { token0: WETH, token1: NOX, reserve0: 20n * E18, reserve1: 1_000_000n * E18 });
   poolObservations.add(REVERSED, await pairState(REVERSED, chain.head()), 3600);
   chain.mine(WINDOW_BLOCKS);
-  const reversed = await pairTwap(REVERSED, 300);
+  const reversed = await pairTwap(REVERSED, 300, 1);
   assert.equal(reversed.token0, WETH);
   assert.equal(reversed.num / reversed.den, 50_000n, 'NOX per WETH');
+});
+
+test('a price pushed up for a block and traded straight back leaves the rate where it was', async () => {
+  chain.tradePair(PAIR, CALM);
+  for (let i = 0; i < 2 * WINDOW_BLOCKS; i += 5) {
+    await recordPoolPrice();
+    chain.mine(5);
+  }
+  const calm = await nox();
+  assert.equal(calm.rateSource, 'oracle');
+
+  // a hundred times the price at the end of one block, back at the start of the next: a plain
+  // average over five minutes would rise about five times over
+  chain.tradePair(PAIR, PUSHED);
+  chain.mine(1);
+  chain.tradePair(PAIR, CALM);
+  chain.mine(1);
+  const after = await nox();
+  assert.equal(after.rateSource, 'oracle');
+  assert.ok(Math.abs(usd(after.rate) / usd(calm.rate) - 1) < 0.01, `from ${usd(calm.rate)} to ${usd(after.rate)}`);
 });

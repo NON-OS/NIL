@@ -13,9 +13,10 @@ const failedAt = new Map();
 // recorded the pair for a whole window yet: its cumulative prices at a block at least `seconds`
 // older than `now`, read by historical eth_call. The pair's cumulative prices are the same
 // numbers Nil records every minute, so the average over them is the same time-weighted price a
-// full recording would give, never a spot price. Kept with the recorded readings, which take
-// over as they age. Null when the node won't serve old state, or the pair didn't exist then.
-export default async function seedObservation(pair, now, head, seconds) {
+// full recording would give, never a spot price. Kept with the recorded readings for
+// `keepSeconds`, and they take over as they age. Null when the node won't serve old state, or the
+// pair didn't exist then.
+export default async function seedObservation(pair, now, head, seconds, keepSeconds = 3 * seconds) {
   if (head < (failedAt.get(pair) ?? -Infinity) + RETRY_BLOCKS) return null;
   let block = head - Math.ceil(seconds / SLOT_SECONDS) - 1;
   for (let tries = 0; tries < 3 && block > 0; tries++) {
@@ -25,7 +26,7 @@ export default async function seedObservation(pair, now, head, seconds) {
     if (short <= 0) {
       // more than two windows back is no longer the window asked for
       if (state.time < now.time - 2 * seconds) break;
-      poolObservations.add(pair, state, 3 * seconds);
+      poolObservations.add(pair, state, keepSeconds);
       return state;
     }
     block -= Math.ceil(short / SLOT_SECONDS) + 1;

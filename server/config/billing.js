@@ -55,6 +55,8 @@ export default Object.freeze({
     weth: envAddress('PLAN_WETH', '0xC02aaA39b223FE8D0A0e5C4F27eAD9083C756Cc2', unpriced),
     ethUsdFeed: envAddress('PLAN_ETH_USD_FEED', '0x5f4eC3Df9cbd43714FE2740f5E3616155c5b8419', unpriced),
     twapMinutes: envNumber('PLAN_TWAP_MINUTES', 30, { min: 5, max: 24 * 60 }),
+    // the window's stretches, whose median average is the price (pairTwap.js)
+    twapParts: envNumber('PLAN_TWAP_PARTS', 6, { min: 1, max: 60 }),
     feedMaxAgeMinutes: envNumber('PLAN_FEED_MAX_AGE_MINUTES', 120, { min: 1 }),
     // USD per whole NOX, as decimal text; the oracle's answer must sit between the bounds
     minUsd: envPositiveDecimal('PLAN_NOX_USD_MIN', '0.000001'),
