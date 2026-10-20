@@ -6,6 +6,7 @@ open Nil.Invoice
 
 def DAY : Nat := 86400000
 def PERIOD_DAYS : Nat := 30
+def MAX_PERIODS : Nat := 24
 
 def askCase (m : Int) (g t : Nat) : Json :=
   .obj [("minimum", int m), ("grid", num g), ("tail", num t), ("ask", num (askAmount m g t))]
@@ -45,7 +46,8 @@ def settleCase (wasOpen : Bool) (periods credit due sent asked : Nat) : Json :=
   .obj [("open", .bool wasOpen), ("periods", num periods), ("periodDays", num PERIOD_DAYS),
     ("credit", num credit), ("due", num due), ("total", num (credit + due)),
     ("sent", num sent), ("asked", num asked), ("fraction", num fraction),
-    ("grantedMs", num (settledTime wasOpen span credit due (credit + due) fraction))]
+    ("maxPeriods", num MAX_PERIODS),
+    ("grantedMs", num (settledTime wasOpen (max periods MAX_PERIODS * PERIOD_DAYS * DAY) span credit due (credit + due) fraction))]
 
 def invoiceJson : Json :=
   let draws (k : Nat) (f : Nat → Nat) := (List.range 32).map fun i => f (i + k)
@@ -78,6 +80,6 @@ def invoiceJson : Json :=
       settleCase false 1 0 10000000 1500000000 1000000421, settleCase false 3 0 30000000 1 1000000421,
       settleCase true 1 0 10000000 999999999 1000000421, settleCase true 1 0 10000000 1000000421 1000000421,
       settleCase false 2 4000000 16000000 1600000000 1600000077, settleCase false 1 10000000 0 0 0,
-      settleCase false 12 1 99999999 3 7])]
+      settleCase false 12 1 99999999 3 7, settleCase false 1 0 10000000 30000012630 1000000421])]
 
 end Vectors

@@ -869,6 +869,7 @@
       "sent": "1000000421",
       "asked": "1000000421",
       "fraction": "1000000000",
+      "maxPeriods": "24",
       "grantedMs": "2592000000"
     },
     {
@@ -881,6 +882,7 @@
       "sent": "1500000000",
       "asked": "1000000421",
       "fraction": "1499999368",
+      "maxPeriods": "24",
       "grantedMs": "3887998361"
     },
     {
@@ -893,6 +895,7 @@
       "sent": "1",
       "asked": "1000000421",
       "fraction": "0",
+      "maxPeriods": "24",
       "grantedMs": "0"
     },
     {
@@ -905,6 +908,7 @@
       "sent": "999999999",
       "asked": "1000000421",
       "fraction": "999999578",
+      "maxPeriods": "24",
       "grantedMs": "0"
     },
     {
@@ -917,6 +921,7 @@
       "sent": "1000000421",
       "asked": "1000000421",
       "fraction": "1000000000",
+      "maxPeriods": "24",
       "grantedMs": "2592000000"
     },
     {
@@ -929,6 +934,7 @@
       "sent": "1600000000",
       "asked": "1600000077",
       "fraction": "999999951",
+      "maxPeriods": "24",
       "grantedMs": "5183999796"
     },
     {
@@ -941,6 +947,7 @@
       "sent": "0",
       "asked": "0",
       "fraction": "1000000000",
+      "maxPeriods": "24",
       "grantedMs": "2592000000"
     },
     {
@@ -953,7 +960,21 @@
       "sent": "3",
       "asked": "7",
       "fraction": "428571428",
+      "maxPeriods": "24",
       "grantedMs": "13330285874"
+    },
+    {
+      "open": false,
+      "periods": "1",
+      "periodDays": "30",
+      "credit": "0",
+      "due": "10000000",
+      "total": "10000000",
+      "sent": "30000012630",
+      "asked": "1000000421",
+      "fraction": "30000000000",
+      "maxPeriods": "24",
+      "grantedMs": "62208000000"
     }
   ]
 }

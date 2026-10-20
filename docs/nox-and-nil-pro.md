@@ -73,7 +73,7 @@ The invoice then shows where it stands: **Waiting for payment**, **Seen, not min
 If a chain reorganisation takes the transaction out of its block, or the server's node briefly can't find it, the payment stops counting toward the invoice, but Nil keeps looking for it for 7 days (`PLAN_LATE_DAYS`) and counts it as soon as it's in a block again. Pasting its hash under the invoice again looks once more, even after that.
 
 - Underpaid: if less arrived, the invoice shows what's missing and the exact amount to send to finish. It ends in the same digits, so it's matched to the same invoice.
-- Overpaid: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half.
+- Overpaid: if more arrived, the extra isn't lost. It buys extra days in proportion: paying $15 for a $10 period gives a period and a half. One invoice buys at most the longest plan you could have asked for (24 periods by default, `PLAN_MAX_PERIODS`). Anything beyond that becomes credit for the next invoice, and NOX in it is valued at the lower of the invoice's locked rate and the rate when it arrived.
 - Expired or cancelled: whatever an invoice received before it expired, or after, becomes credit. Click **Make again** to get a new invoice at today's price with the credit taken off. NOX that arrives after its invoice expired counts at the lower of the locked rate and today's.
 
 Under- and overpayments from any wallet are matched automatically on hosted servers that give each workspace its own share of suffixes (`PLAN_INVOICE_SLOT`). Elsewhere, paste the transaction hash under the invoice: an under- or overpayment sent from a wallet linked to someone in the workspace is then matched the same way. Without a share of their own, other workspaces paying the same treasury draw from the same suffixes, so one sent from an exchange or anyone else's wallet can't be told apart from theirs and isn't counted; send the exact amount instead. A transaction you paste pays only the invoice you pasted it under.
@@ -107,7 +107,9 @@ On the NØNOS foundation's hosted service, the burn works like this. The foundat
 - the token-holder door,
 - the built-in AI,
 - connecting AI assistants over MCP,
-- more people than the free seats, 5 by default. Guests never count. With paid Pro, the team can have as many people as the plan covers; to add more before it runs out, choose **More seats now** and pay for the rest of the paid time.
+- more people than the free seats, 5 by default. Guests never count. With paid Pro, the team can have as many people as the plan covers; to add more before it runs out, choose **More seats now** and pay for the rest of the paid time. Seats bought that way last until the paid time they were priced for ends. A renewal covers the people you choose on it, from the day it starts.
+
+During the trial or while an admin holds a Zero-State Pass, anyone can join. If the team is bigger than the paid plan covers once that ends, the paid tools pause until an admin adds seats or makes someone a guest. Settings → Plan says so, and the notice on each page says **Add seats** instead of **Renew plan**.
 
 ### What never needs it
 

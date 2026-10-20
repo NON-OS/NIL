@@ -114,6 +114,34 @@ theorem owed_full (span credit due total f : Nat) (ht : 0 < total) (sum : credit
   have := owed_mono span credit due total _ _ hf
   rwa [owed_exact span credit due total ht sum] at this
 
+/-- settleInvoice caps the time one invoice grants at `most`, PLAN_MAX_PERIODS periods (or the
+invoice's own, if the limit was lowered after it was made); a payment beyond that becomes credit
+instead (finalizePayment, creditBalance). -/
+def granted (most span credit due total fraction : Nat) : Nat :=
+  min (owed span credit due total fraction) most
+
+/-- The cap only ever takes time away: everything proven of `owed` as an upper bound holds. -/
+theorem granted_le_owed (most span credit due total fraction : Nat) :
+    granted most span credit due total fraction ≤ owed span credit due total fraction :=
+  Nat.min_le_left _ _
+
+/-- No payment, however large, buys more than the cap. -/
+theorem granted_le_most (most span credit due total fraction : Nat) :
+    granted most span credit due total fraction ≤ most :=
+  Nat.min_le_right _ _
+
+/-- Paying more still never buys less time. -/
+theorem granted_mono (most span credit due total f f' : Nat) (h : f ≤ f') :
+    granted most span credit due total f ≤ granted most span credit due total f' := by
+  have := owed_mono span credit due total f f' h
+  simp only [granted]; omega
+
+/-- An invoice within the cap, paid exactly, still buys exactly its periods. -/
+theorem granted_exact (most span credit due total : Nat) (ht : 0 < total)
+    (sum : credit + due = total) (hs : span ≤ most) :
+    granted most span credit due total SCALE = span := by
+  simp only [granted, owed_exact span credit due total ht sum]; omega
+
 theorem rearrange1 (a b c d e f : Nat) : a * (b * c + d * e) * f = a * (b * c * f + d * (e * f)) := by
   grind
 theorem rearrange2 (a b c d e f : Nat) : a * (b * c + d * e) * f = a * (b * f * c + d * (e * f)) := by
@@ -142,9 +170,9 @@ def paidFraction (due : Nat) (tokens : List (Nat × Nat)) : Nat :=
   if due = 0 then SCALE else tokens.foldr (fun (sent, asked) acc => share sent asked + acc) 0
 
 /-- The Pro time settleInvoice grants a "periods" invoice in total: nothing while an open invoice
-is short of being paid, otherwise what `owed` says. -/
-def settledTime (wasOpen : Bool) (span credit due total fraction : Nat) : Nat :=
-  if total = 0 || (wasOpen && fraction < SCALE) then 0 else owed span credit due total fraction
+is short of being paid, otherwise what `granted` says. -/
+def settledTime (wasOpen : Bool) (most span credit due total fraction : Nat) : Nat :=
+  if total = 0 || (wasOpen && fraction < SCALE) then 0 else granted most span credit due total fraction
 
 /-- settleInvoice adds only the difference from what was already granted, so settling the same
 payments again adds nothing. Returns (granted afterwards, time added). -/

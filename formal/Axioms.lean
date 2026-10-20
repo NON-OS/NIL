@@ -62,6 +62,10 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.Invoice.owed_exact
   Nil.Invoice.owed_full
   Nil.Invoice.owed_le_sent
+  Nil.Invoice.granted_le_owed
+  Nil.Invoice.granted_le_most
+  Nil.Invoice.granted_mono
+  Nil.Invoice.granted_exact
   Nil.Invoice.grant_again
   Nil.Invoice.usdToUnits_covers
   Nil.Invoice.unitsToUsd_le

@@ -51,6 +51,7 @@ The model follows `client/src/lib/isRollback.ts` and `client/src/state/taskVersi
 - `topUp_same_suffix`: the "send the rest" amount after a partial payment ends in the same suffix as the invoice.
 - `topUp_completes`: sending that amount in any one token finishes the invoice.
 - `owed_le_paid`, `owed_le_sent`, `owed_proportional`, `owed_mono`, `owed_exact` and `owed_full`: an overpaid invoice buys Pro time in proportion to what was paid, rounded down to the millisecond, never more than the money that arrived pays for, and exactly the invoice's periods when it is paid exactly.
+- `granted_le_owed`, `granted_le_most`, `granted_mono` and `granted_exact`: one invoice never grants more than `PLAN_MAX_PERIODS` periods however much arrives, the cap only ever takes time away, paying more still never buys less, and an invoice within the cap paid exactly still buys exactly its periods.
 - `grant_again`: settling the same payments again adds no time.
 - `usdToUnits_covers`, `unitsToUsd_le` and `noxDue_ge`: price conversions round in the treasury's favour, and credit from a payment is never worth more than what arrived.
 - `draw_off_balance` and `cancel_refunds`: the credit a new invoice draws comes off the balance exactly, and a cancelled or expired invoice hands back what it drew plus what was paid into it.
