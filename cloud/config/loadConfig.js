@@ -8,6 +8,7 @@ import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
 import readTelegram from './readTelegram.js';
 import readWalletConnect from './readWalletConnect.js';
+import checksumAddress from '../lib/checksumAddress.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
 const ADDRESS = /^0x[0-9a-fA-F]{40}$/;
@@ -43,6 +44,14 @@ export default function loadConfig(env = process.env) {
 
   const treasury = read.text('CLOUD_PLAN_TREASURY');
   if (treasury && !ADDRESS.test(treasury)) read.fail('CLOUD_PLAN_TREASURY must be an Ethereum address (0x and 40 hex characters).');
+  // every customer pays this one address, and the workspaces only see it lowercased, so its
+  // EIP-55 checksum is checked here or nowhere
+  if (treasury && ADDRESS.test(treasury) && /[a-f]/i.test(treasury.slice(2))) {
+    const hex = treasury.slice(2);
+    const oneCase = hex === hex.toLowerCase() || hex === hex.toUpperCase();
+    if (!oneCase && checksumAddress(treasury) !== treasury) read.fail('CLOUD_PLAN_TREASURY doesn’t match its checksum, so a character is probably mistyped. Every customer pays this address: copy it again from the wallet that holds it.');
+    if (oneCase) read.warn('CLOUD_PLAN_TREASURY is all one case, so it carries no checksum and a mistyped character can’t be caught. Paste it with mixed case, as the wallet shows it.');
+  }
   if (!treasury) read.warn('CLOUD_PLAN_TREASURY is not set, so hosted workspaces run in community mode: every tool is unlocked and nothing is billed.');
 
   // One treasury, many workspaces: each gets its own slice of the invoice suffixes so no two can

@@ -50,6 +50,8 @@ test('settings that would make the deployment unsafe or broken are errors', () =
   const cases = [
     [{ CLOUD_DOMAIN: 'Not A Domain' }, /CLOUD_DOMAIN/],
     [{ CLOUD_PLAN_TREASURY: '0x1234' }, /CLOUD_PLAN_TREASURY/],
+    // one character off from 0xC4155a7bcE81a5DFE03919eF81A02a44f30Cfbee
+    [{ CLOUD_PLAN_TREASURY: '0xC4155a7bcE81a5DFE03919eF81A02a44f30Cfbef' }, /checksum/],
     [{ CLOUD_INTERNAL_PORT: '8080' }, /must differ/],
     [{ CLOUD_CADDY_CONTAINER: '' }, /CLOUD_CADDY_CONTAINER/],
     [{ CLOUD_TLS: 'wildcard' }, /CLOUD_DNS_PROVIDER/],
@@ -109,4 +111,13 @@ test('open egress needs no Caddy container, and an S3 target reads its credentia
   assert.deepEqual(errors, []);
   assert.equal(config.backup.enabled, true);
   assert.deepEqual({ ...config.backup.target }, { kind: 's3', bucket: 'nil-backups', prefix: 'hosted', endpoint: 'https://fsn1.your-objectstorage.com', region: 'fsn1', accessKeyId: 'AK', secretAccessKey: 'SK', partBytes: 16 * 1024 * 1024 });
+});
+
+test('the treasury is taken with a valid checksum, and one with none is accepted with a warning', () => {
+  const good = loadConfig({ ...baseEnv, CLOUD_PLAN_TREASURY: '0xC4155a7bcE81a5DFE03919eF81A02a44f30Cfbee' });
+  assert.deepEqual(good.errors, []);
+  assert.equal(good.config.app.treasury, '0xc4155a7bce81a5dfe03919ef81a02a44f30cfbee');
+  const lower = loadConfig({ ...baseEnv, CLOUD_PLAN_TREASURY: '0xc4155a7bce81a5dfe03919ef81a02a44f30cfbee' });
+  assert.deepEqual(lower.errors, []);
+  assert.ok(lower.warnings.some((w) => /no checksum|carries no checksum/.test(w)));
 });
