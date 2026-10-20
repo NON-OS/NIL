@@ -60,14 +60,16 @@ const fresh = () => {
 test('a huge overpayment buys at most the longest plan, and the rest becomes credit', async () => {
   fresh();
   const invoice = await create({ periods: 1 });
-  // $1,188 more than the $12 asked, keeping the suffix
-  await send(USDC, amount(invoice, 'USDC') + 1188n * 10n ** 6n);
+  const asked = amount(invoice, 'USDC');
+  // $1,188 more than asked, keeping the suffix
+  const sent = asked + 1188n * 10n ** 6n;
+  await send(USDC, sent);
   const v = await view(invoice.id);
   assert.equal(v.grantedDays, 24 * 30, 'capped at PLAN_MAX_PERIODS periods');
-  // $1,200 arrived and 24 periods cost a little over $288 (the amount asked rounds up and carries
-  // the suffix), so just under $912 is left over
+  // 24 periods at the amount asked (a little over $12, since it rounds up and carries the
+  // suffix) are time; the rest of what arrived is credit, in micro-USD like USDC's units
   const left = await credit();
-  assert.ok(left > 905_000_000 && left < 912_000_000, `credit ${left}`);
+  assert.ok(Math.abs(left - Number(sent - 24n * asked)) <= 2, `credit ${left}, expected ${sent - 24n * asked}`);
 });
 
 test('NOX sent beyond the cap is credit at the lower of the locked rate and today’s', async () => {
