@@ -584,7 +584,7 @@ Raise `MAX_UPLOAD_MB`. For a capsule restore, raise `MAX_CAPSULE_MB`.
 
 ### "You've used the 2 GB of file space you have on this server"
 
-Each person's files count against `UPLOAD_QUOTA_PER_MEMBER_MB` (2048), a guest's against `UPLOAD_QUOTA_PER_GUEST_MB` (100), and everyone's together against `UPLOAD_QUOTA_MB` (20480), which gives "This workspace has used its 20 GB of file space" instead. Remove files, or raise the limit and restart. `0` turns a quota off. "You've attached a lot of files in the last hour" means `UPLOADS_PER_HOUR` (120); it clears within the hour.
+Each person's files count against `UPLOAD_QUOTA_PER_MEMBER_MB` (2048) and a guest's against `UPLOAD_QUOTA_PER_GUEST_MB` (100). Everyone's files and the database together count against `UPLOAD_QUOTA_MB` (20480), which gives "This workspace has used its 20 GB of storage" instead, for files and for new docs, comments and other writes. Reading, deleting and exporting keep working. Remove files or docs, or raise the limit and restart. `0` turns a quota off. "You've attached a lot of files in the last hour" means `UPLOADS_PER_HOUR` (120); it clears within the hour. "You've saved a lot in the last minute" means `CONTENT_WRITES_PER_MINUTE` (120), counted per person across docs and comments.
 
 ### "This server already has a workspace. Restore only works on a fresh install"
 

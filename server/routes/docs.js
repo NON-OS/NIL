@@ -11,6 +11,7 @@ import announceDoc from '../services/announceDoc.js';
 import docRecipients from '../services/docRecipients.js';
 import hub from '../realtime/hub.js';
 import toDoc from '../mappers/toDoc.js';
+import contentWrites from '../auth/contentWrites.js';
 
 const router = express.Router();
 const KEEP_REVISIONS = 25;
@@ -45,6 +46,7 @@ router.get(
 
 router.post(
   '/docs',
+  contentWrites,
   route((req) => {
     const b = req.body ?? {};
     const grants = Array.isArray(b.grants) ? b.grants : [];
@@ -69,6 +71,7 @@ router.post(
 // get their version back instead of silently overwriting it.
 router.put(
   '/docs/:id',
+  contentWrites,
   route((req) => {
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
     const base = check.number(req.body?.baseVersion, 'Version', { min: 1, integer: true });
@@ -102,6 +105,7 @@ router.post(
 // new key for whoever stays. Old revisions used the old key, so they go.
 router.post(
   '/docs/:id/rotate',
+  contentWrites,
   route((req) => {
     const { doc } = docAccess(req.params.id, req.user);
     if (!manager(doc, req.user)) throw HttpError.forbidden('Only the doc’s creator or an admin can remove people.');

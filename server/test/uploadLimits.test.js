@@ -116,7 +116,7 @@ test('the workspace quota counts everyone’s files', async () => {
   for (let i = 0; i < 12; i++) results.push(await upload(owner, task, blob, 'archive.zip'));
   const refused = results.find((r) => r.status === 413);
   assert.ok(refused, JSON.stringify(count(results)));
-  assert.match(refused.data.error, /This workspace has used its 400 MB of file space/);
+  assert.match(refused.data.error, /This workspace has used its 400 MB of storage/);
   assert.ok(storedBytes() <= 400 * MB);
   // removing files makes room again
   const first = results.find((r) => r.status === 200).data.attachment;

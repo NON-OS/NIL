@@ -11,6 +11,7 @@ import publishTask from '../services/publishTask.js';
 import toComment from '../mappers/toComment.js';
 import cipherText from '../lib/cipherText.js';
 import commentQuotes from '../services/commentQuotes.js';
+import contentWrites from '../auth/contentWrites.js';
 
 const router = express.Router();
 
@@ -23,10 +24,11 @@ function ownComment(req, { allowAdmin = false } = {}) {
   return row;
 }
 
-router.post('/tasks/:id/comments', route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body, { sealed: req.body?.sealed === true, id: req.body?.id }) })));
+router.post('/tasks/:id/comments', contentWrites, route((req) => ({ comment: addComment(req.user, req.params.id, req.body?.body, { sealed: req.body?.sealed === true, id: req.body?.id }) })));
 
 router.patch(
   '/comments/:id',
+  contentWrites,
   route((req) => {
     const row = ownComment(req);
     // an encrypted comment stays encrypted; the browser re-seals the edit with the task's key

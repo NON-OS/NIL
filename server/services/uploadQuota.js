@@ -2,6 +2,8 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import HttpError from '../lib/HttpError.js';
 import units from '../config/units.js';
+import storedBytes from './storedBytes.js';
+import storageFull from './storageFull.js';
 
 const GB = 1024 * units.MB;
 const MORE = 'Remove files you no longer need, or ask whoever runs the server for more.';
@@ -19,8 +21,8 @@ function hold(userId, bytes) {
 }
 
 // How much attachments may take up: one person's files (UPLOAD_QUOTA_PER_MEMBER_MB, or
-// UPLOAD_QUOTA_PER_GUEST_MB for a guest) and the whole workspace's (UPLOAD_QUOTA_MB), files in
-// the trash included. An upload holds its size from before its first byte is read until it's
+// UPLOAD_QUOTA_PER_GUEST_MB for a guest), files in the trash included, and the whole
+// workspace's storage (UPLOAD_QUOTA_MB), which counts its database as well. An upload holds its size from before its first byte is read until it's
 // stored or given up, so files sent all at once can't slip past a quota together. Returns the
 // function that lets go of the hold.
 export default function uploadQuota(user, bytes) {
@@ -29,8 +31,8 @@ export default function uploadQuota(user, bytes) {
   if (mine && used('WHERE uploader_id = ?', user.id) + (held.people.get(user.id) ?? 0) + bytes > mine) {
     throw new HttpError(413, `You’ve used the ${size(mine)} of file space you have on this server. ${MORE}`);
   }
-  if (workspaceQuotaBytes && used('') + held.total + bytes > workspaceQuotaBytes) {
-    throw new HttpError(413, `This workspace has used its ${size(workspaceQuotaBytes)} of file space. ${MORE}`);
+  if (workspaceQuotaBytes && storedBytes({ fresh: true }).total + held.total + bytes > workspaceQuotaBytes) {
+    throw new HttpError(413, storageFull(workspaceQuotaBytes));
   }
   hold(user.id, bytes);
   let holding = true;

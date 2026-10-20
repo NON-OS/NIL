@@ -2,6 +2,7 @@ import express from 'express';
 import requireAuth from '../auth/requireAuth.js';
 import requireMember from '../auth/requireMember.js';
 import requirePlan from '../auth/requirePlan.js';
+import storageGuard from '../security/storageGuard.js';
 import cryptoGate from '../auth/cryptoGate.js';
 import auth from './auth.js';
 import wallet from './wallet.js';
@@ -81,6 +82,8 @@ api.use(calendarFeed);
 
 // Everything after this line needs a signed-in, active account.
 api.use(requireAuth);
+// and new writes only while the workspace's storage has room
+api.use(storageGuard);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
 api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/me/identity-wraps', '/me/recovery-kit', '/me/passkeys', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links'], requireMember);

@@ -67,6 +67,11 @@ router.post(
     // a body that says up front it's too large is refused before any of it is read; one that
     // only turns out too large on the way is cut off below
     if (Number(req.headers['content-length']) > config.maxCapsuleBytes) throw new HttpError(413, 'That capsule is larger than this server accepts (MAX_CAPSULE_MB).');
+    // the upload and its unpacked copy are both on disk until the restore is done, and that disk
+    // may be shared with other workspaces, so there has to be room for twice the capsule
+    const declared = Number(req.headers['content-length']) || config.maxCapsuleBytes;
+    const disk = fs.statfsSync(config.dataDir);
+    if (disk.bavail * disk.bsize < 2 * declared) throw new HttpError(507, 'This server doesn’t have enough free disk for that capsule right now. Ask whoever runs it for more room.');
     restoring = true;
     const work = fs.mkdtempSync(path.join(config.dataDir, 'restore-'));
     try {
