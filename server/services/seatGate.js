@@ -11,7 +11,7 @@ export default function seatGate(role) {
   if (status.seatLimit === null || status.seatsUsed < status.seatLimit) return;
   throw new HttpError(
     402,
-    status.unlocked
+    status.unlocked || status.overSeats
       ? `Your Nil Pro plan covers ${countOf(status.seatLimit, 'person', 'people')}. An admin can add seats in Settings → Plan.`
       : `The free plan includes ${countOf(status.freeSeats, 'person', 'people')}. An admin can add more with Nil Pro in Settings → Plan.`,
   );

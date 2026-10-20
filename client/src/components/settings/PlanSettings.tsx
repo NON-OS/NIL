@@ -74,7 +74,7 @@ export default function PlanSettings() {
           {status.enforced && (
             <div className="plan-facts">
               <StatTile label="Price" value={usd(status.priceUsd ?? 0)} sub={`per ${countOf(status.periodDays ?? 0, 'day')}, plus ${usd(status.seatUsd ?? 0)} a seat above ${free}`} />
-              <StatTile label="People" value={status.seatLimit === null ? `${used}` : `${used} / ${status.seatLimit}`} sub={status.seatLimit === null ? 'No seat limit right now' : 'Covered right now'} />
+              <StatTile label="People" value={status.seatLimit === null ? `${used}` : `${used} / ${status.seatLimit}`} sub={status.seatLimit === null ? 'No seat limit right now' : status.overSeats ? 'More than the seats paid for' : 'Covered right now'} />
               <StatTile label="Grace" value={countOf(status.graceDays ?? 0, 'day')} sub="Before tools pause" />
             </div>
           )}

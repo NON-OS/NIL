@@ -16,6 +16,8 @@ export default interface Plan {
   seatsUsed?: number;
   // null: no cap right now (community mode, trial or a Zero-State Pass)
   seatLimit?: number | null;
+  // more people than the seats paid for, which pauses the paid tools until seats are added
+  overSeats?: boolean;
   freeSeats?: number;
   periodDays?: number;
   maxPeriods?: number;
