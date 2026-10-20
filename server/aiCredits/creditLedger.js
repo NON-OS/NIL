@@ -10,6 +10,9 @@ const DAY = 86_400_000;
 const creditLedger = {
   spend({ scope, nullifier, day }) {
     sql.tx(() => {
+      // a proof checked just before midnight and spent just after would land after the prune
+      // below had dropped yesterday's nullifiers, so a slot already used could be used again
+      if (day !== utcDay()) throw new HttpError(409, 'That AI request was made for yesterday. Try again and Nil uses one of today’s credits.');
       creditLedger.prune();
       const { changes } = sql.run('INSERT INTO ai_credit_nullifiers (scope, nullifier, day) VALUES (?, ?, ?) ON CONFLICT DO NOTHING', scope, nullifier, day);
       if (!changes) throw new HttpError(409, 'That AI credit was already used. Try again and Nil picks another of today’s.');

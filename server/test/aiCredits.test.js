@@ -244,3 +244,13 @@ test('without the plan, a valid proof is refused; yesterday’s nullifiers are g
     assert.deepEqual(rows('SELECT * FROM ai_credit_nullifiers'), []);
   });
 });
+
+test('a credit checked just before midnight can’t be spent again just after it', async () => {
+  const { default: creditLedger } = await import('../aiCredits/creditLedger.js');
+  const { default: utcDay } = await import('../aiCredits/utcDay.js');
+  const { default: sql } = await import('../db/sql.js');
+  const yesterday = utcDay(Date.now() - 86_400_000);
+  // spent at 23:59, and the same proof, checked before midnight, arrives to be spent after it
+  sql.run('INSERT INTO ai_credit_nullifiers (scope, nullifier, day) VALUES (?, ?, ?)', '123', '456', yesterday);
+  assert.throws(() => creditLedger.spend({ scope: '123', nullifier: '456', day: yesterday }), /yesterday/);
+});
