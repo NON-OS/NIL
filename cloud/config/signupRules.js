@@ -16,6 +16,8 @@ export default function signupRules(read) {
     maxWorkspaces: read.number('CLOUD_MAX_WORKSPACES', 300, { min: 1 }),
     perWallet: read.number('CLOUD_MAX_PER_WALLET', 3, { min: 1 }),
     perWalletPerDay: read.number('CLOUD_SIGNUPS_PER_WALLET_PER_DAY', 2, { min: 1 }),
+    // only a wallet's first workspace gets the free trial
+    oneTrialPerWallet: read.oneOf('CLOUD_ONE_TRIAL_PER_WALLET', ['on', 'off'], 'on') === 'on',
     perIpPerDay: read.number('CLOUD_SIGNUPS_PER_IP_PER_DAY', 3, { min: 1 }),
     perBlockPerDay: read.number('CLOUD_SIGNUPS_PER_BLOCK_PER_DAY', 10, { min: 1 }),
     perBlockPerHour: read.number('CLOUD_SIGNUPS_PER_BLOCK_PER_HOUR', 3, { min: 1 }),

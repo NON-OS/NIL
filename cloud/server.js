@@ -8,9 +8,11 @@ import startScheduler from './ops/startScheduler.js';
 import recoverInterrupted from './ops/recoverInterrupted.js';
 import checkBackupTarget from './ops/checkBackupTarget.js';
 import checkTlsMode from './ops/checkTlsMode.js';
+import rememberTrialWallets from './ops/rememberTrialWallets.js';
 
 const config = configOrExit();
 const ctx = createContext(config, { role: 'server' });
+rememberTrialWallets(ctx);
 
 // Caddy may not be up yet on a first start, so the file is written first and the reload is
 // only attempted: Caddy reads the file itself when it starts.

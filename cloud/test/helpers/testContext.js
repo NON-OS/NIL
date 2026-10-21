@@ -35,7 +35,7 @@ export default function testContext({ env = {}, driver = fakeDriver(), backups =
     log: silent,
     store: createStore(openDatabase(':memory:'), now),
     driver,
-    walletTag: (address) => (address ? 'w-test' : null),
+    walletTag: (address) => (address ? `w-${String(address).toLowerCase().slice(2, 12)}` : null),
     alert: async (event, details = {}) => {
       alerts.push({ event, ...details });
       return true;

@@ -32,6 +32,8 @@ export default function workspaceSpec(config, workspace) {
     env.PLAN_INVOICE_SLOT = `${workspace.invoiceSlot}/${app.invoiceSlots}`;
     env.PLAN_INVOICE_KEY = app.invoiceKey;
   }
+  // the owner's wallet already had its free trial in another workspace
+  if (workspace.trial === false) env.PLAN_TRIAL_DAYS = '0';
   if (config.links.source) env.SOURCE_URL = config.links.source;
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 

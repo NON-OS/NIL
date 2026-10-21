@@ -26,16 +26,21 @@ export default function createWorkspace(ctx, { name, owner, plan = ctx.config.de
   if (!ADDRESS.test(address)) throw HttpError.badRequest('The owner must be an Ethereum address.');
   if (!config.plans[plan]) throw HttpError.badRequest(`There is no plan called ${plan}.`);
 
+  // a wallet's second workspace starts without a trial, so a fresh address per trial is the only
+  // way round it, and that still has to clear the sign-up limits each time
+  const tag = ctx.walletTag(address);
+  const trial = !config.signup.oneTrialPerWallet || !store.trials.had(tag);
   const id = newWorkspaceId();
   let workspace;
   try {
-    workspace = store.workspaces.insert({ id, name: status.name, owner: address, state: 'provisioning', image, plan, volume: `nil-${id}-data`, setupToken });
+    workspace = store.workspaces.insert({ id, name: status.name, owner: address, state: 'provisioning', image, plan, volume: `nil-${id}-data`, setupToken, trial });
   } catch (err) {
     // two sign-ups for the same name at the same moment: the unique index decides
     if (/UNIQUE/.test(err.message)) throw new HttpError(409, 'That address is taken.');
     throw err;
   }
-  store.events.add(id, 'created', `plan=${plan} image=${image}`);
+  if (trial) store.trials.add(tag);
+  store.events.add(id, 'created', `plan=${plan} image=${image}${trial ? '' : ' trial=no'}`);
   ctx.log.info('workspace.created', { workspace: id, name: workspace.name, owner: ctx.walletTag(address), plan });
   const { app } = config;
   if (app.treasury && app.invoiceKey && workspace.invoiceSlot >= app.invoiceSlots) {

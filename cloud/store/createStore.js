@@ -47,9 +47,9 @@ export default function createStore(db, now = () => Date.now()) {
       try {
         const { slot } = get("UPDATE counters SET value = value + 1 WHERE name = 'invoice_slot' RETURNING value - 1 AS slot");
         run(
-          `INSERT INTO workspaces (id, name, owner, state, image, plan, volume, setup_token, created_at, updated_at, invoice_slot)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          w.id, w.name, w.owner, w.state, w.image, w.plan, w.volume, w.setupToken ?? null, at, at, slot,
+          `INSERT INTO workspaces (id, name, owner, state, image, plan, volume, setup_token, created_at, updated_at, invoice_slot, trial)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+          w.id, w.name, w.owner, w.state, w.image, w.plan, w.volume, w.setupToken ?? null, at, at, slot, w.trial === false ? 0 : 1,
         );
         db.exec('COMMIT');
       } catch (err) {
@@ -71,6 +71,7 @@ export default function createStore(db, now = () => Date.now()) {
 
     countLive: () => get("SELECT COUNT(*) AS n FROM workspaces WHERE state != 'deleted'").n,
     countByOwner: (owner) => get("SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND state != 'deleted'", owner).n,
+    owners: () => all('SELECT DISTINCT owner FROM workspaces WHERE owner IS NOT NULL').map((r) => r.owner),
     countByOwnerSince: (owner, since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND created_at >= ?', owner, since).n,
     // created since then, deleted ones included, so deleting doesn't refill the day's budget
     countCreatedSince: (since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE created_at >= ?', since).n,
@@ -153,5 +154,11 @@ export default function createStore(db, now = () => Date.now()) {
     release: (workspaceId, holder) => run('DELETE FROM locks WHERE workspace_id = ? AND holder = ?', workspaceId, holder).changes,
   };
 
-  return { db, now, workspaces, events, backups, usage, requests, locks };
+  // wallets that have had their free trial, by keyed tag
+  const trials = {
+    had: (tag) => Boolean(get('SELECT 1 FROM trial_wallets WHERE tag = ?', tag)),
+    add: (tag) => run('INSERT INTO trial_wallets (tag, created_at) VALUES (?, ?) ON CONFLICT DO NOTHING', tag, now()).changes,
+  };
+
+  return { db, now, workspaces, events, backups, usage, requests, locks, trials };
 }

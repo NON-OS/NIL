@@ -21,5 +21,6 @@ export default function toWorkspace(row) {
     deletedAt: row.deleted_at,
     lastHealthyAt: row.last_healthy_at,
     activeAt: row.active_at ?? null,
+    trial: row.trial !== 0,
   };
 }
