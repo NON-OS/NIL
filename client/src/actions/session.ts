@@ -27,6 +27,7 @@ import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
 import type Passkey from '../types/Passkey';
+import type AiProviderSummary from '../types/AiProviderSummary';
 import vault from './vault';
 import offline from './offline';
 import phoneConfig from '../lib/phone/phoneConfig';
@@ -45,6 +46,7 @@ interface Bootstrap {
   focus: FocusItem[];
   unread: number;
   ai: boolean;
+  aiProvider?: AiProviderSummary | null;
   aiAnonymous: boolean;
   nox: NoxInfo | null;
   rewards: RewardToken[];
@@ -96,6 +98,7 @@ async function load() {
     focus: b.focus,
     unread: b.unread,
     ai: b.ai,
+    aiProvider: b.aiProvider ?? null,
     aiAnonymous: b.aiAnonymous,
     nox: b.nox,
     rewards: b.rewards ?? [],

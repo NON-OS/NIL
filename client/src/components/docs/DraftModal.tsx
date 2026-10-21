@@ -5,6 +5,7 @@ import Spinner from '../ui/Spinner';
 import toast from '../../state/toast';
 import askAi from '../../actions/askAi';
 import AiMode from '../ai/AiMode';
+import useAiProviderName from '../../hooks/useAiProviderName';
 
 interface Props {
   title: string;
@@ -18,6 +19,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
   const [instruction, setInstruction] = useState('');
   const [useDoc, setUseDoc] = useState(body.trim().length > 0);
   const [busy, setBusy] = useState(false);
+  const provider = useAiProviderName();
 
   const draft = async () => {
     setBusy(true);
@@ -60,7 +62,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
           </label>
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ' and the doc’s current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to Anthropic without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
+          This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ' and the doc’s current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to {provider} without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
         </p>
         <AiMode />
       </div>

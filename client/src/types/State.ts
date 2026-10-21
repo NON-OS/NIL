@@ -10,6 +10,7 @@ import type Activity from './Activity';
 import type PresenceEntry from './PresenceEntry';
 import type TaskDetail from './TaskDetail';
 import type ToastMessage from './ToastMessage';
+import type AiProviderSummary from './AiProviderSummary';
 import type NoxInfo from './NoxInfo';
 import type HolderGate from './HolderGate';
 import type TimeEntry from './TimeEntry';
@@ -43,6 +44,8 @@ export default interface State {
   inbox: InboxItem[] | null;
   feed: Activity[] | null;
   ai: boolean;
+  // who built-in AI sends text to, or null while it's off
+  aiProvider: AiProviderSummary | null;
   // members with a voting key send built-in AI requests anonymously while this is on
   aiAnonymous: boolean;
   // why this browser sends AI requests signed in although you have a voting key, or null

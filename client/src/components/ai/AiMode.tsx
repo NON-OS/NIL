@@ -4,6 +4,7 @@ import useStore from '../../state/useStore';
 import aiMode from '../../actions/aiMode';
 import anonymousAi from '../../actions/anonymousAi';
 import privateKeys from '../../state/privateKeys';
+import useAiProviderName from '../../hooks/useAiProviderName';
 
 // Says how the next AI request from here goes, before anyone clicks: anonymous, with what that
 // does and doesn't hide, or signed in and why. `compact` is the short tag next to a button,
@@ -12,6 +13,7 @@ export default function AiMode({ compact = false, pointer = true }: { compact?: 
   const aiAnonymous = useStore((s) => s.aiAnonymous);
   const me = useStore((s) => s.me);
   const aiSignedReason = useStore((s) => s.aiSignedReason);
+  const provider = useAiProviderName();
   const mode = aiMode({ aiAnonymous, me, aiSignedReason });
   const could = aiMode({ aiAnonymous, me, aiSignedReason: null }).anonymous;
   const [members, setMembers] = useState<number | null>(null);
@@ -33,7 +35,7 @@ export default function AiMode({ compact = false, pointer = true }: { compact?: 
 
   const among = members === null ? 'one of the members with a voting key' : members === 1 ? 'the only member with a voting key' : `one of the ${members} members with a voting key`;
   const text = mode.anonymous
-    ? `Sent anonymously: the server learns that ${among} asked, not which one.${members !== null && members < 3 ? ' With so few, that’s easy to guess.' : ''} This server and Anthropic still read the request, and its words, its timing and your IP address (unless you use Tor) can still point to you.`
+    ? `Sent anonymously: the server learns that ${among} asked, not which one.${members !== null && members < 3 ? ' With so few, that’s easy to guess.' : ''} This server and ${provider} still read the request, and its words, its timing and your IP address (unless you use Tor) can still point to you.`
     : `Sent signed in: the server knows this request is yours. ${mode.why}${mode.setUp && pointer ? ' Set them up in Settings, under Connect AI.' : ''}`;
   const Icon = mode.anonymous ? EyeOff : UserRound;
 

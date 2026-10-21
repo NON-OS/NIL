@@ -18,6 +18,7 @@ const initialState: State = {
   inbox: null,
   feed: null,
   ai: false,
+  aiProvider: null,
   aiAnonymous: false,
   aiSignedReason: null,
   nox: null,

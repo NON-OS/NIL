@@ -5,10 +5,12 @@ import WipeCard from './WipeCard';
 import ImportCard from '../import/ImportCard';
 import useStore from '../../state/useStore';
 import HelpLink from '../help/HelpLink';
+import useAiProviderName from '../../hooks/useAiProviderName';
 
 export default function DataSettings() {
   const role = useStore((s) => s.me?.role);
   const aiOn = useStore((s) => s.ai);
+  const provider = useAiProviderName();
   const sourceUrl = useStore((s) => s.sourceUrl);
   const cryptoTools = useStore((s) => s.workspace.cryptoTools);
   const isAdmin = role === 'owner' || role === 'admin';
@@ -61,7 +63,7 @@ export default function DataSettings() {
             <li><ShieldCheck /> Only admins see wallet addresses. Teammates see the name each person picked.</li>
             {cryptoTools && <li><ShieldCheck /> Proofs of work hide task titles unless the contributor reveals them, and are checked without uploading anything.</li>}
             <li><ShieldCheck /> Deleted data is overwritten in the database file. Trash is erased after 30 days.</li>
-            <li><ShieldCheck />{aiOn ? 'AI assist is on. When someone clicks an AI button, only the text that feature needs goes to Anthropic’s API.' : 'AI assist is off. No task data leaves your server.'}</li>
+            <li><ShieldCheck />{aiOn ? `AI assist is on. When someone clicks an AI button, only the text that feature needs goes to ${provider}.` : 'AI assist is off. No task data leaves your server.'}</li>
           </ul>
         </div>
       </section>

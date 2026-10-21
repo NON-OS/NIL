@@ -92,6 +92,9 @@ export default function applyEvent(event: any): void {
     case 'ai-credits':
       store.set({ aiAnonymous: s.ai && Boolean(event.on) });
       break;
+    case 'ai-provider':
+      store.set({ ai: Boolean(event.ai), aiProvider: event.provider ?? null, aiAnonymous: Boolean(event.anonymous) });
+      break;
     case 'verification':
       if (s.nox) store.set({ nox: { ...s.nox, verification: event.verification } });
       break;

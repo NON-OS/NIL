@@ -8,19 +8,18 @@ import toast from '../../state/toast';
 import agents from '../../actions/agents';
 import meta from '../../lib/meta';
 import urlHost from '../../lib/urlHost';
+import canRunAgent from '../../lib/canRunAgent';
+import agentDefaultModel from '../../lib/agentDefaultModel';
 import type Agent from '../../types/Agent';
 import type AgentInput from '../../types/AgentInput';
 import type AgentOptions from '../../types/AgentOptions';
 import type AgentRunner from '../../types/AgentRunner';
 
-// A server with no route out (hosted Nil) offers only what can work there: external agents, and
-// Claude if the server has a key for it.
-const canRun = (runner: AgentRunner, options: AgentOptions) => runner === 'external' || options.outbound || (runner === 'anthropic' && options.anthropicAvailable);
-
 const RUNNERS: { value: AgentRunner; label: string; hint: string }[] = [
   { value: 'external', label: 'External', hint: 'Connects over MCP or the REST API' },
-  { value: 'anthropic', label: 'Built in: Anthropic', hint: 'Runs inside Nil on Claude' },
-  { value: 'openai', label: 'Built in: OpenAI-compatible', hint: 'Ollama, vLLM, LM Studio, OpenRouter' },
+  { value: 'workspace', label: 'Built in: this workspace’s AI', hint: 'The provider and key in Settings → Connect AI' },
+  { value: 'anthropic', label: 'Built in: Anthropic', hint: 'Runs inside Nil on Claude, with its own key or the workspace’s' },
+  { value: 'openai', label: 'Built in: OpenAI-compatible', hint: 'OpenAI, Ollama, vLLM, LM Studio, OpenRouter' },
 ];
 
 const ACCESS = [
@@ -53,7 +52,7 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
     projectIds: agent?.projectIds ?? [],
     tools: agent?.tools ?? options.tools.map((t) => t.name),
     runner: agent?.runner ?? ('external' as AgentRunner),
-    model: agent?.runner === 'anthropic' && agent.model === options.defaults.model ? '' : agent?.model ?? '',
+    model: agent && agent.model === agentDefaultModel(agent.runner, options) ? '' : agent?.model ?? '',
     endpoint: agent?.endpoint ?? '',
     apiKey: '',
     clearApiKey: false,
@@ -73,6 +72,10 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
   const writeTools = options.tools.filter((t) => t.write);
   const toggleTool = (name: string) => set({ tools: form.tools.includes(name) ? form.tools.filter((t) => t !== name) : [...form.tools, name] });
   const endpointHost = urlHost(form.endpoint);
+  const fallbackModel = agentDefaultModel(form.runner, options);
+  // a key saved for one way of running, or one endpoint, is dropped when that changes
+  const keySaved = Boolean(agent?.hasApiKey && agent.runner === form.runner && (form.runner !== 'openai' || form.endpoint === (agent.endpoint ?? '')));
+  const workspaceClaude = options.workspaceProvider?.source === 'workspace' && options.workspaceProvider.kind === 'anthropic';
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -96,8 +99,9 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
       priceIn: numberOrNull(form.priceIn),
       priceOut: numberOrNull(form.priceOut),
     };
-    if (form.apiKey.trim()) input.apiKey = form.apiKey.trim();
-    else if (form.clearApiKey) input.apiKey = '';
+    const ownKey = form.runner === 'anthropic' || form.runner === 'openai';
+    if (ownKey && form.apiKey.trim()) input.apiKey = form.apiKey.trim();
+    else if (ownKey && form.clearApiKey) input.apiKey = '';
     setSaving(true);
     try {
       if (agent) onSaved((await agents.update(agent.id, input)).agent, null);
@@ -175,7 +179,7 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
       <div className="agent-form-grid">
         <div className="field">
           <span>How it runs</span>
-          <Picker title="How it runs" options={RUNNERS.filter((r) => r.value === form.runner || canRun(r.value, options)).map((r) => ({ ...r, hint: r.value === 'anthropic' && !options.anthropicAvailable ? 'Needs ANTHROPIC_API_KEY on the server' : r.hint }))} value={form.runner} onChange={(v) => set({ runner: v as AgentRunner })} className="btn" width={300}>
+          <Picker title="How it runs" options={RUNNERS.filter((r) => r.value === form.runner || canRunAgent(r.value, options)).map((r) => ({ ...r, hint: r.value === 'workspace' && options.workspaceProvider ? `${options.workspaceProvider.name}, set in Settings → Connect AI` : r.value === 'anthropic' && !options.anthropicAvailable ? 'Needs an Anthropic API key of its own' : r.hint }))} value={form.runner} onChange={(v) => set({ runner: v as AgentRunner, apiKey: '', clearApiKey: false })} className="btn" width={320}>
             {RUNNERS.find((r) => r.value === form.runner)?.label}
           </Picker>
         </div>
@@ -187,12 +191,30 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
         )}
       </div>
 
-      {form.runner === 'anthropic' && (
+      {form.runner === 'workspace' && (
         <label className="field">
           <span>Model</span>
-          <input className="input mono" value={form.model} maxLength={120} required={!options.defaults.model} onChange={(e) => set({ model: e.target.value })} placeholder={options.defaults.model ?? 'The model name, as Anthropic lists it'} />
-          {!options.defaults.model && <small>The server has no AGENT_MODEL, so this agent needs its own.</small>}
+          <input className="input mono" value={form.model} maxLength={120} onChange={(e) => set({ model: e.target.value })} placeholder={fallbackModel ?? 'The model name, as the provider lists it'} />
+          <small>Leave it empty to use the workspace’s model. A change in Settings → Connect AI reaches this agent on its next run.</small>
         </label>
+      )}
+      {form.runner === 'anthropic' && (
+        <div className="agent-form-grid">
+          <label className="field">
+            <span>Model</span>
+            <input className="input mono" value={form.model} maxLength={120} required={!fallbackModel} onChange={(e) => set({ model: e.target.value })} placeholder={fallbackModel ?? 'The model name, as Anthropic lists it'} />
+            {!fallbackModel && <small>Neither the workspace nor the server names a Claude model, so this agent needs its own.</small>}
+          </label>
+          <div className="field">
+            <span>API key</span>
+            <input className="input mono" type="password" autoComplete="off" aria-label="API key" value={form.apiKey} maxLength={500} required={!options.anthropicAvailable && !keySaved} onChange={(e) => set({ apiKey: e.target.value, clearApiKey: false })} placeholder={keySaved ? 'Saved. Type to replace it.' : options.anthropicAvailable ? `Optional. Without one it uses the ${workspaceClaude ? 'workspace’s' : 'server’s'} key` : 'An Anthropic API key'} />
+            {keySaved && options.anthropicAvailable && (
+              <label className="filter-toggle">
+                <input type="checkbox" checked={form.clearApiKey} onChange={(e) => set({ clearApiKey: e.target.checked, apiKey: '' })} /> <span>Remove the saved key</span>
+              </label>
+            )}
+          </div>
+        </div>
       )}
       {form.runner === 'openai' && (
         <div className="agent-form-grid">
@@ -207,8 +229,8 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
           </label>
           <div className="field">
             <span>API key</span>
-            <input className="input mono" type="password" autoComplete="off" aria-label="API key" value={form.apiKey} maxLength={500} onChange={(e) => set({ apiKey: e.target.value, clearApiKey: false })} placeholder={agent?.hasApiKey ? 'Saved. Type to replace it.' : 'Only if the endpoint needs one'} />
-            {agent?.hasApiKey && (
+            <input className="input mono" type="password" autoComplete="off" aria-label="API key" value={form.apiKey} maxLength={500} onChange={(e) => set({ apiKey: e.target.value, clearApiKey: false })} placeholder={keySaved ? 'Saved. Type to replace it.' : 'Only if the endpoint needs one'} />
+            {keySaved && (
               <label className="filter-toggle">
                 <input type="checkbox" checked={form.clearApiKey} onChange={(e) => set({ clearApiKey: e.target.checked, apiKey: '' })} /> <span>Remove the saved key</span>
               </label>

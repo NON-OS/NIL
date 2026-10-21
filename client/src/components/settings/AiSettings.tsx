@@ -11,6 +11,9 @@ import PlanNotice from '../plan/PlanNotice';
 import type AccessKey from '../../types/AccessKey';
 import HelpLink from '../help/HelpLink';
 import AnonymousAiCard from './AnonymousAiCard';
+import AiProviderCard from './AiProviderCard';
+import isAdminUser from '../../lib/isAdmin';
+import aiDestination from '../../lib/aiDestination';
 
 // every key expires, at most a year out unless the server allows less
 const EXPIRY = [
@@ -46,6 +49,8 @@ function Snippet({ label, text }: { label: string; text: string }) {
 // assistant acts as you and sees exactly what you see, never more.
 export default function AiSettings() {
   const aiOn = useStore((s) => s.ai);
+  const provider = useStore((s) => s.aiProvider);
+  const isAdmin = useStore((s) => isAdminUser(s.me));
   const [keys, setKeys] = useState<AccessKey[]>([]);
   const [form, setForm] = useState({ name: 'Claude', scope: 'read' as 'read' | 'write', expiry: '90' });
   const [fresh, setFresh] = useState<string | null>(null);
@@ -147,11 +152,12 @@ export default function AiSettings() {
         <PlanNotice what="AI tools" />
         <div className="settings-card">
           <p style={{ margin: 0 }}>
-            {aiOn
-              ? 'Claude is on for this workspace: break tasks into steps, write descriptions, turn notes into tasks, draft docs and write deck narratives. Only the text a feature needs is sent to Anthropic, and only when someone clicks it.'
-              : 'Built-in AI is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server. Connecting your own assistant above works either way.'}
+            {aiOn && provider
+              ? `Built-in AI is on: break tasks into steps, write descriptions, turn notes into tasks, draft docs, write deck narratives and weekly briefs. ${aiDestination(provider)} Only the text a feature needs is sent, and only when someone clicks it.`
+              : `Built-in AI is off. ${isAdmin ? 'Choose a provider and add the workspace’s own key below to turn it on.' : 'An admin can turn it on here by choosing a provider and adding the workspace’s own key.'} Connecting your own assistant above works either way.`}
           </p>
         </div>
+        {isAdmin && <AiProviderCard />}
         {aiOn && <AnonymousAiCard />}
       </section>
     </>

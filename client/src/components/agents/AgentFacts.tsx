@@ -3,7 +3,7 @@ import meta from '../../lib/meta';
 import type Agent from '../../types/Agent';
 import countOf from '../../lib/countOf';
 
-const RUNNER = { external: 'External, over MCP or the REST API', anthropic: 'Built in, on Anthropic', openai: 'Built in, on an OpenAI-compatible endpoint' };
+const RUNNER = { external: 'External, over MCP or the REST API', workspace: 'Built in, on the workspace’s AI', anthropic: 'Built in, on Anthropic', openai: 'Built in, on an OpenAI-compatible endpoint' };
 
 // What an agent may reach and how it's set up, in one list.
 export default function AgentFacts({ agent }: { agent: Agent }) {
