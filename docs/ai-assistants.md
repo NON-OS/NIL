@@ -1,6 +1,6 @@
 # AI assistants
 
-There are two separate ways to use AI with Nil. You can connect your own AI assistant, which reads and changes tasks as you. And the person running the server can turn on built-in AI features that call Anthropic's API. Both are optional, and neither is on unless someone sets it up.
+There are two separate ways to use AI with Nil. You can connect your own AI assistant, which reads and changes tasks as you. And an admin can turn on built-in AI features with the workspace's own key for Claude, GPT or any OpenAI-compatible model. Both are optional, and neither is on unless someone sets it up.
 
 ## Connect your own assistant
 
@@ -50,9 +50,47 @@ The endpoint is `/mcp` on your server, using the MCP streamable HTTP transport w
 
 ## Built-in AI
 
-Hosted Nil (nil.nonos.app) keeps built-in AI off: its workspaces send nothing to an AI provider and have no route to one. Connecting your own assistant, above, works there as it does anywhere.
+Built-in AI runs on the workspace's own key. Nil has no AI key of its own and never adds one: an admin picks the provider, pastes a key from that provider's account, and the workspace pays the provider directly.
 
-When whoever runs the server sets `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the name of the Anthropic model to use), these features appear:
+### Choose a provider
+
+1. Open **Settings → Connect AI**. Under **Built-in AI**, admins see **AI provider**.
+2. Pick the provider:
+   - **Anthropic (Claude)**, with a key from the Claude Console.
+   - **OpenAI (GPT)**, with a key from the OpenAI platform.
+   - **OpenAI-compatible**, for anything that speaks OpenAI's chat completions API. Enter its address too.
+3. Enter the model's name exactly as the provider lists it. Nil doesn't suggest one, because model names change faster than Nil does.
+4. Paste the API key. A local model may not need one.
+5. Click **Test connection**. Nil sends one tiny request ("Reply with the single word OK.") with what the form holds and says whether it worked, or what the provider said if it didn't. Testing saves nothing.
+6. Click **Save**. Every open app picks up the change at once.
+
+Addresses for OpenAI-compatible providers:
+
+| Provider | Address |
+|---|---|
+| OpenRouter | `https://openrouter.ai/api/v1` |
+| Google Gemini | `https://generativelanguage.googleapis.com/v1beta/openai` |
+| Groq | `https://api.groq.com/openai/v1` |
+| Mistral | `https://api.mistral.ai/v1` |
+| Ollama on the same machine | `http://localhost:11434/v1` |
+| LM Studio on the same machine | `http://localhost:1234/v1` |
+| vLLM or any other server | its address, usually ending in `/v1` |
+
+A model on the server itself or on its private network needs `AGENT_ALLOW_LOCAL_ENDPOINTS=true` on the server. Cloud metadata and link-local addresses are refused either way, and every request goes to the address Nil checked, so a DNS answer that changes later can't send it anywhere else.
+
+### The key
+
+The key goes to the server once and is sealed there with AES-256-GCM, under the same key file that protects agents' keys (`data/keys/agents-secrets.key`). It never comes back to any browser: the form shows only that a key is saved and its last four characters, and the server never writes it to its logs. Anyone with both the data folder and that key file could open it, so use a key you can revoke, and give it a spending limit at the provider if it offers one.
+
+A saved key only goes to the provider it was saved for. Switching from Anthropic to OpenAI, or changing an OpenAI-compatible address, asks for the key again. **Remove** deletes the provider and the key, and built-in AI is off again.
+
+### Hosted Nil and self-hosted servers
+
+On hosted Nil (nil.nonos.app), requests to the provider leave through the server's egress proxy. Built-in AI works once that's on for your workspace's server; until then **Settings → Connect AI** says the server has no route out, nothing is sent, and you can still save the provider ahead of time.
+
+On your own server, requests to the provider go straight out, or through `EGRESS_PROXY` if you set one. You can also give the whole server a default: set `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the name of the Anthropic model to use), and every workspace without a provider of its own uses that key. A workspace's own provider always comes first. `AI_ANTHROPIC_URL` and `AI_OPENAI_URL` change where workspaces' Anthropic and OpenAI requests go, and `AI_MAX_OUTPUT_TOKENS` caps each answer.
+
+### The features
 
 | Where | Button | What it does |
 |---|---|---|
@@ -63,11 +101,13 @@ When whoever runs the server sets `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the
 | A doc | **Draft** | Writes text into the doc from your instruction |
 | Status deck | The AI switch | Writes the deck's summary, highlights and speaker notes |
 
-**Settings → Connect AI** says under **Built-in AI** whether it's on.
+**Settings → Connect AI** says under **Built-in AI** whether it's on and, for everyone in the workspace, which provider gets the text: "This workspace sends AI requests to OpenAI with its own key", for example.
+
+Features that need an answer in a fixed shape (checklist steps, tasks from notes, deck text) ask for a JSON schema. A provider that doesn't support that is asked for any JSON object instead, and then for JSON in plain words, so smaller and local models work too. A request with Claude goes through Anthropic's official SDK.
 
 ### What is sent, and when
 
-Text goes to Anthropic only when someone clicks one of these buttons, and only what that feature needs:
+Text goes to the workspace's provider only when someone clicks one of these buttons, and only what that feature needs:
 
 - For a task: its title, description, checklist, project name and description, and goal title.
 - For notes: the notes you pasted and the names of the people in the workspace, so tasks can be assigned. Nil doesn't store the notes.
@@ -92,7 +132,7 @@ Admins turn anonymous requests on or off for the workspace with the **Anonymous 
 The server can't tell which member sent a request, and nothing it stores links a request to a person. Some things can still point to you, and you should know them before relying on this:
 
 - The group you hide in is the workspace's members who have a voting key. In a small team that's only a few people, and the button's note says how many. With two members, the other one knows it was you.
-- The server and Anthropic still read every request in full, as they would signed in. If the prompt or the doc text says who you are, or is something only you would ask, the request points to you.
+- The server and the AI provider still read every request in full, as they would signed in. If the prompt or the doc text says who you are, or is something only you would ask, the request points to you.
 - The time a request arrives can point to you too, for example when you keep the draft and your signed-in save follows a moment later. The browser waits a short random moment before sending, which helps only a little.
 - The server and any proxy in front of it see your IP address, the same one your signed-in requests come from. Use [Tor](tor.md) if that matters.
 - The server hands out the member list your browser proves against. A dishonest server could hand you a list of its own making and recognise your requests by it. Your browser checks that you're on the list and works out everything else itself, but it can't check who else is.

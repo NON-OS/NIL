@@ -12,7 +12,7 @@ The commands assume Debian or Ubuntu, a domain called `nonos.example.com` and th
 browser ──HTTPS──> Caddy (ports 80, 443) ──> nonos:3000 (Docker network only)
                                                │
                                                ├─ nonos-data volume: database, uploads, signing key
-                                               └─ outbound: your Ethereum node, Anthropic (only if AI is on)
+                                               └─ outbound: your Ethereum node, the AI provider (only if AI is on)
 ```
 
 Nil has no port open to the internet. Only Caddy does.
@@ -24,7 +24,7 @@ Nil has no port open to the internet. Only Caddy does.
 | Size | 2 vCPU, 2 GB RAM and 20 GB of SSD is a comfortable start for a team of a few dozen people. These are starting points, not measured limits. Building the Docker image on the server uses most of that memory. With 1 GB of RAM, add swap for the build (but see the note on swap in [memory-only mode](zero-state.md#memory-only-mode)) |
 | One instance | Nil uses SQLite, and keeps live updates and rate limits in memory. Run exactly one copy. Don't put it behind a load balancer with several replicas |
 | Software | Docker Engine with the Compose plugin, version 2.24.4 or newer (the compose files use `!reset` and `!override`). Check with `docker compose version`. On Ubuntu or Debian, the commands are below the table; for other systems, see docs.docker.com/engine/install |
-| Outbound access | The server needs HTTPS out to your Ethereum node, to Anthropic if you turn AI on, to the browser makers' push services (`PUSH_SERVICES`) once someone turns on push notifications, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building. `PUSH_NOTIFICATIONS=off` keeps the server from ever contacting a push service |
+| Outbound access | The server needs HTTPS out to your Ethereum node, to the AI provider a workspace admin picks once built-in AI is on, to the browser makers' push services (`PUSH_SERVICES`) once someone turns on push notifications, to Let's Encrypt for certificates, and to Docker Hub and the npm registry while building. `PUSH_NOTIFICATIONS=off` keeps the server from ever contacting a push service |
 | A wallet | You sign in with an Ethereum wallet in your browser (an extension such as MetaMask or Rabby, or a wallet's in-app browser). Have one ready, plus a second wallet to link as a backup |
 
 Docker on Ubuntu, from Docker's own package repository (on Debian, use `debian` in both URLs):
@@ -114,7 +114,7 @@ Then decide on these:
 | `NOX_VERIFIER_MODE`, `NOX_VERIFIER_KEY` | Recommended with on-chain features: run Nil's verifier next to Nil. Start with `shadow`, which checks your node's answers on the side and tells admins when one was false, and move to `enforce` after a week without a mismatch: Nil then acts only on chain reads the verifier proved, so a lying or broken node can't make it credit a payment that never happened or count a balance nobody holds. See [Verified chain reads](self-hosting.md#verified-chain-reads) for the steps and for what it can't catch |
 | `REWARD_TOKENS` | Leave the default (USDC on mainnet) or set `none` for NOX only. Change it if `NOX_CHAIN_ID` is not 1 |
 | `PLAN_TREASURY` | Leave unset. The server then runs in community mode, with every tool unlocked. Set it only if you run Nil for others and charge them for Nil Pro; see [Charging for Nil Pro](#charging-for-nil-pro) |
-| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Only if you want built-in AI: the key and the name of the Anthropic model to use. Text goes to Anthropic only when someone clicks an AI button |
+| `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | Optional: a default Anthropic key and model for a workspace without its own provider. Admins can bring their own key for Claude, GPT or any OpenAI-compatible model in Settings → Connect AI instead. Text goes to the provider only when someone clicks an AI button |
 | `MAX_UPLOAD_MB` | Raise it if your team attaches large files (default 25) |
 
 Don't set `DATA_DIR` in Docker. The image already uses `/data`, which is the `nonos-data` volume. Every variable is explained in [.env.example](../.env.example).
@@ -451,7 +451,7 @@ Version 1 had no wallet sign-in. Upgrade to v2 first, have everyone link a walle
 - [ ] Sharing, token-holder door, voting power and zero-state settings are what you want.
 - [ ] Nightly backups run, an encrypted copy leaves the server, and one restore was tested.
 - [ ] A capsule is stored off-site with its passphrase in a password manager.
-- [ ] If built-in AI is on, your team knows what goes to Anthropic and when.
+- [ ] If built-in AI is on, your team knows what goes to the AI provider and when.
 - [ ] If you plan encrypted weighted votes: your team knows they are beta. The ballot circuit is not audited and its trusted setup in `circuits/CEREMONY.json` is a development ceremony. Rerun phase 2 with independent contributors ([circuits/CEREMONY.md](../circuits/CEREMONY.md)) before relying on them.
 - [ ] The host installs security updates (for example `unattended-upgrades`). `docker-compose.yml` rotates Nil's own logs (5 files of 10 MB); rotate the other containers' logs too (`log-opts` in `/etc/docker/daemon.json`).
 - [ ] If you use memory-only mode, swap is off or encrypted.
@@ -564,7 +564,7 @@ Nodes also stop answering for logs older than some depth: the public node at 10,
 
 ### "AI assist is off"
 
-`ANTHROPIC_API_KEY` or `ANTHROPIC_MODEL` is not set (the startup log says which), or the container wasn't recreated after setting them.
+The workspace has no AI provider of its own and the server has no default. An admin can choose one and add its key in **Settings → Connect AI**. For a server-wide default, set both `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the startup log says which is missing) and recreate the container.
 
 ### "This wallet doesn't unlock your keys yet"
 

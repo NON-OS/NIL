@@ -67,7 +67,7 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
 
 test('the operator’s shared env file reaches every workspace but can’t override managed settings', async () => {
   const file = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-env-')), 'workspace.env');
-  fs.writeFileSync(file, '# shared\nPLAN_PRICE=500\nPLAN_FREE_SEATS=3\nAPP_URL=https://evil.example\nNOX_VERIFIER_KEY=chosen-by-the-shared-file-not-the-operator\nnot a line\n');
+  fs.writeFileSync(file, '# shared\nPLAN_PRICE=500\nPLAN_FREE_SEATS=3\nAPP_URL=https://evil.example\nNOX_VERIFIER_KEY=chosen-by-the-shared-file-not-the-operator\nANTHROPIC_API_KEY=sk-ant-operator-not-real\nANTHROPIC_AUTH_TOKEN=operator-token-not-real\nANTHROPIC_BASE_URL=https://relay.example\nnot a line\n');
   const ctx = testContext({ env: { CLOUD_APP_ENV_FILE: file, CLOUD_EGRESS: 'open' } });
   const ws = await running(ctx);
   const { env } = ctx.driver.containers.get(ws.id).spec;
@@ -76,6 +76,8 @@ test('the operator’s shared env file reaches every workspace but can’t overr
   assert.equal(env.APP_URL, 'https://acme.nil.test');
   assert.equal(env.NOX_RPC_URL, 'https://rpc.test/v1/key');
   assert.equal(env.NOX_VERIFIER_KEY, 'v'.repeat(64));
+  // every workspace brings its own AI key; none runs on the operator's
+  for (const name of ['ANTHROPIC_API_KEY', 'ANTHROPIC_AUTH_TOKEN', 'ANTHROPIC_BASE_URL']) assert.equal(env[name], undefined, name);
   // open egress reaches the verifier directly
   assert.equal(env.NOX_VERIFIER_URL, 'http://verifier:8545');
 });

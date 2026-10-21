@@ -44,6 +44,7 @@ Root on the server would also let NØNOS send a changed web app that reads what 
 - Caddy sees every request's IP address and the address it asks for, as any web server does. It keeps no access log.
 - With the default settings a workspace has no network route out at all. Its only connections are Caddy's relays to the Ethereum node and to Nil's verifier, which asks the same node again, so that node sees the addresses and transactions the workspace looks up (for Nil Pro payments, bounties and votes). Run that node on the same server (see [docker-compose.chain.yml](docker-compose.chain.yml)) and those lookups never reach a third party.
 - Nil Pro is paid on-chain inside each workspace, to the foundation's treasury. Payments are public on Ethereum like any transaction.
+- Built-in AI and built-in agents run on each workspace's own key, for Claude, GPT or any OpenAI-compatible provider, which its admin adds in Settings → Connect AI. NØNOS gives no workspace a key of its own: `workspace.env` refuses `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL`. The provider sees the text of each request, under the workspace's own account. Requests reach it only through the egress proxy, once that's on; with no route out, AI stays off and the app says why.
 - Backups are encrypted on the server before they leave it. The storage provider sees only ciphertext, sizes and times, filed under random workspace ids rather than names.
 
 **Deletion**

@@ -5,17 +5,18 @@ An agent is an AI teammate. It has a name and an avatar, shows up in the assigne
 There are two kinds:
 
 - External agents run somewhere else (Claude Code, Cursor, your own program, an agent framework) and connect to Nil with their own key, over MCP or a plain REST API. They can receive webhooks when something happens.
-- Built-in agents run inside Nil. When someone assigns one a task or mentions it, Nil runs it on a model the admin picks: Anthropic's API, or any OpenAI-compatible endpoint, including a model on your own server.
+- Built-in agents run inside Nil. When someone assigns one a task or mentions it, Nil runs it on a model the admin picks: the workspace's own AI provider from Settings → Connect AI, Anthropic's API, or any OpenAI-compatible endpoint, including a model on your own server. They run on the workspace's keys, never on one of Nil's.
 
 This page covers what agents can see, how to add one, how to connect each kind, and the settings that control them.
 
-On hosted Nil (nil.nonos.app), a workspace has no route out to the internet of its own. When the operator turns on the egress proxy, webhooks and built-in agents on OpenAI-compatible endpoints reach the internet through it, over https to public addresses only, and work as they do anywhere. Without it, only external agents are offered there, and they check `my_inbox` and `get_approval` instead of receiving webhooks.
+On hosted Nil (nil.nonos.app), a workspace has no route out to the internet of its own. When the operator turns on the egress proxy, built-in agents reach their model through it with your workspace's own key, and webhooks and OpenAI-compatible endpoints work as they do anywhere, over https to public addresses only. Without it, only external agents are offered there, and they check `my_inbox` and `get_approval` instead of receiving webhooks.
 
 ## What agents can and can't see
 
 - An agent sees the team tasks in its projects, plus any task assigned to it. It sees people the way a guest does: admins, and the people on tasks it can see. An agent set to "all projects" sees every team task.
 - Private tasks and docs are never visible to an agent. They are end-to-end encrypted in people's browsers. No agent, model provider or server can read them, and you can't assign a private task to an agent. Agents are told this, and say so when asked about one.
-- A built-in agent on **Anthropic** sends the text of the team tasks it works on (titles, descriptions, checklists and comments) to Anthropic to run the model.
+- A built-in agent on **the workspace's AI** sends the text of the team tasks it works on (titles, descriptions, checklists and comments) to the workspace's provider, which Settings → Connect AI names.
+- A built-in agent on **Anthropic** sends the same text to Anthropic to run the model.
 - A built-in agent on a **local model** keeps all of that on your server or network.
 - An **external agent** sends what it reads to wherever it runs and to the model provider it uses. Webhooks carry only ids and task keys, never task text.
 
@@ -30,8 +31,9 @@ Admins add agents in **Settings → Agents → Add agent**:
 - Its access: read only, or read and write.
 - Its projects: all of them, or the ones you pick.
 - The tools it may use. Writing tools need write access.
-- How it runs: external, built in on Anthropic, or built in on an OpenAI-compatible endpoint.
-- For a built-in agent, the model's name. On Anthropic it can be left empty when the server sets `AGENT_MODEL`; otherwise the form asks for it.
+- How it runs: external, built in on this workspace's AI, built in on Anthropic, or built in on an OpenAI-compatible endpoint.
+- For a built-in agent, the model's name. On the workspace's AI it can be left empty to use the workspace's model. On Anthropic it can be left empty when the workspace's provider is Anthropic or the server sets `AGENT_MODEL`; otherwise the form asks for it.
+- For an agent on Anthropic or an OpenAI-compatible endpoint, an API key of its own, if it needs one. It's sealed on the server like the workspace's key and never shown again. Switching how the agent runs, or changing its endpoint, drops the saved key.
 - Limits. A built-in agent has steps and tokens per run, tokens per day, and the status finished work moves to (In review by default); an external agent has requests per minute. Empty fields use the workspace defaults from the server's configuration.
 - Prices, if you want a cost estimate, in dollars per million tokens. Without prices, Settings shows token counts only.
 
@@ -397,11 +399,19 @@ The task's timeline shows the run: click it to see each step, every tool call an
 
 Runs stop at the step limit, the token limit per run or per day, or the time limit, and say so in their comment. A transient error (rate limits, an overloaded or unreachable model server) puts the run back in the queue with a growing delay, up to 3 retries. The queue is stored in the database, so runs survive restarts; a run cut off by a restart starts again. Only people start runs: an agent's comment or assignment never wakes another built-in agent.
 
+### On the workspace's AI
+
+1. Choose the workspace's provider and add its key in **Settings → Connect AI**, as in [AI assistants](ai-assistants.md#choose-a-provider): Claude, GPT, or any OpenAI-compatible model.
+2. Add an agent with **How it runs: Built in: this workspace's AI**. Leave the model empty to use the workspace's, or name another model from the same provider.
+3. Assign it a task or @mention it.
+
+The agent reads the workspace's provider each time a run starts, so a change in Settings reaches it on its next run. On Anthropic it runs as below; on OpenAI or an OpenAI-compatible provider it runs as on a local model. Pick a model that supports tool calling.
+
 ### On Anthropic
 
-1. Set `ANTHROPIC_API_KEY` on the server (the same key built-in AI uses) and `AGENT_MODEL` to the name of the Anthropic model to use. Without `AGENT_MODEL`, agents use `ANTHROPIC_MODEL`; with neither, each agent needs its own model in Settings → Agents.
-2. Add an agent with **How it runs: Built in: Anthropic**.
-3. Assign it a task or @mention it.
+1. Paste an Anthropic API key for this agent in the form, or leave it empty to use the workspace's key when the workspace's provider is Anthropic. On a server you run yourself, `ANTHROPIC_API_KEY` is the last fallback.
+2. Name the model, or leave it empty to use the workspace's Claude model, then `AGENT_MODEL`, then `ANTHROPIC_MODEL`.
+3. Add the agent with **How it runs: Built in: Anthropic**, and assign it a task or @mention it.
 
 Each request streams and uses adaptive thinking (`AGENT_THINKING`), an effort setting (`AGENT_EFFORT`) and prompt caching. With `AGENT_FALLBACKS=default`, a request the model declines is re-run server-side on a model Anthropic picks; a model or account that doesn't take that setting gets the request again without it, and the server log says so. Set `AGENT_PRICE_INPUT_PER_MTOK` and `AGENT_PRICE_OUTPUT_PER_MTOK` for a cost estimate.
 
@@ -471,7 +481,7 @@ All settings are optional. See `.env.example` for the full list with comments.
 | `AGENT_BULK_WINDOW_MINUTES` | `10` | The window for the bulk limit |
 | `AGENT_MAX_PENDING_APPROVALS` | `20` | Requests one agent may have waiting for approval |
 | `AGENT_ALLOW_LOCAL_ENDPOINTS` | `false` | Allow private and loopback addresses, and plain `http`, for webhooks and model endpoints |
-| `AGENT_OUTBOUND` | on | `off` on a server with no route out: no built-in agents on OpenAI-compatible endpoints and no webhooks. Hosted Nil sets it when it has no egress proxy |
+| `AGENT_OUTBOUND` | on | `off` on a server with no route out: no built-in agents that would need one (on the workspace's provider, an agent's own key or an OpenAI-compatible endpoint), no workspace AI provider and no webhooks. Hosted Nil sets it on a workspace server with no route out |
 | `EGRESS_PROXY` | none | An `http://` CONNECT proxy for every outbound request: webhooks, model endpoints and AI providers. Requests stay https end to end inside the tunnel, still go only to the address Nil checked, and plain `http` targets are refused. Hosted Nil sets it when its egress proxy is on |
 | `AGENT_ERROR_BODY_KB` | `1024` | How much of an error answer from a model endpoint or AI provider is kept, when it isn't a stream |
 | `AGENT_WEBHOOK_TIMEOUT_SECONDS` | `10` | How long a receiver has to answer one delivery |

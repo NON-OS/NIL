@@ -82,7 +82,7 @@ A doc listed as "Encrypted doc" with "Waiting for a key from" and a name was sha
 
 When built-in AI is on, **Draft** opens **Draft with AI**. Describe what you want and click **Draft**. The text is added to the end of the doc.
 
-This is the one time a doc's text leaves your browser. Your instruction goes to Anthropic for that single request, and so does the doc's current text if **Use what's already in this doc as context** is on. The result is encrypted in your browser before it's saved.
+This is the one time a doc's text leaves your browser. Your instruction goes to the workspace's AI provider for that single request, and so does the doc's current text if **Use what's already in this doc as context** is on. The result is encrypted in your browser before it's saved.
 
 ## If unlocking fails
 

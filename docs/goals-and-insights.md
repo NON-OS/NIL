@@ -36,4 +36,4 @@ Choose what it covers (the whole workspace, one project or one goal) and the per
 
 The deck has a cover, an at-a-glance slide, what shipped, what is in progress, a goals chart you can edit in PowerPoint, risks, bounties and next steps, each with speaker notes. Your browser builds the file, so nothing leaves your device.
 
-With built-in AI on, you can let the AI write the summary, highlights and speaker notes. Then the task titles, names and counts on the slides are sent to Anthropic for that one request. If you included your private tasks, their titles are among them.
+With built-in AI on, you can let the AI write the summary, highlights and speaker notes. Then the task titles, names and counts on the slides are sent to the workspace's AI provider for that one request. If you included your private tasks, their titles are among them.

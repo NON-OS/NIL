@@ -111,7 +111,7 @@ The Docker build copies `docs/` for this reason, so keep it in the build context
 
 ## Stack
 
-Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, snarkjs, Semaphore, @zk-kit/baby-jubjub, poseidon-lite and the Anthropic SDK (used only when built-in AI is on). The web app uses React 18, TypeScript, Vite, dnd-kit, lucide icons and pptxgenjs. The Geist and JetBrains Mono fonts are bundled.
+Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, snarkjs, Semaphore, @zk-kit/baby-jubjub, poseidon-lite and the Anthropic SDK (for Claude, when built-in AI is on). The web app uses React 18, TypeScript, Vite, dnd-kit, lucide icons and pptxgenjs. The Geist and JetBrains Mono fonts are bundled.
 
 ## Live chain checks
 
