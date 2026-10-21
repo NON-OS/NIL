@@ -1,6 +1,17 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
 import parseJSON from '../lib/parseJSON.js';
+import aiProvider from '../ai/provider/aiProvider.js';
+import providerSummary from '../ai/provider/providerSummary.js';
+
+// The model an agent runs on when it names none: on Anthropic, the workspace's Claude model or the
+// server's AGENT_MODEL; on the workspace's provider, that provider's model.
+function defaultModel(runner) {
+  if (runner === 'workspace') return providerSummary()?.model ?? null;
+  if (runner !== 'anthropic') return null;
+  const workspace = aiProvider.row();
+  return (workspace?.kind === 'anthropic' && config.agents.outbound ? workspace.model : null) || config.agents.model;
+}
 
 // An agent's settings with the workspace defaults filled in where the admin left a limit empty.
 export default function loadAgent(id) {
@@ -20,7 +31,7 @@ export default function loadAgent(id) {
     projectIds: sql.all('SELECT project_id FROM agent_projects WHERE agent_id = ?', row.id).map((r) => r.project_id),
     tools: parseJSON(row.tools, []),
     runner: row.runner,
-    model: row.model || (row.runner === 'anthropic' ? config.agents.model : null),
+    model: row.model || defaultModel(row.runner),
     endpoint: row.endpoint,
     apiKeyCt: row.api_key_ct,
     doneStatus: row.done_status || config.agents.doneStatus,

@@ -1,7 +1,13 @@
 import anthropicProvider from './anthropicProvider.js';
 import openaiProvider from './openaiProvider.js';
+import anthropicCreds from './anthropicCreds.js';
+import workspaceRunner from './workspaceRunner.js';
 
-const FACTORIES = { anthropic: anthropicProvider, openai: openaiProvider };
+const FACTORIES = {
+  workspace: workspaceRunner,
+  anthropic: (agent) => anthropicProvider(agent, anthropicCreds(agent)),
+  openai: openaiProvider,
+};
 let replacement = null;
 
 // The model behind an agent's runs. Tests swap in a scripted model with `replace`, so the whole

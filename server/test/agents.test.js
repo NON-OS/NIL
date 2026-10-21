@@ -62,7 +62,8 @@ test('admins add agents; members see them without the settings; only admins mana
   assert.equal((await owner('POST', '/api/agents', { name: 'scout' })).status, 400);
   assert.equal((await owner('POST', '/api/agents', { name: 'Ana Park' })).status, 400);
   assert.match((await owner('POST', '/api/agents', { name: 'Local', runner: 'openai' })).data.error, /endpoint/);
-  assert.match((await owner('POST', '/api/agents', { name: 'Assistant', runner: 'anthropic' })).data.error, /ANTHROPIC_API_KEY/);
+  assert.match((await owner('POST', '/api/agents', { name: 'Assistant', runner: 'anthropic' })).data.error, /Anthropic API key for this agent/);
+  assert.match((await owner('POST', '/api/agents', { name: 'Assistant', runner: 'workspace' })).data.error, /no AI provider/);
 
   const boot = await ana('GET', '/api/bootstrap');
   const member = boot.data.users.find((u) => u.id === ids.scout);

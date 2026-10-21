@@ -44,8 +44,10 @@ function errorFrom(res) {
 // model works only where the admin allowed local endpoints, and metadata addresses never do.
 // max_tokens is AGENT_MAX_OUTPUT_TOKENS; a server that refuses it (some check it against the
 // context window) gets the request again without it, for the rest of the run.
+// `agent.apiKey` is a key already in the clear, the workspace's own (workspaceRunner.js); an agent's
+// own key comes sealed in `apiKeyCt`.
 export default function openaiProvider(agent) {
-  const apiKey = openKey(agent.apiKeyCt);
+  const apiKey = agent.apiKey ?? openKey(agent.apiKeyCt);
   const url = completionsUrl(agent.endpoint ?? '');
   let sendMaxTokens = true;
   return {

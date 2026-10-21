@@ -18,6 +18,8 @@ import issueAgentKey from '../agents/manage/issueAgentKey.js';
 import setAgentPaused from '../agents/manage/setAgentPaused.js';
 import removeAgent from '../agents/manage/removeAgent.js';
 import setAgentsEnabled from '../agents/manage/setAgentsEnabled.js';
+import aiProvider from '../ai/provider/aiProvider.js';
+import providerSummary from '../ai/provider/providerSummary.js';
 
 const router = express.Router();
 
@@ -25,7 +27,11 @@ const router = express.Router();
 const formOptions = () => ({
   tools: tools.map((t) => ({ name: t.name, title: t.title, description: t.description, write: Boolean(t.write) })),
   events: webhookEvents,
-  anthropicAvailable: config.ai.hasKey,
+  // Claude without a key of the agent's own: the workspace's provider is Anthropic, or the server
+  // has a default key
+  anthropicAvailable: (aiProvider.row()?.kind === 'anthropic' && config.agents.outbound) || config.ai.hasKey,
+  // the workspace's own provider, which the "workspace AI" runner uses; null when it has none
+  workspaceProvider: providerSummary(),
   allowLocalEndpoints: config.agents.allowLocalEndpoints,
   outbound: config.agents.outbound,
   webhookToleranceSeconds: config.agents.webhookToleranceSeconds,

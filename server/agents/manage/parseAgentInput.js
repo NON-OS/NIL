@@ -5,9 +5,12 @@ import domain from '../../lib/domain.js';
 import HttpError from '../../lib/HttpError.js';
 import tools from '../../mcp/tools.js';
 import resolveTarget from '../net/resolveTarget.js';
+import aiProvider from '../../ai/provider/aiProvider.js';
+import aiAvailable from '../../ai/provider/aiAvailable.js';
 import defaultTools from './defaultTools.js';
 
-const RUNNERS = ['external', 'anthropic', 'openai'];
+const RUNNERS = ['external', 'workspace', 'anthropic', 'openai'];
+const NO_ROUTE = 'This server has no route out to a model provider, so this agent can’t run here. Add it as an external agent, which connects over MCP or the API.';
 const TOOL_NAMES = tools.map((t) => t.name);
 
 const limit = (value, field, min, max) => (value === null || value === '' ? null : check.number(value, field, { min, max, integer: true }));
@@ -52,9 +55,20 @@ export default async function parseAgentInput(body, existing = null) {
   if (has('priceOut')) out.priceOut = price(body.priceOut, 'Output price');
 
   const model = Object.hasOwn(out, 'model') ? out.model : existing?.model;
-  if (runner === 'anthropic' && !config.ai.hasKey) throw HttpError.badRequest('The Anthropic runner needs ANTHROPIC_API_KEY set on the server.');
-  if (runner === 'anthropic' && !(model || config.agents.model)) throw HttpError.badRequest('Give the name of the Anthropic model this agent runs on. The server has no AGENT_MODEL to fall back to.');
-  if (runner === 'openai' && !config.agents.outbound) throw HttpError.badRequest('This server has no route out to a model endpoint, so a built-in agent on an OpenAI-compatible model can’t run here. Add it as an external agent, which connects over MCP or the API.');
+  // a key saved for one way of running, or for one endpoint, is never sent anywhere else
+  const switched = (has('runner') && existing && existing.runner !== runner) || (runner === 'openai' && has('endpoint') && existing?.endpoint && out.endpoint !== existing.endpoint);
+  if ((runner === 'external' || runner === 'workspace') && (has('apiKey') || existing?.apiKeyCt)) out.apiKey = null;
+  else if (switched && !has('apiKey') && existing?.apiKeyCt) out.apiKey = null;
+  const ownKey = Object.hasOwn(out, 'apiKey') ? Boolean(out.apiKey) : Boolean(existing?.apiKeyCt);
+  const workspace = aiProvider.row();
+  const workspaceClaude = workspace?.kind === 'anthropic' && config.agents.outbound;
+  if (runner === 'workspace' && !aiAvailable()) throw HttpError.badRequest('This workspace has no AI provider yet. An admin can choose one in Settings → Connect AI, or give this agent a provider and key of its own.');
+  if (runner === 'anthropic') {
+    if (ownKey && !config.agents.outbound) throw HttpError.badRequest(NO_ROUTE);
+    if (!ownKey && !workspaceClaude && !config.ai.hasKey) throw HttpError.badRequest('Add an Anthropic API key for this agent, or set the workspace’s AI provider to Anthropic in Settings → Connect AI.');
+    if (!(model || (workspaceClaude && workspace.model) || config.agents.model)) throw HttpError.badRequest('Give the name of the Anthropic model this agent runs on. Neither the workspace nor the server names one to fall back to.');
+  }
+  if (runner === 'openai' && !config.agents.outbound) throw HttpError.badRequest(NO_ROUTE);
   if (runner === 'openai') {
     const endpoint = out.endpoint ?? existing?.endpoint;
     if (!endpoint || !model) throw HttpError.badRequest('An OpenAI-compatible runner needs the endpoint URL and the model name.');

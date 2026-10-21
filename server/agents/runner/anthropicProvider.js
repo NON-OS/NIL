@@ -1,14 +1,16 @@
 import Anthropic from '@anthropic-ai/sdk';
 import config from '../../config.js';
 import friendlyError from '../../ai/friendlyError.js';
+import proxiedFetch from '../net/proxiedFetch.js';
 import log from '../../lib/log.js';
 import ProviderError from './ProviderError.js';
 
 const JSON_RETRIES = 2;
 const FALLBACK_BETA = 'server-side-fallback-2026-07-01';
-let client;
+let serverClient;
 
-function asProviderError(err) {
+function asProviderError(err, source) {
+  err.source ??= source;
   if (err instanceof Anthropic.RateLimitError || err instanceof Anthropic.InternalServerError || err instanceof Anthropic.APIConnectionError) {
     return new ProviderError(friendlyError(err).message, { transient: true, status: err.status ?? null });
   }
@@ -29,9 +31,12 @@ function stopOf(message) {
 // prefix (tools, system prompt) plus the growing transcript are cached. With AGENT_FALLBACKS on,
 // a declined request is re-run server-side on the model Anthropic picks; a model that refuses
 // the setting gets the request again without it, for the rest of the run. The assistant's
-// content goes back unchanged, thinking blocks included.
-export default function anthropicProvider(agent) {
-  client ??= new Anthropic();
+// content goes back unchanged, thinking blocks included. `creds` is the agent's or the workspace's
+// own key (anthropicCreds.js), sent through the same checked route as any address the workspace
+// chose; without it the server's default key is used as the operator configured it.
+export default function anthropicProvider(agent, creds = null) {
+  const client = creds ? new Anthropic({ apiKey: creds.apiKey, authToken: null, baseURL: creds.baseUrl, fetch: proxiedFetch }) : (serverClient ??= new Anthropic());
+  const source = creds?.source === 'workspace' ? 'workspace' : creds ? 'agent' : 'server';
   let fallbacks = config.agents.fallbacks;
   return {
     model: agent.model,
@@ -75,7 +80,7 @@ export default function anthropicProvider(agent) {
             delete params.fallbacks;
             continue;
           }
-          if (err instanceof Anthropic.APIError || attempt >= JSON_RETRIES) throw err instanceof ProviderError ? err : asProviderError(err);
+          if (err instanceof Anthropic.APIError || attempt >= JSON_RETRIES) throw err instanceof ProviderError ? err : asProviderError(err, source);
         }
       }
 

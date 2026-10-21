@@ -28,3 +28,19 @@ test('a server with no route out offers external agents only, and no webhooks', 
   assert.equal(hook.status, 400);
   assert.match(hook.data.error, /can’t send webhooks/);
 });
+
+test('a provider saved with no route out keeps built-in AI off until the server has one', async () => {
+  const saved = await owner('PUT', '/api/ai-provider', { kind: 'anthropic', model: 'test-model', apiKey: 'sk-ant-not-real-0000' });
+  assert.equal(saved.status, 200, JSON.stringify(saved.data));
+  assert.equal(saved.data.outbound, false);
+  const boot = (await owner('GET', '/api/bootstrap')).data;
+  assert.equal(boot.ai, false);
+  assert.equal(boot.aiProvider, null);
+  const tested = (await owner('POST', '/api/ai-provider/test', { kind: 'anthropic', model: 'test-model' })).data;
+  assert.equal(tested.ok, false);
+  assert.match(tested.error, /no route out/);
+
+  assert.match((await owner('POST', '/api/agents', { name: 'Helper', runner: 'workspace' })).data.error, /no AI provider/);
+  assert.match((await owner('POST', '/api/agents', { name: 'Claude', runner: 'anthropic', model: 'test-model', apiKey: 'sk-ant-not-real-1111' })).data.error, /no route out/);
+  await owner('DELETE', '/api/ai-provider');
+});
