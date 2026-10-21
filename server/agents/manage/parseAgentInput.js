@@ -54,6 +54,7 @@ export default async function parseAgentInput(body, existing = null) {
   const model = Object.hasOwn(out, 'model') ? out.model : existing?.model;
   if (runner === 'anthropic' && !config.ai.hasKey) throw HttpError.badRequest('The Anthropic runner needs ANTHROPIC_API_KEY set on the server.');
   if (runner === 'anthropic' && !(model || config.agents.model)) throw HttpError.badRequest('Give the name of the Anthropic model this agent runs on. The server has no AGENT_MODEL to fall back to.');
+  if (runner === 'openai' && !config.agents.outbound) throw HttpError.badRequest('This server has no route out to a model endpoint, so a built-in agent on an OpenAI-compatible model can’t run here. Add it as an external agent, which connects over MCP or the API.');
   if (runner === 'openai') {
     const endpoint = out.endpoint ?? existing?.endpoint;
     if (!endpoint || !model) throw HttpError.badRequest('An OpenAI-compatible runner needs the endpoint URL and the model name.');

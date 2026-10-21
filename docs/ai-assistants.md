@@ -50,6 +50,8 @@ The endpoint is `/mcp` on your server, using the MCP streamable HTTP transport w
 
 ## Built-in AI
 
+Hosted Nil (nil.nonos.app) keeps built-in AI off: its workspaces send nothing to an AI provider and have no route to one. Connecting your own assistant, above, works there as it does anywhere.
+
 When whoever runs the server sets `ANTHROPIC_API_KEY` and `ANTHROPIC_MODEL` (the name of the Anthropic model to use), these features appear:
 
 | Where | Button | What it does |

@@ -27,6 +27,7 @@ const formOptions = () => ({
   events: webhookEvents,
   anthropicAvailable: config.ai.hasKey,
   allowLocalEndpoints: config.agents.allowLocalEndpoints,
+  outbound: config.agents.outbound,
   webhookToleranceSeconds: config.agents.webhookToleranceSeconds,
   defaults: {
     model: config.agents.model,

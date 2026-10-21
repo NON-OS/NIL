@@ -42,3 +42,11 @@ test('the rule can be turned off', () => {
   createWorkspace(ctx, { name: 'acme', owner: ALICE });
   assert.equal(createWorkspace(ctx, { name: 'globex', owner: ALICE }).trial, true);
 });
+
+test('a workspace with no route out is told so, and one with open egress isn’t', () => {
+  const closed = testContext();
+  const ws = createWorkspace(closed, { name: 'acme', owner: ALICE });
+  assert.equal(workspaceSpec(closed.config, ws).env.AGENT_OUTBOUND, 'off');
+  const open = testContext({ env: { CLOUD_EGRESS: 'open' } });
+  assert.equal(workspaceSpec(open.config, createWorkspace(open, { name: 'acme', owner: ALICE })).env.AGENT_OUTBOUND, undefined);
+});

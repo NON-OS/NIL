@@ -57,6 +57,9 @@ export default Object.freeze({
   bulkWindowMs: envNumber('AGENT_BULK_WINDOW_MINUTES', 10, { min: 1 }) * 60_000,
   maxPendingApprovals: envNumber('AGENT_MAX_PENDING_APPROVALS', 20, { min: 1 }),
   allowLocalEndpoints: env.AGENT_ALLOW_LOCAL_ENDPOINTS === 'true',
+  // off on a server with no route out (hosted Nil): no built-in agent on an OpenAI-compatible
+  // endpoint and no webhooks, since neither could ever reach its address
+  outbound: env.AGENT_OUTBOUND !== 'off',
   webhookTimeoutMs: seconds('AGENT_WEBHOOK_TIMEOUT_SECONDS', 10, { min: 1, max: 60 }),
   webhookMaxAttempts: envNumber('AGENT_WEBHOOK_MAX_ATTEMPTS', 8, { min: 1, max: 20 }),
   webhookBackoffMs: seconds('AGENT_WEBHOOK_BACKOFF_SECONDS', 30, { min: 1 }),

@@ -24,6 +24,7 @@ export default function PlanSettings() {
   const status = useStore((s) => s.plan);
   const nox = useStore((s) => s.nox);
   const rewards = useStore((s) => s.rewards);
+  const aiOn = useStore((s) => s.ai);
   const isAdmin = useStore((s) => isAdminUser(s.me));
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [credit, setCredit] = useState(0);
@@ -55,7 +56,7 @@ export default function PlanSettings() {
   const paidTools = [
     `Bounties paid in ${rewards.map((r) => r.symbol).join(' or ') || 'tokens'}, and a public bounty board`,
     'Wallet-signed votes and the token-holder door',
-    'Claude inside tasks, docs and decks, and the AI connection for your own assistant',
+    aiOn ? 'Claude inside tasks, docs and decks, and the AI connection for your own assistant' : 'The AI connection for your own assistant, and external agents',
     `Teams bigger than ${countOf(free, 'person', 'people')} (guests never count)`,
   ];
 

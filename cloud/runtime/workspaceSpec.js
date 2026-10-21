@@ -34,6 +34,9 @@ export default function workspaceSpec(config, workspace) {
   }
   // the owner's wallet already had its free trial in another workspace
   if (workspace.trial === false) env.PLAN_TRIAL_DAYS = '0';
+  // with no route out, a webhook or a model endpoint elsewhere could never be reached, so the app
+  // doesn't offer them
+  if (app.egress === 'rpc-only') env.AGENT_OUTBOUND = 'off';
   if (config.links.source) env.SOURCE_URL = config.links.source;
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 

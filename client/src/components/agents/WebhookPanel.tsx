@@ -47,6 +47,10 @@ export default function WebhookPanel({ agent, options, onChange }: Props) {
     }
   };
 
+  if (!options.outbound && !hook) {
+    return <p className="muted" style={{ margin: 0 }}>This server can’t send webhooks: it has no route out. The agent can check <code>my_inbox</code> and <code>get_approval</code> instead.</p>;
+  }
+
   return (
     <div style={{ display: 'grid', gap: 14 }}>
       <form className="settings-row" onSubmit={save} style={{ alignItems: 'flex-end' }}>

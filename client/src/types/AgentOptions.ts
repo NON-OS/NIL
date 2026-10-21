@@ -7,6 +7,8 @@ export default interface AgentOptions {
   events: string[];
   anthropicAvailable: boolean;
   allowLocalEndpoints: boolean;
+  // false on a server with no route out: no OpenAI-compatible built-in agents and no webhooks
+  outbound: boolean;
   webhookToleranceSeconds: number;
   defaults: {
     // null when the server sets no AGENT_MODEL: a built-in agent on Anthropic then needs its own

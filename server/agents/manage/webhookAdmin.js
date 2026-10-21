@@ -32,6 +32,7 @@ function checkEvents(events) {
 // the signing secret is shown once, when it's made or rotated.
 const webhookAdmin = {
   async save(agentId, body, admin) {
+    if (!config.agents.outbound) throw HttpError.badRequest('This server can’t send webhooks: it has no route out. An external agent can check my_inbox and get_approval instead.');
     const url = await checkUrl(body?.url);
     const events = checkEvents(body?.events);
     const existing = sql.get('SELECT url FROM agent_webhooks WHERE agent_id = ?', agentId);

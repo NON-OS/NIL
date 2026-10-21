@@ -13,6 +13,10 @@ import type AgentInput from '../../types/AgentInput';
 import type AgentOptions from '../../types/AgentOptions';
 import type AgentRunner from '../../types/AgentRunner';
 
+// A server with no route out (hosted Nil) offers only what can work there: external agents, and
+// Claude if the server has a key for it.
+const canRun = (runner: AgentRunner, options: AgentOptions) => runner === 'external' || options.outbound || (runner === 'anthropic' && options.anthropicAvailable);
+
 const RUNNERS: { value: AgentRunner; label: string; hint: string }[] = [
   { value: 'external', label: 'External', hint: 'Connects over MCP or the REST API' },
   { value: 'anthropic', label: 'Built in: Anthropic', hint: 'Runs inside Nil on Claude' },
@@ -171,7 +175,7 @@ export default function AgentForm({ agent, options, onSaved, onCancel }: Props) 
       <div className="agent-form-grid">
         <div className="field">
           <span>How it runs</span>
-          <Picker title="How it runs" options={RUNNERS.map((r) => ({ ...r, hint: r.value === 'anthropic' && !options.anthropicAvailable ? 'Needs ANTHROPIC_API_KEY on the server' : r.hint }))} value={form.runner} onChange={(v) => set({ runner: v as AgentRunner })} className="btn" width={300}>
+          <Picker title="How it runs" options={RUNNERS.filter((r) => r.value === form.runner || canRun(r.value, options)).map((r) => ({ ...r, hint: r.value === 'anthropic' && !options.anthropicAvailable ? 'Needs ANTHROPIC_API_KEY on the server' : r.hint }))} value={form.runner} onChange={(v) => set({ runner: v as AgentRunner })} className="btn" width={300}>
             {RUNNERS.find((r) => r.value === form.runner)?.label}
           </Picker>
         </div>
