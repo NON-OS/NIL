@@ -1,21 +1,19 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
-import path from 'node:path';
 import zlib from 'node:zlib';
-import { fileURLToPath } from 'node:url';
 import Anthropic from '@anthropic-ai/sdk';
+import testTls from './helpers/testTls.js';
 
 // the server's settings load with the module, and need an address to start from
 process.env.APP_URL ??= 'http://localhost:3000';
 const { default: proxiedFetch } = await import('../agents/net/proxiedFetch.js');
 
 // Test-only certificate and authority, as in egressTunnel.test.js.
-const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tls');
-const ca = fs.readFileSync(path.join(dir, 'ca.crt'));
+const tls = testTls('agent.test');
+const { ca } = tls;
 const PUBLIC = '93.184.216.34';
 const resolvePublic = async () => [{ address: PUBLIC, family: 4 }];
 
@@ -36,7 +34,7 @@ const anthropicStream = [
 ];
 
 before(async () => {
-  endpoint = https.createServer({ key: fs.readFileSync(path.join(dir, 'agent.key')), cert: fs.readFileSync(path.join(dir, 'agent.crt')) }, async (req, res) => {
+  endpoint = https.createServer({ key: tls.key, cert: tls.cert }, async (req, res) => {
     const chunks = [];
     for await (const chunk of req) chunks.push(chunk);
     seen.bodies.push({ path: req.url, method: req.method, sni: req.socket.servername, body: Buffer.concat(chunks).toString() });

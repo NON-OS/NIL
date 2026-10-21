@@ -1,17 +1,15 @@
 import { test, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import fs from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
 import net from 'node:net';
-import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import pinnedRequest from '../agents/net/pinnedRequest.js';
+import testTls from './helpers/testTls.js';
 
 // A test-only certificate for agent.test, issued by a test-only authority whose key was thrown
 // away once it had signed it.
-const dir = path.join(path.dirname(fileURLToPath(import.meta.url)), 'fixtures', 'tls');
-const ca = fs.readFileSync(path.join(dir, 'ca.crt'));
+const tls = testTls('agent.test');
+const { ca } = tls;
 const PUBLIC = '93.184.216.34';
 
 let endpoint;
@@ -20,7 +18,7 @@ const seen = { connects: [], servernames: [] };
 let refuse = null;
 
 before(async () => {
-  endpoint = https.createServer({ key: fs.readFileSync(path.join(dir, 'agent.key')), cert: fs.readFileSync(path.join(dir, 'agent.crt')) }, (req, res) => {
+  endpoint = https.createServer({ key: tls.key, cert: tls.cert }, (req, res) => {
     seen.servernames.push(req.socket.servername);
     res.writeHead(200, { 'content-type': 'application/json' });
     res.end(JSON.stringify({ ok: true, path: req.url }));
