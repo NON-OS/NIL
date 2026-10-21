@@ -34,7 +34,7 @@ Nil Pro is the paid plan. Whether you ever see it depends on the server.
 
 ### Community mode
 
-A server that hasn't set a treasury address (`PLAN_TREASURY`) runs in community mode: every tool is unlocked and nothing is charged. This is the normal way to run Nil yourself, and the AGPL licence lets anyone run it this way. **Settings → Plan** then says **Community mode**.
+A server that hasn't set a treasury address (`PLAN_TREASURY`) runs in community mode: every tool is unlocked and nothing is charged. This is how a server licensed by NØNOS runs when it doesn't charge for Pro. **Settings → Plan** then says **Community mode**.
 
 ### On a server that charges
 

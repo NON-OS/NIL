@@ -50,6 +50,6 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md). To contribute, see [C
 
 ## Licence
 
-Nil is free software: you can redistribute it and/or modify it under the terms of the GNU Affero General Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option) any later version. If you run a modified version for others over a network, offer them its source (set `SOURCE_URL`). See [LICENSE](LICENSE).
+Nil's source is available under the Business Source License 1.1. You may read, audit, build and test it, and check that a running server matches a release, but running it in production, hosting it for others or offering a fork as a service needs a license from NØNOS: write to ops@nonos.app. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later. See [LICENSE](LICENSE). Third-party components keep their own licences; see [NOTICE.md](NOTICE.md).
 
 The Nil and NØNOS names and logos are not covered by the licence. See [TRADEMARKS.md](TRADEMARKS.md).

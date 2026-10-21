@@ -1,6 +1,6 @@
 # Self-hosting
 
-Nil is free software that you run on your own server. A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
+Nil's source is available under the Business Source License 1.1. You can build it and run it to try it, test it or audit it; running it in production for a team needs a license from NØNOS (write to ops@nonos.app). A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
 
 Everyone who signs in needs a browser with an Ethereum wallet extension, or a wallet's in-app browser.
 
@@ -50,7 +50,7 @@ Every setting is an environment variable. All of them are optional except `APP_U
 | `APP_URL` | required | Your public address, like `https://nonos.example.com`. Used in sign-in messages, origin checks, links in the bounty and calendar feeds, and push notifications |
 | `TRUST_PROXY` | off | Set to `1` behind a reverse proxy. Needed for secure cookies and correct visitor addresses |
 | `DATA_DIR` | `./data` (`/data` in Docker) | Database, uploads and the signing key |
-| `SOURCE_URL` | none | A link to your source code, shown in the app. The AGPL asks you to offer it if you run a modified version for others |
+| `SOURCE_URL` | none | A link to the source code you run, shown in the app |
 | `NOX_RPC_URL` | required, except on localhost | The Ethereum node to use, or `off` to turn on-chain features off. A server whose `APP_URL` is a localhost address falls back to a public node, with a warning |
 | `NOX_VERIFIER_MODE`, `NOX_VERIFIER_KEY` | `off` | With Nil's verifier: `shadow` checks the node's answers on the side, `enforce` acts only on answers the verifier proved. See [Verified chain reads](#verified-chain-reads) |
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |

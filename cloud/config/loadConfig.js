@@ -85,7 +85,7 @@ export default function loadConfig(env = process.env) {
   const egress = read.oneOf('CLOUD_EGRESS', ['rpc-only', 'open'], 'rpc-only');
 
   const sourceUrl = read.url('CLOUD_SOURCE_URL');
-  if (!sourceUrl) read.warn('CLOUD_SOURCE_URL is not set. The AGPL asks a hosted service to offer its source; set it to the repository you deploy from.');
+  if (!sourceUrl) read.warn('CLOUD_SOURCE_URL is not set, so workspaces show no link to the source they run. Set it to the repository you deploy from once it is published.');
 
   const { plans, problems } = parsePlans(read.text('CLOUD_PLANS', DEFAULT_PLANS));
   problems.forEach((p) => read.fail(`CLOUD_PLANS: ${p}`));

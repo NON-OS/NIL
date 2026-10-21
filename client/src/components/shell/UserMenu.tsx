@@ -52,7 +52,7 @@ export default function UserMenu() {
           </button>
           {sourceUrl && (
             <a className="menu-item" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
-              <Code2 size={14} /> Source code (AGPL)
+              <Code2 size={14} /> Source code
             </a>
           )}
           <div className="menu-divider" />

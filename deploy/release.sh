@@ -115,7 +115,7 @@ labels() {
     "org.opencontainers.image.version=$VERSION" \
     "org.opencontainers.image.revision=$commit" \
     "org.opencontainers.image.created=$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
-    "org.opencontainers.image.licenses=AGPL-3.0-or-later" \
+    "org.opencontainers.image.licenses=BUSL-1.1" \
     "org.opencontainers.image.vendor=NØNOS foundation" \
     "org.opencontainers.image.source=$source_url"
 }

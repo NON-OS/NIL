@@ -30,5 +30,5 @@
       "@noble/curves": "1.9.7"
     }
   },
-  "license": "AGPL-3.0-or-later"
+  "license": "BUSL-1.1"
 }

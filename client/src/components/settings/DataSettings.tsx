@@ -67,10 +67,10 @@ export default function DataSettings() {
       </section>
 
       <section className="settings-section">
-        <h2>Free software</h2>
+        <h2>Source code</h2>
         <div className="settings-card">
           <p style={{ color: 'var(--ink-2)' }}>
-            Nil is free and open source under the GNU Affero General Public License v3. You can run, study, change and share it. If you offer a modified version to others over a network, you must share your changes too.
+            Nil’s source is available under the Business Source License 1.1. Anyone may read and audit it and check that a server runs a published release. Running it in production or hosting it for others needs a license from NØNOS.
           </p>
           {sourceUrl && (
             <a className="btn" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ justifySelf: 'start' }}>

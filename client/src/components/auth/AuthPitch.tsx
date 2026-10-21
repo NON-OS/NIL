@@ -38,7 +38,7 @@ export default function AuthPitch() {
           ))}
         </ol>
       </div>
-      <small className="eyebrow auth-foot">Open source · AGPL-3.0 · No trackers</small>
+      <small className="eyebrow auth-foot">Source available · No trackers</small>
     </aside>
   );
 }

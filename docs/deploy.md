@@ -1,5 +1,7 @@
 # Production deployment
 
+Running Nil in production needs a license from NØNOS (the source is under the Business Source License 1.1; write to ops@nonos.app). Trying it out and testing it doesn't.
+
 This guide puts Nil on a Linux VPS with Docker, behind Caddy for automatic HTTPS. It ends with an optional Tor onion service, backups, upgrades, a pre-launch checklist and troubleshooting.
 
 The commands assume Debian or Ubuntu, a domain called `nonos.example.com` and the code in `/opt/nonos`. Change them to match yours.
@@ -99,7 +101,7 @@ STRICT_CONFIG=1
 - `APP_URL` is required and must be exactly the address people type. Wallets show this domain in the sign-in message, and only this origin may make changes. Nil never reads it from the request, so a phishing site can't get a sign-in message that names its own domain. Without it, the server refuses to start.
 - `TRUST_PROXY=uniquelocal` tells Nil to believe forwarded headers only from a private address, which is where Caddy reaches it on the Docker network. Without it, cookies lose the `Secure` flag and `__Host-` prefix, HSTS isn't sent, and rate limits see Caddy's address instead of the visitor's. A hop count (`1`) also works, but only while port 3000 is closed to everything except Caddy: anyone who reaches the port directly could otherwise claim any IP address. `true` is refused.
 - `NOX_RPC_URL` is required on a server people reach over the network (see the table below), or `off`.
-- `SOURCE_URL` is where people can get the source code you run, which the AGPL asks for.
+- `SOURCE_URL` is where people can read the source code you run.
 - `STRICT_CONFIG=1` makes the server refuse to start while any `[config]` warning remains, so a typo stops the deploy instead of quietly changing behaviour. In production the server also warns about an https `APP_URL` without `TRUST_PROXY`, and about a `NOX_RPC_URL` that names the public node. That second warning counts too: with `STRICT_CONFIG=1`, a server pointed at the public node doesn't start. Use your own node or a provider you trust, or, if you accept what the public node sees, leave `STRICT_CONFIG` out.
 
 Then decide on these:

@@ -70,6 +70,6 @@ No part of Nil's own code has had an independent security audit. Encrypted weigh
 
 No. Nil has a light interface only.
 
-## Is Nil free software?
+## Is Nil open source?
 
-Yes. Nil is licensed under the GNU Affero General Public License, version 3 or later. You can run, study, change and share it. If you run a modified version for others over a network, you must offer them its source code. The NØNOS foundation makes it.
+Its source is available, under the Business Source License 1.1. Anyone can read and audit the code, and check that a server runs exactly a published release. Running it in production, hosting it for others or offering a fork as a service needs a license from NØNOS, which makes it. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later.

@@ -27,4 +27,4 @@ Node 22.13 or newer is required (Nil uses the built-in `node:sqlite`).
 
 Keep them focused, describe the user-facing change in plain words, and make sure `npm test`, `npm run typecheck` and `npm run build` pass.
 
-By contributing, you agree that your work is licensed under the GNU AGPL v3 or later, the same license as the project.
+By contributing, you agree that NØNOS may license your work under the Business Source License 1.1, as it does the rest of the project, and under any other terms it offers Nil on, including the Change License named in [LICENSE](LICENSE).
