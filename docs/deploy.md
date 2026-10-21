@@ -66,6 +66,8 @@ sudo ufw enable
 
 `OpenSSH` means port 22. If your SSH server listens somewhere else (check with `sudo ss -tlpn | grep sshd`), allow that port instead, before `ufw enable`, or the firewall locks you out.
 
+If you'd rather deny outgoing traffic too, Nil still needs your Ethereum node, and for webhooks, model endpoints and AI providers a way to reach https addresses on the internet. Run an HTTP CONNECT proxy that can, and set `EGRESS_PROXY` to it (for example `http://proxy.internal:3128`). Nil then sends every one of those requests through it, still pinned to the address it checked and still https inside the tunnel. Hosted Nil does exactly this with its own egress proxy (see `cloud/README.md`).
+
 Docker writes its own firewall rules for published ports, and those skip ufw. That is why `docker-compose.yml` publishes Nil's port 3000 on the loopback interface only (`127.0.0.1:3000`), which nothing outside the machine can reach, and the override in step 6 removes even that. Only Caddy publishes ports to the internet.
 
 ## 4. Get the code

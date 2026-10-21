@@ -9,7 +9,7 @@ There are two kinds:
 
 This page covers what agents can see, how to add one, how to connect each kind, and the settings that control them.
 
-On hosted Nil (nil.nonos.app), a workspace has no route out to the internet, so only external agents are offered there, and they can't receive webhooks: they check `my_inbox` and `get_approval` instead. Built-in agents need a server that can reach a model, which you get by running Nil yourself.
+On hosted Nil (nil.nonos.app), a workspace has no route out to the internet of its own. When the operator turns on the egress proxy, webhooks and built-in agents on OpenAI-compatible endpoints reach the internet through it, over https to public addresses only, and work as they do anywhere. Without it, only external agents are offered there, and they check `my_inbox` and `get_approval` instead of receiving webhooks.
 
 ## What agents can and can't see
 
@@ -312,7 +312,7 @@ Each agent has its own rate limit, 60 requests a minute by default. Responses ca
 
 ## Receive webhooks
 
-On an external agent's card, open **Webhook**, enter an HTTPS address and pick the events. A server with `AGENT_OUTBOUND=off`, such as hosted Nil, has no route out and doesn't offer webhooks.
+On an external agent's card, open **Webhook**, enter an HTTPS address and pick the events. A server with `AGENT_OUTBOUND=off` has no route out and doesn't offer webhooks. One behind an egress proxy (`EGRESS_PROXY`, as on hosted Nil with the proxy on) delivers them through it, to https addresses only.
 
 | Event | When |
 | --- | --- |
@@ -471,7 +471,9 @@ All settings are optional. See `.env.example` for the full list with comments.
 | `AGENT_BULK_WINDOW_MINUTES` | `10` | The window for the bulk limit |
 | `AGENT_MAX_PENDING_APPROVALS` | `20` | Requests one agent may have waiting for approval |
 | `AGENT_ALLOW_LOCAL_ENDPOINTS` | `false` | Allow private and loopback addresses, and plain `http`, for webhooks and model endpoints |
-| `AGENT_OUTBOUND` | on | `off` on a server with no route out: no built-in agents on OpenAI-compatible endpoints and no webhooks. Hosted Nil sets it |
+| `AGENT_OUTBOUND` | on | `off` on a server with no route out: no built-in agents on OpenAI-compatible endpoints and no webhooks. Hosted Nil sets it when it has no egress proxy |
+| `EGRESS_PROXY` | none | An `http://` CONNECT proxy for every outbound request: webhooks, model endpoints and AI providers. Requests stay https end to end inside the tunnel, still go only to the address Nil checked, and plain `http` targets are refused. Hosted Nil sets it when its egress proxy is on |
+| `AGENT_ERROR_BODY_KB` | `1024` | How much of an error answer from a model endpoint or AI provider is kept, when it isn't a stream |
 | `AGENT_WEBHOOK_TIMEOUT_SECONDS` | `10` | How long a receiver has to answer one delivery |
 | `AGENT_WEBHOOK_MAX_ATTEMPTS` | `8` | Attempts per delivery |
 | `AGENT_WEBHOOK_BACKOFF_SECONDS` | `30` | The wait before the first retry; each later wait can be up to twice the last |
