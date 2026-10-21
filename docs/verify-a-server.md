@@ -35,7 +35,7 @@ If the hash you built matches the published one, the published manifest is an ho
 
 ## What the check covers
 
-- Every file of the web app: the page, scripts, styles, the service worker, the zero-knowledge circuits, icons and the built-in help.
+- Every file of the web app: the page, scripts, styles, the service worker, the zero-knowledge circuits and the prover, icons and the built-in help.
 - The addresses people open the app on, such as `/board` and `/votes`, plus a made-up one. The server answers each of them with the app's page, and each has to be exactly that page.
 - The Content-Security-Policy. Checked files only matter if the page can't also run scripts from somewhere else, so the policy has to keep scripts to the server's own files, as Nil's does.
 

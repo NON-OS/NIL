@@ -11,7 +11,8 @@ npm install
 APP_URL=http://localhost:5173 npm run dev   # API on :3000 with auto-restart, web app on :5173 with hot reload
 npm test            # API integration tests
 npm run typecheck   # strict TypeScript for the web app
-npm run build       # production bundle into dist/
+npm run build       # production bundle into dist/, the prover into dist/prover, then the split check
+npm run build:prover # only the prover (npm run dev builds it once when it starts)
 npm run check:a11y  # axe on every screen at desktop and phone sizes, after a build
 npm run zk:fetch    # download Semaphore circuit files for SEMAPHORE_DEPTH (hash- and proof-checked)
 npm run zk:ballot   # rebuild the encrypted-ballot circuit and rerun its setup (needs PTAU)
@@ -19,6 +20,10 @@ npm run ceremony:start   # run that setup between independent people instead: ci
 ```
 
 `npm run dev` sends `/api` and `/ws` to `http://localhost:3000`. Set `NONOS_API` in your shell to point it somewhere else.
+
+## The prover
+
+Zero-knowledge proofs in the browser are made and checked by the prover in `prover/`, a separate program under the GNU GPL because it bundles snarkjs. The web app is under the Business Source License, so the two stay apart: the app starts `/prover/prover-worker.js` as a Web Worker and talks to it only by messages of plain data, through `client/src/lib/prover`. Nothing in `client/src` imports the prover or snarkjs, and a test checks that. `npm run build` ends with `npm run check:prover`, which fails if any app script holds code from the prover's GPL packages. After changing `prover/src`, run `npm run build:prover` again; the dev server serves the last build.
 
 `npm run zk:ballot` needs the Perpetual Powers of Tau file in `PTAU`. `BEACON_RPC` and `CONTRIBUTORS` change the node used for the beacon block hash and the number of phase-2 contributions. These variables are read from your shell, not from `.env`.
 
@@ -111,7 +116,7 @@ The Docker build copies `docs/` for this reason, so keep it in the build context
 
 ## Stack
 
-Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, snarkjs, Semaphore, @zk-kit/baby-jubjub, poseidon-lite and the Anthropic SDK (for Claude, when built-in AI is on). The web app uses React 18, TypeScript, Vite, dnd-kit, lucide icons and pptxgenjs. The Geist and JetBrains Mono fonts are bundled.
+Node 22 with its built-in SQLite, Express, ws, @noble/curves and @noble/hashes, snarkjs, Semaphore, @zk-kit/baby-jubjub, poseidon-lite and the Anthropic SDK (for Claude, when a workspace or the server has an Anthropic key). The web app uses React 18, TypeScript, Vite, dnd-kit, lucide icons and pptxgenjs. The prover uses snarkjs. The Geist and JetBrains Mono fonts are bundled.
 
 ## Live chain checks
 
