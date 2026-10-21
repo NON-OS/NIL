@@ -53,6 +53,8 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     // the first workspace's slice of the invoice amounts, with the key every workspace shares
     PLAN_INVOICE_SLOT: '0/1000',
     PLAN_INVOICE_KEY: 'k'.repeat(64),
+    // and nothing else gets out, so no webhooks or model endpoints elsewhere
+    AGENT_OUTBOUND: 'off',
     SOURCE_URL: 'https://source.test/nil',
     SETUP_TOKEN: ws.setupToken,
   });
