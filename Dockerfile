@@ -17,6 +17,9 @@ COPY client ./client
 COPY docs ./docs
 # the web app checks ballot proofs against the ceremony's key, which lives with the server code
 COPY server/votes/ballotKey.json ./server/votes/ballotKey.json
+# the prover is a separate GPL program built next to the app, and the check that keeps them apart
+COPY prover ./prover
+COPY scripts/check-prover-split.mjs ./scripts/check-prover-split.mjs
 RUN npm run build
 # .dockerignore already keeps local data out of the build. This is a second guard: anything that
 # still slipped into the server folder (a database, uploads, keys, settings) is removed here, in

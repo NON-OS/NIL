@@ -1,4 +1,4 @@
-import { groth16 } from 'snarkjs';
+import proveCircuit from '../prover/proveCircuit';
 import type { Secrets } from './poolSecrets';
 
 interface TreeProof {
@@ -11,12 +11,11 @@ interface TreeProof {
 // A Privacy Pools withdrawal proof, made in this browser from circuit files this server hosts
 // (pinned to the SDK's published hashes): "I can spend a commitment in this pool's tree whose
 // label the association set approves, and I'm taking `withdrawn` of its `value`, leaving the
-// rest under new secrets", bound to the relayer's terms by `context`. Single-threaded, so the
-// page needs no worker from a data: URL.
+// rest under new secrets", bound to the relayer's terms by `context`.
 const FILES = { wasm: '/zk/privacy-pools/withdraw.wasm', zkey: '/zk/privacy-pools/withdraw.zkey' };
 
 export default async function proveWithdrawal(input: { value: bigint; label: bigint; existing: Secrets; next: Secrets; withdrawn: bigint; context: bigint; state: TreeProof; asp: TreeProof }, files = FILES) {
-  const { proof, publicSignals } = await groth16.fullProve(
+  const { proof, publicSignals } = await proveCircuit(
     {
       withdrawnValue: input.withdrawn,
       stateRoot: input.state.root,
@@ -37,9 +36,6 @@ export default async function proveWithdrawal(input: { value: bigint; label: big
     },
     files.wasm,
     files.zkey,
-    undefined,
-    {},
-    { singleThread: true },
   );
-  return { proof: { pi_a: proof.pi_a.map(String), pi_b: proof.pi_b.map((p: unknown[]) => p.map(String)), pi_c: proof.pi_c.map(String) }, publicSignals: publicSignals.map(String) };
+  return { proof: { pi_a: proof.pi_a, pi_b: proof.pi_b, pi_c: proof.pi_c }, publicSignals };
 }

@@ -11,6 +11,9 @@ import proveCommitment from '../src/lib/pools/proveCommitment.ts';
 import withdrawalContext from '../src/lib/pools/withdrawalContext.ts';
 import serverContext from '../../server/pools/withdrawalContext.js';
 import { Group } from '@semaphore-protocol/group';
+import inProcessProver from './helpers/inProcessProver.js';
+
+inProcessProver();
 
 // Real proofs with the real Privacy Pools circuits (the files this server hosts, pinned to the
 // SDK's hashes), checked against the circuits' own verification keys: a withdrawal that leaves

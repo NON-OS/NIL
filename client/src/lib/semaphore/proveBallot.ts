@@ -1,6 +1,6 @@
-import { groth16 } from 'snarkjs';
 import { packGroth16Proof } from '@zk-kit/utils/proof-packing';
 import type { Identity } from '@semaphore-protocol/identity';
+import proveCircuit from '../prover/proveCircuit';
 import voterGroup from './voterGroup';
 import fieldHash from './fieldHash';
 import type AnonymousVote from '../../types/AnonymousVote';
@@ -9,8 +9,6 @@ import type BallotProof from '../../types/BallotProof';
 // A Semaphore proof that "a member of this vote's group chose option N in hour H", made entirely
 // in this browser from circuit files this server hosts. The message is H × 8 + N, with H the
 // hour since the Unix epoch, so the server can refuse a copy of the proof sent in a later hour.
-// It runs single-threaded so the page needs no worker loaded from a data: URL; that costs a
-// couple of seconds and nothing in safety.
 export default async function proveBallot(identity: Identity, vote: Pick<AnonymousVote, 'scope' | 'depth' | 'members'>, choice: number, hour: number): Promise<BallotProof> {
   const message = BigInt(hour) * 8n + BigInt(choice);
   const group = voterGroup(vote.members);
@@ -18,7 +16,7 @@ export default async function proveBallot(identity: Identity, vote: Pick<Anonymo
   if (index < 0) throw new Error('You’re not on this vote’s voter list yet. Reload and try again.');
   const merkle = group.generateMerkleProof(index);
   const siblings = Array.from({ length: vote.depth }, (_, i) => merkle.siblings[i] ?? 0n);
-  const { proof, publicSignals } = await groth16.fullProve(
+  const { proof, publicSignals } = await proveCircuit(
     {
       secret: identity.secretScalar,
       merkleProofLength: merkle.siblings.length,
@@ -29,9 +27,6 @@ export default async function proveBallot(identity: Identity, vote: Pick<Anonymo
     },
     `/zk/semaphore-${vote.depth}.wasm`,
     `/zk/semaphore-${vote.depth}.zkey`,
-    undefined,
-    {},
-    { singleThread: true },
   );
   return {
     merkleTreeDepth: vote.depth,

@@ -10,8 +10,10 @@
   "scripts": {
     "dev": "concurrently -k -n server,web -c blue,magenta \"npm:dev:server\" \"npm:dev:web\"",
     "dev:server": "node --disable-warning=ExperimentalWarning --watch-path=server server/index.js",
-    "dev:web": "vite",
-    "build": "vite build",
+    "dev:web": "npm run build:prover && vite",
+    "build": "vite build && npm run build:prover && npm run check:prover",
+    "build:prover": "vite build --config prover/vite.config.mjs",
+    "check:prover": "node scripts/check-prover-split.mjs",
     "start": "node --disable-warning=ExperimentalWarning server/index.js",
     "check:quality": "node scripts/check-quality.mjs",
     "check:a11y": "node scripts/a11y/check.mjs",

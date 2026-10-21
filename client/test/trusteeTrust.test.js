@@ -12,6 +12,9 @@ import verifyBallots from '../src/lib/ballot/verifyBallots.ts';
 import voteScope from '../src/lib/ballot/voteScope.ts';
 import partialsMade from '../src/state/partialsMade.ts';
 import signedDealing from './helpers/signedDealing.js';
+import inProcessProver from './helpers/inProcessProver.js';
+
+inProcessProver();
 
 // The auditor's proof of concept against a dishonest server with honest browsers: (1) the server
 // deals all three seats itself and every browser check passed, so it held the whole vote key;
