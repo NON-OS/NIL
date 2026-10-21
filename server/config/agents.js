@@ -4,6 +4,7 @@ import configWarning from '../lib/configWarning.js';
 import domain from '../lib/domain.js';
 import ai from './ai.js';
 import units from './units.js';
+import envUrl from './envUrl.js';
 
 // Agents. These are workspace-wide defaults; each limit can be lowered or raised per agent in
 // Settings → Agents. Built-in agents on Anthropic use AGENT_MODEL, then ANTHROPIC_MODEL, or the
@@ -34,6 +35,15 @@ function agentDoneStatus(value) {
   return 'in_review';
 }
 
+// The CONNECT proxy a server with no route out of its own reaches the internet through: hosted
+// Nil's egress proxy. Plain http, since it only ever carries tunnels that are TLS inside.
+function egressProxy() {
+  const url = envUrl('EGRESS_PROXY');
+  if (!url || new URL(url).protocol === 'http:') return url;
+  configWarning('EGRESS_PROXY has to be an http:// address (the tunnels inside it are https). Leaving it unset.');
+  return null;
+}
+
 const env = process.env;
 const seconds = (name, fallback, limits) => envNumber(name, fallback, limits) * units.SECOND;
 
@@ -60,6 +70,9 @@ export default Object.freeze({
   // off on a server with no route out (hosted Nil): no built-in agent on an OpenAI-compatible
   // endpoint and no webhooks, since neither could ever reach its address
   outbound: env.AGENT_OUTBOUND !== 'off',
+  egressProxy: egressProxy(),
+  // how much of an error answer that isn't a stream proxiedFetch keeps
+  errorBodyBytes: envNumber('AGENT_ERROR_BODY_KB', 1024, { min: 1 }) * 1024,
   webhookTimeoutMs: seconds('AGENT_WEBHOOK_TIMEOUT_SECONDS', 10, { min: 1, max: 60 }),
   webhookMaxAttempts: envNumber('AGENT_WEBHOOK_MAX_ATTEMPTS', 8, { min: 1, max: 20 }),
   webhookBackoffMs: seconds('AGENT_WEBHOOK_BACKOFF_SECONDS', 30, { min: 1 }),
