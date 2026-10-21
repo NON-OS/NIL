@@ -17,11 +17,15 @@ function planTreasury(value) {
   return value.toLowerCase();
 }
 
+const graceDays = envNumber('PLAN_GRACE_DAYS', 7);
+
 export default Object.freeze({
   treasury: planTreasury((process.env.PLAN_TREASURY ?? '').trim()),
   periodDays: envNumber('PLAN_PERIOD_DAYS', 30, { min: 1 }),
-  graceDays: envNumber('PLAN_GRACE_DAYS', 7),
+  graceDays,
   freeSeats: envNumber('PLAN_FREE_SEATS', 5),
   maxPeriods: envNumber('PLAN_MAX_PERIODS', 24, { min: 1 }),
   trialDays: envNumber('PLAN_TRIAL_DAYS', 14),
+  // the trial's own grace period, so a short trial isn't all grace
+  trialGraceDays: envNumber('PLAN_TRIAL_GRACE_DAYS', graceDays),
 });

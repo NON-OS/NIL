@@ -42,7 +42,7 @@ A server that sets a treasury, such as the hosted service the NØNOS foundation 
 
 - The price is in US dollars: a flat fee per period ($12 per 30 days by default) plus a price per person above the free seats ($3 each by default, with 5 free seats). Guests never count.
 - You pay in USDC at face value, or in NOX for less (20% off by default).
-- A free trial runs when the workspace first appears on the server, 14 days by default including the grace days. Erasing the workspace or restoring a capsule never starts another trial.
+- A free trial runs when the workspace first appears on the server, 14 days by default including its grace days (`PLAN_TRIAL_DAYS`, `PLAN_TRIAL_GRACE_DAYS`). Erasing the workspace or restoring a capsule never starts another trial. On hosted Nil, only a wallet's first workspace gets one.
 - After paid time or the trial runs out, a grace period (7 days by default) keeps the paid tools working while you renew. Owners and admins get a reminder 7 days and 1 day before it runs out. Pro from a Zero-State Pass has no grace period.
 - Nothing renews by itself, and no card or email is ever asked for.
 
