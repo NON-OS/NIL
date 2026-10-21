@@ -56,7 +56,7 @@ export default function PlanSettings() {
   const paidTools = [
     `Bounties paid in ${rewards.map((r) => r.symbol).join(' or ') || 'tokens'}, and a public bounty board`,
     'Wallet-signed votes and the token-holder door',
-    aiOn ? 'Claude inside tasks, docs and decks, and the AI connection for your own assistant' : 'The AI connection for your own assistant, and external agents',
+    aiOn ? 'AI inside tasks, docs and decks on your own provider, built-in agents, and the AI connection for your own assistant' : 'AI inside tasks, docs and decks once an admin adds your AI provider, and the AI connection for your own assistant',
     `Teams bigger than ${countOf(free, 'person', 'people')} (guests never count)`,
   ];
 
