@@ -23,15 +23,20 @@ const skip = !hasOpenssl && 'openssl isn’t installed';
 function makeCa() {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nil-certs-'));
   const run = (args) => execFileSync('openssl', args, { cwd: dir, stdio: 'ignore' });
-  const ec = ['-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:prime256v1', '-nodes'];
-  run(['req', '-x509', ...ec, '-keyout', 'ca.key', '-out', 'ca.pem', '-days', '30', '-subj', '/CN=Nil test CA', '-addext', 'basicConstraints=critical,CA:TRUE', '-addext', 'keyUsage=critical,keyCertSign']);
+  // keys from ecparam and the authority's extensions from a config file: both work with OpenSSL
+  // and with the LibreSSL that macOS ships, where -pkeyopt and -addext don't
+  const key = (file) => run(['ecparam', '-name', 'prime256v1', '-genkey', '-noout', '-out', file]);
+  fs.writeFileSync(path.join(dir, 'ca.cnf'), '[req]\ndistinguished_name = dn\nx509_extensions = ca\nprompt = no\n[dn]\nCN = Nil test CA\n[ca]\nbasicConstraints = critical, CA:TRUE\nkeyUsage = critical, keyCertSign\n');
+  key('ca.key');
+  run(['req', '-new', '-x509', '-config', 'ca.cnf', '-key', 'ca.key', '-out', 'ca.pem', '-days', '30']);
   let serial = 1;
   return {
     ca: fs.readFileSync(path.join(dir, 'ca.pem')),
     issue(days, names, { selfSigned = false } = {}) {
       const n = serial++;
       fs.writeFileSync(path.join(dir, `ext${n}.cnf`), `subjectAltName=${names.map((name) => `DNS:${name}`).join(',')}\nbasicConstraints=CA:FALSE\n`);
-      run(['req', '-new', ...ec, '-keyout', `leaf${n}.key`, '-out', `leaf${n}.csr`, '-subj', `/CN=${names[0]}`]);
+      key(`leaf${n}.key`);
+      run(['req', '-new', '-key', `leaf${n}.key`, '-out', `leaf${n}.csr`, '-subj', `/CN=${names[0]}`]);
       const signer = selfSigned ? ['-signkey', `leaf${n}.key`] : ['-CA', 'ca.pem', '-CAkey', 'ca.key', '-set_serial', String(n)];
       run(['x509', '-req', '-in', `leaf${n}.csr`, ...signer, '-out', `leaf${n}.pem`, '-days', String(days), '-extfile', `ext${n}.cnf`]);
       return { key: fs.readFileSync(path.join(dir, `leaf${n}.key`)), cert: fs.readFileSync(path.join(dir, `leaf${n}.pem`)) };
