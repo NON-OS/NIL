@@ -70,6 +70,7 @@ router.post(
     // a public vote: any NOX holder can vote on its own page and anyone can watch. Only signed
     // votes weighted by power, since the power is what makes an outside wallet's ballot count.
     const publicVote = b.publicVote === true;
+    if (publicVote && !config.power.publicVotes) throw HttpError.forbidden(`Votes open to every ${config.nox.symbol} holder can only be started from an official workspace on this server.`);
     if (publicVote && (anonymous || weighting !== 'power')) throw HttpError.badRequest('A public vote is a signed vote weighted by voting power: turn off anonymous ballots and count voting power.');
     const publicBallots = publicVote || (!anonymous && b.publicBallots === true);
     // anonymous and weighted: encrypted ballots, decrypted only as totals by two of three

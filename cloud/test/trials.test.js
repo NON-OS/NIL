@@ -50,3 +50,11 @@ test('a workspace with no route out is told so, and one with open egress isn’t
   const open = testContext({ env: { CLOUD_EGRESS: 'open' } });
   assert.equal(workspaceSpec(open.config, createWorkspace(open, { name: 'acme', owner: ALICE })).env.AGENT_OUTBOUND, undefined);
 });
+
+test('only workspaces marked official may put votes to every NOX holder', async () => {
+  const ctx = testContext();
+  const ws = createWorkspace(ctx, { name: 'acme', owner: ALICE });
+  assert.equal(workspaceSpec(ctx.config, ws).env.PUBLIC_VOTES, 'off');
+  ctx.store.workspaces.setOfficial(ws.id, true);
+  assert.equal(workspaceSpec(ctx.config, ctx.store.workspaces.get(ws.id)).env.PUBLIC_VOTES, 'on');
+});

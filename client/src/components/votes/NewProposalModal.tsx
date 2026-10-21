@@ -17,7 +17,7 @@ export default function NewProposalModal({ onClose, onCreated }: { onClose: () =
   const set = (patch: Partial<typeof form>) => setForm({ ...form, ...patch });
   const options = form.options.split('\n').map((o) => o.trim()).filter(Boolean);
   // open to any NOX holder: only a signed vote counted by voting power can be
-  const canBePublic = Boolean(nox) && form.weighting === 'power' && !form.anonymous;
+  const canBePublic = Boolean(nox) && nox?.publicVotes !== false && form.weighting === 'power' && !form.anonymous;
   const publicVote = canBePublic && form.publicVote;
 
   const create = async () => {

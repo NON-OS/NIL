@@ -94,6 +94,7 @@ router.get(
             decimals: config.nox.decimals,
             explorer: config.nox.explorer,
             transferFeeBps: transferFee.current().bps,
+            publicVotes: config.power.publicVotes,
             // admins are told when chain reads can't be verified; nobody else needs the plumbing
             ...(req.user.isAdmin ? { verification: verifyHealth.report() } : {}),
           }

@@ -51,7 +51,7 @@ In a vote weighted by voting power, you need some power at the moment the vote o
 
 ## Public votes
 
-A public vote is a signed vote weighted by voting power that anyone can watch and any NOX holder can vote in, the way DAO votes work. It gets a page of its own at an address nobody can guess, `/vote/` followed by 22 random characters. **Copy public link** on the vote card copies it. Closing the vote ends voting on the page too, and deleting it takes the page down.
+A public vote is a signed vote weighted by voting power that anyone can watch and any NOX holder can vote in, the way DAO votes work. On hosted Nil only the workspaces NØNOS marks official can start one, so a vote put to every holder under nil.nonos.app always comes from the project itself. Other workspaces keep their own signed, anonymous and weighted votes. A server you run yourself allows them unless `PUBLIC_VOTES=off`. It gets a page of its own at an address nobody can guess, `/vote/` followed by 22 random characters. **Copy public link** on the vote card copies it. Closing the vote ends voting on the page too, and deleting it takes the page down.
 
 The page needs no account. Anyone who opens it sees:
 

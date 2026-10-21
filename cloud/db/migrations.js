@@ -5,8 +5,9 @@ import workspaceLocks from './migrations/004-workspace-locks.js';
 import signupRequests from './migrations/005-signup-requests.js';
 import activity from './migrations/006-activity.js';
 import trialWallets from './migrations/007-trial-wallets.js';
+import official from './migrations/008-official.js';
 
 // In order. Never edit one that has shipped: add the next.
-const migrations = Object.freeze([initial, invoiceSlots, invoiceCounter, workspaceLocks, signupRequests, activity, trialWallets]);
+const migrations = Object.freeze([initial, invoiceSlots, invoiceCounter, workspaceLocks, signupRequests, activity, trialWallets, official]);
 
 export default migrations;

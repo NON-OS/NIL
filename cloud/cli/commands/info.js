@@ -17,6 +17,7 @@ export default async function info(ctx, { args, print }) {
     ['Claimed', w.claimedAt ? when(w.claimedAt) : 'not yet'],
     ['Image', w.image],
     ['Plan', w.plan],
+    ['Official', w.official ? 'yes: may start votes for every NOX holder' : 'no'],
     ['Volume', w.volume],
     ['Disk', usage ? formatBytes(usage.diskBytes) : ''],
     ['Members', usage?.members ?? 'not reported'],

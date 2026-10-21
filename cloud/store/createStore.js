@@ -72,6 +72,7 @@ export default function createStore(db, now = () => Date.now()) {
     countLive: () => get("SELECT COUNT(*) AS n FROM workspaces WHERE state != 'deleted'").n,
     countByOwner: (owner) => get("SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND state != 'deleted'", owner).n,
     owners: () => all('SELECT DISTINCT owner FROM workspaces WHERE owner IS NOT NULL').map((r) => r.owner),
+    setOfficial: (id, on) => run('UPDATE workspaces SET official = ?, updated_at = ? WHERE id = ?', on ? 1 : 0, now(), id).changes,
     countByOwnerSince: (owner, since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE owner = ? AND created_at >= ?', owner, since).n,
     // created since then, deleted ones included, so deleting doesn't refill the day's budget
     countCreatedSince: (since) => get('SELECT COUNT(*) AS n FROM workspaces WHERE created_at >= ?', since).n,

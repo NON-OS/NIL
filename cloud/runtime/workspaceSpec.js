@@ -32,6 +32,8 @@ export default function workspaceSpec(config, workspace) {
     env.PLAN_INVOICE_SLOT = `${workspace.invoiceSlot}/${app.invoiceSlots}`;
     env.PLAN_INVOICE_KEY = app.invoiceKey;
   }
+  // only workspaces the operator marked official may put a vote to every NOX holder
+  env.PUBLIC_VOTES = workspace.official ? 'on' : 'off';
   // the owner's wallet already had its free trial in another workspace
   if (workspace.trial === false) env.PLAN_TRIAL_DAYS = '0';
   // with no route out, a webhook or a model endpoint elsewhere could never be reached, so the app

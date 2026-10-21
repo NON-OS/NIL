@@ -489,6 +489,7 @@ Run it in the control plane's container: `docker compose exec control node cli.j
 | `start <name>`, `resume <name>` | start a stopped or suspended workspace, cancel a deletion, or retry a failed creation |
 | `stop <name>`, `suspend <name> [--reason r]` | take it offline, keeping its data |
 | `resize <name> <plan>`, `refresh <name…>\|--all` | recreate containers with a new plan or the current settings |
+| `official <name> on\|off` | let a workspace start votes every NOX holder can sign. Every other workspace gets `PUBLIC_VOTES=off`, so a holder vote under this domain always comes from the project's own workspace |
 | `upgrade <name…>\|--all --image i [--max-failures n]` | rolling upgrade with checkpoints and automatic rollback |
 | `rollback <name…>\|--all [--yes]` | back to the pre-upgrade checkpoint |
 | `delete <name> [--now] [--no-export] [--yes]` | final encrypted export, then deletion after the grace period |

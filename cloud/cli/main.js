@@ -18,6 +18,7 @@ import decrypt from './commands/decrypt.js';
 import keygen from './commands/keygen.js';
 import maintenance from './commands/maintenance.js';
 import requests from './commands/requests.js';
+import official from './commands/official.js';
 
 const HELP = `Nil control plane
 
@@ -33,6 +34,7 @@ Workspaces
   suspend <name> [--reason <text>]       take it offline with a notice, keeping its data
   resize <name> <plan>                   move it to another resource plan
   refresh <name…>|--all                  recreate containers after changing cloud.env or workspace.env
+  official <name> on|off                 let it start votes every NOX holder can sign (off for all others)
   upgrade <name…>|--all --image <image>  rolling upgrade with pre-migration checkpoints
          [--max-failures <n>]            and automatic rollback on a failed health check
   rollback <name…>|--all [--yes]         back to the checkpoint from before the last upgrade
@@ -75,6 +77,7 @@ const COMMANDS = {
   suspend: lifecycle,
   resize: lifecycle,
   refresh,
+  official,
   upgrade,
   rollback,
   delete: remove,
