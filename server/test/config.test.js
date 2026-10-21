@@ -33,7 +33,7 @@ test('a clean configuration starts without warnings', () => {
 });
 
 test('empty values count as unset and get the defaults, never 0', () => {
-  const names = ['PORT', 'SESSION_DAYS', 'TRASH_DAYS', 'MAX_UPLOAD_MB', 'MAX_CAPSULE_MB', 'NOX_CHAIN_ID', 'NOX_DECIMALS', 'NOX_CONFIRMATIONS', 'NOX_EXPLORER', 'PLAN_TREASURY', 'PLAN_PRICE', 'PLAN_PERIOD_DAYS', 'PLAN_GRACE_DAYS', 'PLAN_FREE_SEATS', 'PLAN_MAX_PERIODS', 'PLAN_TRIAL_DAYS', 'STEALTH_ANNOUNCE_CHECK_DAYS', 'SEMAPHORE_DEPTH',
+  const names = ['PORT', 'SESSION_DAYS', 'TRASH_DAYS', 'MAX_UPLOAD_MB', 'MAX_CAPSULE_MB', 'NOX_CHAIN_ID', 'NOX_DECIMALS', 'NOX_CONFIRMATIONS', 'NOX_EXPLORER', 'PLAN_TREASURY', 'PLAN_PRICE', 'PLAN_PERIOD_DAYS', 'PLAN_GRACE_DAYS', 'PLAN_FREE_SEATS', 'PLAN_MAX_PERIODS', 'PLAN_TRIAL_DAYS', 'PLAN_TRIAL_GRACE_DAYS', 'STEALTH_ANNOUNCE_CHECK_DAYS', 'SEMAPHORE_DEPTH',
     'NOX_TOKEN', 'NOX_STAKING', 'ZSP_CONTRACT', 'STEALTH_ANNOUNCER', 'REWARD_TOKENS', 'NOX_RPC_TIMEOUT_SECONDS', 'NOX_MISSING_TX_HOURS', 'MAX_JSON_KB', 'NOTIFICATION_DAYS', 'USED_INVITE_DAYS',
     'JOB_PURGE_SECONDS', 'JOB_PAYMENTS_SECONDS', 'JOB_VOTES_SECONDS', 'JOB_REMINDERS_SECONDS', 'JOB_AGENT_DUE_SOON_SECONDS', 'JOB_AGENT_PRUNE_SECONDS', 'JOB_DUE_ALERTS_SECONDS', 'JOB_OPTIMIZE_SECONDS', 'JOB_POOL_PRICE_SECONDS', 'JOB_TRANSFER_FEE_SECONDS', 'JOB_BILLING_WATCHDOG_SECONDS', 'PAYMENT_STALL_HOURS', 'PLAN_RECONCILE_MINUTES', 'PLAN_RECONCILE_BLOCKS', 'PLAN_RECONCILE_DAYS', 'NOX_MAX_TRANSFER_FEE_BPS', 'AI_TIMEOUT_SECONDS', 'AI_MAX_RETRIES', 'SHUTDOWN_TIMEOUT_SECONDS', 'DB_JOURNAL_LIMIT_MB',
     'SETUP_TOKEN', 'LOG_FORMAT', 'STRICT_CONFIG'];
@@ -47,7 +47,7 @@ test('empty values count as unset and get the defaults, never 0', () => {
   assert.deepEqual([config.ai.timeoutMs, config.ai.maxRetries, config.shutdownTimeoutMs, config.dbJournalLimitBytes, config.setupToken], [120_000, 1, 20_000, 64 * 1024 * 1024, null]);
   assert.deepEqual([config.port, config.sessionDays, config.trashDays, config.maxUploadBytes, config.maxCapsuleBytes], [3000, 30, 30, 25 * 1024 * 1024, 4096 * 1024 * 1024]);
   assert.deepEqual([config.nox.chainId, config.nox.decimals, config.nox.explorer], [1, 18, 'https://etherscan.io']);
-  assert.deepEqual(config.plan, { treasury: null, periodDays: 30, graceDays: 7, freeSeats: 5, maxPeriods: 24, trialDays: 14 });
+  assert.deepEqual(config.plan, { treasury: null, periodDays: 30, graceDays: 7, freeSeats: 5, maxPeriods: 24, trialDays: 14, trialGraceDays: 7 });
   assert.deepEqual([config.stealth.announceCheckDays, config.semaphore.depth], [7, 16]);
   // a real 0 still means 0
   assert.equal(load({ PLAN_TRIAL_DAYS: '0' }).config.plan.trialDays, 0);
