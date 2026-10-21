@@ -57,13 +57,20 @@ export default function dockerDriver({ config, log, client = dockerClient(config
     await client.json('PUT', archive(id), { query: { path: mount, copyUIDGID: 'true' }, body, headers: { 'content-type': 'application/x-tar' }, timeout: 600_000 });
   }
 
-  async function attachProxy(id) {
-    if (!caddy.container) return;
+  // The containers that join every workspace's network: Caddy, the only way in and the way to
+  // the chain, and the egress proxy when workspaces have one, their way out to the internet.
+  const joiners = [caddy.container, app.egressProxy?.container].filter(Boolean);
+
+  async function join(container, id) {
     try {
-      await client.json('POST', `/networks/${containerName(id)}/connect`, { body: { Container: caddy.container } });
+      await client.json('POST', `/networks/${containerName(id)}/connect`, { body: { Container: container } });
     } catch (err) {
       if (!(err.status === 409 || (err.status === 403 && /already exists/i.test(err.reason)))) throw err;
     }
+  }
+
+  async function attachProxy(id) {
+    for (const container of joiners) await join(container, id);
   }
 
   const driver = {
@@ -115,20 +122,21 @@ export default function dockerDriver({ config, log, client = dockerClient(config
 
     attachProxy,
 
-    // Recreating the Caddy container (to update it, say) drops it from every workspace network.
-    // One inspect shows which are missing; only those are reconnected.
+    // Recreating Caddy or the egress proxy (to update it, say) drops it from every workspace
+    // network. One inspect each shows which are missing; only those are reconnected.
     async ensureProxy(ids) {
-      if (!caddy.container) return 0;
-      const info = await client.quiet('GET', `/containers/${encodeURIComponent(caddy.container)}/json`);
-      if (!info) return 0;
-      const joined = new Set(Object.keys(info.NetworkSettings?.Networks ?? {}));
       let attached = 0;
-      for (const id of ids.filter((id) => !joined.has(containerName(id)))) {
-        try {
-          await attachProxy(id);
-          attached++;
-        } catch (err) {
-          if (err.status !== 404) throw err;
+      for (const container of joiners) {
+        const info = await client.quiet('GET', `/containers/${encodeURIComponent(container)}/json`);
+        if (!info) continue;
+        const joined = new Set(Object.keys(info.NetworkSettings?.Networks ?? {}));
+        for (const id of ids.filter((id) => !joined.has(containerName(id)))) {
+          try {
+            await join(container, id);
+            attached++;
+          } catch (err) {
+            if (err.status !== 404) throw err;
+          }
         }
       }
       return attached;
@@ -140,7 +148,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
     remove: (id) => client.quiet('DELETE', `/containers/${containerName(id)}`, { query: { force: 'true' } }),
     removeVolume: (volume) => client.quiet('DELETE', `/volumes/${encodeURIComponent(volume)}`),
 
-    ...dockerRemoval({ client, docker, caddy, containerName }),
+    ...dockerRemoval({ client, docker, joiners, containerName }),
 
     async status(id) {
       const info = await client.quiet('GET', `/containers/${containerName(id)}/json`);

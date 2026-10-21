@@ -28,10 +28,10 @@ const frame = (stream, text) => {
 };
 
 // Just enough of the Docker Engine API, on a unix socket, recording what it was asked.
-async function fakeEngine(t) {
+async function fakeEngine(t, env = {}) {
   const socket = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-docker-')), 'docker.sock');
   const seen = [];
-  const state = { networks: new Set(), volumes: new Set(), busy: new Map(), stuck: new Set(), lingering: new Map(), connected: new Set(), containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
+  const state = { networks: new Set(), volumes: new Set(), busy: new Map(), stuck: new Set(), lingering: new Map(), connected: new Set(), joined: new Map(), disconnected: [], containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
   const json = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json' });
     res.end(body === undefined ? '' : JSON.stringify(body));
@@ -49,8 +49,12 @@ async function fakeEngine(t) {
       return json(res, 201, { Id: 'net1' });
     }
     if ((m = /^POST \/networks\/([^/]+)\/connect$/.exec(route))) {
-      if (state.connected.has(m[1])) return json(res, 403, { message: 'endpoint with name nil-caddy already exists in network' });
-      state.connected.add(m[1]);
+      const { Container } = JSON.parse(body);
+      const joined = state.joined.get(Container) ?? new Set();
+      if (joined.has(m[1])) return json(res, 403, { message: `endpoint with name ${Container} already exists in network` });
+      joined.add(m[1]);
+      state.joined.set(Container, joined);
+      if (Container === 'nil-caddy') state.connected.add(m[1]);
       return json(res, 200);
     }
     if (route === 'POST /volumes/create') {
@@ -80,7 +84,7 @@ async function fakeEngine(t) {
         state.lingering.set(m[1], lingers - 1);
         return json(res, 200, { Config: {}, State: { Running: false } });
       }
-      if (m[1] === 'nil-caddy') return json(res, 200, { NetworkSettings: { Networks: Object.fromEntries([...state.connected].map((n) => [n, {}])) } });
+      if (m[1] === 'nil-caddy' || m[1] === 'nil-egress') return json(res, 200, { NetworkSettings: { Networks: Object.fromEntries([...(state.joined.get(m[1]) ?? [])].map((n) => [n, {}])) } });
       const c = state.containers.get(m[1]);
       if (!c) return json(res, 404, { message: `No such container: ${m[1]}` });
       return json(res, 200, { Config: { Image: c.body.Image }, State: { Running: c.running, ExitCode: 0, StartedAt: '2026-10-21T08:00:00.000000000Z', Health: { Status: c.running ? 'healthy' : 'unhealthy', Log: [{ Output: '{"ok":true,"version":"3.1.0","schema":19,"members":7,"secret":"x","jobs":{"purge":1}}' }] } } });
@@ -118,7 +122,10 @@ async function fakeEngine(t) {
       return state[m[1]].delete(m[2]) ? json(res, 204) : json(res, 404, { message: 'not found' });
     }
     if ((m = /^GET \/(networks|volumes)\/([^/]+)$/.exec(route))) return state[m[1]].has(m[2]) ? json(res, 200, { Name: m[2] }) : json(res, 404, { message: 'not found' });
-    if ((m = /^POST \/networks\/([^/]+)\/disconnect$/.exec(route))) return json(res, 404, { message: 'network not found' });
+    if ((m = /^POST \/networks\/([^/]+)\/disconnect$/.exec(route))) {
+      state.disconnected.push([m[1], JSON.parse(body).Container]);
+      return json(res, 404, { message: 'network not found' });
+    }
     if ((m = /^POST \/containers\/([^/]+)\/exec$/.exec(route))) {
       const id = `e${state.execs.size + 1}`;
       state.execs.set(id, JSON.parse(body));
@@ -163,7 +170,7 @@ async function fakeEngine(t) {
   });
   await new Promise((resolve) => server.listen(socket, resolve));
   t.after(() => server.close());
-  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_IMAGE_PULL: 'missing', CLOUD_DOCKER_REMOVE_WAIT_MS: '1' });
+  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_IMAGE_PULL: 'missing', CLOUD_DOCKER_REMOVE_WAIT_MS: '1', ...env });
   const log = { info() {}, warn() {}, error() {} };
   return { config, seen, state, driver: dockerDriver({ config, log }) };
 }
@@ -209,6 +216,25 @@ test('each workspace gets an internal network, Caddy attached to it, a volume an
   state.containers.delete(`nil-${ID}`);
   await driver.create(spec);
   assert.equal(await driver.ensureProxy([ID]), 0);
+});
+
+test('with the egress proxy on, it joins every workspace network next to Caddy, and leaves with it', async (t) => {
+  const { driver, state, config } = await fakeEngine(t, { CLOUD_EGRESS_PROXY: 'on' });
+  const spec = workspaceSpec(config, { id: ID, name: 'acme', image: 'nonos/nil:1.0.0', volume: `nil-${ID}-data`, plan: 'standard' });
+  assert.equal(spec.env.EGRESS_PROXY, `http://${ID}@nil-egress:3128`);
+  assert.equal(spec.env.AGENT_OUTBOUND, undefined, 'outbound tools stay on');
+  await driver.create(spec);
+  assert.deepEqual([...state.joined.get('nil-caddy')], [`nil-${ID}`]);
+  assert.deepEqual([...state.joined.get('nil-egress')], [`nil-${ID}`]);
+
+  // the egress container was recreated and lost its networks: only it is reattached
+  state.joined.set('nil-egress', new Set());
+  assert.equal(await driver.ensureProxy([ID]), 1);
+  assert.deepEqual([...state.joined.get('nil-egress')], [`nil-${ID}`]);
+  assert.equal(await driver.ensureProxy([ID]), 0);
+
+  await driver.destroy(ID, [`nil-${ID}-data`]);
+  assert.deepEqual(state.disconnected.map(([, container]) => container).sort(), ['nil-caddy', 'nil-egress']);
 });
 
 test('status, probes and usage read only small, typed values from the workspace', async (t) => {

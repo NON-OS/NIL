@@ -36,9 +36,10 @@ export default function workspaceSpec(config, workspace) {
   env.PUBLIC_VOTES = workspace.official ? 'on' : 'off';
   // the owner's wallet already had its free trial in another workspace
   if (workspace.trial === false) env.PLAN_TRIAL_DAYS = '0';
-  // with no route out, a webhook or a model endpoint elsewhere could never be reached, so the app
-  // doesn't offer them
-  if (app.egress === 'rpc-only') env.AGENT_OUTBOUND = 'off';
+  // with no route out, a webhook or a model endpoint elsewhere is reached through the egress
+  // proxy, named with the workspace's id for its log, or, without one, isn't offered at all
+  if (app.egress === 'rpc-only' && app.egressProxy) env.EGRESS_PROXY = `http://${workspace.id}@${app.egressProxy.container}:${app.egressProxy.port}`;
+  else if (app.egress === 'rpc-only') env.AGENT_OUTBOUND = 'off';
   if (config.links.source) env.SOURCE_URL = config.links.source;
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 

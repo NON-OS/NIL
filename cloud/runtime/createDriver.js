@@ -26,7 +26,7 @@ import dockerDriver from './docker/dockerDriver.js';
 //   checkpoint(id)              pre-migration copy of the database, workspace stopped
 //   restoreCheckpoint(id)       put that copy back, workspace stopped
 //   discardCheckpoint(id)       remove it, workspace running
-//   attachProxy(id)             make sure the reverse proxy can reach the workspace
+//   attachProxy(id)             make sure the reverse proxy (and the egress proxy) can reach the workspace
 //   ensureProxy(ids)            the same for many workspaces, cheaply; returns how many it fixed
 //   upstream(id)                host:port the reverse proxy forwards to
 //   usage()                     Map of volume name to bytes used

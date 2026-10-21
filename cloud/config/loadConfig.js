@@ -83,6 +83,15 @@ export default function loadConfig(env = process.env) {
     verifierMode = 'off';
   }
   const egress = read.oneOf('CLOUD_EGRESS', ['rpc-only', 'open'], 'rpc-only');
+  // The egress proxy (egress.js) gives rpc-only workspaces a way out for webhooks, model
+  // endpoints and AI providers: https to public addresses only, through a CONNECT tunnel.
+  let egressProxy = read.oneOf('CLOUD_EGRESS_PROXY', ['on', 'off'], 'off') === 'on';
+  if (egressProxy && egress === 'open') {
+    read.warn('CLOUD_EGRESS_PROXY=on does nothing with CLOUD_EGRESS=open: workspaces already reach the internet directly.');
+    egressProxy = false;
+  }
+  const egressContainer = read.text('CLOUD_EGRESS_CONTAINER', 'nil-egress');
+  if (egressProxy && !/^[a-zA-Z0-9][a-zA-Z0-9_.-]*$/.test(egressContainer)) read.fail('CLOUD_EGRESS_CONTAINER must be a container name.');
 
   const sourceUrl = read.url('CLOUD_SOURCE_URL');
   if (!sourceUrl) read.warn('CLOUD_SOURCE_URL is not set, so workspaces show no link to the source they run. Set it to the repository you deploy from once it is published.');
@@ -163,6 +172,8 @@ export default function loadConfig(env = process.env) {
       verifierKey: verifierMode === 'off' ? null : verifierKey,
       verifierUrl: verifierMode === 'shadow' ? verifierUrl : null,
       egress,
+      // null unless workspaces reach the internet through the egress proxy
+      egressProxy: egressProxy ? Object.freeze({ container: egressContainer, port: read.number('CLOUD_EGRESS_PROXY_PORT', 3128, { min: 1, max: 65535 }) }) : null,
       extraEnv,
       tmpfsMb: read.number('CLOUD_APP_TMPFS_MB', 64, { min: 8, max: 4096 }),
       logMb: read.number('CLOUD_APP_LOG_MB', 10, { min: 1, max: 1024 }),

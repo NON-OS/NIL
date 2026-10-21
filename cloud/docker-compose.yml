@@ -23,6 +23,9 @@ services:
       CLOUD_DATA_DIR: /var/lib/nil-cloud
       CLOUD_CADDYFILE: /srv/caddy/Caddyfile
       CLOUD_CADDY_CONTAINER: nil-caddy
+      # the egress service below; workspaces use it only with CLOUD_EGRESS_PROXY=on in cloud.env
+      CLOUD_EGRESS_CONTAINER: nil-egress
+      CLOUD_EGRESS_PROXY_PORT: "3128"
       CLOUD_CADDY_CONTROL: control:8080
       CLOUD_CADDY_ASK: control:8081
       CLOUD_PORT: "8080"
@@ -127,6 +130,48 @@ services:
         max-size: 10m
         max-file: "5"
 
+  egress:
+    # The way out for workspaces with CLOUD_EGRESS_PROXY=on: an HTTP CONNECT proxy (egress.js) that
+    # opens tunnels only to allowed ports on public addresses. The control plane attaches it to
+    # each workspace network. It sees addresses and byte counts, never what's inside the tunnels.
+    image: ${NIL_CLOUD_IMAGE:-localhost/nonos/nil-cloud}:${NIL_VERSION:?set NIL_VERSION in .env}
+    pull_policy: never
+    container_name: nil-egress
+    restart: unless-stopped
+    command: ["node", "--disable-warning=ExperimentalWarning", "egress.js"]
+    # its settings come from .env, never from cloud.env, so none of the control plane's keys are here
+    environment:
+      CLOUD_EGRESS_PROXY_PORT: "3128"
+      CLOUD_EGRESS_PROXY_ALLOW_PORTS: ${EGRESS_ALLOW_PORTS:-}
+      CLOUD_EGRESS_PROXY_DENY: ${EGRESS_DENY:-}
+      CLOUD_EGRESS_PROXY_PER_MINUTE: ${EGRESS_PER_MINUTE:-}
+      CLOUD_EGRESS_PROXY_CONCURRENT: ${EGRESS_CONCURRENT:-}
+      CLOUD_EGRESS_PROXY_CONNECT_SECONDS: ${EGRESS_CONNECT_SECONDS:-}
+      CLOUD_EGRESS_PROXY_IDLE_SECONDS: ${EGRESS_IDLE_SECONDS:-}
+      CLOUD_EGRESS_PROXY_MAX_SECONDS: ${EGRESS_MAX_SECONDS:-}
+    networks:
+      - egress
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('net').connect(3128, '127.0.0.1').on('connect', () => process.exit(0)).on('error', () => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      start_period: 10s
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid,nodev
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 256m
+    memswap_limit: 256m
+    pids_limit: 256
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "5"
+
 networks:
   # Caddy publishes 80 and 443 from here. With the userland proxy off (see
   # deploy/host/docker-daemon.json), Docker forwards the host's IPv6 ports only to a container's
@@ -138,6 +183,9 @@ networks:
   # (docker-compose.chain.yml) join this one.
   chain:
     internal: true
+  # Only the egress proxy joins this one: an ordinary bridge with a route out, apart from the
+  # control plane and Caddy.
+  egress: {}
 
 volumes:
   control-data:

@@ -5,7 +5,7 @@ import sleep from '../../lib/sleep.js';
 // while what it removes is still in use: a container whose forced removal is still finishing,
 // or a helper that hasn't let go of the volume. Those calls are retried with a doubling wait,
 // CLOUD_DOCKER_REMOVE_TRIES times from CLOUD_DOCKER_REMOVE_WAIT_MS; anything else fails at once.
-export default function dockerRemoval({ client, docker, caddy, containerName }) {
+export default function dockerRemoval({ client, docker, joiners, containerName }) {
   async function patiently(fn) {
     for (let attempt = 1; ; attempt++) {
       try {
@@ -58,7 +58,7 @@ export default function dockerRemoval({ client, docker, caddy, containerName }) 
     await step(async () => {
       for (const name of await labelled(id)) await removeContainer(name);
     });
-    if (caddy.container) await step(() => client.quiet('POST', `/networks/${network}/disconnect`, { body: { Container: caddy.container, Force: true } }, [404, 403]));
+    for (const container of joiners) await step(() => client.quiet('POST', `/networks/${network}/disconnect`, { body: { Container: container, Force: true } }, [404, 403]));
     await step(() => patiently(() => client.quiet('DELETE', `/networks/${encodeURIComponent(network)}`)));
     for (const volume of volumes) await step(() => patiently(() => client.quiet('DELETE', `/volumes/${encodeURIComponent(volume)}`)));
     if (!failures.length) return;
