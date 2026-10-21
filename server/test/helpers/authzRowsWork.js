@@ -99,4 +99,9 @@ export default {
   'GET /api/ai-credits': { allow: MEMBERS },
   'GET /api/ai-credits/usage': { allow: ADMINS },
   'PUT /api/ai-credits': { allow: ADMINS, body: { anonymous: true } },
+  // an empty provider gets past the door and stops at the form, so no row saves a key
+  'GET /api/ai-provider': { allow: ADMINS },
+  'PUT /api/ai-provider': { allow: ADMINS, ok: [400] },
+  'DELETE /api/ai-provider': { allow: ADMINS },
+  'POST /api/ai-provider/test': { allow: ADMINS, ok: [400] },
 };

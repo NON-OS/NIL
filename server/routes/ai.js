@@ -8,11 +8,12 @@ import aiFeatures from '../ai/aiFeatures.js';
 import runAi from '../ai/runAi.js';
 import mustProve from '../aiCredits/mustProve.js';
 import signedAllowance from '../ai/signedAllowance.js';
+import aiAvailable from '../ai/provider/aiAvailable.js';
 
 const router = express.Router();
 
 router.use('/ai', (req, res, next) => {
-  if (!config.ai.enabled) return res.status(503).json({ error: 'AI assist is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server.' });
+  if (!aiAvailable()) return res.status(503).json({ error: 'AI assist is off. An admin can choose an AI provider and add its key in Settings → Connect AI.' });
   next();
 });
 

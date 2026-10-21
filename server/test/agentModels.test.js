@@ -28,12 +28,12 @@ after(() => {
   srv.close();
 });
 
-test('built-in AI stays off without ANTHROPIC_MODEL, and says what to set', async () => {
+test('built-in AI stays off without ANTHROPIC_MODEL, and says where to turn it on', async () => {
   assert.equal((await owner('GET', '/api/bootstrap')).data.ai, false);
   const t = (await owner('POST', '/api/tasks', { title: 'Plan the launch', projectId: ids.alpha })).data.task;
   const res = await owner('POST', '/api/ai/describe', { taskId: t.id });
   assert.equal(res.status, 503);
-  assert.match(res.data.error, /ANTHROPIC_API_KEY and ANTHROPIC_MODEL/);
+  assert.match(res.data.error, /choose an AI provider and add its key in Settings → Connect AI/);
   assert.equal(anthropic.requests.length, 0);
 });
 

@@ -51,5 +51,5 @@ process.on('uncaughtException', (err) => {
 });
 
 server.listen(config.port, config.host, () => {
-  log.info('server', `Nil ${appVersion} is listening on ${config.host}:${server.address().port}. APP_URL is ${config.appUrl ?? 'not set'}. AI assist is ${config.ai.enabled ? 'on' : 'off'}.`);
+  log.info('server', `Nil ${appVersion} is listening on ${config.host}:${server.address().port}. APP_URL is ${config.appUrl ?? 'not set'}. The server's default AI key is ${config.ai.enabled ? 'set' : 'not set; workspaces bring their own in Settings → Connect AI'}.`);
 });

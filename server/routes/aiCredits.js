@@ -11,6 +11,7 @@ import runAi from '../ai/runAi.js';
 import creditSetting from '../aiCredits/creditSetting.js';
 import checkCredit from '../aiCredits/checkCredit.js';
 import creditLedger from '../aiCredits/creditLedger.js';
+import aiAvailable from '../ai/provider/aiAvailable.js';
 
 const router = express.Router();
 
@@ -42,7 +43,7 @@ router.post(
   route(async (req) => {
     // a session cookie here would tie the request to an account, so it's refused, not read
     if (sessionCookie.read(req)) throw HttpError.badRequest('An anonymous AI request must not carry a session cookie.');
-    if (!config.ai.enabled) throw new HttpError(503, 'AI assist is off. An admin can turn it on by setting ANTHROPIC_API_KEY and ANTHROPIC_MODEL on the server.');
+    if (!aiAvailable()) throw new HttpError(503, 'AI assist is off. An admin can choose an AI provider and add its key in Settings → Connect AI.');
     const feature = Object.hasOwn(aiFeatures, req.params.feature) ? aiFeatures[req.params.feature] : null;
     if (!feature) throw HttpError.notFound('That AI feature');
     if (!creditSetting.on()) throw HttpError.forbidden('Anonymous AI requests are off in this workspace. Reload the page to send it signed in.');

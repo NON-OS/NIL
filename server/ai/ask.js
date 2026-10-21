@@ -1,47 +1,20 @@
-import Anthropic from '@anthropic-ai/sdk';
-import config from '../config.js';
+import activeProvider from './provider/activeProvider.js';
+import AiError from './AiError.js';
+import askAnthropic from './askAnthropic.js';
+import askOpenAi from './askOpenAi.js';
 
-const SYSTEM = `You are the planning assistant inside Nil, a private task app for a small, ambitious team.
-Write plain, direct English. Prefer concrete, checkable steps over generic advice.
-Never invent people, numbers or facts that aren't in the data you're given.`;
-
-let client;
-
-class AiError extends Error {
-  constructor(userMessage) {
-    super(userMessage);
-    this.userMessage = userMessage;
+// One request to the workspace's AI provider, or the server's default. With a schema the reply is
+// parsed JSON, otherwise text. A failure carries whose key it was, so the message points at the
+// right fix (friendlyError.js).
+export default async function ask(request, provider = activeProvider()) {
+  if (!provider) throw new AiError('AI assist is off. An admin can choose an AI provider and add its key in Settings → Connect AI.', 503);
+  if (provider.source === 'workspace' && !provider.apiKey && provider.kind !== 'compatible') {
+    throw new AiError('This workspace’s AI key can’t be read. An admin can enter it again in Settings → Connect AI.', 503);
   }
-}
-
-// One request to Claude. With a schema the reply is parsed JSON, otherwise text.
-// `fallbacks: 'default'` reruns a declined request on Anthropic's recommended fallback model.
-export default async function ask({ prompt, schema, effort = 'low' }) {
-  // Someone is waiting on every request, so a stalled one gives up instead of holding the click
-  // for the SDK's default ten minutes. Timeouts are retried too, so the longest wait is
-  // AI_TIMEOUT_SECONDS × (AI_MAX_RETRIES + 1).
-  client ??= new Anthropic({ timeout: config.ai.timeoutMs, maxRetries: config.ai.maxRetries });
-  const output_config = schema ? { effort, format: { type: 'json_schema', schema } } : { effort };
-  const response = await client.beta.messages.create({
-    model: config.ai.model,
-    max_tokens: 16000,
-    betas: ['server-side-fallback-2026-07-01'],
-    fallbacks: 'default',
-    system: SYSTEM,
-    output_config,
-    messages: [{ role: 'user', content: prompt }],
-  });
-
-  if (response.stop_reason === 'refusal') throw new AiError('Claude declined this request. Rephrase it and try again.');
-  const text = response.content
-    .filter((block) => block.type === 'text')
-    .map((block) => block.text)
-    .join('')
-    .trim();
-  if (!schema) return text;
   try {
-    return JSON.parse(text);
-  } catch {
-    throw new AiError(response.stop_reason === 'max_tokens' ? 'The answer got too long. Try with less text.' : 'Claude returned something unexpected. Try again.');
+    return await (provider.kind === 'anthropic' ? askAnthropic : askOpenAi)(provider, request);
+  } catch (err) {
+    err.source ??= provider.source;
+    throw err;
   }
 }

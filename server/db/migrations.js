@@ -37,10 +37,11 @@ import laterLookupIndexes from './migrations/036-later-lookup-indexes.js';
 import publicBallots from './migrations/037-public-ballots.js';
 import publicVotes from './migrations/038-public-votes.js';
 import overpaidCredit from './migrations/039-overpaid-credit.js';
+import aiProvider from './migrations/040-ai-provider.js';
 
 // Append new migrations to the end. Never edit one that has shipped.
 // An object entry with `rebuild: true` runs with foreign keys off, which SQLite
 // needs for table rebuilds; foreign keys are re-checked before committing.
-const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, passkeyWraps, aiCredits, tracesAndLimits, privacyPools, signInHardening, lookupIndexes, voteReview, laterLookupIndexes, publicBallots, publicVotes, overpaidCredit];
+const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, passkeyWraps, aiCredits, tracesAndLimits, privacyPools, signInHardening, lookupIndexes, voteReview, laterLookupIndexes, publicBallots, publicVotes, overpaidCredit, aiProvider];
 
 export default migrations;

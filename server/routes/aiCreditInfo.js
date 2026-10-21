@@ -9,6 +9,7 @@ import creditSetting from '../aiCredits/creditSetting.js';
 import creditGroup from '../aiCredits/creditGroup.js';
 import creditLedger from '../aiCredits/creditLedger.js';
 import utcDay from '../aiCredits/utcDay.js';
+import aiAvailable from '../ai/provider/aiAvailable.js';
 
 const router = express.Router();
 
@@ -20,7 +21,7 @@ router.get(
   requireMember,
   route(() => {
     const { members, root } = creditGroup.current();
-    return { on: config.ai.enabled && creditSetting.on(), day: utcDay(), slots: config.ai.perDay, depth: config.semaphore.depth, members, root, spent: creditLedger.spentToday() };
+    return { on: aiAvailable() && creditSetting.on(), day: utcDay(), slots: config.ai.perDay, depth: config.semaphore.depth, members, root, spent: creditLedger.spentToday() };
   }),
 );
 
