@@ -48,7 +48,7 @@ export default function DocHistory({ doc, onClose, onRestore }: { doc: DocItem; 
                 {r.verified && r.olderFormat && ' · older format'}
                 {r.verified && r.oldKey && ` · signed with an earlier key, ${r.oldKey}`}
               </small>
-              <pre>{r.body.slice(0, 600)}</pre>
+              <pre>{(r.text || r.body).slice(0, 600)}</pre>
             </div>
           ))
         )}

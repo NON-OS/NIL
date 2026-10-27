@@ -77,6 +77,8 @@ export default {
   'POST /api/docs/:id/grants': { allow: MEMBERS, id: 'doc', body: ({ world }) => ({ grants: [{ userId: world.ids.member, wrappedKey: blob(92) }] }) },
   'POST /api/docs/:id/rotate': { allow: MEMBERS, id: 'fresh.doc', body: ({ world }, who) => ({ baseVersion: 1, titleCt: blob(40), bodyCt: blob(100), grants: [{ userId: world.ids[who] ?? world.ids.member, wrappedKey: blob(92) }] }) },
   'GET /api/docs/:id/revisions': { allow: MEMBERS, id: 'doc' },
+  'POST /api/docs/:id/updates': { allow: MEMBERS, id: 'doc', body: () => ({ updateCt: blob(80) }) },
+  'GET /api/docs/:id/updates': { allow: MEMBERS, id: 'doc' },
   'DELETE /api/docs/:id': { allow: MEMBERS, id: 'fresh.doc' },
   'GET /api/encryption-keys': { allow: MEMBERS },
   'PUT /api/me/encryption-key': { allow: MEMBERS, ok: [400] },

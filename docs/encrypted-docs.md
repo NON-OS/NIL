@@ -18,22 +18,41 @@ If you've added a passkey to your keys, **Unlock with a passkey** sits next to *
 
 ## Write a doc
 
-Click the plus button above the list. A new doc called "Untitled" opens, shared with the whole team. Start typing. Nil saves a moment after you stop, and encrypts the text before it leaves your browser. The status at the top says **Encrypted · saved**, **Unsaved**, **Encrypting…** or **Conflict**.
+Click the plus button above the list. A new doc opens, shared with the whole team. Give it a title and start typing. Every change is signed and encrypted in your browser before it leaves, and reaches everyone else who has the doc open within a moment. The status at the top says **Encrypted · saved**, **Encrypting…**, **Offline · kept here** or **Not verified**.
 
-Docs understand Markdown: `#` for headings, `**bold**`, lines starting with `-` for lists and `[text](https://example.com)` for links. Click **Preview** to see the result and **Write** to go back.
+The bar above the text has the usual formatting: headings, bold, italic, underline, strikethrough, inline code, highlight, links, bulleted, numbered and to-do lists, quotes, code blocks, alignment and tables. You rarely need it:
 
-The other buttons along the top:
+- Type `/` for a list of blocks to add, such as headings, lists, a to-do list, a table, a quote, a code block or a divider. Keep typing to narrow it, then press Enter.
+- Type `@` and a name to mention a teammate.
+- Select some words for a small bar with formatting, a link and **Comment**.
+- Markdown shortcuts work as you type: `#` and a space for a heading, `-` for a list, `[ ]` for a to-do, three backticks for code.
+- Ctrl+K (Cmd+K on a Mac) adds a link. Links go to web pages and email addresses only.
+
+The buttons along the top:
 
 | Button | What it does |
 |---|---|
 | Draft | Asks the built-in AI to write for you. Shown only when built-in AI is on (see below) |
+| The speech bubble | Opens the doc's comments |
+| The list | Opens an outline of the doc's headings |
 | The people button, showing Team or a number | Sets who can read the doc |
-| The clock | Opens the version history |
-| The download arrow | Saves the doc on your device as a Markdown file, decrypted |
-| The printer | Prints the doc or saves it as a PDF |
-| The bin | Deletes the doc for everyone. Only its creator or an admin can delete it |
+| The three dots | Version history, download as Markdown (decrypted), print or save as PDF, and delete. Only a doc's creator or an admin can delete it, and it goes for everyone |
 
 The **Search docs** box above the list looks through titles and text that your browser has decrypted. The server never sees what you search for.
+
+## Edit together
+
+Everyone who can read a doc can edit it at the same time. You see each other's cursors, with names, and faces at the top show who else has it open. Changes merge as you type, so nobody's words overwrite anybody else's, even when two people type in the same sentence.
+
+If the connection drops, keep typing. Your changes wait in the tab, the status says **Offline · kept here**, and they go out when the connection is back. Closing the tab while changes are still waiting asks you first.
+
+Every few seconds the browser of whoever is typing saves a new signed version that folds the changes in. That keeps the doc quick to open and gives the history something to show.
+
+## Comments
+
+Select some words and click **Comment**, or press Ctrl+Alt+M. Write your comment and click **Comment** again. The words get a yellow underline, and the thread opens in the panel on the right. Anyone who can read the doc can reply, resolve a thread or reopen it. Whoever started a thread, or an admin, can delete it. Resolved threads are hidden unless you switch on **Show resolved**.
+
+Comments are part of the doc, so they're encrypted and signed exactly like its text, and they go with the doc when it's shared or re-keyed.
 
 ## Check your teammates' keys
 
@@ -58,15 +77,13 @@ Click the people button and choose **Whole team** or **Specific people**, then *
 
 Only the doc's creator or an admin can switch a doc between the two choices, remove people, or add people to a doc shared with specific people. Removing someone gives the doc a new key, so they can't read anything saved after that. They may still have copies of what they read before.
 
-## When two people edit at once
-
-If someone saves a newer version while you're typing, Nil doesn't overwrite it. You see "Someone saved a newer version while you were typing" with two buttons. **Load theirs** throws away your unsaved change and shows their version. **Keep mine** saves your text on top of theirs.
-
 ## Version history
 
-The clock button lists earlier versions, decrypted in your browser. Nil keeps the last 25. **Restore** brings an old version back as the newest one; the version it replaces stays in the history.
+The three dots open **Version history**: earlier versions, decrypted in your browser, newest first. The last hour keeps a version for about every minute, the last day one for every quarter of an hour, and older history one a day, up to 100 versions (`DOC_REVISIONS` sets the number). **Restore** brings an old version back as a new change on top, which everyone editing sees arrive; the version it replaces stays in the history.
 
-## Signed versions
+## Signed versions and changes
+
+Each live change is signed by whoever made it, for this doc and this change, together with which key protects it and when it was made. A change that doesn't open with the doc's key, or whose signature doesn't check out against the key you know for its author, or that comes from someone who doesn't hold the doc's key, is left out, and the doc says how many were.
 
 Each version of a doc is signed by whoever saved it, with a signing key only their browser holds, together with who the version is for and which key protects it. If a version's signature doesn't check out against the keys you know, if its signer isn't one of the readers it names, or if it's under a different key from the one signed, the doc says "Nil can't confirm a teammate wrote this version" and opens read-only. The server may have changed it, so don't rely on it. If someone's key changed recently, check it first. To keep the text, the doc's creator or an admin opens the people button and clicks **Save**, which gives the doc a new key and signs the text as theirs.
 

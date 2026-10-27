@@ -1,3 +1,5 @@
+import type EncryptedUpdate from './EncryptedUpdate';
+
 // A doc exactly as the server stores and returns it: ciphertext plus your sealed key.
 export default interface EncryptedDoc {
   id: string;
@@ -11,4 +13,7 @@ export default interface EncryptedDoc {
   updatedAt: number;
   wrappedKey: string;
   readers: string[];
+  // when opened: how far into the live changes this version reaches, and the changes after it
+  updatesThrough?: number;
+  updates?: EncryptedUpdate[];
 }

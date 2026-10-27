@@ -7,6 +7,7 @@ import docFacts, { type DocFacts } from '../lib/crypto/docFacts';
 import signedText from '../lib/crypto/signedText';
 import signedFacts from '../lib/crypto/signedFacts';
 import keyHash from '../lib/crypto/keyHash';
+import docBody from '../lib/docState/docBody';
 import keyDirectory from './keyDirectory';
 import type DocItem from '../types/DocItem';
 import type EncryptedDoc from '../types/EncryptedDoc';
@@ -52,6 +53,13 @@ function unwrap(doc: EncryptedDoc) {
   return docKeySeal.open(doc.wrappedKey, id.privateKey, id.publicKey);
 }
 
+// A rich body's words come from its shared state; the converter loads only when one is opened.
+async function plainText(body: string | null) {
+  if (!docBody.isRich(body)) return body;
+  const { default: stateText } = await import('../lib/docState/stateText');
+  return stateText(body);
+}
+
 // Decrypts docs and checks who wrote each version and who it's for. Only a key that opened a
 // version which checked out is kept for writing under.
 const readDoc = {
@@ -72,6 +80,7 @@ const readDoc = {
       id: doc.id,
       title: v.title,
       body: v.body,
+      text: await plainText(v.body),
       version: doc.version,
       audience: v.facts?.audience ?? doc.audience,
       createdBy: doc.createdBy,
@@ -83,9 +92,10 @@ const readDoc = {
       olderFormat: v.olderFormat,
       oldKey: v.oldKey,
       keyHash: keyHash(key),
+      live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [] },
     };
     // so search in this tab can find it, for as long as the keys stay unlocked
-    openedText.rememberDoc(item);
+    openedText.rememberDoc({ id: item.id, title: item.title, body: item.text });
     return item;
   },
 
@@ -97,7 +107,7 @@ const readDoc = {
 
   async revision(doc: DocItem, key: Uint8Array, r: { version: number; titleCt: string; bodyCt: string; updatedBy: string | null; createdAt: number }) {
     const v = await openVersion(key, doc.id, r.version, r, r.updatedBy);
-    return { version: r.version, updatedBy: v.by, createdAt: r.createdAt, title: v.title, body: v.body ?? '', verified: v.verified, olderFormat: v.olderFormat, oldKey: v.oldKey };
+    return { version: r.version, updatedBy: v.by, createdAt: r.createdAt, title: v.title, body: v.body ?? '', text: (await plainText(v.body)) ?? '', verified: v.verified, olderFormat: v.olderFormat, oldKey: v.oldKey };
   },
 };
 

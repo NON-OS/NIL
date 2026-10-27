@@ -18,7 +18,7 @@ export default function DocList({ docs, waiting, current, onOpen, onNew }: Props
   const [query, setQuery] = useState('');
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? docs.filter((d) => d.title.toLowerCase().includes(q) || d.body?.toLowerCase().includes(q)) : docs;
+    return q ? docs.filter((d) => d.title.toLowerCase().includes(q) || d.text?.toLowerCase().includes(q)) : docs;
   }, [docs, query]);
 
   return (

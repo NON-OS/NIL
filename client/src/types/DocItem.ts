@@ -1,8 +1,13 @@
+import type EncryptedUpdate from './EncryptedUpdate';
+
 // A doc as the browser sees it after decrypting. Bodies load only when a doc is opened.
 export default interface DocItem {
   id: string;
   title: string;
+  // the body as signed: shared editing state from Docs v2 on, Markdown before
   body: string | null;
+  // its plain words, for search and previews
+  text: string | null;
   version: number;
   // from format 2 on, who the person who saved this version signed it for; the server's word
   // for a version in the older format
@@ -22,4 +27,6 @@ export default interface DocItem {
   oldKey: string | null;
   // the hash of the doc key this version was opened with, so nothing is written under another one
   keyHash: string;
+  // the live changes made since this version, still to be checked and laid on top
+  live: { through: number; updates: EncryptedUpdate[] };
 }

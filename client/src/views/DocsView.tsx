@@ -46,7 +46,7 @@ export default function DocsView() {
   }, [unlocked, currentId]);
   useEffect(load, [load]);
 
-  // someone else saved: pick up their version unless we're mid-edit (the editor decides)
+  // someone saved a newer version: the open editor lays it on top of what's on screen
   useEffect(() => {
     if (revision && open) docs.open(open.id).then((fresh) => fresh.version !== open.version && setOpen(fresh)).catch(() => {});
   }, [revision]);
@@ -58,7 +58,7 @@ export default function DocsView() {
 
   const create = async () => {
     try {
-      const doc = await docs.create({ title: 'Untitled', body: '', audience: 'team' });
+      const doc = await docs.create({ title: '', audience: 'team' });
       await refresh();
       router.navigate(`/docs/${doc.id}`);
     } catch (err) {
@@ -84,10 +84,7 @@ export default function DocsView() {
               <DocEditor
                 key={open.id}
                 doc={open}
-                onChange={(doc) => {
-                  setOpen(doc);
-                  setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === doc.id ? { ...doc, body: d.body } : d)) });
-                }}
+                onTitle={(title) => setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === open.id && d.title !== (title || 'Untitled') ? { ...d, title: title || 'Untitled' } : d)) })}
                 onDeleted={() => {
                   router.navigate('/docs');
                   refresh();

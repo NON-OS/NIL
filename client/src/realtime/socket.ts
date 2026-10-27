@@ -6,6 +6,7 @@ let retry = 0;
 let timer: number | undefined;
 let wanted = false;
 let viewing: string | null = null;
+let docOpen: string | null = null;
 let onReconnect: (() => void) | null = null;
 
 function send(payload: unknown) {
@@ -23,6 +24,7 @@ function open() {
     retry = 0;
     store.set({ connected: true });
     send({ type: 'presence', viewing });
+    if (docOpen) send({ type: 'doc-open', docId: docOpen });
     if (wasRetrying) onReconnect?.();
   };
   socket.onmessage = (e) => {
@@ -71,6 +73,16 @@ const socket = {
 
   typing(taskId: string) {
     send({ type: 'typing', taskId });
+  },
+
+  // the doc this tab is editing, so cursors in it reach this tab; null when none
+  docOpen(docId: string | null) {
+    docOpen = docId;
+    send({ type: 'doc-open', docId });
+  },
+
+  docAware(docId: string, ct: string) {
+    send({ type: 'doc-aware', docId, ct });
   },
 };
 

@@ -1,0 +1,91 @@
+import * as Y from 'yjs';
+import docs from '../docs';
+import readDoc from '../readDoc';
+import liveDocs from './liveDocs';
+import loadState from './loadState';
+import createInbox from './inbox';
+import createOutbox from './outbox';
+import createSaver from './saver';
+import createPresence from './presence';
+import type LiveContext from './liveContext';
+import type LiveDoc from '../../types/LiveDoc';
+import type LiveStatus from '../../types/LiveStatus';
+import type DocItem from '../../types/DocItem';
+import type EncryptedUpdate from '../../types/EncryptedUpdate';
+
+// One doc open for live editing: its shared state, built from the newest version this tab could
+// verify and the checked changes since, kept in step with everyone else's and saved as it goes.
+// The key that opened the version is the only one anything is sealed with; when the doc moves
+// to a new key, `onRekey` asks the editor to open it afresh.
+export default async function createLiveDoc(start: DocItem, me: string, onRekey: (fresh: DocItem) => void): Promise<LiveDoc> {
+  const key = readDoc.keyOf(start);
+  if (!key) throw new Error('Reopen the doc to edit it.');
+  const listeners = new Set<(s: LiveStatus) => void>();
+  const ydoc = new Y.Doc();
+  const ctx: LiveContext = {
+    ydoc,
+    docId: start.id,
+    key,
+    doc: start,
+    through: start.live.through,
+    sent: new Set(),
+    status: { state: start.warning === 'unverified' ? 'readonly' : 'saved', refused: 0 },
+    setStatus(patch) {
+      ctx.status = { ...ctx.status, ...patch };
+      for (const fn of listeners) fn(ctx.status);
+    },
+    local: () => saver.changed(),
+    saveNow: () => saver.saveNow(),
+    reload: async () => rebase(await docs.open(ctx.docId)),
+  };
+
+  const adopt = (saved: DocItem) => {
+    ctx.doc = saved;
+    ctx.through = Math.max(ctx.through, saved.live.through);
+  };
+  // A newer version arrived: one that checks out is merged in (shared state never loses anyone's
+  // changes); one that doesn't stops this tab from writing; a new key means opening afresh.
+  async function rebase(fresh: DocItem) {
+    if (fresh.version < ctx.doc.version) return;
+    if (fresh.keyHash !== ctx.doc.keyHash) return onRekey(fresh);
+    if (fresh.warning === 'unverified') return ctx.setStatus({ state: 'readonly' });
+    loadState(ydoc, fresh);
+    adopt(fresh);
+    await inbox.receive(fresh.live.updates);
+  }
+
+  loadState(ydoc, start);
+  const inbox = createInbox(ctx);
+  const saver = createSaver(ctx, adopt);
+  await inbox.receive(start.live.updates);
+  const outbox = createOutbox(ctx);
+  const presence = createPresence(ctx, me);
+  const unregister = liveDocs.register(start.id, (event) => {
+    if (event.type === 'doc-update') void inbox.receive([event as unknown as EncryptedUpdate]);
+    else if (event.type === 'doc-aware' && typeof event.ct === 'string') void presence.receive(event.ct);
+  });
+
+  return {
+    ydoc,
+    awareness: presence.awareness,
+    current: () => ctx.doc,
+    status: () => ctx.status,
+    onStatus(fn) {
+      listeners.add(fn);
+      return () => listeners.delete(fn);
+    },
+    rebase,
+    pending: () => outbox.pending() || saver.dirty(),
+    reconnected: () => outbox.retryNow(),
+    async close() {
+      unregister();
+      presence.stop();
+      // what's typed still goes out, and a version folds it in, even as the editor closes
+      await outbox.flush().catch(() => {});
+      outbox.stop();
+      await saver.flush().catch(() => {});
+      saver.stop();
+      ydoc.destroy();
+    },
+  };
+}

@@ -65,7 +65,7 @@ const docs = {
 
   // A team doc is sealed for everyone whose key this person has confirmed; the rest get it handed
   // over by a teammate's browser once confirmed there (see shareWithTeam).
-  async create({ title, body, audience, people = [] }: { title: string; body: string; audience: Audience; people?: string[] }) {
+  async create({ title, body, audience, people = [] }: { title: string; body?: string; audience: Audience; people?: string[] }) {
     const me = store.get().me!;
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const docKey = crypto.getRandomValues(new Uint8Array(32));
@@ -73,15 +73,19 @@ const docs = {
     const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id) : people;
     const grants = await sealFor(docKey, [me.id, ...everyone]);
     const readers = grants.map((g) => g.userId);
-    const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, ...(await sealed(docKey, id, 1, { title, body }, { audience, readers })) });
+    // a new doc starts as shared editing state, with its title in it
+    const { default: newDocBody } = await import('../lib/docState/newDocBody');
+    const words = { title, body: body ?? newDocBody(title) };
+    const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, ...(await sealed(docKey, id, 1, words, { audience, readers })) });
     keyring.rememberDocKey(id, docKey);
     return readDoc.decrypt(res.doc);
   },
 
   // A save keeps the audience the version was signed for and names everyone who holds the key now.
-  async save(doc: DocItem, title: string, body: string) {
+  // `through` says how far into the live changes it reaches, so the server can fold those away.
+  async save(doc: DocItem, title: string, body: string, { through }: { through?: number } = {}) {
     const key = writable(doc, 'save');
-    const res = await http.put<{ doc: EncryptedDoc }>(`/docs/${doc.id}`, { baseVersion: doc.version, ...(await sealed(key, doc.id, doc.version + 1, { title, body }, doc)) });
+    const res = await http.put<{ doc: EncryptedDoc }>(`/docs/${doc.id}`, { baseVersion: doc.version, through, ...(await sealed(key, doc.id, doc.version + 1, { title, body }, doc)) });
     return readDoc.decrypt(res.doc);
   },
 

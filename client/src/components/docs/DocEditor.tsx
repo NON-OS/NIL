@@ -1,184 +1,130 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Download, Eye, History, Pencil, Printer, ShieldCheck, Sparkles, Trash2, Users } from 'lucide-react';
-import Markdown from '../ui/Markdown';
-import ConfirmButton from '../ui/ConfirmButton';
+import './editor/Editor.css';
+import './editor/Side.css';
+import { useEffect, useState } from 'react';
+import type { Editor } from '@tiptap/react';
+import { ArrowLeft, ListTree, MessageSquare, Sparkles, Users } from 'lucide-react';
 import DocMoreMenu from './DocMoreMenu';
 import ShareDocModal from './ShareDocModal';
 import DocHistory from './DocHistory';
 import DraftModal from './DraftModal';
+import DocBanners from './DocBanners';
+import RichEditor from './editor/RichEditor';
+import FormatBar from './editor/FormatBar';
+import CommentsPanel from './editor/CommentsPanel';
+import OutlinePanel from './editor/OutlinePanel';
+import DocPresence from './editor/DocPresence';
+import DocStatusBadge from './editor/DocStatusBadge';
+import LinkEditor from './editor/LinkEditor';
+import useLiveDoc from './editor/useLiveDoc';
+import useYText from './editor/useYText';
+import docComments from './editor/docComments';
+import restoreVersion from './editor/restoreVersion';
+import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
-import useMediaQuery from '../../hooks/useMediaQuery';
 import toast from '../../state/toast';
 import docs from '../../actions/docs';
 import saveBlob from '../../lib/saveBlob';
-import type DocItem from '../../types/DocItem';
 import isAdminUser from '../../lib/isAdmin';
-import media from '../../lib/media';
-
-type Status = 'saved' | 'dirty' | 'saving' | 'conflict';
+import type DocItem from '../../types/DocItem';
 
 interface Props {
   doc: DocItem;
-  onChange: (doc: DocItem) => void;
   onDeleted: () => void;
   onBack: () => void;
   onReload: () => void;
+  // the title as it's typed, so the list beside the doc keeps up
+  onTitle: (title: string) => void;
 }
 
-// Typing saves on its own after a short pause. Each save encrypts in the browser first,
-// so what leaves this tab is already ciphertext.
-export default function DocEditor({ doc, onChange, onDeleted, onBack, onReload }: Props) {
+const fileName = (title: string, ext: string) => `${(title || 'doc').replace(/[^\w-]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'doc'}.${ext}`;
+
+// One doc, open for live editing with everyone else who has it open. Every change is signed and
+// encrypted in this tab before it leaves; the server passes on and stores only ciphertext.
+export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }: Props) {
   const me = useStore((s) => s.me)!;
-  const users = useStore((s) => s.users);
   const aiOn = useStore((s) => s.ai);
-  const [drafting, setDrafting] = useState(false);
-  const [title, setTitle] = useState(doc.title);
-  const [body, setBody] = useState(doc.body ?? '');
-  const [status, setStatus] = useState<Status>('saved');
-  const [preview, setPreview] = useState(false);
-  const [sharing, setSharing] = useState(false);
-  const [history, setHistory] = useState(false);
-  const timer = useRef<ReturnType<typeof setTimeout>>();
-  const latest = useRef(doc);
-  latest.current = doc;
+  const { live, status, error } = useLiveDoc(doc, onReload);
+  const [editor, setEditor] = useState<Editor | null>(null);
+  const [title, setTitle] = useYText(live?.ydoc.getText('title') ?? null);
+  const [panel, setPanel] = useState<'comments' | 'outline' | null>(null);
+  const [thread, setThread] = useState<string | null>(null);
+  const [draft, setDraft] = useState<{ from: number; to: number; quote: string } | null>(null);
+  const [modal, setModal] = useState<'link' | 'share' | 'history' | 'draft' | null>(null);
   const canManage = doc.createdBy === me.id || isAdminUser(me);
-  const compact = useMediaQuery(media.touchOrNarrow);
-  // text nobody on the team can be shown to have written stays read-only until it's re-keyed
-  const readOnly = doc.warning === 'unverified';
-
   useEffect(() => {
-    if (status === 'dirty' || status === 'saving') return;
-    setTitle(doc.title);
-    setBody(doc.body ?? '');
-  }, [doc.id, doc.version]);
-
-  const save = useCallback(
-    async (nextTitle: string, nextBody: string) => {
-      setStatus('saving');
-      try {
-        const saved = await docs.save(latest.current, nextTitle, nextBody);
-        onChange(saved);
-        setStatus('saved');
-      } catch (err: any) {
-        if (err?.status === 409) setStatus('conflict');
-        else {
-          setStatus('dirty');
-          toast.error(err);
-        }
-      }
-    },
-    [onChange],
-  );
-
-  const edit = (nextTitle: string, nextBody: string) => {
-    if (readOnly) return;
-    setTitle(nextTitle);
-    setBody(nextBody);
-    setStatus('dirty');
-    clearTimeout(timer.current);
-    timer.current = setTimeout(() => save(nextTitle, nextBody), 1200);
-  };
-  useEffect(() => () => clearTimeout(timer.current), []);
-
-  // Keep my text: fetch their version number, then save mine on top of it.
-  const overwrite = async () => {
-    try {
-      const fresh = await docs.open(doc.id);
-      latest.current = fresh;
-      await save(title, body);
-    } catch (err) {
-      toast.error(err);
-    }
-  };
-
-  const label = readOnly ? 'Not verified' : { saved: 'Encrypted · saved', dirty: 'Unsaved', saving: 'Encrypting…', conflict: 'Conflict' }[status];
+    if (live) onTitle(title);
+  }, [live, title]);
+  const readOnly = doc.warning === 'unverified' || status.state === 'readonly';
   const audience = doc.audience === 'team' ? 'Team' : `${doc.readers.length} ${doc.readers.length === 1 ? 'reader' : 'readers'}`;
-  const download = () => saveBlob(new Blob([`# ${title}\n\n${body}\n`], { type: 'text/markdown' }), `${(title || 'doc').replace(/[^\w-]+/g, '-').toLowerCase()}.md`);
+
+  const startComment = () => {
+    if (!editor || readOnly) return;
+    const { from, to } = editor.state.selection;
+    if (from === to) return toast.show('Select the words you want to comment on first.');
+    setDraft({ from, to, quote: editor.state.doc.textBetween(from, to, ' ').slice(0, 300) });
+    setPanel('comments');
+  };
+  const sendComment = (text: string) => {
+    if (!editor || !live || !draft) return;
+    const id = docComments.start(live.ydoc, me.id, draft.quote, text);
+    editor.chain().setTextSelection({ from: draft.from, to: draft.to }).setMark('comment', { thread: id }).run();
+    setDraft(null);
+    setThread(id);
+  };
+
+  const download = () => editor && saveBlob(new Blob([`# ${title}\n\n${editor.getMarkdown()}\n`], { type: 'text/markdown' }), fileName(title, 'md'));
   const remove = () => docs.remove(doc).then(onDeleted).catch(toast.error);
+  const toggle = (p: 'comments' | 'outline') => setPanel((cur) => (cur === p ? null : p));
+
+  if (error) return <DocBanners doc={doc} status={status} canManage={canManage} error={error} />;
+  if (!live) {
+    return (
+      <section className="doc-editor docs-locked" aria-label="Doc" aria-busy="true">
+        <Spinner size={20} />
+      </section>
+    );
+  }
 
   return (
-    <section className="doc-editor" aria-label="Doc">
+    <section className={`doc-editor${panel ? ' has-side' : ''}`} aria-label="Doc">
       <div className="doc-toolbar">
         <button type="button" className="btn btn-sm btn-ghost only-mobile" onClick={onBack} aria-label="Back to docs">
           <ArrowLeft />
         </button>
-        <span className="doc-status" aria-live="polite">
-          <ShieldCheck /> {label}
-        </span>
-        <button type="button" className="btn btn-sm" onClick={() => setPreview((p) => !p)} aria-pressed={preview}>
-          {preview ? <Pencil /> : <Eye />} {preview ? 'Write' : 'Preview'}
-        </button>
-        {aiOn && (
-          <button type="button" className="btn btn-sm" onClick={() => setDrafting(true)}>
+        <DocStatusBadge status={status} />
+        <DocPresence awareness={live.awareness} />
+        {aiOn && !readOnly && (
+          <button type="button" className="btn btn-sm" onClick={() => setModal('draft')}>
             <Sparkles /> Draft
           </button>
         )}
-        <button type="button" className="btn btn-sm" onClick={() => setSharing(true)} aria-label={`Share, ${audience}`}>
+        <button type="button" className="btn btn-sm" onClick={() => toggle('comments')} aria-pressed={panel === 'comments'} aria-label="Comments">
+          <MessageSquare />
+        </button>
+        <button type="button" className="btn btn-sm only-wide" onClick={() => toggle('outline')} aria-pressed={panel === 'outline'} aria-label="Outline">
+          <ListTree />
+        </button>
+        <button type="button" className="btn btn-sm" onClick={() => setModal('share')} aria-label={`Share, ${audience}`}>
           <Users /> {audience}
         </button>
-        {compact ? (
-          <DocMoreMenu onHistory={() => setHistory(true)} onDownload={download} onPrint={() => window.print()} onDelete={canManage ? remove : undefined} />
-        ) : (
-          <>
-            <button type="button" className="btn btn-sm btn-ghost tip" onClick={() => setHistory(true)} aria-label="Version history">
-              <History />
-            </button>
-            <button type="button" className="btn btn-sm btn-ghost tip" onClick={download} aria-label="Download as Markdown (decrypted)">
-              <Download />
-            </button>
-            <button type="button" className="btn btn-sm btn-ghost tip" onClick={() => window.print()} aria-label="Print or save as PDF">
-              <Printer />
-            </button>
-            {canManage && (
-              <ConfirmButton className="btn btn-sm btn-ghost doc-delete tip tip-end" onConfirm={remove} confirmLabel="Delete for everyone?" label="Delete doc">
-                <Trash2 />
-              </ConfirmButton>
-            )}
-          </>
-        )}
+        <DocMoreMenu onHistory={() => setModal('history')} onDownload={download} onPrint={() => window.print()} onDelete={canManage ? remove : undefined} />
       </div>
-      {status === 'conflict' && (
-        <div className="doc-conflict" role="alert">
-          <span>Someone saved a newer version while you were typing.</span>
-          <button type="button" className="btn btn-sm" onClick={() => (setStatus('saved'), onReload())}>
-            Load theirs
-          </button>
-          <button type="button" className="btn btn-sm btn-primary" onClick={overwrite}>
-            Keep mine
-          </button>
+      {editor && !readOnly && <FormatBar editor={editor} onLink={() => setModal('link')} onPick={() => toast.show('Images and files arrive with Files.')} />}
+      <DocBanners doc={doc} status={status} canManage={canManage} error={null} />
+      <div className="doc-main">
+        <div className="doc-body">
+          <div>
+            <input className="doc-title" value={title} onChange={(e) => setTitle(e.target.value.slice(0, 200))} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), editor?.commands.focus('start'))} placeholder="Untitled" aria-label="Title" maxLength={200} readOnly={readOnly} />
+            <RichEditor live={live} readOnly={readOnly} onEditor={setEditor} onLink={() => setModal('link')} onComment={startComment} onPick={() => toast.show('Images and files arrive with Files.')} />
+          </div>
         </div>
-      )}
-      {doc.warning === 'unverified' && (
-        <div className="doc-conflict" role="alert">
-          <span>Nil can’t confirm a teammate wrote this version: no signature on it checks out against the keys you know. The server may have changed it, so don’t rely on it. {canManage ? 'To keep it, open Who can read this and save: the doc gets a new key and your signature.' : 'Its creator or an admin can re-key it.'} If someone’s key changed recently, check it first.</span>
-        </div>
-      )}
-      {doc.warning === 'rollback' && (
-        <div className="doc-conflict" role="alert">
-          <span>This is an older version than one you’ve already opened here. The server may be holding back newer changes.</span>
-        </div>
-      )}
-      {doc.olderFormat && !readOnly && (
-        <div className="doc-conflict">
-          <span>This version was saved in an older format that can’t show who it’s for, so Nil won’t share it with new teammates on its own. Saving it again updates it.</span>
-        </div>
-      )}
-      {doc.oldKey && (
-        <div className="doc-conflict">
-          <span>
-            {users[doc.updatedBy ?? '']?.name ?? 'A former member'} signed this version with an earlier key, <span className="mono">{doc.oldKey}</span>, from before their key changed.
-          </span>
-        </div>
-      )}
-      <div className="doc-body">
-        <div>
-          <input className="doc-title" value={title} onChange={(e) => edit(e.target.value, body)} placeholder="Untitled" aria-label="Title" maxLength={200} readOnly={readOnly} />
-          {preview ? <Markdown text={body || '_Nothing written yet._'} headingLevel={2} /> : <textarea className="doc-text" value={body} onChange={(e) => edit(title, e.target.value)} placeholder="Start writing. Markdown works: # headings, **bold**, - lists, [links](https://…)" aria-label="Doc text" readOnly={readOnly} />}
-        </div>
+        {editor && panel === 'comments' && <CommentsPanel editor={editor} ydoc={live.ydoc} active={thread} onActive={setThread} onClose={() => setPanel(null)} draft={draft && { quote: draft.quote, onSend: sendComment, onCancel: () => setDraft(null) }} />}
+        {editor && panel === 'outline' && <OutlinePanel editor={editor} onClose={() => setPanel(null)} />}
       </div>
-      {sharing && <ShareDocModal doc={doc} canManage={canManage} onClose={() => setSharing(false)} onDone={onReload} />}
-      {drafting && <DraftModal title={title} body={body} onClose={() => setDrafting(false)} onDraft={(text) => edit(title, body.trim() ? `${body.trimEnd()}\n\n${text}` : text)} />}
-      {history && <DocHistory doc={doc} onClose={() => setHistory(false)} onRestore={(t, b) => edit(t, b)} />}
+      {modal === 'link' && editor && <LinkEditor editor={editor} onClose={() => setModal(null)} />}
+      {modal === 'share' && <ShareDocModal doc={live.current()} canManage={canManage} onClose={() => setModal(null)} onDone={onReload} />}
+      {modal === 'draft' && editor && <DraftModal title={title} body={editor.getMarkdown()} onClose={() => setModal(null)} onDraft={(text) => editor.chain().focus('end').insertContent(text, { contentType: 'markdown' }).run()} />}
+      {modal === 'history' && editor && <DocHistory doc={live.current()} onClose={() => setModal(null)} onRestore={(t, b) => restoreVersion(editor, setTitle, t, b)} />}
     </section>
   );
 }

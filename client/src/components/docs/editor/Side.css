@@ -1,0 +1,205 @@
+/* The panel beside a doc: its comments, or its outline. */
+
+.doc-side {
+  display: flex;
+  flex-direction: column;
+  width: 320px;
+  flex: none;
+  min-height: 0;
+  border-left: 1px solid var(--line);
+  background: var(--surface-2);
+}
+
+.doc-side-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+
+.doc-side-head h2 {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-size: var(--text-md);
+  font-weight: 600;
+}
+
+.doc-side-head h2 svg {
+  width: 15px;
+  height: 15px;
+}
+
+.doc-side-filter {
+  padding: 8px 16px 0;
+  font-size: var(--text-sm);
+}
+
+.doc-side-list {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  flex: 1;
+  padding: 12px;
+  overflow: auto;
+}
+
+.doc-side-empty {
+  margin: 4px;
+  font-size: var(--text-sm);
+  line-height: 1.5;
+}
+
+.doc-thread {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.doc-thread.active {
+  border-color: var(--accent-line);
+}
+
+.doc-thread.resolved {
+  opacity: 0.7;
+}
+
+.doc-thread-quote {
+  margin: 0;
+  padding-left: 8px;
+  border-left: 3px solid #f5c26b;
+  color: var(--ink-2);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  overflow-wrap: anywhere;
+}
+
+.doc-thread-msg {
+  display: flex;
+  gap: 8px;
+}
+
+.doc-thread-msg p {
+  margin: 2px 0 0;
+  font-size: var(--text-md);
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.doc-thread-meta {
+  font-size: var(--text-xs);
+  color: var(--muted);
+}
+
+.doc-thread-meta strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.doc-thread-reply {
+  display: grid;
+  gap: 6px;
+  justify-items: end;
+}
+
+.doc-thread-reply .textarea {
+  width: 100%;
+}
+
+.doc-thread-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 4px;
+}
+
+.doc-outline-item {
+  display: block;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: none;
+  color: var(--ink);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+.doc-outline-item:hover {
+  background: var(--surface-3);
+}
+
+.doc-outline-item.level-2 {
+  padding-left: 20px;
+}
+
+.doc-outline-item.level-3 {
+  padding-left: 32px;
+  color: var(--ink-2);
+}
+
+@media (max-width: 1100px) {
+  .doc-side {
+    position: fixed;
+    z-index: 40;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: min(360px, 100vw);
+  }
+}
+
+@media (max-width: 860px) {
+  .doc-format {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    padding: 6px 10px;
+  }
+
+  .doc-toolbar .only-wide {
+    display: none;
+  }
+
+  .doc-prose {
+    font-size: 16px;
+  }
+}
+
+@media print {
+  .doc-format,
+  .doc-side,
+  .doc-caret,
+  .doc-bubble {
+    display: none !important;
+  }
+
+  .doc-prose .doc-comment-mark {
+    border: 0;
+    background: none;
+  }
+
+  .doc-prose pre {
+    border: 1px solid #ccc;
+    background: #fff;
+    color: #000;
+    white-space: pre-wrap;
+  }
+
+  .doc-prose h1,
+  .doc-prose h2,
+  .doc-prose h3 {
+    break-after: avoid;
+  }
+
+  .doc-prose table,
+  .doc-prose pre,
+  .doc-prose blockquote {
+    break-inside: avoid;
+  }
+}
