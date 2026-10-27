@@ -120,7 +120,11 @@ async function flush() {
 
 window.addEventListener('online', () => void flush());
 
-async function queue(channel: ChatChannel, type: ChatItem['type'], threadId: string | null, content: Partial<Content>, uploads: File[] = [], ping: string[] = []) {
+async function queue(given: ChatChannel, type: ChatItem['type'], threadId: string | null, content: Partial<Content>, uploads: File[] = [], ping: string[] = []) {
+  // online, the key is brought up to date first, so what's written isn't sealed to someone who
+  // just left; offline, sealing refuses that on its own
+  if (navigator.onLine) await chatChannels.tend(given);
+  const channel = chatState.get().channels[given.id] ?? given;
   const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
   const files = [];
   const bodies: [string, Uint8Array][] = [];

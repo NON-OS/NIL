@@ -57,7 +57,8 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
     return () => {
       live = false;
     };
-  }, [channel.id, channel.epoch, keysRev]);
+    // someone leaving or a departure being signed may mean a new key from this browser
+  }, [channel.id, channel.epoch, keysRev, channel.members.join(), channel.departures.length]);
 
   // read up to the newest message whenever it's on screen
   const newest = timeline?.items.reduce((n, m) => Math.max(n, m.seq), 0) ?? 0;

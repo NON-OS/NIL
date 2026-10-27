@@ -25,6 +25,9 @@ const router = express.Router();
 const META_CHARS = 8000;
 
 const channelsPerHour = rateLimit({ windowMs: units.HOUR, max: config.chat.channelsPerHour, key: (req) => req.user.id, message: 'You’ve started a lot of conversations in the last hour. Wait a while and try again.' });
+// reading up to a message and choosing what notifies you, both of which tell the person's other
+// tabs, so a script can't flood them
+const readsPerMinute = rateLimit({ windowMs: units.MINUTE, max: config.chat.messagesPerMinute, key: (req) => req.user.id, message: 'Too many updates in the last minute. Wait a moment and try again.' });
 
 // Every conversation you're in, newest first.
 router.get(
@@ -121,6 +124,7 @@ router.delete(
 
 router.put(
   '/chat/channels/:id/read',
+  readsPerMinute,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const seq = check.number(req.body?.seq, 'Read position', { min: 0, max: channel.seq, integer: true }) ?? channel.seq;
@@ -137,6 +141,7 @@ router.put(
 
 router.put(
   '/chat/channels/:id/notify',
+  readsPerMinute,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const notify = check.oneOf(req.body?.notify, ['default', 'all', 'mentions', 'none'], 'Notifications');

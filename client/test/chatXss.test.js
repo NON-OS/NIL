@@ -48,6 +48,9 @@ test('file names and types from a message are cleaned and shown as text', () => 
     const html = renderToStaticMarkup(createElement(ChatFileView, { channelId: 'c', file }));
     assert.ok(!runs(html), html);
   }
+  // a name can't hide its real ending by turning round which way it reads
+  const turned = chatContent.parse(JSON.stringify({ files: [{ id: 'f'.repeat(22), name: 'invoice\u202Efdp.exe', type: 'application/octet-stream', size: 1, hash: key, key }] }));
+  assert.equal(turned.files[0].name, 'invoicefdp.exe');
   // a file that isn't shaped like one makes the whole message unreadable rather than half-shown
   assert.throws(() => chatContent.parse(JSON.stringify({ files: [{ id: '<script>', name: 'x', hash: key, key, size: 1 }] })));
 });

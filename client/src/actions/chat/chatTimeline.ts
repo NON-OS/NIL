@@ -21,15 +21,16 @@ function merge(channelId: string, threadId: string | null, incoming: ChatItem[],
   for (const m of incoming) byId.set(m.id, m);
   const items = [...byId.values()].sort(order);
   chatState.putTimeline(key, { items, ...patch });
-  if (threadId) return;
-  recount(channelId);
+  recount(channelId, threadId);
 }
 
-// Looks again at every sender's numbering in a conversation's main timeline, and their marks.
-function recount(channelId: string) {
-  const tl = chatState.timeline(channelId);
+// Looks again at every sender's numbering in a conversation's main timeline, or one thread's,
+// and their marks. A thread's notices are kept under the thread's timeline.
+function recount(channelId: string, threadId: string | null = null) {
+  const key = keyOf(channelId, threadId);
+  const tl = chatState.timeline(key);
   const marks = chatState.get().marks[channelId] ?? {};
-  chatState.set((s) => ({ notices: { ...s.notices, [channelId]: chatStreams(tl.items, { fromStart: !tl.more, marks }) } }));
+  chatState.set((s) => ({ notices: { ...s.notices, [key]: chatStreams(tl.items, { fromStart: !tl.more, marks, scope: threadId ?? 'main' }) } }));
 }
 
 async function open(channel: ChatChannelRow, rows: ChatMessageRow[]) {
@@ -44,7 +45,11 @@ async function open(channel: ChatChannelRow, rows: ChatMessageRow[]) {
 // list scrolls up, and live messages as they arrive. A thread is a timeline of its own.
 const chatTimeline = {
   keyOf,
-  recount,
+  // the main timeline and every thread this tab has loaded, after the marks changed
+  recount(channelId: string) {
+    recount(channelId);
+    for (const [key, tl] of Object.entries(chatState.get().timelines)) if (key.startsWith('thread:') && tl.items.some((m) => m.channelId === channelId)) recount(channelId, key.slice(7));
+  },
 
   async latest(channel: ChatChannelRow, threadId: string | null = null) {
     const key = keyOf(channel.id, threadId);
@@ -94,11 +99,32 @@ const chatTimeline = {
     return item;
   },
 
+  // Opens one message without showing it anywhere, to know it checks out and whom it mentions.
+  check: async (channel: ChatChannelRow, row: ChatMessageRow) => (await open(channel, [row]))[0],
+
   // Shows a message this tab is still sending, or replaces it with what the server kept.
   local: (item: ChatItem) => merge(item.channelId, item.threadId, [item]),
   drop(channelId: string, threadId: string | null, id: string) {
     const key = keyOf(channelId, threadId);
     chatState.putTimeline(key, { items: chatState.timeline(key).items.filter((m) => m.id !== id) });
+  },
+
+  // Everything that came while this tab wasn't listening, after a reconnect: each loaded timeline
+  // of the conversation from its newest message on, a page at a time.
+  async catchUp(channel: ChatChannelRow) {
+    for (const [key, tl] of Object.entries(chatState.get().timelines)) {
+      const threadId = key === channel.id ? null : key.startsWith('thread:') && tl.items.some((m) => m.channelId === channel.id) ? key.slice(7) : undefined;
+      if (threadId === undefined || !tl.fetched) continue;
+      let after = tl.items.reduce((n, m) => Math.max(n, m.seq), 0);
+      for (let page = 0; page < 20; page++) {
+        const thread = threadId ? `&thread=${threadId}` : '';
+        const res = await http.get<{ messages: ChatMessageRow[]; more: boolean }>(`/chat/channels/${channel.id}/messages?after=${after}${thread}`).catch(() => null);
+        if (!res?.messages.length) break;
+        merge(channel.id, threadId, await open(channel, res.messages));
+        after = res.messages[res.messages.length - 1].seq;
+        if (!res.more) break;
+      }
+    }
   },
 
   // Opens again whatever was waiting on a key, once one arrives.

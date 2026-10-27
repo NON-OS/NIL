@@ -13,6 +13,9 @@ import announceChat from '../chat/announceChat.js';
 const router = express.Router();
 const STREAM = /^[A-Za-z0-9_-]{16}$/;
 const MARK_CHARS = 16 * 1024;
+// a person's sending tabs kept per conversation; a new one past this lets go of their oldest, so
+// nobody can crowd out anyone else's
+const STREAMS_PER_PERSON = 20;
 
 const marksPerMinute = rateLimit({ windowMs: units.MINUTE, max: config.chat.messagesPerMinute, key: (req) => req.user.id, message: 'Too many updates in the last minute. Wait a moment and try again.' });
 
@@ -25,7 +28,7 @@ router.get(
   '/chat/channels/:id/marks',
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
-    return { marks: sql.all('SELECT * FROM chat_marks WHERE channel_id = ? ORDER BY updated_at DESC LIMIT 500', channel.id).map(toMark) };
+    return { marks: sql.all('SELECT * FROM chat_marks WHERE channel_id = ? ORDER BY updated_at DESC LIMIT ?', channel.id, STREAMS_PER_PERSON * config.chat.maxMembers).map(toMark) };
   }),
 );
 
@@ -50,6 +53,12 @@ router.put(
        ON CONFLICT (channel_id, user_id, stream) DO UPDATE SET epoch = excluded.epoch, sent_at = excluded.sent_at, body_ct = excluded.body_ct, updated_at = excluded.updated_at`,
       channel.id, req.user.id, stream, b.epoch, b.sentAt, bodyCt, now,
     );
+    if (!held) {
+      sql.run(
+        'DELETE FROM chat_marks WHERE channel_id = ? AND user_id = ? AND stream NOT IN (SELECT stream FROM chat_marks WHERE channel_id = ? AND user_id = ? ORDER BY updated_at DESC LIMIT ?)',
+        channel.id, req.user.id, channel.id, req.user.id, STREAMS_PER_PERSON,
+      );
+    }
     announceChat(channel, { kind: 'mark', mark: toMark(sql.get('SELECT * FROM chat_marks WHERE channel_id = ? AND user_id = ? AND stream = ?', channel.id, req.user.id, stream)) });
     return { ok: true };
   }),

@@ -8,6 +8,8 @@ import chatTimeline from './chatTimeline';
 import chatRead from './chatRead';
 import chatMarks from './chatMarks';
 import chatTitle from './chatTitle';
+// listens for the socket coming back, to catch up on what it missed
+import './chatCatchUp';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
 const TYPING_MS = 4000;
@@ -40,9 +42,12 @@ export default async function chatEvents(event: any) {
       const unread = fresh && row.senderId !== me && !watching ? now.unread + 1 : now.unread;
       chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...now, seq: Math.max(now.seq, row.seq), lastAt: row.createdAt, unread } } }));
       if (fresh && watching) chatRead.mark(id, row.seq);
-      const mentioned = me !== undefined && Boolean(item?.mentions.includes(me));
       const here = chatState.get().viewing === id;
-      if (row.edits === 0 && row.kind === 'message' && row.senderId !== me && !here && (channel.kind !== 'channel' || mentioned) && channel.notify !== 'none') tell(id, row.senderId, mentioned);
+      if (row.edits !== 0 || row.kind !== 'message' || row.senderId === me || here || channel.notify === 'none') return;
+      // only a message that checks out says anything, and a mention only when its sender signed it
+      const checked = item ?? (await chatTimeline.check(channel, row).catch(() => null));
+      const mentioned = me !== undefined && Boolean(checked?.mentions.includes(me));
+      if (checked?.state === 'ok' && (channel.kind !== 'channel' || mentioned)) tell(id, row.senderId, mentioned);
       return;
     }
     case 'typing': {

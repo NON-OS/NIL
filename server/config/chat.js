@@ -13,6 +13,8 @@ export default Object.freeze({
   markDays: envNumber('CHAT_MARK_DAYS', 90, { min: 1 }),
   // one encrypted message, signature and file keys included
   messageChars: envNumber('CHAT_MESSAGE_KB', 64, { min: 4, max: 1024 }) * 1024,
+  // the encrypted messages one person may keep on the server
+  memberBytes: envNumber('CHAT_MEMBER_MB', 1024, { min: 1 }) * units.MB,
   messagesPerMinute: envNumber('CHAT_MESSAGES_PER_MINUTE', 120, { min: 1 }),
   channelsPerHour: envNumber('CHAT_CHANNELS_PER_HOUR', 30, { min: 1 }),
   // new keys, handed-on keys, leavings and settings changes one person may make a minute

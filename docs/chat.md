@@ -20,7 +20,7 @@ Click the plus button above the list, or the small plus next to **Channels** or 
 
 You can also choose how long messages stay (see [Disappearing messages](#disappearing-messages)).
 
-Before anything is sealed to someone, Nil asks you to compare their key fingerprint with them, the same check as for docs. In anything but a team channel, you also can't write until you've checked the key of everyone who holds the conversation's key, since whoever holds it reads what you write. A team channel skips the question and is sealed to everyone whose key you've already confirmed. Anyone else waits for a key. In a team channel they get it once you or a teammate confirm theirs; anywhere else, whoever manages the conversation gives it with **Give key** in its settings, after checking their key.
+Before anything is sealed to someone, Nil asks you to compare their key fingerprint with them, the same check as for docs. You can't write in a conversation, team channels included, until you've checked the key of everyone who holds its key, since whoever holds it reads what you write: the conversation names whose keys are left to check, with **Check keys**. Starting a team channel skips the question and seals it to everyone whose key you've already confirmed. Anyone else waits for a key. In a team channel they get it once you or a teammate confirm theirs; anywhere else, whoever manages the conversation gives it with **Give key** in its settings, after checking their key.
 
 ## Write
 
@@ -44,7 +44,7 @@ An edited message says so. A deleted one leaves a line saying it was deleted, an
 
 ### Offline
 
-Write while you're offline and the message shows as queued. It goes as soon as you're back, in the order you wrote. A message is signed and encrypted the moment you send it, and kept on this device in that form until the server has it, so closing the tab or the browser loses nothing: it goes the next time you unlock. If the conversation got a new key meanwhile, or the message waited a while, your browser opens it and seals it again first. A message the server refuses stays on screen with **Try again** and **Discard**. Discarding sends a signed, empty placeholder in its place, so your teammates' browsers don't take its absence for a message the server held back.
+Write while you're offline and the message shows as queued. It goes as soon as you're back, in the order you wrote. A message is signed and encrypted the moment you send it, and kept on this device in that form until the server has it, so closing the tab or the browser loses nothing: it goes the next time you unlock. If the conversation got a new key meanwhile, or the message waited a while, your browser opens it and seals it again first. Coming back online, your browser also fetches whatever arrived in the conversations you have open while it was away. A message the server refuses stays on screen with **Try again** and **Discard**. Discarding sends a signed, empty placeholder in its place, so your teammates' browsers don't take its absence for a message the server held back.
 
 ## Read
 
@@ -74,7 +74,7 @@ The box above the list finds conversations by name, and from two letters on it a
 
 ## Notifications
 
-While Nil is open, a short notice says when someone writes to you directly, in a group, or mentions you in a channel, with a button to open it. Notices never quote the message.
+While Nil is open, a short notice says when someone writes to you directly, in a group, or mentions you in a channel, with a button to open it. Notices never quote the message. Your browser opens and checks the message first: a message that doesn't check out raises no notice, and a mention counts only when the sender signed it into the message.
 
 On devices where you [turned on push notifications](time-and-reminders.md#push-notifications), you get them while Nil isn't open. A chat notification says only "New message". It carries no words, no channel name and not even who wrote, since a lock screen is seen by anyone nearby and the push service carries it. Nil sends at most one a minute for each conversation (`CHAT_PUSH_QUIET_SECONDS`).
 
@@ -110,17 +110,23 @@ Anyone can leave a channel for some people or a group; a team channel can't be l
 
 Every change of who holds a conversation's key shows in its timeline: who added whom, who left, and who took someone out.
 
+Until the new key starts, someone who left still holds the current one. The conversation says so, and nothing is sent there until the next key leaves them out; any member's browser starts it once their leaving is signed. In a team channel, whoever manages it also leaves out, on their own, anyone who is no longer on the team, signed statement or not, since a team channel's people are the team's. In a channel for some people, without a signed statement only whoever manages it can take them out.
+
+If the lists of who holds a direct message's key ever stop checking out, nothing after the break can be trusted, and it can't be mended. **Start a fresh conversation** in its notice sets it aside and starts a new one with the same person, once you've checked their key again. The old one stays, with what can still be read in it.
+
 Deleting a channel deletes every message and file in it for everyone. Only whoever manages it can.
 
 ## Keys and what your browser checks
 
-Each conversation has a key, made in the browser of whoever started it and sealed to each member's own key. That key is replaced when someone joins, leaves or is taken out, when someone's keys change, and at least once a day (`CHAT_EPOCH_HOURS`, 24 by default): the first browser that sends after that starts the next one. Each key's stretch of time is called an epoch, and settings show which epoch a conversation is on, who started it and when.
+Each conversation has a key, made in the browser of whoever started it and sealed to each member's own key. That key is replaced when someone joins, leaves or is taken out, when someone's keys change, and at least once a day (`CHAT_EPOCH_HOURS`, 24 by default): the first browser that sends after that starts the next one. Browsers count the time from when the list of who holds the key was signed, not from what the server says, and never keep a key on for more than a week, whatever the server is set to. Each key's stretch of time is called an epoch, and settings show which epoch a conversation is on, who started it and when.
 
 Every epoch has a list of who holds its key, signed by whoever started it, and each list names the one before. Your browser checks every list from the first: the signature, and that the person who signed was allowed to make that change. A manager may take someone out. Anyone else may leave someone out only by citing that person's own signed leaving, or a signed removal from the team by a manager or by an admin whose key you confirmed, signed since they last joined. Each list has to be newer than the one before. The names and people a conversation shows come from its newest checked list, never from the server's. Anyone in a conversation can start a new key for the same people, and in a team channel bring in a teammate. Nobody comes into a private conversation, or is left out of one, just because the server's list says so. Your browser only accepts a key whose hash the list names, so the server can't hand you a key of its own. If someone hands over a copy that doesn't match, the copies others gave still count.
 
-Every message, reaction, edit and deletion is signed by its sender for that workspace, conversation, epoch, message, sender and time, and encrypted with all of those as additional data. A message opens only when its sender is on that epoch's list and the signature checks out against a key you can see for them. One that doesn't is shown as "Nil couldn't confirm who wrote this" and its words stay hidden.
+The server checks each list too, before it takes it: the signature against the key its signer published, that it follows the list before it and is newer, and the same rules about who may change what. It checks the signed statements that someone left the same way. That doesn't make it a judge of anything, since your browser checks again against the keys you confirmed, but it means a member can't file a list or a statement that every browser would refuse, which would otherwise stop the conversation for everyone.
 
-Each browser tab also numbers what it sends in each conversation, 1, 2, 3 and so on, and signs the number. If the server holds a message back, sends one twice, or changes the order, the numbers show it, and the conversation says so at the top. A moment after it sends, each tab also publishes its mark: how far it has numbered, signed and encrypted like a message. A mark ahead of the messages that arrived means the server held back the last ones, and that shows too. The same notice appears if a list of who holds the key doesn't check out, or if the server shows a different history of who was in the conversation than it did before.
+Every message, reaction, edit and deletion is signed by its sender for that workspace, conversation, epoch, message, sender and time, and encrypted with all of those as additional data. A message opens only when its sender is on that epoch's list and the signature checks out against a key you can see for them. One that doesn't is shown as "Nil couldn't confirm who wrote this" and its words stay hidden. So is a message from someone who was taken out that claims to be written under an old key after the next key started without them: they still have that key, but nothing they write with it after they were out is shown.
+
+Each browser tab also numbers what it sends in each conversation, 1, 2, 3 and so on, and in each thread apart, and signs the number. If the server holds a message back, sends one twice, or changes the order, the numbers show it, and the conversation, or the thread, says so at the top. A moment after it sends, each tab also publishes its mark: how far it has numbered, signed and encrypted like a message. A mark ahead of the messages that arrived means the server held back the last ones, and that shows too. The same notice appears if a list of who holds the key doesn't check out, or if the server shows a different history of who was in the conversation than it did before.
 
 Compare key fingerprints with your teammates, face to face or on a call. Until you do, a teammate's first key counts for their messages while it's listed for an active member, as with docs, and the key notice at the top of the conversation asks you to check it. Nothing is sealed to a key you haven't confirmed.
 
@@ -141,12 +147,17 @@ The server can't read messages, reactions, file names, files, or channel names a
 
 [Encryption and trust](encryption.md#chat) has the details of the scheme, and [Privacy model](privacy-model.md) the full list for the whole app.
 
+## Space and clean-up
+
+Each person may keep up to `CHAT_MEMBER_MB` (1024 by default) of encrypted messages on the server; files count toward their file space instead. Each person keeps marks for up to 20 sending tabs in a conversation, so nobody can crowd out anyone else's. A conversation nobody can use any more is deleted with everything in it: a private one with nobody left, or one whose current key nobody holds, after someone was erased or started over with new keys. A direct message whose other person was erased lets go of the pair, so a new one can start.
+
 ## Limits
 
 - Within an epoch, a key protects everything sent under it: anyone who gets hold of it, from a member's unlocked browser say, can read that day's messages. A member who was taken out can still read, with the server's help, what was sent while they were in, unless the conversation is forward-secret and those keys have gone.
 - Keys don't heal after a theft. Each new epoch key is sealed to every member's long-term key, so someone who stole a member's identity keys can open new epochs too, until that member starts over with new keys. Messaging Layer Security (MLS, RFC 9420) would heal after a compromise and is the next step. We looked at ts-mls, a TypeScript implementation; it's young and has no published independent audit, so chat doesn't rely on it yet.
 - The server sees when each tab publishes its mark. A server that holds back both a tab's last messages and every mark it publishes after them isn't caught until that tab, or another of the sender's, is seen sending again.
 - The server says who is an admin. A removal signed by an admin counts only if you confirmed that admin's key, but an admin who agrees with the server could still sign one for someone who never left.
+- Someone taken out of a conversation still has its old keys. A message they write under one, dated before they were out, can't be told from one they really sent then; the server only takes messages under a conversation's current key, so this needs the server's help.
 - The very first list of who is in a conversation is taken on its signer's word: a newcomer can't tell a conversation the server forked from its start from the real one, though browsers that saw the real one notice.
 - Mentions tell the server who was mentioned, so push notifications can reach them, and queued messages keep that list on this device until they're sent.
 - Like the rest of Nil, chat trusts the app your server sends. [Check what a server sends](verify-a-server.md) explains how to compare it with a release.

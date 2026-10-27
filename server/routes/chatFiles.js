@@ -1,5 +1,6 @@
 import express from 'express';
 import fs from 'node:fs';
+import { pipeline } from 'node:stream/promises';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
@@ -55,16 +56,22 @@ router.post(
 
 router.get(
   '/chat/files/:id',
-  route((req, res) => {
+  route(async (req, res) => {
     const row = sql.get('SELECT * FROM chat_files WHERE id = ?', String(req.params.id));
-    if (!row || !fs.existsSync(chatFilePath(row.id))) throw HttpError.notFound('That file');
+    if (!row) throw HttpError.notFound('That file');
     channelAccess(row.channel_id, req.user);
+    if (!fs.existsSync(chatFilePath(row.id))) throw HttpError.notFound('That file');
     // only ciphertext, for the browser to open itself; never something a browser would render
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment; filename="file"');
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     res.setHeader('Cache-Control', 'private, no-store');
-    fs.createReadStream(chatFilePath(row.id)).pipe(res);
+    // a file that can't be read ends the answer, not the server; a reader who went away is no error
+    try {
+      await pipeline(fs.createReadStream(chatFilePath(row.id)), res);
+    } catch (err) {
+      if (err?.code !== 'ERR_STREAM_PREMATURE_CLOSE') throw err;
+    }
   }),
 );
 

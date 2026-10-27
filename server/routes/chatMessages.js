@@ -14,6 +14,7 @@ import toChatMessage from '../chat/toChatMessage.js';
 import announceChat from '../chat/announceChat.js';
 import chatPush from '../chat/chatPush.js';
 import dropChatFiles from '../chat/dropChatFiles.js';
+import chatBudget from '../chat/chatBudget.js';
 
 const router = express.Router();
 const MAX_FILES = 10;
@@ -47,8 +48,10 @@ router.get(
     const before = check.number(req.query.before, 'Before', { min: 0, integer: true });
     const after = check.number(req.query.after, 'After', { min: 0, integer: true });
     const thread = req.query.thread === undefined ? null : chatId(req.query.thread, 'Thread');
-    const where = ['channel_id = ?', '(expires_at IS NULL OR expires_at > ?)', thread ? '(thread_id = ? OR id = ?)' : 'thread_id IS NULL'];
-    const params = [channel.id, live(), ...(thread ? [thread, thread] : [])];
+    // a thread's replies by the index on (channel, thread, seq); its first message comes with the
+    // page that reaches back to the start
+    const where = ['channel_id = ?', thread ? 'thread_id = ?' : 'thread_id IS NULL', '(expires_at IS NULL OR expires_at > ?)'];
+    const params = [channel.id, ...(thread ? [thread] : []), live()];
     for (const [op, value] of [['<', before], ['>', after]]) {
       if (value === null) continue;
       where.push(`seq ${op} ?`);
@@ -59,6 +62,10 @@ router.get(
     const more = rows.length > limit;
     const page = rows.slice(0, limit);
     if (newest) page.reverse();
+    if (thread && !more && after === null) {
+      const root = sql.get('SELECT * FROM chat_messages WHERE id = ? AND channel_id = ? AND thread_id IS NULL AND (expires_at IS NULL OR expires_at > ?)', thread, channel.id, live());
+      if (root) page.unshift(root);
+    }
     return { messages: page.map(toChatMessage), more };
   }),
 );
@@ -89,6 +96,7 @@ router.post(
     const pinged = new Set(idList(b.ping, MAX_PINGS, 'mentions').filter((u) => members.includes(u)));
     if (sql.get('SELECT 1 FROM chat_messages WHERE id = ?', id)) throw new HttpError(409, 'That message was already sent.');
     const expiresAt = channel.disappear_seconds ? now + channel.disappear_seconds * 1000 : null;
+    chatBudget(me, bodyCt.length);
     let row;
     sql.tx(() => {
       const seq = sql.get('SELECT seq FROM chat_channels WHERE id = ?', channel.id).seq + 1;
@@ -124,6 +132,7 @@ router.put(
     currentEpoch(channel, b.epoch, req.user.id);
     const bodyCt = cipherText(b.bodyCt, 'Message', { max: config.chat.messageChars });
     const deleted = b.deleted === true;
+    chatBudget(req.user.id, bodyCt.length - row.body_ct.length);
     sql.tx(() => {
       sql.run('UPDATE chat_messages SET body_ct = ?, epoch = ?, edits = ?, deleted = ?, updated_at = ? WHERE id = ?', bodyCt, b.epoch, b.edits, deleted ? 1 : 0, live(), row.id);
       if (deleted) {

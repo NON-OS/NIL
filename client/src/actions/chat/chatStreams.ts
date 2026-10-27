@@ -15,10 +15,11 @@ type Entry = { seq: number; n: number; id: string; ttl: number | null; senderId:
 // unnoticed either: a mark ahead of what arrived is messages missing at the end.
 type Marks = Record<string, { senderId: string; scopes: Scopes }>;
 
-export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, now = Date.now() }: { fromStart: boolean; marks?: Marks; now?: number }): ChatNotice[] {
+// `scope` is the timeline: 'main', or a thread's first message, whose replies are numbered apart.
+export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, now = Date.now(), scope = 'main' }: { fromStart: boolean; marks?: Marks; now?: number; scope?: string }): ChatNotice[] {
   const streams = new Map<string, Entry[]>();
   for (const m of items) {
-    if (m.state !== 'ok' || !m.seq || !m.stream) continue;
+    if (m.state !== 'ok' || !m.seq || !m.stream || (m.threadId ?? 'main') !== scope) continue;
     // a stream is its sender's: someone else's messages under the same name are a stream of theirs
     const name = `${m.senderId}/${m.stream}`;
     const list = streams.get(name) ?? [];
@@ -44,7 +45,7 @@ export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, 
     if (fromStart && byN[0].n > 1 && list.every((e) => e.ttl === null)) note('missing', sender, byN[0].n - 1);
   }
   for (const [name, mark] of Object.entries(marks)) {
-    const main = mark.scopes.main;
+    const main = mark.scopes[scope];
     if (!main || (main.until !== null && main.until <= now)) continue;
     // marks are filed by sender and stream, so a mark speaks only for its own sender's messages
     const seen = streams.get(name);

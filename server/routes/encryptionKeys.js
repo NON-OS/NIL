@@ -9,6 +9,7 @@ import dropTaskKeys from '../keys/dropTaskKeys.js';
 import publishTask from '../services/publishTask.js';
 import publishUser from '../services/publishUser.js';
 import toEncryptionKey from '../mappers/toEncryptionKey.js';
+import eraseOrphans from '../chat/eraseOrphans.js';
 
 const router = express.Router();
 
@@ -50,11 +51,14 @@ router.put(
       if (current && !same) {
         sql.run('DELETE FROM doc_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM chat_epoch_keys WHERE user_id = ?', req.user.id);
+        sql.run('DELETE FROM chat_history_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM identity_wraps WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM passkey_wraps WHERE user_id = ?', req.user.id);
         sql.run('UPDATE encryption_keys SET kit_saved_at = NULL WHERE user_id = ?', req.user.id);
         sql.run('UPDATE users SET stealth_meta = NULL WHERE id = ?', req.user.id);
         dropped = dropTaskKeys(req.user.id);
+        // a conversation whose key only the old keys held can't go on
+        eraseOrphans();
       }
       sql.run(
         `INSERT INTO encryption_keys (user_id, public_key, signing_key, address, signature, created_at) VALUES (?, ?, ?, ?, ?, ?)

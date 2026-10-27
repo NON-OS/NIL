@@ -39,8 +39,8 @@ async function handHistory(channel: ChatChannelRow, newcomers: string[]) {
 //   they confirmed, anywhere else only an explicit change by whoever manages it;
 // - someone's key was replaced, or the epoch is due on schedule.
 // Nothing changes on the server's say alone: without a signed departure, nobody is left out unless
-// a manager asks for it with `members`, and in a private conversation nobody comes in that way
-// either. Only ever for people whose keys this person confirmed: if anyone who holds the key now
+// a manager asks for it with `members`, or manages a team channel, whose people are the team's;
+// and in a private conversation nobody comes in that way either. Only ever for people whose keys this person confirmed: if anyone who holds the key now
 // can't be sealed to, nothing changes and the key notice asks to check them. True when a new
 // epoch started.
 export default async function chatMaintain(channel: ChatChannelRow, { members }: { members?: string[] } = {}) {
@@ -60,7 +60,9 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const manager = head.managers.includes(me);
   const removing = head.members.filter((id) => !wanted.includes(id));
   const proofs = removing.map((id) => channel.departures.find((d) => d.userId === id)?.statement ?? null);
-  if (proofs.includes(null) && !(members && manager)) return false;
+  // in a team channel, who is on the team is the workspace's to say, so whoever manages it leaves
+  // out anyone no longer on it; anywhere else that takes their own say
+  if (proofs.includes(null) && !(manager && (members || channel.audience === 'team'))) return false;
   const joining = wanted.filter((id) => id !== me && sealable.has(id) && !head.members.includes(id));
   const adding = members || channel.audience === 'team' ? joining : [];
   const next = [...head.members.filter((id) => wanted.includes(id)), ...adding];

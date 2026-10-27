@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import MessageList from './MessageList';
 import Composer, { type ComposerHandle } from './Composer';
+import ChatNotices from './ChatNotices';
 import useChat from '../../state/useChat';
 import useStore from '../../state/useStore';
 import chatTimeline from '../../actions/chat/chatTimeline';
@@ -46,6 +47,7 @@ export default function ThreadPanel({ channel, rootId, onClose }: { channel: Cha
           </button>
         </div>
       </header>
+      <ChatNotices channelId={key} chain={null} />
       {timeline && (
         <MessageList
           channel={channel}
