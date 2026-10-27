@@ -1,11 +1,10 @@
 import '../components/docs/Docs.css';
-import { useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
 import { FileText } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import Spinner from '../components/ui/Spinner';
 import DocsLocked from '../components/docs/DocsLocked';
 import DocList from '../components/docs/DocList';
-import DocEditor from '../components/docs/DocEditor';
 import KeyNotice from '../components/keys/KeyNotice';
 import useStore from '../state/useStore';
 import useRoute from '../hooks/useRoute';
@@ -15,6 +14,9 @@ import router from '../lib/router';
 import socket from '../realtime/socket';
 import cx from '../lib/cx';
 import type DocItem from '../types/DocItem';
+
+// the editor is the heavy part, so the list shows while it loads
+const DocEditor = lazy(() => import('../components/docs/DocEditor'));
 
 export default function DocsView() {
   const unlocked = useStore((s) => s.docsUnlocked);
@@ -81,20 +83,28 @@ export default function DocsView() {
           <div className={cx('docs', currentId && 'has-doc')}>
             <DocList docs={list.docs} waiting={list.waiting} current={currentId} onOpen={(id) => router.navigate(`/docs/${id}`)} onNew={create} />
             {open ? (
-              <DocEditor
-                key={open.id}
-                doc={open}
-                onTitle={(title) => setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === open.id && d.title !== (title || 'Untitled') ? { ...d, title: title || 'Untitled' } : d)) })}
-                onDeleted={() => {
-                  router.navigate('/docs');
-                  refresh();
-                }}
-                onBack={() => router.navigate('/docs')}
-                onReload={() => {
-                  load();
-                  refresh();
-                }}
-              />
+              <Suspense
+                fallback={
+                  <div className="docs-locked">
+                    <Spinner size={20} />
+                  </div>
+                }
+              >
+                <DocEditor
+                  key={open.id}
+                  doc={open}
+                  onTitle={(title) => setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === open.id && d.title !== (title || 'Untitled') ? { ...d, title: title || 'Untitled' } : d)) })}
+                  onDeleted={() => {
+                    router.navigate('/docs');
+                    refresh();
+                  }}
+                  onBack={() => router.navigate('/docs')}
+                  onReload={() => {
+                    load();
+                    refresh();
+                  }}
+                />
+              </Suspense>
             ) : (
               <div className="docs-locked">
                 <p className="muted">{list.docs.length ? 'Pick a doc, or start a new one.' : 'Start your first encrypted doc with the + button.'}</p>

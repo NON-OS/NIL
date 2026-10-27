@@ -13,6 +13,8 @@ export default function useShortcuts() {
     let leader = 0;
     const onKey = (e: KeyboardEvent) => {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
+        // in a doc's text the editor takes it for a link
+        if (e.defaultPrevented) return;
         e.preventDefault();
         ui.palette(!store.get().palette);
         return;
