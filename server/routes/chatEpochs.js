@@ -22,14 +22,14 @@ const MAX_PROOFS = 500;
 
 const holders = (channelId, epoch) => sql.all('SELECT user_id FROM chat_epoch_keys WHERE channel_id = ? AND epoch = ?', channelId, epoch).map((r) => r.user_id);
 
-// The signed departures a new epoch cites for the people it leaves out. Each has to be one the
-// server holds for someone leaving out of this conversation; browsers check the signatures.
-function proofsFor(channel, dropped, raw) {
+// The signed departures a new epoch cites for the people it leaves out: each has to be one the
+// server holds for someone leaving this conversation. Returns who they prove gone, and what to
+// store with the epoch; browsers check the signatures again.
+function proofsFor(channel, raw) {
   if (raw === undefined) raw = [];
   if (!Array.isArray(raw) || raw.length > MAX_PROOFS || !raw.every((p) => typeof p === 'string' && p.length <= 4096)) throw HttpError.badRequest('Those departures aren’t ones Nil can read.');
-  const known = new Map(departures(channel).map((d) => [d.userId, d.statement]));
-  for (const id of dropped) if (!known.get(id) || !raw.includes(known.get(id))) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key without their signed leaving.');
-  return raw;
+  const cited = departures(channel).filter((d) => d.statement && raw.includes(d.statement));
+  return { proven: cited.map((d) => d.userId), stored: cited.map((d) => d.statement) };
 }
 
 // Every epoch's signed member list from `from` on, the departures it cites, and your own sealed
@@ -66,7 +66,8 @@ router.post(
     const b = req.body ?? {};
     if (b.epoch !== channel.epoch + 1) throw new HttpError(409, 'Someone else just gave this conversation a new key. Try again.');
     const prev = sql.get('SELECT roster FROM chat_epochs WHERE channel_id = ? AND epoch = ?', channel.id, channel.epoch)?.roster ?? null;
-    const roster = parseRoster(b.roster, { channel, by: req.user.id, epoch: b.epoch, prev });
+    const cited = proofsFor(channel, b.proofs);
+    const roster = parseRoster(b.roster, { channel, by: req.user.id, epoch: b.epoch, prev, proven: cited.proven });
     const before = channelMembers(channel);
     const after = channel.audience === 'team' || b.members === undefined ? before : memberList(b.members, channel.kind, req.user.id);
     // managing takes both: the server's say on who may change the people, and the signed list's
@@ -78,8 +79,9 @@ router.post(
     const current = holders(channel.id, channel.epoch);
     const kept = current.filter((id) => after.includes(id) && !roster.members.includes(id));
     if (kept.length && !manages) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key.');
-    const gone = [...new Set([...current.filter((id) => !after.includes(id)), ...roster.dropped])];
-    const proofs = manages ? proofsFor(channel, [], b.proofs) : proofsFor(channel, gone, b.proofs);
+    // whoever the server has as out has to be proven gone too, unless a manager leaves them out
+    if (!manages && current.some((id) => !after.includes(id) && !cited.proven.includes(id))) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key without their signed leaving.');
+    const proofs = cited.stored;
     const now = Date.now();
     sql.tx(() => {
       sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, proofs, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', channel.id, b.epoch, b.roster, proofs.length ? JSON.stringify(proofs) : null, req.user.id, now);

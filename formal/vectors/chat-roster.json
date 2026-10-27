@@ -1,0 +1,11033 @@
+{
+  "cases": [
+    {
+      "name": "first list by its manager",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "first list by someone it doesn't name a manager",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "first list pointing at a list before it",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": false,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "same people, new key, by a member",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "a member leaves someone out without proof",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a member leaves someone out, citing their leaving",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "a member leaves the manager out, citing nothing",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a manager takes someone out",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "a member makes themselves a manager",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a member brings someone into a private channel",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a member brings a teammate into a team channel",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "someone outside signs the next list",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a list dated no later than the one before",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a list that doesn't name the one before",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": false,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a channel turned into a group",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a direct message, new key",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "2"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "a direct message with someone else in it",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "a group member leaves, another moves on",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "a group whose managers aren't everyone",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "2"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "1"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 0",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 1",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 2",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 3",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 4",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 5",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 6",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 7",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 8",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 9",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 10",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 11",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 12",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 13",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 14",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 15",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 16",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 17",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 18",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 19",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 20",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 21",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 22",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 23",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 24",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 25",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 26",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 27",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 28",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 29",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 30",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 31",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 32",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 33",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 34",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 35",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 36",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 37",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 38",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 39",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 40",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 41",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 42",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 43",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 44",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 45",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 46",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 47",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 48",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 49",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 50",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 51",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 52",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 53",
+      "next": {
+        "kind": "group",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 54",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 55",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 56",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 57",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 58",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 59",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 60",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 61",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 62",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 63",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 64",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 65",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 66",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 67",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 68",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 69",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 70",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 71",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 72",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 73",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 74",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 75",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 76",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 77",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": null,
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 78",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 79",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 80",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 81",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 82",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 83",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 84",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 85",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 86",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 87",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 88",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 89",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 90",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 91",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 92",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 93",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 94",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 95",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 96",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 97",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 98",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 99",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 100",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 101",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 102",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 103",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 104",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 105",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 106",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 107",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 108",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 109",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 110",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 111",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 112",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 113",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 114",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 115",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 116",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 117",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 118",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 119",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 120",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 121",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 122",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 123",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "generated 124",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 125",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 126",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 127",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 128",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 129",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 130",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 131",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 132",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 133",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 134",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 135",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 136",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 137",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 138",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 139",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 140",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 141",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 142",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 143",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 144",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 145",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 146",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 147",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 148",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 149",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 150",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 151",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 152",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 153",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 154",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 155",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 156",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 157",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 158",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 159",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 160",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 161",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 162",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 163",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 164",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 165",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 166",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 167",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 168",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 169",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 170",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 171",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 172",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 173",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 174",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 175",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 176",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 177",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 178",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 179",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 180",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 181",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 182",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 183",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 184",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 185",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 186",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 187",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 188",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 189",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 190",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 191",
+      "next": {
+        "kind": "dm",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 192",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": false,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 193",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 194",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 195",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 196",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 197",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 198",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 199",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 200",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 201",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 202",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 203",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 204",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 205",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 206",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 207",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 208",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 209",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 210",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 211",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 212",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 213",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 214",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 215",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 216",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 217",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 218",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 219",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 220",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 221",
+      "next": {
+        "kind": "group",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 222",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 223",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 224",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 225",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 226",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 227",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 228",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 229",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 230",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 231",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 232",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 233",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": false,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 234",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 235",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": true
+    },
+    {
+      "name": "generated 236",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 237",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 238",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 239",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 240",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 241",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 242",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 243",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 244",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 245",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 246",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 247",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 248",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 249",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 250",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 251",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 252",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 253",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 254",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 255",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 256",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 257",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 258",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 259",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": null,
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 260",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "3",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 261",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 262",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 263",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 264",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 265",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 266",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 267",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 268",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [],
+      "allowed": false
+    },
+    {
+      "name": "generated 269",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 270",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 271",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 272",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 273",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 274",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": null,
+      "linked": true,
+      "proven": [
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 275",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 276",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 277",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 278",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 279",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "4"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 280",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "2",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 281",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 282",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 283",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 284",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3"
+      ],
+      "allowed": true
+    },
+    {
+      "name": "generated 285",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2"
+        ],
+        "managers": [
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "2",
+      "prev": null,
+      "linked": false,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 286",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 287",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "2",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 288",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1",
+          "3"
+        ],
+        "time": "10"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 289",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 290",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3",
+          "4"
+        ],
+        "managers": [
+          "3",
+          "4"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "managers": [
+          "1",
+          "2",
+          "3",
+          "4"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 291",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 292",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2",
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 293",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "2",
+          "4"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "2"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 294",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 295",
+      "next": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "dm",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "2",
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 296",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "11"
+      },
+      "signer": "4",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": false,
+      "proven": [
+        "1",
+        "2",
+        "3"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 297",
+      "next": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "2",
+          "3"
+        ],
+        "managers": [
+          "2",
+          "3"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "group",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [
+          "1",
+          "2"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "2",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 298",
+      "next": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "3"
+        ],
+        "managers": [],
+        "time": "11"
+      },
+      "signer": "1",
+      "prev": {
+        "kind": "channel",
+        "audience": "people",
+        "members": [
+          "1",
+          "2"
+        ],
+        "managers": [],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "3",
+        "4"
+      ],
+      "allowed": false
+    },
+    {
+      "name": "generated 299",
+      "next": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "11"
+      },
+      "signer": "5",
+      "prev": {
+        "kind": "channel",
+        "audience": "team",
+        "members": [
+          "1",
+          "3"
+        ],
+        "managers": [
+          "1"
+        ],
+        "time": "10"
+      },
+      "linked": true,
+      "proven": [
+        "1",
+        "3"
+      ],
+      "allowed": false
+    }
+  ]
+}

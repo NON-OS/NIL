@@ -4,6 +4,7 @@ import parseJSON from '../lib/parseJSON.js';
 import config from '../config.js';
 import signingKey from '../proofs/signingKey.js';
 import factsSigned from './factsSigned.js';
+import rosterRule from './rosterRule.js';
 
 const KIND = 'nil/chat-roster/v1';
 const HASH = /^[A-Za-z0-9_-]{43}$/;
@@ -19,8 +20,9 @@ const hashOf = (raw) => crypto.createHash('sha256').update('nil/chat-roster-hash
 // it follows the list before it, and the rules every browser checks again with the keys it
 // confirmed: a list someone files that browsers would refuse would stall the conversation for
 // everyone. `prev` is the list it follows, as stored, or null for the first. Whether the signer
-// managed the conversation under the list before comes back as `manager`.
-export default function parseRoster(raw, { channel, by, epoch, prev }) {
+// managed the conversation under the list before comes back as `manager`. `proven` is who has a
+// signed departure on file that the request cites (see rosterRule).
+export default function parseRoster(raw, { channel, by, epoch, prev, proven = [] }) {
   if (typeof raw !== 'string' || raw.length > maxChars()) throw HttpError.badRequest('The member list is missing or too long.');
   const value = parseJSON(raw, null);
   const facts = value?.facts;
@@ -47,16 +49,11 @@ export default function parseRoster(raw, { channel, by, epoch, prev }) {
     if (prevHash !== null || !managers.includes(by)) throw HttpError.badRequest('The first member list has to be signed by whoever manages the conversation.');
     return { members, managers, manager: true, dropped: [] };
   }
-  const [, , before, managedBy, , , beforeAt] = parseJSON(prev, {}).facts;
+  const [prevKind, prevAudience, before, managedBy, , , beforeAt] = parseJSON(prev, {}).facts;
   if (prevHash !== hashOf(prev) || at <= beforeAt) throw new HttpError(409, 'That member list doesn’t follow the one before it. Try again.');
   if (kind === 'dm' && !same(members, before)) throw HttpError.badRequest('A direct message keeps its two people.');
+  const last = { kind: prevKind, audience: prevAudience, members: before, managers: managedBy, at: beforeAt };
+  if (!rosterRule({ kind, audience, members, managers, at, by }, last, true, proven)) throw HttpError.forbidden('Only whoever manages this conversation can change who is in it, or leave someone out without their signed leaving.');
   const manager = managedBy.includes(by);
-  if (!manager) {
-    const dropped = before.filter((id) => !members.includes(id));
-    const added = members.some((id) => !before.includes(id));
-    if (!before.includes(by) || !same(managers, managedBy.filter((id) => !dropped.includes(id))) || (added && audience !== 'team')) {
-      throw HttpError.forbidden('Only whoever manages this conversation can change who is in it.');
-    }
-  }
   return { members, managers, manager, dropped: before.filter((id) => !members.includes(id)) };
 }
