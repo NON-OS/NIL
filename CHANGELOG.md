@@ -34,6 +34,8 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 ### Calls v2
 
 - Bigger calls on an SFU, still end to end. With `SFU_URL`, `SFU_API_KEY` and `SFU_API_SECRET` set, a call of more than `CALL_MESH_MAX_PEERS` (4) moves onto LiveKit 1.9.12, run by `docker-compose.yml` under the `calls` profile, and holds up to `CALL_SFU_MAX_PEERS` (50). Every frame is encrypted in the browser with livekit-client 2.22.4's frame encryption (insertable streams in Chrome, `RTCRtpScriptTransform` in Firefox and Safari). Each browser makes its own frame key, a new one whenever anyone joins or leaves, sealed to each other person's key and signed (`nil/call-media-key/v1`). The SFU gets room and participant names derived under a key it doesn't hold, and tokens that last ten minutes and can't send data. Smaller calls stay browser to browser.
+- Every frame on the SFU is signed for by its sender: each browser signs a list of the frames it sent every fifth of a second (`nil/call-frames/v1`, under a key named in its signed frame keys), and receivers check each frame against it before decrypting. Frames in someone's name that they didn't send, even made by someone in the call with the SFU's help, or old frames played again, stop that person being shown within seconds. It runs in a worker wrapped around LiveKit's.
+- Sound on the SFU goes at a steady rate and size (no silence suppression, padded per track) and video in padded size steps, so the traffic doesn't show who is speaking or moving.
 - Nothing goes to someone whose key you haven't confirmed until you click **Talk anyway** or confirm it, in a mesh call or on the SFU.
 - Each signed handshake names the tab the server announced for its sender, and is dropped if it doesn't match.
 - Calls are kept in the database (migration 045) instead of memory, so a call survives the server restarting and works across server processes that share the database. The record holds who is in the call and when, is deleted when the call ends or after `CALL_RECORD_HOURS` (12), and is left out of backups and capsules.
@@ -44,6 +46,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Phones: the screen stays on while the camera is on, the call shows in the system's media controls with hang up and mute, a microphone or camera the system stopped in the background says so with **Turn it back on**, and a tab that was away too long gets **Rejoin**.
 - coturn gets only the `TURN_*` settings, not the whole `.env`.
 - Hosted workspaces have calls off until a relay is provisioned for them.
+- A CI job on macOS runs the calls check in WebKit with mock cameras and microphones, coturn and the SFU.
 - The browser check runs in Chromium, Firefox and WebKit (`node scripts/calls/check.mjs --browser firefox`), with the SFU when `LIVEKIT_SERVER` points at a LiveKit binary, and `--long` checks password renewal on one-minute passwords and recovery over TCP when UDP stops getting through.
 
 ### Breaking changes
