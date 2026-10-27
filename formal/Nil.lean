@@ -7,3 +7,4 @@ import Nil.Invoice
 import Nil.ChatRoster
 import Nil.ChatStreams
 import Nil.ChatHistory
+import Nil.ChatSeal

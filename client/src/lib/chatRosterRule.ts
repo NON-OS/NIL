@@ -1,3 +1,5 @@
+import rosterLead from './rosterLead';
+
 // One epoch's signed member list, as the rule needs it.
 export interface RuleList {
   kind: 'channel' | 'dm' | 'group';
@@ -25,7 +27,8 @@ export default function chatRosterRule(next: RuleList & { by: string }, prev: Ru
   // a list can't claim to be older than the one it follows, which would revive old departures
   if (next.at <= prev.at || next.kind !== prev.kind || next.audience !== prev.audience) return false;
   if (next.kind === 'dm' && !same(next.members, prev.members)) return false;
-  if (prev.managers.includes(next.by)) return true;
+  // a conversation whose managers all left is managed by everyone still in it
+  if (rosterLead(prev).includes(next.by)) return true;
   if (!prev.members.includes(next.by)) return false;
   const dropped = prev.members.filter((id) => !next.members.includes(id));
   if (!same(next.managers, prev.managers.filter((id) => !dropped.includes(id)))) return false;

@@ -11,6 +11,7 @@ def main (args : List String) : IO Unit := do
   IO.FS.createDirAll dir
   for (name, json) in [("canonical", canonicalJson), ("rollback", rollbackJson),
       ("invoice", invoiceJson), ("tally", tallyJson), ("chat-roster", chatRosterJson),
-      ("chat-streams", chatStreamsJson), ("chat-history", chatHistoryJson)] do
+      ("chat-streams", chatStreamsJson), ("chat-history", chatHistoryJson),
+      ("chat-seal", chatSealJson)] do
     IO.FS.writeFile s!"{dir}/{name}.json" (json.render ++ "\n")
     IO.println s!"wrote {dir}/{name}.json"

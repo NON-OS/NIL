@@ -1,6 +1,7 @@
 import http from '../../api/http';
 import store from '../../state/store';
 import chatKeyring from '../../state/chatKeyring';
+import rosterLead from '../../lib/rosterLead';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
@@ -44,7 +45,7 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const head = chain.rosters[chain.rosters.length - 1];
   if (chain.broken !== null || !head || !head.members.includes(me) || head.epoch !== channel.epoch) return false;
   const wanted = members ?? channel.members;
-  const manager = head.managers.includes(me);
+  const manager = rosterLead(head).includes(me);
   // due by the signed list's own time, so a server that holds back its clock can't keep a key on
   // past the schedule; it may ask for sooner, never later than a week
   const every = Math.min(channel.rotateAt !== null && channel.epochAt !== null ? channel.rotateAt - channel.epochAt : MAX_EPOCH_MS, MAX_EPOCH_MS);
@@ -61,7 +62,7 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const proofs: (string | null)[] = [];
   for (const id of removing) {
     const raw = channel.departures.find((d) => d.userId === id)?.statement ?? null;
-    proofs.push(raw && (await departureCounts([raw], channel.id, id, chain.rosters, { admins: manager })) ? raw : null);
+    proofs.push(raw && (await departureCounts([raw], channel.id, id, chain.rosters)) ? raw : null);
   }
   // in a team channel, who is on the team is the workspace's to say, so whoever manages it leaves
   // out anyone no longer on it; anywhere else that takes their own say

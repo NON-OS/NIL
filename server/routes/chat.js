@@ -12,6 +12,7 @@ import chatId from '../chat/chatId.js';
 import chatPeople from '../chat/chatPeople.js';
 import channelAccess from '../chat/channelAccess.js';
 import canManage from '../chat/canManage.js';
+import signedLead from '../chat/signedLead.js';
 import memberList from '../chat/memberList.js';
 import parseRoster from '../chat/parseRoster.js';
 import takeGrants from '../chat/takeGrants.js';
@@ -93,7 +94,11 @@ router.patch(
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const b = req.body ?? {};
-    const manages = canManage(channel, req.user);
+    // whoever manages it by its signed member list, which is who browsers take a name or settings
+    // from; anyone else's would only make every browser stop sending
+    const manages = channel.kind === 'dm' ? true : signedLead(channel).includes(req.user.id);
+    // the settings are signed with the name, so they change only together with it
+    if ((b.disappearSeconds !== undefined || b.forwardDays !== undefined) && b.metaCt === undefined) throw HttpError.badRequest('Send the signed name and settings with the change.');
     if (b.metaCt !== undefined) {
       // in a direct message, it's where both people's settings are signed
       if (!manages && channel.kind !== 'dm') throw HttpError.forbidden('Only whoever manages this conversation can rename it.');

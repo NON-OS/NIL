@@ -5,6 +5,7 @@ import chatMetaFacts from '../../lib/crypto/chatMetaFacts';
 import signedFacts from '../../lib/crypto/signedFacts';
 import keyHash from '../../lib/crypto/keyHash';
 import stripBidi from '../../lib/stripBidi';
+import rosterLead from '../../lib/rosterLead';
 import metaHistory from '../../state/metaHistory';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
@@ -62,8 +63,8 @@ const chatMeta = {
       // signed while its epoch was the newest, so a manager taken out can't sign one under an
       // old key they kept, and never older than one this browser already opened
       const next = chatRosters.at(chain, epoch + 1);
-      const current = !next || f.at <= next.at + SKEW_MS;
-      const fits = roster?.managers.includes(signed.by) && f.key === keyHash(key) && current && !metaHistory.stale(channel.id, epoch, f.at);
+      const current = (!next || f.at <= next.at + SKEW_MS) && f.at <= Date.now() + SKEW_MS;
+      const fits = roster && rosterLead(roster).includes(signed.by) && f.key === keyHash(key) && current && !metaHistory.stale(channel.id, epoch, f.at);
       if (!fits || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
       const meta = chatMeta.clean(JSON.parse(signed.text));
       metaHistory.record(channel.id, epoch, f.at);

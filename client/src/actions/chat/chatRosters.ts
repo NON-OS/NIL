@@ -37,7 +37,8 @@ async function extend(channel: ChatChannelRow, held: Chain | null): Promise<Chai
   const { workspaceKey } = store.get();
   const chain: Chain = held ? { ...held, rosters: [...held.rosters] } : { rosters: [], broken: null, forked: false, keysRev: store.get().keysRev };
   // the server answers a page of lists at a time; a long-lived conversation takes several
-  for (let page = 0; page < 100 && chain.broken === null && chain.rosters.length < channel.epoch; page++) {
+  // until the chain reaches the conversation's epoch, as long as each page brings it further
+  while (chain.broken === null && chain.rosters.length < channel.epoch) {
     const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${chain.rosters.length + 1}`);
     if (!epochs.length) break;
     for (const row of epochs) {
@@ -78,11 +79,14 @@ const chatRosters = {
     const held = await (chains.get(channel.id) ?? Promise.resolve(null)).catch(() => null);
     if (!held) return;
     const rosters = [...held.rosters];
-    for (let from = 1, page = 0; from <= rosters.length && page < 100; page++) {
+    for (let from = 1; from <= rosters.length; ) {
       const { epochs } = await http.get<{ epochs: { epoch: number; wrappedKeys: string[] }[] }>(`/chat/channels/${channel.id}/epochs?from=${from}&keys=1`);
       if (!epochs.length) break;
       for (const e of epochs) if (rosters[e.epoch - 1]) rosters[e.epoch - 1] = { ...rosters[e.epoch - 1], wrappedKeys: e.wrappedKeys };
-      from = epochs[epochs.length - 1].epoch + 1;
+      // a page that doesn't move on ends it, so a server can't keep this going round
+      const next = epochs[epochs.length - 1].epoch + 1;
+      if (next <= from) break;
+      from = next;
     }
     chains.set(channel.id, Promise.resolve({ ...held, rosters }));
   },

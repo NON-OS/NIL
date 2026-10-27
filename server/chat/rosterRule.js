@@ -1,3 +1,5 @@
+import rosterLead from './rosterLead.js';
+
 const same = (a, b) => a.length === b.length && a.every((id, i) => id === b[i]);
 
 // Whether `next`, signed by `next.by`, may follow `prev` (null for a conversation's first list):
@@ -14,7 +16,8 @@ export default function rosterRule(next, prev, linked, proven) {
   // a list can't claim to be older than the one it follows, which would revive old departures
   if (next.at <= prev.at || next.kind !== prev.kind || next.audience !== prev.audience) return false;
   if (next.kind === 'dm' && !same(next.members, prev.members)) return false;
-  if (prev.managers.includes(next.by)) return true;
+  // a conversation whose managers all left is managed by everyone still in it
+  if (rosterLead(prev).includes(next.by)) return true;
   if (!prev.members.includes(next.by)) return false;
   const dropped = prev.members.filter((id) => !next.members.includes(id));
   if (!same(next.managers, prev.managers.filter((id) => !dropped.includes(id)))) return false;

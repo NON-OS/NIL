@@ -1,6 +1,6 @@
 # Formal verification
 
-Some of Nil's rules are simple to state and costly to get wrong: one ballot per voter, a vote total that only the trustees can open, a payout address only the payee can spend from, a warning when a server hands back an old version of a private task, invoices that never charge too little or match the wrong payment, and who may change who holds an encrypted chat's key, with how a browser catches a server that holds chat messages back, replays them, reorders them or shows them as they were. The `formal` folder holds models of these rules written in Lean 4, with machine-checked proofs that the models have the properties below.
+Some of Nil's rules are simple to state and costly to get wrong: one ballot per voter, a vote total that only the trustees can open, a payout address only the payee can spend from, a warning when a server hands back an old version of a private task, invoices that never charge too little or match the wrong payment, and who may change who holds an encrypted chat's key and when a browser may seal in it, with how a browser catches a server that holds chat messages back, replays them, reorders them or shows them as they were. The `formal` folder holds models of these rules written in Lean 4, with machine-checked proofs that the models have the properties below.
 
 The proofs are about models. A model is a small, exact description of what a piece of Nil's code computes, written next to the code it describes. Tests then check that the real JavaScript gives the same answers as the model on the same inputs. This page says what is proven, what is left out, and how the two are tied together.
 
@@ -68,6 +68,7 @@ The model follows `client/src/lib/chatRosterRule.ts`, the rule every browser che
 - `drop_needs_proof`: someone who doesn't manage the conversation can leave a person out only when that person's departure is proven.
 - `no_private_add`: nobody comes into a conversation for some people unless a manager brings them in.
 - `managers_kept`: someone who doesn't manage the conversation can't make themselves, or anyone, a manager.
+- `unmanaged_everyone`: once every manager has left, everyone still in the conversation manages it, so it's never stuck.
 - `member_stays`: along any history of lists, someone stays in unless a manager left them out or their departure was proven.
 - `time_increases` and `shape_fixed`: along any history, time only moves forward and the kind of conversation never changes.
 
@@ -92,6 +93,15 @@ The model follows `client/src/state/editHistory.ts`, as `openMessage` uses it, a
 - `honest_none_late`: messages a server took in turn are never flagged.
 
 Writing this model found a bug: the browser's record skipped a deletion of a message it had already seen edited, so such a message could come back. The record now always keeps a deletion, and the differential test fails on the old code.
+
+### When a browser seals in a chat (`formal/Nil/ChatSeal.lean`)
+
+The model follows `client/src/lib/sealBlockers.ts`, which `sealGate` applies before every message, edit, reaction, name and mark.
+
+- `sealed_only_to_confirmed`: whatever is sealed can be opened only by people whose key this browser confirmed.
+- `none_out`: nothing is sealed while someone the server has as out still holds the key.
+- `current_and_signed`: nothing is sealed under an epoch older than one the browser checked, or another history, or settings the server changed.
+- `seals_when_safe`: when all of that holds, nothing stands in the way.
 
 ## What is not proven
 
@@ -125,6 +135,7 @@ The tests read the vectors and call Nil's real functions:
 - `client/test/formalChatRoster.test.js` runs every member-list case through both the browser's `chatRosterRule` and the server's `rosterRule`, which must each give the model's answer.
 - `client/test/formalChatStreams.test.js` feeds timelines an honest or dishonest server might deliver, with the marks it served, to `chatStreams`, whose notices must be the model's.
 - `client/test/formalChatHistory.test.js` replays message versions through `editHistory` the way `openMessage` uses it, and timelines through `lateUnderOldKey`.
+- `client/test/formalChatSeal.test.js` checks that `sealBlockers` refuses exactly where the model does, for the same reason.
 
 Two of them guard the fix for the leading-zero bug the audit found: ballot nullifiers and voting keys written any way but the canonical one are refused, by both ballot checks and by the voting key route.
 

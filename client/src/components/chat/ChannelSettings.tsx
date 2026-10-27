@@ -65,7 +65,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
             style={{ display: 'grid', gap: 10 }}
             onSubmit={(e) => {
               e.preventDefault();
-              void run(() => chatChannels.rename(channel, { name, topic }), 'Saved, encrypted.');
+              // a record that didn't check out is signed again whole, with the settings shown here
+              const all = channel.metaState === 'unverified' ? { disappear: channel.disappearSeconds, forward: channel.forwardDays } : {};
+              void run(() => chatChannels.rename(channel, { name, topic, ...all }), 'Saved, encrypted.');
             }}
           >
             <label className="field">
@@ -76,8 +78,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
               <span>Topic</span>
               <input className="input" value={topic} maxLength={chatMeta.limits.topic} onChange={(e) => setTopic(e.target.value)} />
             </label>
+            {channel.metaState === 'unverified' && <small>The name and settings didn’t check out. Check how long messages stay and old keys are kept below, then save to sign them again.</small>}
             <div>
-              <button type="submit" className="btn btn-sm" disabled={(channel.kind === 'channel' && !name.trim()) || (name === channel.name && topic === channel.topic)}>
+              <button type="submit" className="btn btn-sm" disabled={(channel.kind === 'channel' && !name.trim()) || (channel.metaState !== 'unverified' && name === channel.name && topic === channel.topic)}>
                 Save name and topic
               </button>
             </div>

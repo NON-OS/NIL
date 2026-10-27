@@ -20,8 +20,8 @@ export default {
     },
   },
   'GET /api/chat/channels/:id': { allow: MEMBERS, id: 'chat' },
-  // the member made it; workspace admins manage channels too
-  'PATCH /api/chat/channels/:id': { allow: MEMBERS, id: 'chat', body: { disappearSeconds: 3600 } },
+  // the member made it and manages it by its signed member list; an admin's server role doesn't
+  'PATCH /api/chat/channels/:id': { allow: ['member'], id: 'chat', body: async (ctx) => ({ metaCt: blob(60), metaEpoch: await epochOf(ctx), disappearSeconds: 3600 }) },
   'DELETE /api/chat/channels/:id': { allow: MEMBERS, id: 'fresh.chat' },
   'POST /api/chat/channels/:id/leave': { allow: MEMBERS, id: 'fresh.chat', body: ({ world }, actor, { id }) => ({ statement: chat.statement(world.ids[actor] ?? 'nobody', { channelId: id }) }) },
   // a direct message the member has with the admin, set aside by either of them

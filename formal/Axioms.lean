@@ -80,6 +80,7 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.ChatRoster.drop_needs_proof
   Nil.ChatRoster.no_private_add
   Nil.ChatRoster.managers_kept
+  Nil.ChatRoster.unmanaged_everyone
   Nil.ChatRoster.member_stays
   Nil.ChatRoster.time_increases
   Nil.ChatRoster.shape_fixed
@@ -94,3 +95,7 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.ChatHistory.honest_never_stale
   Nil.ChatHistory.honest_none_late
   Nil.ChatHistory.late_caught
+  Nil.ChatSeal.sealed_only_to_confirmed
+  Nil.ChatSeal.none_out
+  Nil.ChatSeal.current_and_signed
+  Nil.ChatSeal.seals_when_safe

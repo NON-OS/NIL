@@ -5,6 +5,7 @@ import config from '../config.js';
 import signingKey from '../proofs/signingKey.js';
 import factsSigned from './factsSigned.js';
 import rosterRule from './rosterRule.js';
+import rosterLead from './rosterLead.js';
 
 const KIND = 'nil/chat-roster/v1';
 const HASH = /^[A-Za-z0-9_-]{43}$/;
@@ -42,7 +43,9 @@ export default function parseRoster(raw, { channel, by, epoch, prev, proven = []
     (prevHash === null || HASH.test(prevHash)) &&
     Number.isSafeInteger(at) &&
     at > 0 &&
-    at <= Date.now() + config.chat.clockSkewMs;
+    at <= Date.now() + config.chat.clockSkewMs &&
+    // nor dated back, which would make what was sent under the key before it look sent late
+    at >= Date.now() - config.chat.clockSkewMs;
   if (!fits) throw HttpError.badRequest('The member list doesn’t fit this conversation.');
   if (!factsSigned(value, { kind: KIND, place: [signingKey.publicKey(), channel.id, epoch] })) throw HttpError.badRequest('The member list’s signature doesn’t check out.');
   if (!prev) {
@@ -54,6 +57,6 @@ export default function parseRoster(raw, { channel, by, epoch, prev, proven = []
   if (kind === 'dm' && !same(members, before)) throw HttpError.badRequest('A direct message keeps its two people.');
   const last = { kind: prevKind, audience: prevAudience, members: before, managers: managedBy, at: beforeAt };
   if (!rosterRule({ kind, audience, members, managers, at, by }, last, true, proven)) throw HttpError.forbidden('Only whoever manages this conversation can change who is in it, or leave someone out without their signed leaving.');
-  const manager = managedBy.includes(by);
+  const manager = rosterLead(last).includes(by);
   return { members, managers, manager, dropped: before.filter((id) => !members.includes(id)) };
 }

@@ -72,19 +72,16 @@ test('a leaving signed by someone else, for another conversation, or before they
   for (const proof of [forged, elsewhere, stale]) await assert.rejects(checkRoster(next.raw, ctx(shape, 2, [proof]), [first]), /wasn’t allowed/);
 });
 
-test('a removal from the team counts for any member only when a manager signed it', async () => {
+test('a removal from the team counts when a manager, or an admin whose key is confirmed, signed it', async () => {
   const { shape, first, next } = await setup();
   await as('a');
   const byAdmin = departure('removal', 'a', '', 'x');
   await as('w');
   const byMember = departure('removal', 'w', '', 'x');
   await as('v');
-  // who is an admin is the server's word, so an admin who doesn't manage the conversation doesn't
-  // decide alone; a manager acting on it signs the next list themselves
-  await assert.rejects(checkRoster(next.raw, ctx(shape, 2, [byAdmin]), [first]), /wasn’t allowed/);
+  assert.deepEqual((await checkRoster(next.raw, ctx(shape, 2, [byAdmin]), [first])).departed, ['x']);
   await assert.rejects(checkRoster(next.raw, ctx(shape, 2, [byMember]), [first]), /wasn’t allowed/);
-  assert.equal(await departureCounts([byAdmin], shape.id, 'x', [first], { admins: true }), true, 'a manager may act on it');
-  assert.equal(await departureCounts([byMember], shape.id, 'x', [first], { admins: true }), false);
+  assert.equal(await departureCounts([byMember], shape.id, 'x', [first]), false);
 });
 
 test('one bad copy of a key doesn’t keep out a good one from someone else', async () => {

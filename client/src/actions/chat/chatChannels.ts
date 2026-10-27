@@ -7,6 +7,7 @@ import b64u from '../../lib/crypto/b64u';
 import confirmKeys from '../confirmKeys';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
+import rosterLead from '../../lib/rosterLead';
 import sealGate from './sealGate';
 import chatMeta, { type Meta } from './chatMeta';
 import chatMaintain from './chatMaintain';
@@ -55,7 +56,7 @@ const chatChannels = {
   // checked member list says, which every browser holds them to
   manages(channel: ChatChannel) {
     const me = store.get().me?.id;
-    return channel.kind !== 'dm' && Boolean(me && channel.signedManagers?.includes(me));
+    return channel.kind !== 'dm' && Boolean(me && channel.signedMembers && channel.signedManagers && rosterLead({ members: channel.signedMembers, managers: channel.signedManagers }).includes(me));
   },
 
   async load() {
@@ -112,7 +113,9 @@ const chatChannels = {
   // The name, topic and settings are signed together; a change to any reseals the lot under the
   // current key, and the server's copy of the settings goes in the same request.
   async rename(channel: ChatChannel, meta: Partial<Meta>) {
-    // what isn't changing stays as it was signed, never as the server has it
+    // what isn't changing stays as it was signed, never as the server has it; with nothing that
+    // checks out to keep, all of it has to be given, so nothing is switched off unnoticed
+    if (channel.metaState === 'unverified' && !['name', 'topic', 'disappear', 'forward'].every((k) => k in meta)) throw new Error('This conversation’s name and settings didn’t check out. Set the name, topic, disappearing messages and forward secrecy again, together.');
     const settings = channel.signedSettings ?? { disappear: null, forward: null };
     const next = { name: channel.name, topic: channel.topic, ...settings, ...meta };
     const metaCt = await chatMeta.seal(await keyNow(channel, { settings: false }), channel.id, channel.epoch, next);

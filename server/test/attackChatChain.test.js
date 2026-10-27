@@ -56,6 +56,8 @@ test('a list has to follow the one before it, after it, and keep who manages it'
   assert.equal((await ben('POST', url, { epoch: 2, ...old })).status, 409, 'dated no later than the list before');
   const future = chat.roster({ by: ids.ben, channelId: ch.id, epoch: 2, prev: first, members: [ids.ann, ids.ben], managers: [ids.ann], at: Date.now() + 86_400_000 });
   assert.equal((await ben('POST', url, { epoch: 2, ...future })).status, 400, 'dated a day ahead');
+  const back = chat.roster({ by: ids.ben, channelId: ch.id, epoch: 2, prev: first, members: [ids.ann, ids.ben], managers: [ids.ann], at: Date.now() - 60 * 60_000 });
+  assert.equal((await ben('POST', url, { epoch: 2, ...back })).status, 400, 'dated an hour back');
   const seized = await chat.next(ben, ch.id, { by: ids.ben, members: [ids.ann, ids.ben], managers: [ids.ann, ids.ben] });
   assert.equal((await ben('POST', url, seized)).status, 403, 'naming himself a manager');
   assert.equal((await ann('POST', url, await chat.next(ann, ch.id, { by: ids.ann, members: [ids.ann, ids.ben], managers: [ids.ann, ids.ben] }))).status, 200, 'the manager may');

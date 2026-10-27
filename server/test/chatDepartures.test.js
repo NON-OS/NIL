@@ -102,9 +102,10 @@ test('a message given up on goes as a tombstone, which nobody is notified of or 
 test('a forward-secret conversation lets go of old keys and what was sealed under them', async () => {
   const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, ids.ben], managers: [ids.ann] })).data.channel;
   const url = `/api/chat/channels/${ch.id}`;
-  assert.equal((await ben('PATCH', url, { forwardDays: 1 })).status, 403);
-  assert.equal((await ann('PATCH', url, { forwardDays: 0 })).status, 400);
-  assert.equal((await ann('PATCH', url, { forwardDays: 1 })).data.channel.forwardDays, 1);
+  const signed = (forwardDays) => ({ metaCt: 'N'.repeat(60), metaEpoch: 1, forwardDays });
+  assert.equal((await ben('PATCH', url, signed(1))).status, 403);
+  assert.equal((await ann('PATCH', url, signed(0))).status, 400);
+  assert.equal((await ann('PATCH', url, signed(1))).data.channel.forwardDays, 1);
   await ann('POST', `${url}/messages`, chat.message(1));
   await ann('POST', `${url}/epochs`, await chat.next(ann, ch.id, { by: ids.ann, members: [ids.ann, ids.ben] }));
   await ann('POST', `${url}/messages`, chat.message(2));
@@ -144,4 +145,24 @@ test('one person can make only so many channels for the whole team', async () =>
   for (let i = 0; i < 26; i++) made.push((await chat.makeChannel(cat, ids.cat, { audience: 'team', keyed: [ids.cat] })).status);
   assert.ok(made.includes(400), 'refused past CHAT_TEAM_CHANNELS_PER_PERSON');
   assert.equal(sql.get("SELECT COUNT(*) AS n FROM chat_channels WHERE audience = 'team' AND created_by = ?", ids.cat).n, 25);
+});
+
+test('a leaving from an earlier stay doesn’t count once someone is back in', async () => {
+  const dan = client(base);
+  const w = wallet();
+  const inv = await owner('POST', '/api/invites', { role: 'member' });
+  const danId = (await dan.wallet(w, 'invite', { name: 'dan', inviteToken: inv.data.token })).data.user.id;
+  await publishKey(dan, w);
+  const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, ids.cat, danId], managers: [ids.ann] })).data.channel;
+  const url = `/api/chat/channels/${ch.id}`;
+  const old = chat.statement(danId, { channelId: ch.id, at: Date.now() - 1000 });
+  assert.equal((await dan('POST', `${url}/leave`, { statement: old })).status, 200);
+  // Ann, who manages it, leaves Dan out, then brings him back
+  assert.equal((await ann('POST', `${url}/epochs`, await chat.next(ann, ch.id, { by: ids.ann, members: [ids.ann, ids.cat], managers: [ids.ann] }))).status, 200);
+  assert.equal((await ann('POST', `${url}/epochs`, { ...(await chat.next(ann, ch.id, { by: ids.ann, members: [ids.ann, ids.cat, danId], managers: [ids.ann] })), members: [ids.ann, ids.cat, danId] })).status, 200);
+  await owner('PATCH', `/api/users/${danId}`, { deactivated: true });
+  // Cat, who doesn't manage it, can't use Dan's old leaving to drop him now
+  const drop = await cat('POST', `${url}/epochs`, { ...(await chat.next(cat, ch.id, { by: ids.cat, members: [ids.ann, ids.cat], managers: [ids.ann] })), proofs: [old] });
+  assert.equal(drop.status, 403, JSON.stringify(drop.data));
+  assert.match(drop.data.error, /signed leaving/);
 });

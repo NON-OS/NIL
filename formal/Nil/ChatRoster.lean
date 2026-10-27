@@ -31,6 +31,10 @@ structure RList where
 /-- Who `next` leaves out of `prev`, in `prev`'s order. -/
 def dropped (prev next : List Nat) : List Nat := prev.filter fun x => !next.contains x
 
+/-- Who manages a conversation after `p`: the managers it names, or, when it names none (they all
+left), everyone in it, so a conversation is never left with nobody able to change it. -/
+def lead (p : RList) : List Nat := if p.managers = [] then p.members else p.managers
+
 /-- chatRosterRule(next, prev, linked, proven), with `signer` as `next.by`. -/
 def allowed (next : RList) (signer : Nat) (prev : Option RList) (linked : Bool) (proven : List Nat) : Bool :=
   if !next.members.contains signer then false
@@ -42,7 +46,7 @@ def allowed (next : RList) (signer : Nat) (prev : Option RList) (linked : Bool) 
     | some p =>
       if next.time ≤ p.time ∨ next.kind ≠ p.kind ∨ next.audience ≠ p.audience then false
       else if next.kind = .dm ∧ next.members ≠ p.members then false
-      else if p.managers.contains signer then true
+      else if (lead p).contains signer then true
       else if !p.members.contains signer then false
       else if next.managers ≠ p.managers.filter (fun x => !(dropped p.members next.members).contains x) then false
       else if next.audience ≠ .team ∧ next.members.any (fun x => !p.members.contains x) then false
@@ -54,7 +58,7 @@ theorem of_allowed {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
     s ∈ n.members ∧ (¬n.kind = .dm ∨ n.members.length = 2) ∧ (n.kind = .channel ∨ n.managers = n.members) ∧
       l = true ∧ (p.time < n.time ∧ n.kind = p.kind ∧ n.audience = p.audience) ∧
       (¬n.kind = .dm ∨ n.members = p.members) ∧
-      (s ∈ p.managers ∨ s ∈ p.members ∧
+      (s ∈ lead p ∨ s ∈ p.members ∧
         n.managers = p.managers.filter (fun x => !decide (x ∈ dropped p.members n.members)) ∧
         (n.audience = .team ∨ ∀ x, x ∈ n.members → x ∈ p.members) ∧
         ∀ x, x ∈ dropped p.members n.members → x ∈ pr) := by
@@ -89,7 +93,7 @@ theorem dm_fixed {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
 
 /-- Someone who isn't in the conversation can't sign its next list. -/
 theorem outsider_refused {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
-    (hm : s ∉ p.members) (hg : s ∉ p.managers) : allowed n s (some p) l pr = false := by
+    (hm : s ∉ p.members) (hg : s ∉ lead p) : allowed n s (some p) l pr = false := by
   cases h : allowed n s (some p) l pr
   · rfl
   · rcases (of_allowed h).2.2.2.2.2.2 with h1 | h1
@@ -98,7 +102,7 @@ theorem outsider_refused {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
 
 /-- The checks after the manager test, for a signer who doesn't manage the conversation. -/
 theorem member_rules {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
-    (h : allowed n s (some p) l pr = true) (hs : s ∉ p.managers) :
+    (h : allowed n s (some p) l pr = true) (hs : s ∉ lead p) :
     n.managers = p.managers.filter (fun x => !decide (x ∈ dropped p.members n.members)) ∧
     (n.audience = .team ∨ ∀ x, x ∈ n.members → x ∈ p.members) ∧
     ∀ x, x ∈ dropped p.members n.members → x ∈ pr := by
@@ -109,21 +113,25 @@ theorem member_rules {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
 /-- Someone who doesn't manage the conversation can leave a person out only when that person's
 departure is proven. -/
 theorem drop_needs_proof {n p : RList} {s x : Nat} {l : Bool} {pr : List Nat}
-    (h : allowed n s (some p) l pr = true) (hs : s ∉ p.managers)
+    (h : allowed n s (some p) l pr = true) (hs : s ∉ lead p)
     (hx : x ∈ p.members) (gone : x ∉ n.members) : x ∈ pr :=
   (member_rules h hs).2.2 x (by simp [dropped, List.mem_filter, hx, gone])
 
 /-- Nobody comes into a conversation for some people unless a manager brings them in. -/
 theorem no_private_add {n p : RList} {s : Nat} {l : Bool} {pr : List Nat}
-    (h : allowed n s (some p) l pr = true) (hs : s ∉ p.managers) (ha : n.audience = .people) :
+    (h : allowed n s (some p) l pr = true) (hs : s ∉ lead p) (ha : n.audience = .people) :
     ∀ x, x ∈ n.members → x ∈ p.members := by
   rcases (member_rules h hs).2.1 with h1 | h1
   · rw [ha] at h1; cases h1
   · exact h1
 
+/-- A conversation whose managers all left is managed by everyone still in it. -/
+theorem unmanaged_everyone (p : RList) (h : p.managers = []) : lead p = p.members := by
+  simp [lead, h]
+
 /-- Someone who doesn't manage the conversation can't make themselves, or anyone, a manager. -/
 theorem managers_kept {n p : RList} {s x : Nat} {l : Bool} {pr : List Nat}
-    (h : allowed n s (some p) l pr = true) (hs : s ∉ p.managers) (hx : x ∈ n.managers) :
+    (h : allowed n s (some p) l pr = true) (hs : s ∉ lead p) (hx : x ∈ n.managers) :
     x ∈ p.managers := by
   rw [(member_rules h hs).1] at hx
   exact (List.mem_filter.1 hx).1
@@ -148,7 +156,7 @@ def last : RList → List Step → RList
 /-- Along a history, `x` was never left out by a manager and never proven gone. -/
 def keptBy (x : Nat) : RList → List Step → Prop
   | _, [] => True
-  | prev, st :: rest => st.signer ∉ prev.managers ∧ x ∉ st.proven ∧ keptBy x st.list rest
+  | prev, st :: rest => st.signer ∉ lead prev ∧ x ∉ st.proven ∧ keptBy x st.list rest
 
 /-- However long the history, someone in a conversation is still in it at the end unless a
 manager left them out or their own or an admin's signed departure was proven. -/

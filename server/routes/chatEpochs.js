@@ -11,11 +11,11 @@ import HttpError from '../lib/HttpError.js';
 import parseJSON from '../lib/parseJSON.js';
 import channelAccess from '../chat/channelAccess.js';
 import channelMembers from '../chat/channelMembers.js';
-import canManage from '../chat/canManage.js';
 import memberList from '../chat/memberList.js';
 import parseRoster from '../chat/parseRoster.js';
 import takeGrants from '../chat/takeGrants.js';
 import departures from '../chat/departures.js';
+import departureCounts from '../chat/departureCounts.js';
 import wrapsFor from '../chat/wrapsFor.js';
 import announceChat from '../chat/announceChat.js';
 import hub from '../realtime/hub.js';
@@ -29,10 +29,12 @@ const holders = (channelId, epoch) => sql.all('SELECT user_id FROM chat_epoch_ke
 // The signed departures a new epoch cites for the people it leaves out: each has to be one the
 // server holds for someone leaving this conversation. Returns who they prove gone, and what to
 // store with the epoch; browsers check the signatures again.
-function proofsFor(channel, raw) {
+function proofsFor(channel, raw, prev) {
   if (raw === undefined) raw = [];
   if (!Array.isArray(raw) || raw.length > MAX_PROOFS || !raw.every((p) => typeof p === 'string' && p.length <= 4096)) throw HttpError.badRequest('Those departures aren’t ones Nil can read.');
-  const cited = departures(channel).filter((d) => d.statement && raw.includes(d.statement));
+  const last = prev && parseJSON(prev, null)?.facts;
+  const lead = last ? { members: last[2], managers: last[3] } : null;
+  const cited = departures(channel).filter((d) => d.statement && raw.includes(d.statement) && lead && departureCounts(d.statement, channel, d.userId, lead));
   return { proven: cited.map((d) => d.userId), stored: cited.map((d) => d.statement) };
 }
 
@@ -72,13 +74,12 @@ router.post(
     const b = req.body ?? {};
     if (b.epoch !== channel.epoch + 1) throw new HttpError(409, 'Someone else just gave this conversation a new key. Try again.');
     const prev = sql.get('SELECT roster FROM chat_epochs WHERE channel_id = ? AND epoch = ?', channel.id, channel.epoch)?.roster ?? null;
-    const cited = proofsFor(channel, b.proofs);
+    const cited = proofsFor(channel, b.proofs, prev);
     const roster = parseRoster(b.roster, { channel, by: req.user.id, epoch: b.epoch, prev, proven: cited.proven });
     const before = channelMembers(channel);
     const after = channel.audience === 'team' || b.members === undefined ? before : memberList(b.members, channel.kind, req.user.id);
-    // managing takes both: the server's say on who may change the people, and the signed list's
-    // on who may sign for it, which is what every browser checks
-    const manages = canManage(channel, req.user) && roster.manager;
+    // managing is the signed list's say, which is what every browser checks
+    const manages = channel.kind !== 'dm' && roster.manager;
     const changed = after.length !== before.length || after.some((id) => !before.includes(id));
     if (changed && (channel.kind === 'dm' || !manages)) throw HttpError.forbidden('Only whoever manages this conversation can change who is in it.');
     if (!roster.members.every((id) => after.includes(id))) throw HttpError.badRequest('The member list names someone who isn’t in this conversation.');
@@ -89,14 +90,17 @@ router.post(
     if (!manages && current.some((id) => !after.includes(id) && !cited.proven.includes(id))) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key without their signed leaving.');
     const proofs = cited.stored;
     const now = Date.now();
-    // a new key for the same people, from someone who doesn't manage it, comes on the schedule,
-    // or now and then for a member whose copy didn't open; not as often as one member likes
+    // a new key for the same people comes on the schedule, or now and then for a member whose copy
+    // didn't open; not as often as one member likes, manager or not
     const same = !changed && roster.members.length === current.length && roster.members.every((id) => current.includes(id));
-    if (same && !manages && now - channel.epoch_at < config.chat.epochMs / 2 && sql.get('SELECT 1 FROM chat_epochs WHERE channel_id = ? AND created_by = ? AND created_at > ?', channel.id, req.user.id, now - units.HOUR)) {
+    if (same && now - channel.epoch_at < config.chat.epochMs / 2 && sql.get('SELECT 1 FROM chat_epochs WHERE channel_id = ? AND epoch > 1 AND created_by = ? AND created_at > ?', channel.id, req.user.id, now - units.HOUR)) {
       throw new HttpError(429, 'You gave this conversation a new key a short while ago. It gets the next one on schedule.');
     }
+    // and however they come, only so many a day, so its history stays one any browser can check
+    if (sql.get('SELECT COUNT(*) AS n FROM chat_epochs WHERE channel_id = ? AND created_at > ?', channel.id, now - 24 * units.HOUR).n >= config.chat.epochsPerDay) {
+      throw new HttpError(429, 'This conversation’s key changed many times today. Try again tomorrow.');
+    }
     chatBudget(req.user.id, b.roster.length + JSON.stringify(b.grants ?? []).length);
-    channelKeyChanges(channel.id);
     sql.tx(() => {
       sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, proofs, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', channel.id, b.epoch, b.roster, proofs.length ? JSON.stringify(proofs) : null, req.user.id, now);
       sql.run('UPDATE chat_channels SET epoch = ?, epoch_at = ? WHERE id = ?', b.epoch, now, channel.id);
@@ -108,6 +112,8 @@ router.post(
         for (const id of after.filter((m) => !before.includes(m))) sql.run('INSERT INTO chat_members (channel_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)', channel.id, id, req.user.id, now);
       }
       takeGrants(channel.id, b.epoch, b.grants, req.user.id, { exactly: roster.members });
+      // counted only once everything about it checked out
+      channelKeyChanges(channel.id);
       announceChat(channel, { kind: 'epoch', epoch: b.epoch }, { also: before.filter((m) => !after.includes(m)) });
     });
     return { epoch: b.epoch };

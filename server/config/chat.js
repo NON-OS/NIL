@@ -21,6 +21,8 @@ export default Object.freeze({
   teamChannelsPerPerson: envNumber('CHAT_TEAM_CHANNELS_PER_PERSON', 25, { min: 1 }),
   // new keys, handed-on keys, leavings and settings changes one person may make a minute
   keyChangesPerMinute: envNumber('CHAT_KEY_CHANGES_PER_MINUTE', 30, { min: 1 }),
+  // new keys one conversation may get a day, whoever starts them
+  epochsPerDay: envNumber('CHAT_EPOCHS_PER_DAY', 200, { min: 10 }),
   maxMembers: envNumber('CHAT_MAX_MEMBERS', 500, { min: 2, max: 5000 }),
   groupMax: envNumber('CHAT_GROUP_MAX', 12, { min: 3, max: 50 }),
   pageSize: envNumber('CHAT_PAGE_SIZE', 60, { min: 10, max: 200 }),

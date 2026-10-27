@@ -147,9 +147,11 @@ test('epochs: a member may start a new key for the same people; changing who is 
 test('disappearing messages: the setting is a manager’s, and expired messages are gone', async () => {
   const { channel } = (await chat.makeChannel(member, ids.member, { members: [ids.member, ids.other], keyed: [ids.member, ids.other] })).data;
   const url = `/api/chat/channels/${channel.id}`;
-  assert.equal((await other('PATCH', url, { disappearSeconds: 3600 })).status, 403);
-  assert.equal((await member('PATCH', url, { disappearSeconds: 10 })).status, 400);
-  assert.equal((await member('PATCH', url, { disappearSeconds: 60 })).data.channel.disappearSeconds, 60);
+  const signed = (disappearSeconds) => ({ metaCt: 'N'.repeat(60), metaEpoch: 1, disappearSeconds });
+  assert.equal((await other('PATCH', url, signed(3600))).status, 403, 'not a manager by the signed list');
+  assert.equal((await member('PATCH', url, { disappearSeconds: 60 })).status, 400, 'settings come only with the signed name');
+  assert.equal((await member('PATCH', url, signed(10))).status, 400);
+  assert.equal((await member('PATCH', url, signed(60))).data.channel.disappearSeconds, 60);
   const sent = await member('POST', `${url}/messages`, chat.message(1, { ttl: 60 }));
   assert.ok(sent.data.message.expiresAt > Date.now());
   const { default: sql } = await import('../db/sql.js');
