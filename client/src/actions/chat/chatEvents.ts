@@ -39,7 +39,7 @@ export default async function chatEvents(event: any) {
       const unread = fresh && row.senderId !== me && !watching ? now.unread + 1 : now.unread;
       chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...now, seq: Math.max(now.seq, row.seq), lastAt: row.createdAt, unread } } }));
       if (fresh && watching) chatRead.mark(id, row.seq);
-      const mentioned = me !== undefined && item.mentions.includes(me);
+      const mentioned = me !== undefined && Boolean(item?.mentions.includes(me));
       const here = chatState.get().viewing === id;
       if (row.edits === 0 && row.kind === 'message' && row.senderId !== me && !here && (channel.kind !== 'channel' || mentioned) && channel.notify !== 'none') tell(id, row.senderId, mentioned);
       return;

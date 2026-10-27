@@ -127,6 +127,7 @@ The server can't read messages, reactions, file names, files, or channel names a
 
 - There is no forward secrecy within an epoch. Anyone who gets hold of an epoch's key, from a member's unlocked browser say, can read everything sent under it, and a member who was taken out can still read, with the server's help, what was sent while they were in. A new epoch at least every week keeps that window short. Messaging Layer Security (MLS, RFC 9420), which replaces keys with every change and heals after a compromise, is the next step. We looked at ts-mls, a TypeScript implementation; it's young and has no published independent audit, so chat doesn't rely on it yet.
 - The numbering catches a message held back between two others, but not the very last thing a tab sent, if the server never delivers it and the tab sends nothing after it.
+- When someone leaves a conversation on their own, or is removed from the team, the new key starts the next time the browser of someone who manages it opens the conversation. Until then only the server keeps them from later messages. Taking someone out in the settings starts the new key at once.
 - Search covers only what this tab has decrypted.
 - Mentions tell the server who was mentioned, so push notifications can reach them.
 - A queued message is in the tab's memory only, so closing the tab loses it.

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import Spinner from '../ui/Spinner';
 import MessageRow from './MessageRow';
 import useVirtualList from '../../hooks/useVirtualList';
+import useNow from '../../hooks/useNow';
 import useStore from '../../state/useStore';
 import chatRows from '../../lib/chatRows';
 import type { Timeline } from '../../state/chatState';
@@ -26,7 +27,9 @@ interface Props {
 // replies in a thread, and Escape goes back to writing.
 export default function MessageList({ channel, timeline, inThread, editing, onEditing, onThread, onOlder, onLeave, label }: Props) {
   const me = useStore((s) => s.me?.id ?? null);
-  const rows = useMemo(() => chatRows(timeline.items, { me, readSeq: inThread ? Number.MAX_SAFE_INTEGER : channel.readSeq }), [timeline.items, me, channel.readSeq, inThread]);
+  // disappearing messages go from the screen as their time runs out
+  const now = useNow(30_000);
+  const rows = useMemo(() => chatRows(timeline.items, { me, readSeq: inThread ? Number.MAX_SAFE_INTEGER : channel.readSeq, now }), [timeline.items, me, channel.readSeq, inThread, now]);
   const keyAt = useCallback((i: number) => rows[i].key, [rows]);
   const list = useVirtualList({ count: rows.length, keyAt, estimate: 56, onTop: timeline.more ? onOlder : undefined });
   const focusWanted = useRef<number | null>(null);

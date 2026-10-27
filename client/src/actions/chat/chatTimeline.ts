@@ -68,6 +68,8 @@ const chatTimeline = {
   // A message from the server (live, or the answer to a send) into every timeline this tab has
   // loaded; one not opened yet starts from the server's newest page when it is.
   async arrive(channel: ChatChannelRow, row: ChatMessageRow, root?: ChatMessageRow) {
+    const held = chatState.get().timelines;
+    if (!held[channel.id] && !(row.threadId && held[keyOf(channel.id, row.threadId)])) return null;
     const [item, top] = await open(channel, root ? [row, root] : [row]);
     if (row.threadId) {
       if (chatState.get().timelines[keyOf(channel.id, row.threadId)]) merge(channel.id, row.threadId, [item]);
