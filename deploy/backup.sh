@@ -55,7 +55,7 @@ live.exec("PRAGMA busy_timeout = 15000");
 live.exec(`VACUUM INTO '"'"'${out}'"'"'`);
 live.close();
 const copy = new DatabaseSync(out);
-// calls going on are this server's alone while they last; a backup never carries one
+// calls going on are for this server alone while they last; a backup never carries one
 for (const table of ["call_events", "call_instances", "call_people", "calls"]) {
   try {
     copy.exec("DELETE FROM " + table);

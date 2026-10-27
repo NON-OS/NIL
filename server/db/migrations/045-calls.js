@@ -14,6 +14,8 @@ const calls = `
     expires_at INTEGER NOT NULL
   );
   CREATE INDEX calls_expiry ON calls(expires_at);
+  CREATE INDEX calls_started_by ON calls(started_by);
+  CREATE INDEX calls_project ON calls(project_id);
 
   CREATE TABLE call_people (
     call_id TEXT NOT NULL REFERENCES calls(id) ON DELETE CASCADE,
