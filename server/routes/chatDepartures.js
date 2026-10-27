@@ -1,4 +1,5 @@
 import express from 'express';
+import keyChanges from '../chat/keyChanges.js';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
@@ -19,6 +20,7 @@ const remember = (channelId, userId, signedBy, statement) =>
 // from the conversation at once.
 router.post(
   '/chat/channels/:id/leave',
+  keyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     if (channel.audience === 'team' || channel.kind === 'dm') throw HttpError.badRequest('You can mute this conversation, but not leave it.');
@@ -39,11 +41,15 @@ router.post(
 // members' browsers.
 router.post(
   '/chat/removals',
+  keyChanges,
   route((req) => {
     if (!req.user.isAdmin) throw HttpError.forbidden('Only admins can take someone out of the team.');
     const userId = String(req.body?.userId ?? '');
     if (!sql.get('SELECT 1 FROM users WHERE id = ?', userId) || chatPeople.includes(userId)) throw HttpError.badRequest('That person is still on the team.');
     remember(null, userId, req.user.id, parseStatement(req.body?.statement, { by: req.user.id, text: userId }));
+    // every conversation whose current key they hold can now move on without them
+    const held = sql.all('SELECT c.* FROM chat_channels c JOIN chat_epoch_keys k ON k.channel_id = c.id AND k.epoch = c.epoch WHERE k.user_id = ?', userId);
+    for (const channel of held) announceChat(channel, { kind: 'channel' });
     return { ok: true };
   }),
 );

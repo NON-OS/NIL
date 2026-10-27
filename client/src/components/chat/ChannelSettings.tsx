@@ -37,6 +37,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
   const manages = channel.kind === 'group' || (channel.kind === 'channel' && (channel.createdBy === me?.id || isAdmin(me)));
   const hours = channel.rotateAt && channel.epochAt ? Math.round((channel.rotateAt - channel.epochAt) / 3_600_000) : null;
   const every = !hours ? null : hours % 24 ? `${hours} hours` : hours === 24 ? 'day' : `${hours / 24} days`;
+  // who holds the key is the checked member list's word; the server's list adds who waits for one
+  const signed = channel.signedMembers ?? [];
+  const people = [...new Set([...signed, ...channel.members])];
   const peopleChange = manages && channel.audience === 'people' && channel.kind !== 'dm';
 
   useEffect(() => {
@@ -82,12 +85,12 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
         <div className="field">
           <span>{channel.audience === 'team' ? 'Everyone on the team' : 'People'}</span>
           <div className="chat-people">
-            {channel.members.map((id) => (
+            {people.map((id) => (
               <div key={id} className="chat-person">
                 <Avatar user={users[id]} size={24} />
                 <span className="grow">{users[id]?.name ?? 'Someone'}</span>
-                <small>{channel.keyHolders.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
-                {peopleChange && !channel.keyHolders.includes(id) && (
+                <small>{!channel.members.includes(id) ? 'Holds the key, but is out' : signed.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
+                {peopleChange && !signed.includes(id) && (
                   <button type="button" className="btn btn-sm" onClick={() => void run(() => chatChannels.setMembers(channel, channel.members), 'New key, sealed to everyone whose key you’ve confirmed.')}>
                     Give key
                   </button>

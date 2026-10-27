@@ -17,15 +17,19 @@ function joinedAt(history: ChatRoster[], userId: string) {
 }
 
 // Whether each person left out has a signed departure that counts: their own leaving of this
-// conversation, or a removal from the team signed by someone who manages it or is an admin, in
-// either case signed since they last joined.
+// conversation, or a removal from the team signed by someone who manages it, or by an admin whose
+// key this person confirmed (the server says who is an admin, so an account it made up can't be
+// one here). Either has to be signed since they last joined.
 async function proven(dropped: string[], proofs: string[], channelId: string, prev: ChatRoster, history: ChatRoster[]) {
   const users = store.get().users;
+  const keys = await keyDirectory.load();
+  const me = store.get().me?.id;
+  const vouched = (id: string) => isAdmin(users[id]) && !users[id]?.deactivated && (id === me || keys.get(id)?.state === 'confirmed');
   for (const userId of dropped) {
     let ok = false;
     for (const raw of proofs) {
       const d = await departures.check(raw, channelId, userId);
-      const signer = d && (d.kind === 'leave' || prev.managers.includes(d.by) || (isAdmin(users[d.by]) && !users[d.by]?.deactivated));
+      const signer = d && (d.kind === 'leave' || prev.managers.includes(d.by) || vouched(d.by));
       if (signer && d.at >= joinedAt(history, userId)) ok = true;
       if (ok) break;
     }
@@ -43,6 +47,8 @@ async function allowed(next: ChatRoster, history: ChatRoster[], proofs: string[]
   const prev = history[history.length - 1] ?? null;
   if (!next.members.includes(next.by)) return false;
   if (next.kind === 'dm' && next.members.length !== 2) return false;
+  // a list can't claim to be older than the one it follows, which would revive old departures
+  if (prev && next.at <= prev.at) return false;
   if (next.kind !== 'channel' && !same(next.managers, next.members)) return false;
   if (!prev) return next.prev === null && next.managers.includes(next.by);
   if (next.prev !== prev.hash || next.kind !== prev.kind || next.audience !== prev.audience) return false;
@@ -71,8 +77,9 @@ export default async function checkRoster(
   const author = await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k));
   if (!author) throw new Error('Nil can’t confirm who started this key.');
   const prev = history[history.length - 1];
-  const departed = prev && !prev.managers.includes(signed.by) ? prev.members.filter((id) => !f.members.includes(id)) : [];
-  const roster: ChatRoster = { ...f, epoch: at.epoch, by: signed.by, hash: chatRoster.hash(raw), wrappedKeys: at.wrappedKeys, departed };
+  const roster: ChatRoster = { ...f, epoch: at.epoch, by: signed.by, hash: chatRoster.hash(raw), wrappedKeys: at.wrappedKeys, departed: [] };
   if (!(await allowed(roster, history, at.proofs ?? [], at.channelId))) throw new Error('Someone who wasn’t allowed to changed who is in this conversation.');
+  // who went on the strength of their own or an admin's signed word, rather than being taken out
+  if (prev) for (const id of prev.members.filter((m) => !f.members.includes(m))) if (await proven([id], at.proofs ?? [], at.channelId, prev, history)) roster.departed.push(id);
   return roster;
 }

@@ -69,7 +69,7 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const cited = proofs.filter((p): p is string => p !== null);
   await http.post(`/chat/channels/${channel.id}/epochs`, { epoch, roster: made.raw, grants: made.grants, proofs: cited, ...(members && channel.audience === 'people' ? { members: wanted } : {}) });
   chatKeyring.put(channel.id, epoch, made.key);
-  await chatRosters.add(channel, { ...made.roster, departed: manager ? [] : removing });
+  await chatRosters.add(channel, { ...made.roster, departed: removing.filter((id, i) => proofs[i] !== null) });
   await handHistory(channel, made.roster.members.filter((id) => adding.includes(id)));
   return true;
 }

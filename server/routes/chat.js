@@ -1,4 +1,5 @@
 import express from 'express';
+import keyChanges from '../chat/keyChanges.js';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
@@ -56,7 +57,6 @@ router.post(
     if (!roster.members.every((m) => members.includes(m))) throw HttpError.badRequest('The member list names someone who isn’t in this conversation.');
     const metaCt = b.metaCt === undefined || b.metaCt === null ? null : cipherText(b.metaCt, 'Name', { max: META_CHARS });
     if (kind === 'channel' && !metaCt) throw HttpError.badRequest('Give the channel a name.');
-    if (kind === 'dm' && metaCt) throw HttpError.badRequest('A direct message has no name.');
     const now = Date.now();
     const channel = { id, kind, audience };
     sql.tx(() => {
@@ -83,12 +83,14 @@ router.get(
 // both people can set how long messages stay.
 router.patch(
   '/chat/channels/:id',
+  keyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const b = req.body ?? {};
     const manages = canManage(channel, req.user);
     if (b.metaCt !== undefined) {
-      if (!manages) throw HttpError.forbidden('Only whoever manages this conversation can rename it.');
+      // in a direct message, it's where both people's settings are signed
+      if (!manages && channel.kind !== 'dm') throw HttpError.forbidden('Only whoever manages this conversation can rename it.');
       if (b.metaEpoch !== channel.epoch) throw new HttpError(409, 'This conversation has a new key. Try again.');
       sql.run('UPDATE chat_channels SET meta_ct = ?, meta_epoch = ? WHERE id = ?', cipherText(b.metaCt, 'Name', { max: META_CHARS }), channel.epoch, channel.id);
     }

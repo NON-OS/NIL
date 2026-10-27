@@ -14,6 +14,8 @@ export default Object.freeze({
   messageChars: envNumber('CHAT_MESSAGE_KB', 64, { min: 4, max: 1024 }) * 1024,
   messagesPerMinute: envNumber('CHAT_MESSAGES_PER_MINUTE', 120, { min: 1 }),
   channelsPerHour: envNumber('CHAT_CHANNELS_PER_HOUR', 30, { min: 1 }),
+  // new keys, handed-on keys, leavings and settings changes one person may make a minute
+  keyChangesPerMinute: envNumber('CHAT_KEY_CHANGES_PER_MINUTE', 30, { min: 1 }),
   maxMembers: envNumber('CHAT_MAX_MEMBERS', 500, { min: 2, max: 5000 }),
   groupMax: envNumber('CHAT_GROUP_MAX', 12, { min: 3, max: 50 }),
   pageSize: envNumber('CHAT_PAGE_SIZE', 60, { min: 10, max: 200 }),

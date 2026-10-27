@@ -64,7 +64,8 @@ export default async function chatEvents(event: any) {
       return chatChannels.drop(id);
     case 'keys':
     case 'epoch': {
-      chatRosters.forget(id);
+      // a new epoch extends the checked chain; keys handed over later mean fetching it again
+      if (event.kind === 'keys') chatRosters.forget(id);
       const next = await chatChannels.refresh(id);
       if (next) await chatTimeline.reopen(next);
       return;

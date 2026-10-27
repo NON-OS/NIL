@@ -41,8 +41,8 @@ router.put(
     const now = Date.now();
     if (!Number.isSafeInteger(b.sentAt) || Math.abs(b.sentAt - now) > config.chat.clockSkewMs) throw HttpError.badRequest('This device’s clock is off. Set it right and try again.');
     const bodyCt = cipherText(b.bodyCt, 'Mark', { max: MARK_CHARS });
-    const held = sql.get('SELECT user_id, sent_at FROM chat_marks WHERE channel_id = ? AND stream = ?', channel.id, stream);
-    if (held && held.user_id !== req.user.id) throw HttpError.forbidden('That stream is someone else’s.');
+    // a stream is filed under its sender, so nobody can take another's
+    const held = sql.get('SELECT sent_at FROM chat_marks WHERE channel_id = ? AND user_id = ? AND stream = ?', channel.id, req.user.id, stream);
     // a mark only moves forward
     if (held && held.sent_at >= b.sentAt) return { ok: true };
     sql.run(

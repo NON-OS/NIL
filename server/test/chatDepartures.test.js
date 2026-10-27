@@ -73,18 +73,19 @@ test('history keys are kept per giver, so a bad copy can’t crowd out a good on
   assert.deepEqual(wraps.sort(), ['A'.repeat(123), 'B'.repeat(123)]);
 });
 
-test('marks move forward only, and belong to one person', async () => {
+test('marks move forward only, and each is filed under its own sender', async () => {
   const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, ids.ben] })).data.channel;
   const url = `/api/chat/channels/${ch.id}/marks`;
   const mark = (sentAt) => ({ epoch: 1, sentAt, bodyCt: 'M'.repeat(80) });
   const now = Date.now();
   assert.equal((await ann('PUT', `${url}/aaaaaaaaaaaaaaaa`, mark(now))).status, 200);
   assert.equal((await ann('PUT', `${url}/aaaaaaaaaaaaaaaa`, mark(now - 1000))).status, 200);
-  assert.equal((await ben('PUT', `${url}/aaaaaaaaaaaaaaaa`, mark(now + 10))).status, 403, 'someone else’s stream');
+  // Ben using the same stream name files a mark of his own, which can't touch Ann's
+  assert.equal((await ben('PUT', `${url}/aaaaaaaaaaaaaaaa`, mark(now + 10))).status, 200);
   assert.equal((await ann('PUT', `${url}/bad`, mark(now))).status, 400);
   assert.equal((await ann('PUT', `${url}/bbbbbbbbbbbbbbbb`, { ...mark(now), epoch: 2 })).status, 409);
   const marks = (await ben('GET', url)).data.marks;
-  assert.deepEqual(marks.map((m) => [m.userId, m.sentAt]), [[ids.ann, now]]);
+  assert.deepEqual(marks.map((m) => [m.userId, m.sentAt]).sort(), [[ids.ann, now], [ids.ben, now + 10]].sort());
   assert.equal((await cat('GET', url)).status, 404);
 });
 

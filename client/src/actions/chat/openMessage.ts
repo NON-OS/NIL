@@ -4,6 +4,7 @@ import chatFacts from '../../lib/crypto/chatFacts';
 import signedFacts from '../../lib/crypto/signedFacts';
 import keyHash from '../../lib/crypto/keyHash';
 import chatContent from '../../lib/chatContent';
+import editHistory from '../../state/editHistory';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters, { type Chain } from './chatRosters';
@@ -11,8 +12,6 @@ import type ChatItem from '../../types/ChatItem';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
-// the newest edit of each message this tab has opened, so an older one served later is caught
-const edits = new Map<string, number>();
 
 const shell = (row: ChatMessageRow, state: ChatItem['state']): ChatItem => ({
   id: row.id,
@@ -61,8 +60,8 @@ export default async function openMessage(row: ChatMessageRow, channel: ChatChan
     const fits = signed.by === row.senderId && roster?.members.includes(signed.by) && f.key === keyHash(key) && f.thread === row.threadId && f.edit === row.edits && row.deleted === (f.type === 'deleted') && kindFits;
     const statement = { kind: chatFacts.kind, place: chatFacts.place(at), facts: chatFacts.list(f) };
     if (!fits || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
-    if ((edits.get(row.id) ?? 0) > f.edit) throw new Error('older edit');
-    edits.set(row.id, f.edit);
+    if (editHistory.stale(row.id, f.edit, f.type === 'deleted')) throw new Error('older edit');
+    editHistory.record(row.id, f.edit, f.type === 'deleted');
     const content = f.type === 'deleted' ? chatContent.parse('{}') : chatContent.parse(signed.text);
     const expiresAt = f.ttl ? row.sentAt + f.ttl * 1000 : null;
     return { ...shell(row, 'ok'), ...content, type: f.type, edit: f.edit, editedAt: f.edit ? f.at : null, stream: f.stream, n: f.n, expiresAt };

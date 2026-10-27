@@ -36,15 +36,18 @@ function remember(channelId: string, chain: Chain) {
 async function extend(channel: ChatChannelRow, held: Chain | null): Promise<Chain> {
   const { workspaceKey } = store.get();
   const chain: Chain = held ? { ...held, rosters: [...held.rosters] } : { rosters: [], broken: null, forked: false, keysRev: store.get().keysRev };
-  const from = chain.rosters.length + 1;
-  const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${from}`);
-  for (const row of epochs) {
-    if (chain.broken !== null) break;
-    try {
-      if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
-      chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKeys: row.wrappedKeys, proofs: row.proofs }, chain.rosters));
-    } catch {
-      chain.broken = row.epoch;
+  // the server answers a page of lists at a time; a long-lived conversation takes several
+  for (let page = 0; page < 100 && chain.broken === null && chain.rosters.length < channel.epoch; page++) {
+    const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${chain.rosters.length + 1}`);
+    if (!epochs.length) break;
+    for (const row of epochs) {
+      if (chain.broken !== null) break;
+      try {
+        if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
+        chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKeys: row.wrappedKeys, proofs: row.proofs }, chain.rosters));
+      } catch {
+        chain.broken = row.epoch;
+      }
     }
   }
   if (chain.broken === null && chain.rosters.length < channel.epoch) chain.broken = chain.rosters.length + 1;

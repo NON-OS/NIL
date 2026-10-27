@@ -72,20 +72,29 @@ function gone(e: Entry, now: number) {
 }
 
 // Search over everything this browser has decrypted, in any tab and any visit, kept on this
-// device encrypted under a key derived from the unlocked identity. Messages that disappear, and
-// those older than a forward-secret conversation keeps, leave the index as they leave the chat.
+// device encrypted under a key derived from the unlocked identity. Disappearing messages and
+// forward-secret conversations stay out of it, since a stolen identity would open the index.
+// leaving the page writes what's waiting, so a reload loses nothing
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && void flush());
+
 const chatIndex = {
   note(items: ChatItem[]) {
     for (const m of items) {
       if (!m.seq || m.state !== 'ok' || m.reaction) continue;
+      // what's meant to vanish never lands on the device: disappearing messages, and anything in
+      // a forward-secret conversation, are searched only while this tab holds them
+      if (m.expiresAt || chatState.get().channels[m.channelId]?.forwardDays) continue;
       const name = bucketOf(m.channelId, m.sentAt);
       const changes = pending.get(name) ?? new Map<string, Entry | null>();
       const text = [m.text, ...m.files.map((f) => f.name)].join(' ').trim();
       changes.set(m.id, m.type === 'message' && text ? { id: m.id, channelId: m.channelId, threadId: m.threadId, senderId: m.senderId, sentAt: m.sentAt, text, until: m.expiresAt } : null);
       pending.set(name, changes);
     }
-    clearTimeout(timer);
-    timer = window.setTimeout(() => void flush(), FLUSH_MS);
+    // written soon after the first change, however busy the conversation keeps it
+    timer ??= window.setTimeout(() => {
+      timer = undefined;
+      void flush();
+    }, FLUSH_MS);
   },
 
   async search(query: string, { limit = 100 } = {}): Promise<Entry[]> {

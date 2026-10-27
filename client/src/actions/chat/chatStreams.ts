@@ -19,9 +19,11 @@ export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, 
   const streams = new Map<string, Entry[]>();
   for (const m of items) {
     if (m.state !== 'ok' || !m.seq || !m.stream) continue;
-    const list = streams.get(m.stream) ?? [];
+    // a stream is its sender's: someone else's messages under the same name are a stream of theirs
+    const name = `${m.senderId}/${m.stream}`;
+    const list = streams.get(name) ?? [];
     list.push({ seq: m.seq, n: m.n, id: m.id, ttl: m.expiresAt ? m.expiresAt - m.sentAt : null, senderId: m.senderId });
-    streams.set(m.stream, list);
+    streams.set(name, list);
   }
   const found = new Map<string, ChatNotice>();
   const note = (kind: ChatNotice['kind'], senderId: string | null, count: number) => {
@@ -41,12 +43,13 @@ export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, 
     }
     if (fromStart && byN[0].n > 1 && list.every((e) => e.ttl === null)) note('missing', sender, byN[0].n - 1);
   }
-  for (const [stream, mark] of Object.entries(marks)) {
+  for (const [name, mark] of Object.entries(marks)) {
     const main = mark.scopes.main;
     if (!main || (main.until !== null && main.until <= now)) continue;
-    const seen = streams.get(stream);
-    if (!seen && !fromStart) continue;
-    const highest = seen ? Math.max(...seen.map((e) => e.n)) : 0;
+    // marks are filed by sender and stream, so a mark speaks only for its own sender's messages
+    const seen = streams.get(name);
+    if (!seen?.length && !fromStart) continue;
+    const highest = seen?.length ? Math.max(...seen.map((e) => e.n)) : 0;
     if (main.n > highest) note('missing', mark.senderId, main.n - highest);
   }
   return [...found.values()];

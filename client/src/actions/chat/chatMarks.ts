@@ -9,6 +9,7 @@ import keyHash from '../../lib/crypto/keyHash';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
+import markHistory from '../../state/markHistory';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
 type Row = { userId: string; stream: string; epoch: number; sentAt: number; bodyCt: string };
@@ -62,8 +63,10 @@ const chatMarks = {
       const f = chatMarkFacts.parse(facts ?? []);
       const statement = { kind: chatMarkFacts.kind, place: [at.workspaceKey, channel.id, row.epoch, row.stream, row.userId, row.sentAt], facts: chatMarkFacts.list(f.at, f.key) };
       if (signed.by !== row.userId || f.key !== keyHash(key) || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) return;
-      const scopes = chatMarkFacts.scopes(signed.text);
-      chatState.set((s) => ({ marks: { ...s.marks, [channel.id]: { ...(s.marks[channel.id] ?? {}), [row.stream]: { senderId: row.userId, scopes } } } }));
+      // never behind a mark seen before: a server can't serve an older one to hide what it held back
+      const name = `${row.userId}/${row.stream}`;
+      const scopes = markHistory.newest(channel.id, name, f.at, chatMarkFacts.scopes(signed.text));
+      chatState.set((s) => ({ marks: { ...s.marks, [channel.id]: { ...(s.marks[channel.id] ?? {}), [name]: { senderId: row.userId, scopes } } } }));
     } catch {}
   },
 

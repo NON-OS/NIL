@@ -95,3 +95,15 @@ test('one bad copy of a key doesn’t keep out a good one from someone else', as
   chatKeyring.wipe();
   await assert.rejects(chatKeys.get(channel, { rosters: [{ ...roster, wrappedKeys: [bad] }], broken: null, forked: false, keysRev: 0 }, 1), /isn’t the one/);
 });
+
+test('an admin the server names, with a key nobody here confirmed, can’t remove anyone', async () => {
+  P.z = person();
+  users.push({ id: 'z', name: 'Zed', role: 'admin' });
+  const { shape, first, next } = await setup();
+  await as('z');
+  const byStranger = departure('removal', 'z', '', 'x');
+  // V sees Z listed as an admin, but never confirmed Z's key
+  chatKeyring.wipe();
+  signIn('v', P.v, users);
+  await assert.rejects(checkRoster(next.raw, ctx(shape, 2, [byStranger]), [first]), /wasn’t allowed/);
+});

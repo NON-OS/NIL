@@ -81,7 +81,11 @@ const chatTimeline = {
   // loaded; one not opened yet starts from the server's newest page when it is.
   async arrive(channel: ChatChannelRow, row: ChatMessageRow, root?: ChatMessageRow) {
     const held = chatState.get().timelines;
-    if (!held[channel.id] && !(row.threadId && held[keyOf(channel.id, row.threadId)])) return null;
+    if (!held[channel.id] && !(row.threadId && held[keyOf(channel.id, row.threadId)])) {
+      // not on screen, but an edit or deletion still has to reach this device's search index
+      if (row.edits > 0) await open(channel, [row]);
+      return null;
+    }
     const [item, top] = await open(channel, root ? [row, root] : [row]);
     if (row.threadId) {
       if (chatState.get().timelines[keyOf(channel.id, row.threadId)]) merge(channel.id, row.threadId, [item]);

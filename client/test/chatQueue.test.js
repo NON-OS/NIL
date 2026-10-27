@@ -83,12 +83,15 @@ test('the search index is encrypted on the device, found with the keys and unrea
 
 test('a mark ahead of what arrived is a message held back at the end', () => {
   const m = (n, seq) => ({ id: `m${seq}`, seq, n, stream: 'cccccccccccccccc', senderId: 'w', state: 'ok', sentAt: seq, expiresAt: null });
-  const marks = { cccccccccccccccc: { senderId: 'w', scopes: { main: { n: 4, until: null } } } };
+  const marks = { 'w/cccccccccccccccc': { senderId: 'w', scopes: { main: { n: 4, until: null } } } };
   assert.deepEqual(chatStreams([m(1, 1), m(2, 2)], { fromStart: true, marks }), [{ kind: 'missing', senderId: 'w', count: 2 }]);
   assert.deepEqual(chatStreams([m(1, 1), m(2, 2), m(3, 3), m(4, 4)], { fromStart: true, marks }), []);
   // the last one was set to disappear, and has
-  const gone = { cccccccccccccccc: { senderId: 'w', scopes: { main: { n: 4, until: 1 } } } };
+  const gone = { 'w/cccccccccccccccc': { senderId: 'w', scopes: { main: { n: 4, until: 1 } } } };
   assert.deepEqual(chatStreams([m(1, 1), m(2, 2)], { fromStart: true, marks: gone }), []);
+  // someone else posting under W's stream name neither fills W's gap nor blames W
+  const other = (n, seq) => ({ ...m(n, seq), id: `x${seq}`, senderId: 'x' });
+  assert.deepEqual(chatStreams([m(1, 1), m(2, 2), other(1, 3), other(2, 4)], { fromStart: true, marks }), [{ kind: 'missing', senderId: 'w', count: 2 }]);
 });
 
 test('a mark is signed by its tab’s sender and opens only as theirs', async () => {
@@ -107,7 +110,7 @@ test('a mark is signed by its tab’s sender and opens only as theirs', async ()
   // as V's it opens; filed under W, who didn't sign it, it doesn't
   const row = { userId: 'v', stream: sent.stream, epoch: 1, sentAt: sent.sentAt, bodyCt: sent.bodyCt };
   await chatMarks.open(channel(1), row);
-  assert.deepEqual(chatState.get().marks[shape.id][sent.stream], { senderId: 'v', scopes: { main: { n: 9, until: null } } });
+  assert.deepEqual(chatState.get().marks[shape.id][`v/${sent.stream}`], { senderId: 'v', scopes: { main: { n: 9, until: null } } });
   chatState.set({ marks: {} });
   await chatMarks.open(channel(1), { ...row, userId: 'w' });
   assert.equal(chatState.get().marks[shape.id], undefined);

@@ -44,7 +44,7 @@ export default function RemovalNotice() {
     <div className="chat-notice" role="status">
       <UserMinus />
       <span style={{ flex: 1 }}>
-        {names} {out.length === 1 ? 'is' : 'are'} out of the team but still {out.length === 1 ? 'holds' : 'hold'} keys to conversations. Sign them out so each conversation gets a new key without them.
+        The server says {names} {out.length === 1 ? 'is' : 'are'} out of the team, but {out.length === 1 ? 'still holds' : 'still hold'} keys to conversations. If that’s right, sign them out so each conversation gets a new key without them.
       </span>
       <button type="button" className="btn btn-sm" onClick={sign} disabled={busy}>
         {busy && <Spinner size={12} />} Sign them out

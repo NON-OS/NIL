@@ -41,6 +41,12 @@ export default function ChatView() {
     if (unlocked) void chatChannels.load().then(() => chatSend.restore());
   }, [unlocked]);
 
+  // someone leaving the team changes who should hold each conversation's key
+  const gone = useStore((s) => Object.values(s.users).filter((u) => u.deactivated || u.role === 'guest').map((u) => u.id).sort().join(','));
+  useEffect(() => {
+    if (unlocked && loaded) void chatChannels.load();
+  }, [gone]);
+
   // a conversation named in the address that isn't listed yet may have just been made
   useEffect(() => {
     if (loaded && currentId && !channel) void chatChannels.refresh(currentId).then((c) => !c && router.navigate('/chat', { replace: true }));

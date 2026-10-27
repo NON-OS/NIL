@@ -20,7 +20,7 @@ Click the plus button above the list, or the small plus next to **Channels** or 
 
 You can also choose how long messages stay (see [Disappearing messages](#disappearing-messages)).
 
-Before anything is sealed to someone, Nil asks you to compare their key fingerprint with them, the same check as for docs. A team channel skips the question and is sealed to everyone whose key you've already confirmed. Anyone else waits for a key. In a team channel they get it once you or a teammate confirm theirs; anywhere else, whoever manages the conversation gives it with **Give key** in its settings, after checking their key.
+Before anything is sealed to someone, Nil asks you to compare their key fingerprint with them, the same check as for docs. In anything but a team channel, you also can't write until you've checked the key of everyone who holds the conversation's key, since whoever holds it reads what you write. A team channel skips the question and is sealed to everyone whose key you've already confirmed. Anyone else waits for a key. In a team channel they get it once you or a teammate confirm theirs; anywhere else, whoever manages the conversation gives it with **Give key** in its settings, after checking their key.
 
 ## Write
 
@@ -28,7 +28,7 @@ Type in the box at the bottom and press `Enter` to send. `Shift+Enter` starts a 
 
 Type `@` and a few letters to mention someone in the conversation. They get a notice even in a busy channel, and the message is marked for them.
 
-To attach files, click the paper clip, paste them, or drop them on the conversation. Up to 10 go with one message, each as large as your server allows for task files. Pictures in JPEG, PNG, WebP and GIF show in the conversation. Before a picture is encrypted, Nil removes what it carries besides the picture: where it was taken, when, and on which camera. A photo keeps only the note that says which way up it goes. Kinds of picture Nil can't clean, such as HEIC or TIFF, aren't sent at all; save them as a JPEG first.
+To attach files, click the paper clip, paste them, or drop them on the conversation. Up to 10 go with one message, each as large as your server allows for task files. Pictures in JPEG, PNG, WebP and GIF show in the conversation. Before a picture is encrypted, Nil removes what it carries besides the picture: where it was taken, when, and on which camera. A photo keeps only the note that says which way up it goes, and anything stored after the picture itself, such as the extra frames of a motion photo, is cut off. Kinds of picture Nil can't clean, such as HEIC or TIFF, aren't sent at all; save them as a JPEG first.
 
 Links are clickable and open in a new tab, but Nil never fetches a preview. A preview would have the server visit the link, and that would tell it what you're reading.
 
@@ -40,7 +40,7 @@ Point at a message, or move to it with the keyboard, for its buttons:
 - the speech bubble opens a thread beside the conversation, where replies don't crowd the channel,
 - on your own messages, the pencil edits and the bin deletes.
 
-An edited message says so. A deleted one leaves a line saying it was deleted, and its files are removed from the server. Only whoever sent a message can edit or delete it.
+An edited message says so. A deleted one leaves a line saying it was deleted, and its files are removed from the server. Only whoever sent a message can edit or delete it. Your browser remembers the newest edit of each message it has seen, and which were deleted, so a server can't show an older version or bring a deleted message back, in this tab or a later one.
 
 ### Offline
 
@@ -70,7 +70,7 @@ Scroll up and older messages load. Long conversations stay quick, because only t
 
 ## Search
 
-The box above the list finds conversations by name, and from two letters on it also finds words in messages and file names. It runs in your browser, so the server never sees what you look for, and it covers every message this browser has ever opened, in any tab or visit. For that, your browser keeps an index on this device, encrypted under a key it derives from your unlocked keys and never stores: while your keys are locked, the index can't be read. Messages that disappear leave the index when they leave the chat, and so do messages older than a forward-secret conversation keeps. Signing out deletes the index.
+The box above the list finds conversations by name, and from two letters on it also finds words in messages and file names. It runs in your browser, so the server never sees what you look for, and it covers every message this browser has ever opened, in any tab or visit. For that, your browser keeps an index on this device, encrypted under a key it derives from your unlocked keys and never stores: while your keys are locked, the index can't be read. Disappearing messages and forward-secret conversations never go into it, since someone who later stole your keys and this device would otherwise find them there; they're searched only while a tab holds them. Signing out deletes the index.
 
 ## Notifications
 
@@ -92,7 +92,9 @@ A disappearing message is gone from the server and from every browser showing it
 
 A conversation can be forward-secret. In its settings, whoever manages it (in a direct message, either person) picks how long old keys are kept: a day, 7, 30 or 90 days. Once a key was replaced longer ago than that, every sealed copy of it is deleted from the server, the messages sealed under it are deleted with it, and browsers forget it too. Someone who later steals a member's keys, or a copy of the server, finds nothing older to open.
 
-It's a trade. In a forward-secret conversation, people who join can read back only as far as the old keys go, and nobody can scroll back further than that, you included. In a conversation that’s in use, keys change at least daily, so with a day of forward secrecy, nothing older than about two days can be opened by anyone. The name of the conversation stays readable until it's renamed, since whoever manages it seals it under the newest key as keys change. It pairs well with disappearing messages, which delete the words themselves on a schedule.
+It's a trade. Both settings are signed with the conversation's name by whoever set them. The server keeps its own copy to act on, and if it ever differs from the signed one, the conversation says so and Nil won't send there until it's set again.
+
+In a forward-secret conversation, people who join can read back only as far as the old keys go, and nobody can scroll back further than that, you included. In a conversation that’s in use, keys change at least daily, so with a day of forward secrecy, nothing older than about two days can be opened by anyone. The name of the conversation stays readable until it's renamed, since whoever manages it seals it under the newest key as keys change. It pairs well with disappearing messages, which delete the words themselves on a schedule.
 
 ## Call from a conversation
 
@@ -114,7 +116,7 @@ Deleting a channel deletes every message and file in it for everyone. Only whoev
 
 Each conversation has a key, made in the browser of whoever started it and sealed to each member's own key. That key is replaced when someone joins, leaves or is taken out, when someone's keys change, and at least once a day (`CHAT_EPOCH_HOURS`, 24 by default): the first browser that sends after that starts the next one. Each key's stretch of time is called an epoch, and settings show which epoch a conversation is on, who started it and when.
 
-Every epoch has a list of who holds its key, signed by whoever started it, and each list names the one before. Your browser checks every list from the first: the signature, and that the person who signed was allowed to make that change. A manager may take someone out. Anyone else may leave someone out only by citing that person's own signed leaving, or an admin's or manager's signed removal from the team, signed since they last joined. Anyone in a conversation can start a new key for the same people, and in a team channel bring in a teammate. Nobody comes into a private conversation, or is left out of one, just because the server's list says so. Your browser only accepts a key whose hash the list names, so the server can't hand you a key of its own. If someone hands over a copy that doesn't match, the copies others gave still count.
+Every epoch has a list of who holds its key, signed by whoever started it, and each list names the one before. Your browser checks every list from the first: the signature, and that the person who signed was allowed to make that change. A manager may take someone out. Anyone else may leave someone out only by citing that person's own signed leaving, or a signed removal from the team by a manager or by an admin whose key you confirmed, signed since they last joined. Each list has to be newer than the one before. The names and people a conversation shows come from its newest checked list, never from the server's. Anyone in a conversation can start a new key for the same people, and in a team channel bring in a teammate. Nobody comes into a private conversation, or is left out of one, just because the server's list says so. Your browser only accepts a key whose hash the list names, so the server can't hand you a key of its own. If someone hands over a copy that doesn't match, the copies others gave still count.
 
 Every message, reaction, edit and deletion is signed by its sender for that workspace, conversation, epoch, message, sender and time, and encrypted with all of those as additional data. A message opens only when its sender is on that epoch's list and the signature checks out against a key you can see for them. One that doesn't is shown as "Nil couldn't confirm who wrote this" and its words stay hidden.
 
@@ -144,6 +146,7 @@ The server can't read messages, reactions, file names, files, or channel names a
 - Within an epoch, a key protects everything sent under it: anyone who gets hold of it, from a member's unlocked browser say, can read that day's messages. A member who was taken out can still read, with the server's help, what was sent while they were in, unless the conversation is forward-secret and those keys have gone.
 - Keys don't heal after a theft. Each new epoch key is sealed to every member's long-term key, so someone who stole a member's identity keys can open new epochs too, until that member starts over with new keys. Messaging Layer Security (MLS, RFC 9420) would heal after a compromise and is the next step. We looked at ts-mls, a TypeScript implementation; it's young and has no published independent audit, so chat doesn't rely on it yet.
 - The server sees when each tab publishes its mark. A server that holds back both a tab's last messages and every mark it publishes after them isn't caught until that tab, or another of the sender's, is seen sending again.
+- The server says who is an admin. A removal signed by an admin counts only if you confirmed that admin's key, but an admin who agrees with the server could still sign one for someone who never left.
 - The very first list of who is in a conversation is taken on its signer's word: a newcomer can't tell a conversation the server forked from its start from the real one, though browsers that saw the real one notice.
 - Mentions tell the server who was mentioned, so push notifications can reach them, and queued messages keep that list on this device until they're sent.
 - Like the rest of Nil, chat trusts the app your server sends. [Check what a server sends](verify-a-server.md) explains how to compare it with a release.

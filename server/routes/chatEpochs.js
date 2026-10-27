@@ -1,4 +1,5 @@
 import express from 'express';
+import keyChanges from '../chat/keyChanges.js';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
@@ -57,6 +58,7 @@ router.get(
 // signed departure. Changing who is in it otherwise is for whoever manages it.
 router.post(
   '/chat/channels/:id/epochs',
+  keyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const b = req.body ?? {};
@@ -96,6 +98,7 @@ router.post(
 // Keys a forward-secret conversation has let go of can't come back.
 router.post(
   '/chat/channels/:id/grants',
+  keyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const epoch = check.number(req.body?.epoch, 'Epoch', { min: channel.purged_epoch + 1, max: channel.epoch, integer: true });
