@@ -4,8 +4,8 @@
   position: fixed;
   inset: 0;
   z-index: 45;
-  display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  display: flex;
+  flex-direction: column;
   padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) max(10px, env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
   gap: 10px;
   background: var(--brand-ink);
@@ -84,6 +84,7 @@
 .call-stage {
   position: relative;
   display: grid;
+  flex: 1;
   min-height: 0;
   gap: 8px;
 }
@@ -259,6 +260,10 @@
   height: 18px;
 }
 
+.call-tile-state.refused {
+  background: #15171b;
+}
+
 .call-tile-state.refused p {
   max-width: 34ch;
   margin: 0;
@@ -348,7 +353,7 @@ button.call-trust {
   background: #2a2e36;
 }
 
-.call-control[aria-pressed='true'] {
+.call-control.on {
   border-color: var(--brand-cyan);
   background: var(--brand-cyan);
   color: var(--brand-ink);
@@ -388,6 +393,36 @@ button.call-trust {
 .call-control.small svg {
   width: 17px;
   height: 17px;
+}
+
+/* the phone's "more" menu */
+.call-menu {
+  display: grid;
+  padding: 6px;
+}
+
+.call-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: var(--tap-min);
+  padding: 0 10px;
+  border: 0;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+  font-size: var(--text-md);
+  text-align: left;
+}
+
+.call-menu-item:hover {
+  background: var(--surface-3);
+}
+
+.call-menu-item svg {
+  width: 18px;
+  height: 18px;
+  color: var(--ink-2);
 }
 
 /* minimized: a bar across the bottom on a phone, a small card in the corner on a computer */

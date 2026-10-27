@@ -33,6 +33,7 @@ const ANSWER_MS = 12_000;
 const DISCONNECT_GRACE_MS = 2500;
 const LOST_MS = 40_000;
 const STATS_MS = 2000;
+const SOFT = new Set(['stale', 'replayed', 'unexpected']);
 
 // The connection to one other person in a call: their browser and this one, directly or
 // through the relay, with the media encrypted between the two (DTLS-SRTP). Every session
@@ -92,18 +93,23 @@ export default function peerLink(o: LinkOptions) {
     });
   }
 
-  const gathered = () =>
-    new Promise<void>((resolve) => {
-      if (pc.iceGatheringState === 'complete') return resolve();
+  // Sets a description and waits for this round of candidates to be gathered, so they go out
+  // inside the signed description. The gathering state may still say "complete" from the round
+  // before for a moment, so it listens for this round's end-of-candidates instead.
+  async function describe(description: RTCSessionDescriptionInit) {
+    const done = new Promise<void>((resolve) => {
       const finish = () => {
         clearTimeout(timer);
-        pc.removeEventListener('icegatheringstatechange', check);
+        pc.removeEventListener('icecandidate', onCandidate);
         resolve();
       };
-      const check = () => pc.iceGatheringState === 'complete' && finish();
+      const onCandidate = (e: RTCPeerConnectionIceEvent) => !e.candidate && finish();
       const timer = window.setTimeout(finish, GATHER_MS);
-      pc.addEventListener('icegatheringstatechange', check);
+      pc.addEventListener('icecandidate', onCandidate);
     });
+    await pc.setLocalDescription(description);
+    await done;
+  }
 
   function seal(type: LinkType, peerNonce: string | null) {
     const id = keyring.identity();
@@ -117,8 +123,10 @@ export default function peerLink(o: LinkOptions) {
     if (closed) return;
     if (pc.signalingState === 'have-local-offer') await pc.setLocalDescription({ type: 'rollback' });
     if (pc.signalingState !== 'stable') return;
-    await pc.setLocalDescription(await pc.createOffer({ iceRestart: restart }));
-    await gathered();
+    // until this offer goes out, no answer counts: a late one to the offer before would carry
+    // that offer's ICE details and leave this one unable to connect
+    myNonce = null;
+    await describe(await pc.createOffer({ iceRestart: restart }));
     const { message, nonce } = seal('offer', null);
     myNonce = nonce;
     o.send(message);
@@ -136,8 +144,10 @@ export default function peerLink(o: LinkOptions) {
   async function verified(message: LinkMessage, type: LinkType) {
     const keys = (await keyDirectory.signers(o.peer, null)).map((s) => s.key);
     const result = callLink.verify(message, { place: o.place, from: o.peer, me: o.me, mySession: o.mySession, type, myNonce, pinned, now: Date.now(), seen }, keys);
+    // a description that's merely late, or one seen before, is dropped; anything that doesn't
+    // check out as theirs ends the connection
     if (!result.ok) {
-      refuse(keys.length ? result.reason : 'no-key');
+      if (!SOFT.has(result.reason)) refuse(keys.length ? result.reason : 'no-key');
       return null;
     }
     pinned = result.facts.fingerprints;
@@ -150,13 +160,12 @@ export default function peerLink(o: LinkOptions) {
     if (pc.signalingState !== 'stable') await pc.setLocalDescription({ type: 'rollback' });
     await pc.setRemoteDescription({ type: 'offer', sdp: message.sdp });
     attach();
-    await pc.setLocalDescription(await pc.createAnswer());
-    await gathered();
+    await describe(await pc.createAnswer());
     o.send(seal('answer', facts.nonce).message);
   }
 
   async function onAnswer(message: LinkMessage) {
-    if (pc.signalingState !== 'have-local-offer') return;
+    if (pc.signalingState !== 'have-local-offer' || !myNonce) return;
     if (!(await verified(message, 'answer')) || closed) return;
     clearTimeout(answerTimer);
     await pc.setRemoteDescription({ type: 'answer', sdp: message.sdp });
@@ -171,8 +180,9 @@ export default function peerLink(o: LinkOptions) {
       recoverTimer = undefined;
       if (closed || !troubleSince) return;
       if (Date.now() - troubleSince > LOST_MS) o.update({ link: 'lost' });
-      if (o.offerer) run(() => offer(true));
-      else o.send({ type: 'restart' });
+      // an offer already on its way gets its answer, or is offered again when ANSWER_MS runs out
+      if (o.offerer && pc.signalingState !== 'have-local-offer') run(() => offer(true));
+      else if (!o.offerer) o.send({ type: 'restart' });
       recoverTimer = window.setTimeout(attempt, Math.min(15_000, 3000 + (Date.now() - troubleSince) / 4));
     };
     attempt();
@@ -242,7 +252,7 @@ export default function peerLink(o: LinkOptions) {
       if (closed) return;
       if (message.type === 'offer' && !o.offerer) run(() => onOffer(message as LinkMessage));
       else if (message.type === 'answer' && o.offerer) run(() => onAnswer(message as LinkMessage));
-      else if (message.type === 'restart' && o.offerer) run(() => offer(connectedOnce));
+      else if (message.type === 'restart' && o.offerer && pc.signalingState !== 'have-local-offer') run(() => offer(connectedOnce));
       else if (message.type === 'refused') {
         close();
         o.update({ link: 'refused', refusal: 'theirs' });

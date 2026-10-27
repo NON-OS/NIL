@@ -37,7 +37,7 @@ export default function CallStage({ call, onMainVideo }: { call: ActiveCall; onM
   const duo = peers.length === 1 && !tiles.some((t) => t.screen);
   const speaker = call.layout === 'speaker' && !duo && tiles.length > 0;
 
-  const render = (t: Tile, main = false) => {
+  const render = (t: Tile, main = false, compact = false) => {
     const peer = call.peers[t.userId];
     const mine = t.userId === me;
     return (
@@ -53,16 +53,17 @@ export default function CallStage({ call, onMainVideo }: { call: ActiveCall; onM
         pinned={call.pinned === t.key}
         onPin={tiles.length > 1 ? pin(t.key) : undefined}
         videoRef={main ? onMainVideo : undefined}
+        compact={compact}
       />
     );
   };
 
-  const self = <CallTile userId={me} stream={call.local} video={call.cam} mic={call.mic} speaking={call.speaking} />;
+  const self = (compact = false) => <CallTile userId={me} stream={call.local} video={call.cam} mic={call.mic} speaking={call.speaking} compact={compact} />;
 
   if (!tiles.length) {
     return (
       <div className="call-stage waiting">
-        <div className="call-self-alone">{self}</div>
+        <div className="call-self-alone">{self()}</div>
         <p className="call-waiting" role="status">
           {ringing.length ? 'Ringing…' : 'Waiting for others to join.'}
         </p>
@@ -77,11 +78,11 @@ export default function CallStage({ call, onMainVideo }: { call: ActiveCall; onM
       <div className={cx('call-stage', duo ? 'duo' : 'speaker')}>
         <div className="call-main">{render(main, true)}</div>
         {duo ? (
-          <div className="call-self-corner">{self}</div>
+          <div className="call-self-corner">{self(true)}</div>
         ) : (
           <div className="call-strip">
-            {rest.map((t) => render(t))}
-            {self}
+            {rest.map((t) => render(t, false, true))}
+            {self(true)}
           </div>
         )}
       </div>
@@ -92,7 +93,7 @@ export default function CallStage({ call, onMainVideo }: { call: ActiveCall; onM
   return (
     <div className="call-stage grid" style={{ ['--cols' as string]: count <= 1 ? 1 : count <= 4 ? 2 : 3 }}>
       {tiles.map((t, i) => render(t, i === 0))}
-      {self}
+      {self()}
     </div>
   );
 }

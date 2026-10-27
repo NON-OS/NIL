@@ -1,6 +1,6 @@
 # Encryption and trust
 
-What Nil encrypts in the browser, who holds which key, what teammates check for each other, and what a server operator can still do. The code is in `client/src/lib/crypto`, `client/src/actions/vault.ts`, `client/src/actions/passkeys.ts`, `client/src/actions/keyDirectory.ts`, `server/keys` and `server/votes/encrypted`.
+What Nil encrypts in the browser, who holds which key, what teammates check for each other, and what a server operator can still do. The code is in `client/src/lib/crypto`, `client/src/actions/calls`, `client/src/actions/vault.ts`, `client/src/actions/passkeys.ts`, `client/src/actions/keyDirectory.ts`, `server/keys` and `server/votes/encrypted`.
 
 ## Your identity
 
@@ -59,6 +59,17 @@ The server writes the messages for signing in, for signed ballots and for applyi
 - Browsers hand a doc to newcomers only when its version is signed for the whole team, whatever the server lists, and save or share a doc only under the key its version checked out with.
 - Each browser remembers the highest version of each doc it has verified and warns when the server serves an older one.
 
+## Calls
+
+- Call media goes from browser to browser over DTLS-SRTP, the encryption every WebRTC call uses. Each browser makes a fresh certificate for each call, and announces its fingerprint in the session description, the handshake the two browsers exchange through Nil's live connection. On its own that would leave the server able to swap the description for one with its own certificate and sit in the middle.
+- So each browser signs its description before it goes out, with your Ed25519 key, as `nil/call-link/v1`. The statement names the call, the workspace key and the site, who it's from and who it's for, whether it's an offer or an answer, the DTLS fingerprints in the description, a SHA-256 hash of the whole description, a fresh random nonce, the tab it comes from and the tab it's for, and the time. An answer repeats the nonce of the offer it answers.
+- The other browser checks the statement before it uses the description: that it names this call, this workspace and this site, the sender the server says sent it and this person as the one it's for; that the hash and the fingerprints match the description it received; that the answer carries its own offer's nonce; that the nonce is new and the time within ten minutes; and that the signature verifies against a key it can see for the sender, as for docs. If anything about who it's from or what it says doesn't check out, the browser refuses the connection and says so on both sides. A description that's only late or repeated is dropped.
+- Once a connection is up, its certificate can't change: a new description for the same connection (an ICE restart after a network drop) must name the same fingerprints. The browser itself refuses a DTLS certificate that doesn't match the fingerprint it was given, and Nil also reads the certificate the other side really used from the connection's statistics, where the browser reports it, and drops the connection if it isn't the signed one.
+- A key you haven't confirmed yet still connects, as a doc would, and the call shows that person as unverified with the same check as Docs. A key that changed since you confirmed it doesn't connect until you check it.
+- Calls use the relay (TURN) by default, so neither side learns the other's IP address. The relay only ever sees encrypted packets. Its passwords are short-lived: an HMAC of an expiring username under a secret Nil and the relay share, handed only to someone in the call or allowed into it. The username carries a keyed hash of the person's id, not the id.
+- What the server learns is who is in which call and when they joined. It holds that in memory, never on disk or in its logs, and forgets it when the call ends. It passes each handshake message only between two people in the same call.
+- Calls are a mesh, each browser sending to every other, which is why a call holds six people by default. Larger calls would need a server that forwards media (an SFU) without being able to read it. That takes encryption of each frame on top of DTLS, with keys only the people in the call hold: SFrame, through the browsers' insertable streams. It isn't solid in Chrome, Safari and Firefox alike yet, so Nil doesn't use it. When it is, a call's frame keys can be sealed and signed with the same keys as everything else here, and the forwarding server would see only encrypted frames.
+
 ## The team pool key
 
 - On a server with [pool payouts](private-payouts.md#pay-from-the-teams-pool) on, the team's Privacy Pools key is 16 random bytes made in an admin's browser and shown as a 12-word BIP-39 phrase, the format the Privacy Pools SDK takes. Every deposit's and withdrawal's secrets come from it as the SDK derives them, so the key and the chain alone recover the team's deposits.
@@ -93,7 +104,7 @@ Docs, private tasks, comments and files saved before signatures named who they'r
 ## What a server operator can still do
 
 - Serve different app code. All of the above assumes the JavaScript your browser runs is Nil's. An operator who changes it can read anything you unlock. [Check what a server sends](verify-a-server.md) compares a server with a release byte for byte; it can't see code sent only to one person or for a moment. Running a build you trust on a server you control is the strongest defence.
-- See metadata: who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
+- See metadata: who is in which call and when, who can read which doc and when it changed, who created and is assigned each private task, sizes, times, and who is in the workspace.
 - Decide who is in a vote's census and which ballots the trustees decrypt. A census the server made up for everyone isn't caught. Nor is a ballot it leaves out of what trustees get: it could hand them a single valid ballot, and the "totals" two trustees decrypt would be that ballot.
 - Refuse service, delete data, or serve old data. Docs and private tasks carry a signed version or revision number, and a browser warns when the server sends an older one than it has already opened. A new browser or device has nothing to compare with.
 - Get the first key in. If your browser has never seen a teammate's key, the first one it sees is pinned, and counts for their signatures while it's listed. Comparing fingerprints rules out a key the server made up. A new browser or device starts with no pins, and so does a workspace key or account your browser hasn't used before, which is why it warns when it holds pins for another one.

@@ -1,6 +1,6 @@
 import walletConnect from '../config/walletConnect.js';
 import contentSecurityPolicy from './contentSecurityPolicy.js';
-import calls from '../config/calls.js';
+import calls from '../config/callsEnabled.js';
 
 const relay = walletConnect.enabled ? walletConnect.relayUrl : null;
 // Calls need this page's own camera, microphone and screen; no other page ever gets them.

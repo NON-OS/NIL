@@ -64,6 +64,15 @@ sudo ufw allow 443/udp      # HTTP/3, optional
 sudo ufw enable
 ```
 
+With calls on (see [Set up calls](calls.md#set-up-calls)), also open the relay's ports:
+
+```bash
+sudo ufw allow 3478/udp
+sudo ufw allow 3478/tcp
+sudo ufw allow 5349/tcp
+sudo ufw allow 49160:49999/udp
+```
+
 `OpenSSH` means port 22. If your SSH server listens somewhere else (check with `sudo ss -tlpn | grep sshd`), allow that port instead, before `ufw enable`, or the firewall locks you out.
 
 If you'd rather deny outgoing traffic too, Nil still needs your Ethereum node, and for webhooks, model endpoints and AI providers a way to reach https addresses on the internet. Run an HTTP CONNECT proxy that can, and set `EGRESS_PROXY` to it (for example `http://proxy.internal:3128`). Nil then sends every one of those requests through it, still pinned to the address it checked and still https inside the tunnel. Hosted Nil does exactly this with its own egress proxy (see `cloud/README.md`).
@@ -597,3 +606,7 @@ Capsules restore only into an empty volume. See the reset steps in section 8.
 ### "That ballot was refused: it was made for a different circuit"
 
 `SEMAPHORE_DEPTH` doesn't match the circuit files in the image. Run `npm run zk:fetch` with the same depth, then rebuild.
+
+### Calls don't connect
+
+Open **Calls**. If it says calls aren't set up, `TURN_URLS` or `TURN_SECRET` is missing, or the secret is shorter than 32 characters: the startup log says which. If calls ring but stay on **Connecting…**, the relay isn't reachable: check that coturn runs (`docker compose --profile calls ps`), that `TURN_SECRET` is the same for Nil and coturn, and that the firewall lets through 3478, 5349 and the UDP range 49160 to 49999. Behind NAT, set `TURN_EXTERNAL_IP` to `public/private` and put the private address in `TURN_ALLOWED_PEER_IP`. `TURN_LOG=on` makes coturn log each connection while you look.

@@ -1,7 +1,6 @@
 import envNumber from '../lib/envNumber.js';
-import envFlag from './envFlag.js';
+import callsEnabled from './callsEnabled.js';
 import configWarning from '../lib/configWarning.js';
-import appSite from './appSite.js';
 
 // Calls. Audio, video and screens travel between browsers, encrypted end to end, and never
 // through this server: it only passes along each call's handshake and hands out short-lived
@@ -32,13 +31,9 @@ const urls = turnUrls(env.TURN_URLS);
 const secret = turnSecret(env.TURN_SECRET);
 if (urls.length && !secret && !env.TURN_SECRET) configWarning('TURN_URLS is set but TURN_SECRET isn’t. Calls need both to use the relay.');
 
-// Tor carries TCP alone, and a call needs UDP and a path between two browsers, so calls are off
-// on an onion address whatever the setting says.
-const onion = new URL(appSite.origin).hostname.endsWith('.onion');
-
 export default Object.freeze({
-  enabled: envFlag('CALLS', true) && !onion,
-  onion,
+  enabled: callsEnabled.enabled,
+  onion: callsEnabled.onion,
   turn: Object.freeze({ urls, secret, configured: Boolean(urls.length && secret) }),
   // how long one set of relay passwords works; the app fetches fresh ones well before then
   turnTtlSeconds: envNumber('TURN_TTL_SECONDS', 3600, { min: 60, max: 86_400 }),

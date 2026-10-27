@@ -30,11 +30,22 @@ const GROUPS = [
       ['G G', 'Goals'],
       ['G S', 'Insights'],
       ['G D', 'Docs'],
+      ['G A', 'Calls'],
       ['G M', 'Time'],
       ['G N', 'Bounties'],
       ['G V', 'Votes'],
       ['G P', 'Proof of work'],
       ['G T', 'Settings'],
+    ],
+  },
+  {
+    title: 'In a call',
+    keys: [
+      ['⌘ D', 'Mute or unmute'],
+      ['⌘ E', 'Camera on or off'],
+      ['S', 'Share your screen'],
+      ['L', 'Grid or speaker layout'],
+      ['Esc', 'Minimize the call'],
     ],
   },
   {

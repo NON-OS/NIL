@@ -24,6 +24,7 @@ Press `G`, then the second key, within about a second.
 | `G` `L` | All tasks |
 | `G` `C` | Calendar |
 | `G` `D` | Docs |
+| `G` `A` | Calls |
 | `G` `G` | Goals |
 | `G` `S` | Insights |
 | `G` `M` | Time |
@@ -31,6 +32,19 @@ Press `G`, then the second key, within about a second.
 | `G` `V` | Votes |
 | `G` `P` | Proof of work |
 | `G` `T` | Settings |
+
+## In a call
+
+| Keys | What it does |
+|---|---|
+| `⌘D` (Mac) or `Ctrl+D` | Mute or unmute, anywhere in Nil |
+| `⌘E` (Mac) or `Ctrl+E` | Camera on or off, anywhere in Nil |
+| `M` | Mute or unmute, on the call screen |
+| `V` | Camera on or off, on the call screen |
+| `S` | Share your screen, or stop |
+| `L` | Grid or speaker layout |
+| `P` | Picture in picture |
+| `Esc` | Minimize the call |
 
 ## Lists
 

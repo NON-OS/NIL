@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Lock, Minimize2, WifiOff } from 'lucide-react';
+import { Lock, WifiOff } from 'lucide-react';
 import CallStage from './CallStage';
 import CallControls from './CallControls';
 import CallDock from './CallDock';
@@ -9,7 +9,6 @@ import useTicker from '../../hooks/useTicker';
 import useOnline from '../../hooks/useOnline';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useCallKeys from '../../hooks/useCallKeys';
-import callRuntime from '../../actions/calls/callRuntime';
 import iceConfig from '../../actions/calls/iceConfig';
 import callClock from '../../lib/calls/callClock';
 import callTitle from '../../lib/calls/callTitle';
@@ -54,9 +53,6 @@ export default function CallScreen({ call }: { call: ActiveCall }) {
             {iceConfig.relayOnly() && <span className="call-chip">Relay only</span>}
           </p>
         </div>
-        <button type="button" className="call-control small" onClick={() => callRuntime.patch(() => ({ minimized: true }))} aria-label="Minimize the call">
-          <Minimize2 />
-        </button>
       </header>
       {(!online || !connected) && (
         <p className="call-banner" role="status">

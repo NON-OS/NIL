@@ -29,10 +29,12 @@ interface Props {
   pinned?: boolean;
   onPin?: () => void;
   videoRef?: (el: HTMLVideoElement | null) => void;
+  // a tile in the strip or the corner, with a smaller picture when there's no video
+  compact?: boolean;
 }
 
 // One person, or one shared screen, in the call.
-export default function CallTile({ userId, peer, stream, video, mic, speaking, screen = false, pinned = false, onPin, videoRef }: Props) {
+export default function CallTile({ userId, peer, stream, video, mic, speaking, screen = false, pinned = false, onPin, videoRef, compact = false }: Props) {
   const user = useStore((s) => s.users[userId]);
   const me = useStore((s) => s.me?.id === userId);
   const name = me ? 'You' : user?.name ?? 'Someone';
@@ -41,7 +43,7 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
 
   return (
     <figure className={cx('call-tile', speaking && !screen && 'speaking', screen && 'screen')} aria-label={label}>
-      {video && stream ? <VideoView stream={stream} mirror={me && !screen} fit={screen ? 'contain' : 'cover'} videoRef={videoRef} /> : <Avatar user={user} size={72} />}
+      {video && stream ? <VideoView stream={stream} mirror={me && !screen} fit={screen ? 'contain' : 'cover'} videoRef={videoRef} /> : <Avatar user={user} size={compact ? 36 : 72} />}
       {trouble && peer.link !== 'refused' && (
         <div className="call-tile-state" role="status">
           {peer.link === 'lost' ? <RefreshCw aria-hidden="true" /> : <Spinner size={18} />}
@@ -72,7 +74,7 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
         {peer && !screen && <TrustBadge peer={peer} name={name} />}
         {peer && !screen && peer.link === 'connected' && <QualityBars quality={peer.quality} />}
       </figcaption>
-      {onPin && (
+      {onPin && !compact && (
         <button type="button" className="icon-btn call-pin" onClick={onPin} aria-pressed={pinned} aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}>
           {pinned ? <PinOff /> : <Pin />}
         </button>

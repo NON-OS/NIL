@@ -24,7 +24,7 @@ export default function CallDock({ call }: { call: ActiveCall }) {
         <strong>{callTitle(call.view, me, users, projects)}</strong>
         <span className="num">{trouble ? 'Reconnecting…' : speaking ? `${users[speaking.userId]?.name ?? 'Someone'} is speaking` : callClock(now - call.view.startedAt)}</span>
       </button>
-      <button type="button" className={cx('call-control small', !call.mic && 'off')} onClick={callMedia.toggleMic} aria-pressed={call.mic} aria-label={call.mic ? 'Mute' : 'Unmute'}>
+      <button type="button" className={cx('call-control small', call.mic ? 'on' : 'off')} onClick={callMedia.toggleMic} aria-label={call.mic ? 'Mute' : 'Unmute'}>
         {call.mic ? <Mic /> : <MicOff />}
       </button>
       <button type="button" className="call-control small" onClick={() => callRuntime.patch(() => ({ minimized: false }))} aria-label="Open the call">

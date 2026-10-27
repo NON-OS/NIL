@@ -42,6 +42,8 @@ function connect(callId: string, userId: string, session: string) {
     send: (message) => socket.call({ type: 'call.signal', callId, to: userId, blob: JSON.stringify(message) }),
     update(patch) {
       if (patch.media) audioLevels.watch(`peer:${userId}`, patch.media, (speaking) => rt.patchPeer(userId, { speaking }, session));
+      // someone starts sharing their screen: show it large
+      if (patch.screen && !rt.active()?.peers[userId]?.screen) rt.patch(() => ({ layout: 'speaker', pinned: null }));
       if (patch.link === 'lost') rt.say(`Lost the connection to ${rt.name(userId)}. Still trying.`);
       rt.patchPeer(userId, patch, session);
     },
@@ -189,8 +191,11 @@ const callSession = {
     toast.show('This call moved to another tab.');
   },
 
+  // ends the call here, and tells the server this tab is out of it
   end(message: string | null) {
-    if (!rt.active()) return;
+    const a = rt.active();
+    if (!a) return;
+    socket.call({ type: 'call.leave', callId: a.id });
     teardown();
     if (message) toast.show(message);
   },

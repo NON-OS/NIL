@@ -71,6 +71,8 @@ const signedIn = [
   { name: 'calendar', path: '/calendar' },
   { name: 'docs', path: '/docs' },
   { name: 'docs-open', path: '/docs', then: unlockDocs },
+  // the calls page; with no relay here it says calls aren't set up, and scripts/calls checks the rest
+  { name: 'calls', path: '/calls' },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },
