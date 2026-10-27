@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Check, RotateCcw, Trash2 } from 'lucide-react';
+import { Check, RotateCcw, ShieldAlert, Trash2 } from 'lucide-react';
 import Avatar from '../../ui/Avatar';
 import useStore from '../../../state/useStore';
 import dates from '../../../lib/dates';
@@ -29,13 +29,19 @@ export default function CommentThreadCard({ thread, active, orphaned, canDelete,
     <article className={`doc-thread${active ? ' active' : ''}${thread.resolved ? ' resolved' : ''}`} onClick={onFocus} aria-label={`Comment on “${thread.quote}”`}>
       <blockquote className="doc-thread-quote">{orphaned ? <em>The text this was about was deleted.</em> : thread.quote}</blockquote>
       {thread.messages.map((m) => {
-        const who = users[m.by];
+        if (m.verified === false)
+          return (
+            <p key={m.id} className="doc-thread-msg doc-thread-unverified">
+              <ShieldAlert /> Nil can’t confirm who wrote this message, so it stays hidden.
+            </p>
+          );
+        const who = m.verified ? users[m.by] : undefined;
         return (
           <div key={m.id} className="doc-thread-msg">
             {who && <Avatar user={who} size={20} />}
             <div>
               <div className="doc-thread-meta">
-                <strong>{who?.name ?? 'Someone'}</strong> <time dateTime={new Date(m.at).toISOString()}>{dates.ago(m.at)}</time>
+                <strong>{who?.name ?? (m.verified ? 'Someone' : 'Checking…')}</strong> <time dateTime={new Date(m.at).toISOString()}>{dates.ago(m.at)}</time>
               </div>
               <p>{m.text}</p>
             </div>

@@ -13,6 +13,7 @@ import confirmKeys from './confirmKeys';
 import readDoc from './readDoc';
 import type DocItem from '../types/DocItem';
 import type EncryptedDoc from '../types/EncryptedDoc';
+import sealedLocal from '../lib/sealedLocal/sealedLocal';
 
 type Grant = { userId: string; wrappedKey: string };
 type Audience = DocItem['audience'];
@@ -46,6 +47,12 @@ async function sealed(docKey: Uint8Array, docId: string, version: number, words:
   return { titleCt: await field('title', words.title || 'Untitled'), bodyCt: await field('body', words.body) };
 }
 
+// the pictures and files a body uses, so the server can let go of ones taken out (see docBlobRefs)
+async function blobsIn(body: string) {
+  const { default: docBlobRefs } = await import('../lib/docState/docBlobRefs');
+  return docBlobRefs(body);
+}
+
 // Writing to a doc, or sharing it, uses the very key its version checked out with.
 function writable(doc: DocItem, what: string) {
   if (doc.warning === 'unverified') throw new Error('Nil can’t confirm a teammate wrote this version, so it won’t write to it or share it under the same key.');
@@ -76,7 +83,7 @@ const docs = {
     // a new doc starts as shared editing state, with its title in it
     const { default: newDocBody } = await import('../lib/docState/newDocBody');
     const words = { title, body: body ?? newDocBody(title, markdown) };
-    const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, ...(await sealed(docKey, id, 1, words, { audience, readers })) });
+    const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(docKey, id, 1, words, { audience, readers })) });
     keyring.rememberDocKey(id, docKey);
     return readDoc.decrypt(res.doc);
   },
@@ -85,7 +92,7 @@ const docs = {
   // `through` says how far into the live changes it reaches, so the server can fold those away.
   async save(doc: DocItem, title: string, body: string, { through }: { through?: number } = {}) {
     const key = writable(doc, 'save');
-    const res = await http.put<{ doc: EncryptedDoc }>(`/docs/${doc.id}`, { baseVersion: doc.version, through, ...(await sealed(key, doc.id, doc.version + 1, { title, body }, doc)) });
+    const res = await http.put<{ doc: EncryptedDoc }>(`/docs/${doc.id}`, { baseVersion: doc.version, through, blobs: await blobsIn(body), ...(await sealed(key, doc.id, doc.version + 1, { title, body }, doc)) });
     return readDoc.decrypt(res.doc);
   },
 
@@ -107,7 +114,7 @@ const docs = {
     const grants = await sealFor(fresh, [me.id, ...keep]);
     const words = { title: doc.title, body: doc.body ?? '' };
     const to = { audience, readers: grants.map((g) => g.userId) };
-    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, audience, grants, ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
+    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
     keyring.rememberDocKey(doc.id, fresh);
     return res.readers;
   },
@@ -138,6 +145,7 @@ const docs = {
     await http.del(`/docs/${doc.id}`);
     keyring.forgetDocKey(doc.id);
     openedText.forgetDoc(doc.id);
+    for (const name of await sealedLocal.names('doc-unsent', `${doc.id}:`)) await sealedLocal.remove('doc-unsent', name);
   },
 };
 

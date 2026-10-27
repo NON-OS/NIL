@@ -1,4 +1,5 @@
 import envNumber from '../lib/envNumber.js';
+import units from './units.js';
 
 // Live editing. Every change someone makes to a doc goes out as one encrypted update; browsers
 // fold the updates into a new version every few seconds, and the server keeps only the updates
@@ -13,4 +14,8 @@ export default Object.freeze({
   updatesPerMinute: envNumber('DOC_UPDATES_PER_MINUTE', 600, { min: 30 }),
   // versions kept in a doc's history, spaced out further the older they get
   revisions: envNumber('DOC_REVISIONS', 100, { min: 10 }),
+  // pictures and files one version may say it uses; a version naming more keeps all of the doc's
+  blobRefsMax: envNumber('DOC_BLOB_REFS_MAX', 2000, { min: 10 }),
+  // how long a picture or file taken out of a doc stays, in case changes made offline still use it
+  blobGraceMs: envNumber('DOC_BLOB_GRACE_DAYS', 7, { min: 1 }) * 24 * units.HOUR,
 });

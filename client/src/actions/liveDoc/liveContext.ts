@@ -15,6 +15,8 @@ export default interface LiveContext {
   setStatus(patch: Partial<LiveStatus>): void;
   // a local change was made
   local(): void;
+  // every change this tab made is on the server now
+  settled(): void;
   // save a new version now, folding in the live changes
   saveNow(): Promise<void>;
   // fetch the newest version and lay it on top

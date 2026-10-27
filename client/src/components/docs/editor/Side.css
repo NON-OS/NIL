@@ -85,6 +85,18 @@
   gap: 8px;
 }
 
+.doc-thread-unverified {
+  align-items: center;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.doc-thread-unverified svg {
+  width: 14px;
+  height: 14px;
+  flex: none;
+}
+
 .doc-thread-msg p {
   margin: 2px 0 0;
   font-size: var(--text-md);
