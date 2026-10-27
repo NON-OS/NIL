@@ -7,13 +7,15 @@ import type { Plugin } from 'vite';
 // 2000, JBIG2, colour profiles), the Adobe CMaps for fonts a PDF names but doesn't embed (most
 // Chinese, Japanese and Korean text) and the standard fonts. The Content Security Policy keeps
 // every fetch on this server, so they're copied into the build under a folder named after the
-// pdf.js version, where the app asks for them. The scripting sandbox isn't copied: previews
-// never run a PDF's scripts.
+// pdf.js version, where the app asks for them, with their licence files. The scripting sandbox
+// isn't copied, since previews never run a PDF's scripts, and neither are the Liberation fonts,
+// which come under the GPL: a PDF that names Helvetica without embedding it is drawn with the
+// device's own Helvetica or Arial instead.
 const require = createRequire(import.meta.url);
 const ROOT = path.dirname(require.resolve('pdfjs-dist/package.json'));
 const VERSION: string = JSON.parse(fs.readFileSync(path.join(ROOT, 'package.json'), 'utf8')).version;
 const FOLDERS = ['wasm', 'cmaps', 'standard_fonts', 'iccs'];
-const SKIP = /^(quickjs|LICENSE)/;
+const SKIP = /^(quickjs|LiberationSans|LICENSE_LIBERATION)/;
 const BASE = `assets/pdfjs-${VERSION}`;
 
 const files = () =>

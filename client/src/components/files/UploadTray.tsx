@@ -1,18 +1,28 @@
 import './Files.css';
-import { useState, useSyncExternalStore } from 'react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
 import { ChevronDown, ChevronUp, RotateCw, X } from 'lucide-react';
 import uploadQueue from '../../actions/uploadQueue';
 import fileSize from '../../lib/fileSize';
 
+// how long a tray of finished uploads stays up before it clears itself
+const LINGER = 6000;
 const STATUS = { queued: 'Waiting', uploading: 'Encrypting and uploading', done: 'Encrypted and uploaded', stopped: 'Stopped', failed: 'Failed' };
 
 // Every upload in this tab, with its progress, a way to stop it, and to try again when one fails.
 export default function UploadTray() {
   const jobs = useSyncExternalStore(uploadQueue.subscribe, uploadQueue.snapshot);
   const [folded, setFolded] = useState(false);
-  if (!jobs.length) return null;
   const going = jobs.filter((j) => j.status === 'queued' || j.status === 'uploading');
   const failed = jobs.filter((j) => j.status === 'failed').length;
+  const settled = jobs.length > 0 && !going.length && !failed;
+
+  useEffect(() => {
+    if (!settled) return;
+    const later = setTimeout(() => uploadQueue.clear(), LINGER);
+    return () => clearTimeout(later);
+  }, [settled, jobs]);
+
+  if (!jobs.length) return null;
   const title = going.length ? `Uploading ${going.length} ${going.length === 1 ? 'file' : 'files'}` : failed ? `${failed} ${failed === 1 ? 'upload' : 'uploads'} failed` : 'Uploads finished';
 
   return (

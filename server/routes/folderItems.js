@@ -47,12 +47,16 @@ function shown(id) {
   return toFolderItem(row, blobs);
 }
 
+// Each file added needs a blob of its own, and starting those is limited already; subfolders count
+// as content writes, like docs saved, so a script can't fill a folder with them.
+const newFolders = (req, res, next) => (req.body?.kind === 'file' ? next() : contentWrites(req, res, next));
+
 // Adds a file whose blob is already uploaded, or a subfolder. Its key is wrapped under the folder
 // key the browser had; if the folder has moved to a new key since, it's refused so nobody is left
 // with a file they can't open.
 router.post(
   '/folders/:id/items',
-  contentWrites,
+  newFolders,
   route((req) => {
     const b = req.body ?? {};
     const { folder } = folderAccess(req.params.id, req.user);

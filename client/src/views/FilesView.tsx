@@ -11,6 +11,8 @@ import useStore from '../state/useStore';
 import folders from '../actions/folders';
 import type FilesOverview from '../types/FilesOverview';
 
+const SETTLE = 400;
+
 // Files: shared folders encrypted end to end, at /files and /files/<folder>. It opens with the
 // same keys as Docs.
 export default function FilesView({ folderId }: { folderId?: string }) {
@@ -35,7 +37,10 @@ export default function FilesView({ folderId }: { folderId?: string }) {
   }, []);
 
   useEffect(() => {
-    if (unlocked && !guest) void refresh();
+    if (!unlocked || guest) return;
+    // the first load right away; a burst of changes after it, once
+    const soon = setTimeout(() => void refresh(), overview ? SETTLE : 0);
+    return () => clearTimeout(soon);
   }, [unlocked, guest, revision, keysRevision, refresh]);
 
   return (

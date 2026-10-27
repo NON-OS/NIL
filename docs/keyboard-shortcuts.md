@@ -24,6 +24,7 @@ Press `G`, then the second key, within about a second.
 | `G` `L` | All tasks |
 | `G` `C` | Calendar |
 | `G` `D` | Docs |
+| `G` `F` | Files |
 | `G` `G` | Goals |
 | `G` `S` | Insights |
 | `G` `M` | Time |
@@ -48,6 +49,20 @@ Press `G`, then the second key, within about a second.
 | `Space` | Pick up the card that has focus, or drop it |
 | Arrow keys | Move the card you picked up |
 | `Esc` | Put the card back where it was |
+
+## Files
+
+| Keys | What it does |
+|---|---|
+| Arrow keys, `Home`, `End` | Move between the files and folders in a folder |
+| `Enter` | Open the folder, or preview the file, that has focus |
+| `F2` | Rename it |
+| `Delete` or `⌘ Backspace` (Mac) | Delete it, after asking |
+| `Backspace` | Go up one folder |
+| `⌘V` (Mac) or `Ctrl+V` | Upload the files you copied |
+| Left and right arrows | In a preview, show the previous or next file |
+| `+`, `-` and `0` | In a preview, zoom an image or PDF in or out, or fit it again |
+| `Page Up`, `Page Down` | In a PDF preview, turn the page |
 
 ## Writing
 

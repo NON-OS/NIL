@@ -7,6 +7,8 @@ import type SharedFolder from '../types/SharedFolder';
 
 type Listing = { folder: SharedFolder; items: FolderItem[] };
 
+const SETTLE = 400;
+
 // A shared folder and everything in it, decrypted. Moving between its subfolders reuses what's
 // loaded; a change announced by the server, or a newly confirmed key, loads it again.
 export default function useFolderListing(folderId: string) {
@@ -37,8 +39,11 @@ export default function useFolderListing(folderId: string) {
     }
   }, [folderId, load]);
 
+  // a burst of changes, such as many files arriving at once, loads the folder once
   useEffect(() => {
-    if (loaded.current) void load();
+    if (!loaded.current) return;
+    const soon = setTimeout(() => void load(), SETTLE);
+    return () => clearTimeout(soon);
   }, [revision, keysRevision]);
 
   // shows a change made in this tab straight away, before the server's announcement brings it
