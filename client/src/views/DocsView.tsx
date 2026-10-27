@@ -14,6 +14,7 @@ import router from '../lib/router';
 import socket from '../realtime/socket';
 import cx from '../lib/cx';
 import type DocItem from '../types/DocItem';
+import type { DocTemplate } from '../lib/docState/docTemplates';
 
 // the editor is the heavy part, so the list shows while it loads
 const DocEditor = lazy(() => import('../components/docs/DocEditor'));
@@ -58,9 +59,9 @@ export default function DocsView() {
     return () => socket.viewing(null);
   }, [currentId]);
 
-  const create = async () => {
+  const create = async (template?: DocTemplate) => {
     try {
-      const doc = await docs.create({ title: '', audience: 'team' });
+      const doc = await docs.create({ title: template?.title ?? '', markdown: template?.markdown, audience: 'team' });
       await refresh();
       router.navigate(`/docs/${doc.id}`);
     } catch (err) {

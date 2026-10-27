@@ -16,6 +16,8 @@ const stateToJson = await load('lib/docState/stateToJson');
 const jsonText = await load('lib/docState/jsonText');
 const docBody = await load('lib/docState/docBody');
 const createLiveDoc = await load('actions/liveDoc/createLiveDoc');
+const newDocBody = await load('lib/docState/newDocBody');
+const docTemplates = await load('lib/docState/docTemplates');
 const liveDocs = await load('actions/liveDoc/liveDocs');
 
 const users = [{ id: 'v', name: 'Vic' }, { id: 'w', name: 'Wen' }];
@@ -91,6 +93,21 @@ test('Markdown from before Docs v2 converts the same in every tab, so it never s
   Y.applyUpdate(ydoc, b);
   assert.equal(words(ydoc).match(/stop the node/g).length, 1);
   assert.equal(ydoc.getText('title').toString(), 'Runbook');
+});
+
+test('every template opens as a real doc: headings, lists, tables and to-dos', () => {
+  for (const t of docTemplates) {
+    const { title, content } = stateToJson(docBody.decode(newDocBody(t.title, t.markdown)));
+    assert.equal(title, t.title);
+    const types = new Set();
+    const walk = (n) => (types.add(n.type), (n.content ?? []).forEach(walk));
+    walk(content);
+    assert.ok(types.has('heading'), t.id);
+    assert.ok(jsonText(content).length > 40, t.id);
+  }
+  const brief = stateToJson(docBody.decode(newDocBody('b', docTemplates.find((t) => t.id === 'brief').markdown))).content;
+  assert.match(JSON.stringify(brief), /"table"/);
+  assert.match(JSON.stringify(brief), /"taskItem"/);
 });
 
 test('two people typing in the title at once both keep their words', () => {

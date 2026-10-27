@@ -65,7 +65,7 @@ const docs = {
 
   // A team doc is sealed for everyone whose key this person has confirmed; the rest get it handed
   // over by a teammate's browser once confirmed there (see shareWithTeam).
-  async create({ title, body, audience, people = [] }: { title: string; body?: string; audience: Audience; people?: string[] }) {
+  async create({ title, body, markdown, audience, people = [] }: { title: string; body?: string; markdown?: string; audience: Audience; people?: string[] }) {
     const me = store.get().me!;
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const docKey = crypto.getRandomValues(new Uint8Array(32));
@@ -75,7 +75,7 @@ const docs = {
     const readers = grants.map((g) => g.userId);
     // a new doc starts as shared editing state, with its title in it
     const { default: newDocBody } = await import('../lib/docState/newDocBody');
-    const words = { title, body: body ?? newDocBody(title) };
+    const words = { title, body: body ?? newDocBody(title, markdown) };
     const res = await http.post<{ doc: EncryptedDoc }>('/docs', { id, audience, grants, ...(await sealed(docKey, id, 1, words, { audience, readers })) });
     keyring.rememberDocKey(id, docKey);
     return readDoc.decrypt(res.doc);
