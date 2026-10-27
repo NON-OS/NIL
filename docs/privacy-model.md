@@ -7,6 +7,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - Private tasks are shown only to their creator and their assignee. Admins don't see them.
 - Your timesheet, your reminders and your My Day list are yours alone.
 - Docs are shown only to the people they're shared with.
+- Conversations in [chat](chat.md) are shown only to the people in them. Guests and agents aren't part of chat.
 - Wallet addresses, last-seen times, private payout addresses and voting-key commitments are shown only to admins and to the person themselves. Teammates see the name each person picked. The one exception is the wallet that signed your encryption keys: members see its address next to your key fingerprint, so they can check the key. To show a different one, add another wallet to your keys, remove the wallet that signed, and unlock again: Nil then asks the wallet you're using to sign your keys.
 - Bounty payments are shown only to admins and to the person paid, because a transaction reveals the receiving wallet.
 - Guests see only the projects shared with them and the tasks assigned to them.
@@ -19,6 +20,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 Some things are encrypted in your browser with keys the server never has:
 
 - [encrypted docs](encrypted-docs.md), titles included,
+- [chat](chat.md) messages, reactions, files and their names, and channel names and topics,
 - the title, notes, checklist, comments and files of [private tasks](private-tasks.md), file names and types included,
 - the ballots of [encrypted weighted votes](votes.md#encrypted-weighted-votes-beta).
 
@@ -34,6 +36,8 @@ Everything else is stored in plain form in the server's database, where anyone w
 - for members who joined through the token-holder door, which account each wallet's NOX last counted for, kept until 3 days after it last counted, even once the wallet is unlinked,
 - bounty amounts and payment records,
 - signed votes, with each voter's wallet and choice.
+
+For a conversation, the server knows who is in it, who sent each message, reaction, edit or deletion and when, how large it is, which thread it's in, who the sender mentioned, how far each person has read, and each epoch's signed list of who holds the key. [Chat](chat.md#what-the-server-can-see) has the full list.
 
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when.
 

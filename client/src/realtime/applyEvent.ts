@@ -12,6 +12,7 @@ import recountArchive from '../actions/recountArchive';
 import isArchived from '../lib/isArchived';
 import agentActivity from '../actions/agentActivity';
 import liveDocs from '../actions/liveDoc/liveDocs';
+import chatEvents from '../actions/chat/chatEvents';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
@@ -156,6 +157,9 @@ export default function applyEvent(event: any): void {
       break;
     case 'agent.approval':
       agentActivity.putApproval(event.approval);
+      break;
+    case 'chat':
+      void chatEvents(event);
       break;
     case 'wiped':
       // the workspace was erased; reload into the fresh-install screen

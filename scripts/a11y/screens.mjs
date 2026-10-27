@@ -17,6 +17,28 @@ const unlockDocs = async (page) => {
   await page.locator('.doc-editor').waitFor();
 };
 
+// unlocks chat and opens a channel with a message in it, starting one the first time
+const openChat = async (page) => {
+  await page.getByRole('button', { name: 'Unlock with your wallet' }).click();
+  await page.locator('.chat, .empty').first().waitFor();
+  if (!(await page.locator('.chat-link').count())) {
+    await page.getByRole('button', { name: 'Start a channel' }).click();
+    await page.getByLabel('Name', { exact: true }).fill('launch');
+    await page.getByRole('button', { name: 'Create channel' }).click();
+    await page.locator('.chat-composer textarea').fill('The launch post is ready for review. https://example.com/post');
+    await page.keyboard.press('Enter');
+  } else await page.locator('.chat-link').first().click();
+  await page.locator('.msg').first().waitFor();
+};
+const newConversation = async (page) => {
+  await openChat(page);
+  // on a phone the conversation covers the list, so step back to it first
+  const back = page.getByRole('button', { name: 'All conversations' });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole('button', { name: 'New conversation' }).click();
+  await page.getByRole('dialog').waitFor();
+};
+
 // the network goes while the page is open, and the app is reloaded while it's gone
 const loseNetwork = async (page) => {
   await page.context().setOffline(true);
@@ -71,6 +93,9 @@ const signedIn = [
   { name: 'calendar', path: '/calendar' },
   { name: 'docs', path: '/docs' },
   { name: 'docs-open', path: '/docs', then: unlockDocs },
+  { name: 'chat', path: '/chat' },
+  { name: 'chat-open', path: '/chat', then: openChat },
+  { name: 'chat-new', path: '/chat', then: newConversation, after: closeDialog },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },

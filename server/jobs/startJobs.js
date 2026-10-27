@@ -14,6 +14,7 @@ import pruneAgentData from './pruneAgentData.js';
 import recordPoolPrice from './recordPoolPrice.js';
 import checkTransferFee from './checkTransferFee.js';
 import watchBilling from './watchBilling.js';
+import sweepChat from '../chat/sweepChat.js';
 
 // Starts every background job on its interval from config. Purge and optimize also run once
 // right away, so a server that restarts often still gets to them.
@@ -37,6 +38,8 @@ export default function startJobs() {
     { run: safeJob('transferFee', checkTransferFee, { signal }), every: config.jobs.transferFeeMs, now: true },
     // on its own timer, so a payments run that hangs on a slow node is noticed rather than waited on
     { run: safeJob('billingWatchdog', () => watchBilling(), { signal }), every: config.jobs.billingWatchdogMs },
+    // disappearing messages and chat files nobody posted
+    { run: safeJob('chatSweep', sweepChat, { signal }), every: config.chat.sweepMs },
   ];
   const timers = schedule.map(({ run, every, now }) => {
     if (now) run();

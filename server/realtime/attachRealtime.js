@@ -11,6 +11,7 @@ import docAwareness from './docAwareness.js';
 import logLimited from '../lib/logLimited.js';
 import buildId from '../lib/buildId.js';
 import config from '../config.js';
+import chatTyping from '../chat/chatTyping.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -51,6 +52,8 @@ function handleMessage(ws, raw) {
     hub.broadcast((viewer) => (canSeeTask(task, viewer) ? typing : null), { except: ws });
   } else if (msg?.type === 'doc-open' || msg?.type === 'doc-aware') {
     docAwareness(ws, client, msg);
+  } else if (msg?.type === 'chat.typing') {
+    chatTyping(client, msg);
   }
 }
 

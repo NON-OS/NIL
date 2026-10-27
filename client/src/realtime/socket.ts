@@ -84,6 +84,10 @@ const socket = {
   docAware(docId: string, ct: string) {
     send({ type: 'doc-aware', docId, ct });
   },
+
+  chatTyping(channelId: string, threadId: string | null) {
+    send({ type: 'chat.typing', channelId, threadId });
+  },
 };
 
 export default socket;
