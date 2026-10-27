@@ -109,6 +109,7 @@ function draft(channel: ChatChannel, type: ChatItem['type'], threadId: string | 
     sentAt: Date.now(),
     epoch: channel.epoch,
     type,
+    reaction: type === 'reaction',
     text: content.text ?? '',
     files: [],
     mentions: content.mentions ?? [],
@@ -122,7 +123,7 @@ function draft(channel: ChatChannel, type: ChatItem['type'], threadId: string | 
     stream: chatCounters.stream,
     n: 0,
     state: 'ok',
-    pending: 'queued',
+    pending: navigator.onLine ? 'sending' : 'queued',
   };
 }
 

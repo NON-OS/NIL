@@ -23,6 +23,7 @@ const shell = (row: ChatMessageRow, state: ChatItem['state']): ChatItem => ({
   sentAt: row.sentAt,
   epoch: row.epoch,
   type: row.deleted ? 'deleted' : row.kind,
+  reaction: row.kind === 'reaction',
   text: '',
   files: [],
   mentions: [],

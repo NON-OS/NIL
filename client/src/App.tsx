@@ -36,6 +36,7 @@ const GoalsView = lazy(() => import('./views/GoalsView'));
 const InsightsView = lazy(() => import('./views/InsightsView'));
 const SettingsView = lazy(() => import('./views/SettingsView'));
 const DocsView = lazy(() => import('./views/DocsView'));
+const ChatView = lazy(() => import('./views/ChatView'));
 const TimeView = lazy(() => import('./views/TimeView'));
 const VotesView = lazy(() => import('./views/VotesView'));
 const BountiesView = lazy(() => import('./views/BountiesView'));
@@ -90,6 +91,8 @@ function Screen({ segments }: { segments: string[] }) {
       return <SettingsView />;
     case 'docs':
       return <DocsView />;
+    case 'chat':
+      return <ChatView />;
     case 'time':
       return <TimeView />;
     case 'votes':

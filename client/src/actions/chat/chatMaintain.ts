@@ -41,14 +41,19 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const head = chain.rosters[chain.rosters.length - 1];
   if (chain.broken !== null || !head || !head.members.includes(me) || head.epoch !== channel.epoch) return false;
   const wanted = members ?? channel.members;
-  const sealable = await keyDirectory.sharable(wanted);
+  const due = channel.rotateAt !== null && Date.now() > channel.rotateAt;
+  const same = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id));
+  // nothing to do unless who should hold the key differs from who does, or the key is due
+  if (!members && !due && same(head.members, wanted) && same(head.members, channel.keyHolders)) return false;
+  // the cached directory is enough to decide; sealing looks again, fresh
+  const keys = await keyDirectory.load();
+  const sealable = new Set(wanted.filter((id) => keys.get(id)?.active && keys.get(id)?.state === 'confirmed'));
   const next = wanted.filter((id) => id === me || sealable.has(id));
   const manager = head.managers.includes(me);
   const removing = head.members.filter((id) => !wanted.includes(id));
   const adding = next.filter((id) => !head.members.includes(id));
   const stuck = head.members.some((id) => wanted.includes(id) && !next.includes(id));
   const keyless = head.members.some((id) => wanted.includes(id) && !channel.keyHolders.includes(id));
-  const due = channel.rotateAt !== null && Date.now() > channel.rotateAt;
   if (stuck || (!removing.length && !adding.length && !keyless && !due && !members)) return false;
   if ((removing.length || (members && channel.audience === 'people')) && !manager) throw new Error('Only whoever manages this conversation can change who is in it.');
   if (adding.length && !manager && channel.audience !== 'team') return false;

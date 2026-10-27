@@ -18,6 +18,7 @@ import useFocusTrap from '../../hooks/useFocusTrap';
 import useMediaQuery from '../../hooks/useMediaQuery';
 import media from '../../lib/media';
 import landmarks from '../../lib/landmarks';
+import useChatUnread from '../../hooks/useChatUnread';
 
 export default function Sidebar({ onNewProject }: { onNewProject: () => void }) {
   const { path } = useRoute();
@@ -32,6 +33,7 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
   const meId = useStore((s) => s.me?.id);
   const guest = useStore((s) => s.guest);
   const cryptoTools = useCryptoTools();
+  const chatUnread = useChatUnread();
   // on narrow screens the sidebar is a menu over the page: focus goes in and stays until it closes
   const folded = useMediaQuery(media.sidebarFolds);
   const menu = open && folded;
@@ -96,7 +98,17 @@ export default function Sidebar({ onNewProject }: { onNewProject: () => void }) 
               <a key={to} href={to} onClick={link(to)} aria-current={path === to || (to !== '/' && path.startsWith(`${to}/`)) ? 'page' : undefined}>
                 <Icon />
                 {label}
-                {to === '/inbox' && unread > 0 ? <span className="badge num">{unread > 99 ? '99+' : unread}</span> : <span className="nav-key" aria-hidden="true">G {key.toUpperCase()}</span>}
+                {to === '/inbox' && unread > 0 ? (
+                  <span className="badge num">{unread > 99 ? '99+' : unread}</span>
+                ) : to === '/chat' && chatUnread > 0 ? (
+                  <span className="badge num" aria-label={`${chatUnread} unread`}>
+                    {chatUnread > 99 ? '99+' : chatUnread}
+                  </span>
+                ) : (
+                  <span className="nav-key" aria-hidden="true">
+                    G {key.toUpperCase()}
+                  </span>
+                )}
               </a>
             ))}
           </div>

@@ -11,6 +11,8 @@ export default interface ChatItem {
   sentAt: number;
   epoch: number;
   type: 'message' | 'reaction' | 'deleted';
+  // a reaction, or a reaction taken back, as the server files it
+  reaction: boolean;
   text: string;
   files: ChatFile[];
   mentions: string[];

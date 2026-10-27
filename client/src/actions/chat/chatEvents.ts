@@ -13,11 +13,12 @@ const TYPING_MS = 4000;
 
 // Says so in the app when a message comes in somewhere else: a direct or group message, or a
 // mention. Only that it came and from whom; the words stay in the conversation.
-function tell(channelId: string, senderId: string | null) {
+function tell(channelId: string, senderId: string | null, mentioned: boolean) {
   const channel = chatState.get().channels[channelId];
-  const name = senderId ? store.get().users[senderId]?.name : null;
+  const name = (senderId ? store.get().users[senderId]?.name : null) ?? 'Someone';
   if (!channel) return;
-  toast.show(`${name ?? 'Someone'} wrote in ${chatTitle(channel)}`, { action: { label: 'Open', run: () => router.navigate(`/chat/${channelId}`) } });
+  const line = channel.kind === 'dm' ? `${name} sent you a message` : `${name} ${mentioned ? 'mentioned you in' : 'wrote in'} ${chatTitle(channel)}`;
+  toast.show(line, { action: { label: 'Open', run: () => router.navigate(`/chat/${channelId}`) } });
 }
 
 // Live changes to chat from the server, as `{ type: 'chat', channelId, kind, … }`.
@@ -39,7 +40,8 @@ export default async function chatEvents(event: any) {
       chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...now, seq: Math.max(now.seq, row.seq), lastAt: row.createdAt, unread } } }));
       if (fresh && watching) chatRead.mark(id, row.seq);
       const mentioned = me !== undefined && item.mentions.includes(me);
-      if (row.edits === 0 && row.kind === 'message' && row.senderId !== me && !watching && (channel.kind !== 'channel' || mentioned) && channel.notify !== 'none') tell(id, row.senderId);
+      const here = chatState.get().viewing === id;
+      if (row.edits === 0 && row.kind === 'message' && row.senderId !== me && !here && (channel.kind !== 'channel' || mentioned) && channel.notify !== 'none') tell(id, row.senderId, mentioned);
       return;
     }
     case 'typing': {

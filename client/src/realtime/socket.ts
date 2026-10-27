@@ -72,6 +72,10 @@ const socket = {
   typing(taskId: string) {
     send({ type: 'typing', taskId });
   },
+
+  chatTyping(channelId: string, threadId: string | null) {
+    send({ type: 'chat.typing', channelId, threadId });
+  },
 };
 
 export default socket;
