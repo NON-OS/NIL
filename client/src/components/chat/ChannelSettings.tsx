@@ -5,6 +5,7 @@ import Avatar from '../ui/Avatar';
 import ConfirmButton from '../ui/ConfirmButton';
 import PeoplePicker from './PeoplePicker';
 import DisappearSelect from './DisappearSelect';
+import ForwardSelect from './ForwardSelect';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import isAdmin from '../../lib/isAdmin';
@@ -34,7 +35,8 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
   const [adding, setAdding] = useState<string[]>([]);
   const [head, setHead] = useState<ChatRoster | null>(null);
   const manages = channel.kind === 'group' || (channel.kind === 'channel' && (channel.createdBy === me?.id || isAdmin(me)));
-  const every = channel.rotateAt && channel.epochAt ? Math.round((channel.rotateAt - channel.epochAt) / 86_400_000) : null;
+  const hours = channel.rotateAt && channel.epochAt ? Math.round((channel.rotateAt - channel.epochAt) / 3_600_000) : null;
+  const every = !hours ? null : hours % 24 ? `${hours} hours` : hours === 24 ? 'day' : `${hours / 24} days`;
   const peopleChange = manages && channel.audience === 'people' && channel.kind !== 'dm';
 
   useEffect(() => {
@@ -112,6 +114,7 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
         )}
 
         <DisappearSelect value={channel.disappearSeconds} disabled={!manages && channel.kind !== 'dm'} onChange={(s) => void run(() => chatChannels.disappear(channel, s))} />
+        <ForwardSelect value={channel.forwardDays} disabled={!manages && channel.kind !== 'dm'} onChange={(d) => void run(() => chatChannels.forward(channel, d))} />
 
         <label className="field">
           <span>Notify me about</span>
@@ -130,7 +133,7 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
           <small>
             <KeyRound size={12} /> Key {channel.epoch}
             {head ? `, started ${dates.ago(head.at)} by ${users[head.by]?.name ?? 'someone'}, sealed to ${head.members.length} ${head.members.length === 1 ? 'person' : 'people'}.` : '.'}{' '}
-            A new key starts when someone leaves{every ? `, and at least every ${every === 1 ? 'day' : `${every} days`}` : ''}.
+            A new key starts when someone joins or leaves{every ? `, and at least every ${every}` : ''}.
           </small>
           <div>
             <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show(channel.members.filter((id) => id !== me?.id), 'this conversation')}>

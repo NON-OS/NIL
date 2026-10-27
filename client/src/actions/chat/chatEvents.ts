@@ -6,6 +6,7 @@ import chatChannels from './chatChannels';
 import chatRosters from './chatRosters';
 import chatTimeline from './chatTimeline';
 import chatRead from './chatRead';
+import chatMarks from './chatMarks';
 import chatTitle from './chatTitle';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
@@ -46,9 +47,16 @@ export default async function chatEvents(event: any) {
     }
     case 'typing': {
       const until = Date.now() + TYPING_MS;
-      chatState.set((st) => ({ typing: { ...st.typing, [id]: { ...(st.typing[id] ?? {}), [event.userId]: until } } }));
+      const scope = typeof event.threadId === 'string' ? event.threadId : 'main';
+      chatState.set((st) => {
+        const here = st.typing[id] ?? {};
+        return { typing: { ...st.typing, [id]: { ...here, [scope]: { ...(here[scope] ?? {}), [event.userId]: until } } } };
+      });
       return;
     }
+    case 'mark':
+      if (channel && event.mark) await chatMarks.open(channel, event.mark).then(() => chatTimeline.recount(id));
+      return;
     case 'read':
       if (channel) chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...channel, readSeq: event.readSeq, unread: 0 } } }));
       return;

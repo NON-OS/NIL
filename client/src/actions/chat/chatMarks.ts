@@ -1,0 +1,76 @@
+import http from '../../api/http';
+import store from '../../state/store';
+import keyring from '../../state/keyring';
+import chatState from '../../state/chatState';
+import chatText from '../../lib/crypto/chatText';
+import chatMarkFacts, { type Scopes } from '../../lib/crypto/chatMarkFacts';
+import signedFacts from '../../lib/crypto/signedFacts';
+import keyHash from '../../lib/crypto/keyHash';
+import keyDirectory from '../keyDirectory';
+import chatKeys from './chatKeys';
+import chatRosters from './chatRosters';
+import type ChatChannelRow from '../../types/ChatChannelRow';
+
+type Row = { userId: string; stream: string; epoch: number; sentAt: number; bodyCt: string };
+
+const PUBLISH_MS = 1500;
+// channel id -> stream -> what this tab (or a queue it flushed) has sent there
+const mine = new Map<string, Map<string, Scopes>>();
+const timers = new Map<string, number>();
+
+const place = (channelId: string, epoch: number, stream: string, senderId: string, sentAt: number) => ({ workspaceKey: store.get().workspaceKey, channelId, epoch, message: { id: `mark.${stream}`, senderId, sentAt } });
+
+async function publish(channelId: string) {
+  const channel = chatState.get().channels[channelId];
+  const id = keyring.identity();
+  if (!channel || !id) return;
+  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch).catch(() => null);
+  if (!key) return;
+  const me = store.get().me!.id;
+  for (const [stream, scopes] of mine.get(channelId) ?? []) {
+    const sentAt = Date.now();
+    const at = place(channelId, channel.epoch, stream, me, sentAt);
+    const json = signedFacts.seal(JSON.stringify(scopes), { kind: chatMarkFacts.kind, place: [at.workspaceKey, channelId, channel.epoch, stream, me, sentAt], facts: chatMarkFacts.list(sentAt, keyHash(key)), by: me, signingPrivate: id.signingPrivate });
+    await http.put(`/chat/channels/${channelId}/marks/${stream}`, { epoch: channel.epoch, sentAt, bodyCt: await chatText.seal(key, at, json) }).catch(() => {});
+  }
+}
+
+// Each tab's high-water marks: after it sends, it publishes how far it has numbered its messages
+// in each timeline, signed and sealed. Readers open the marks of everyone in a conversation and
+// compare them with what the server delivered.
+const chatMarks = {
+  record(channelId: string, stream: string, scope: string, n: number, until: number | null) {
+    const byStream = mine.get(channelId) ?? new Map<string, Scopes>();
+    const scopes = byStream.get(stream) ?? {};
+    if ((scopes[scope]?.n ?? 0) < n) scopes[scope] = { n, until };
+    byStream.set(stream, scopes);
+    mine.set(channelId, byStream);
+    clearTimeout(timers.get(channelId));
+    timers.set(channelId, window.setTimeout(() => void publish(channelId), PUBLISH_MS));
+  },
+
+  // A mark that checks out: sealed under its epoch's checked key for exactly this place, signed
+  // by the member the server files it under, who is on that epoch's list.
+  async open(channel: ChatChannelRow, row: Row) {
+    try {
+      const chain = await chatRosters.load(channel);
+      const key = await chatKeys.get(channel, chain, row.epoch);
+      const roster = chatRosters.at(chain, row.epoch);
+      if (!key || !roster?.members.includes(row.userId)) return;
+      const at = place(channel.id, row.epoch, row.stream, row.userId, row.sentAt);
+      const { signed, facts } = signedFacts.open(await chatText.open(key, at, row.bodyCt));
+      const f = chatMarkFacts.parse(facts ?? []);
+      const statement = { kind: chatMarkFacts.kind, place: [at.workspaceKey, channel.id, row.epoch, row.stream, row.userId, row.sentAt], facts: chatMarkFacts.list(f.at, f.key) };
+      if (signed.by !== row.userId || f.key !== keyHash(key) || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) return;
+      const scopes = chatMarkFacts.scopes(signed.text);
+      chatState.set((s) => ({ marks: { ...s.marks, [channel.id]: { ...(s.marks[channel.id] ?? {}), [row.stream]: { senderId: row.userId, scopes } } } }));
+    } catch {}
+  },
+
+  async load(channel: ChatChannelRow) {
+    const { marks } = await http.get<{ marks: Row[] }>(`/chat/channels/${channel.id}/marks`).catch(() => ({ marks: [] as Row[] }));
+    await Promise.all(marks.map((m) => chatMarks.open(channel, m)));
+  },
+};
+
+export default chatMarks;

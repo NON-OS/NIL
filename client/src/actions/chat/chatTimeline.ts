@@ -3,6 +3,7 @@ import chatState from '../../state/chatState';
 import chatRosters from './chatRosters';
 import openMessage from './openMessage';
 import chatStreams from './chatStreams';
+import chatIndex from './chatIndex';
 import type ChatItem from '../../types/ChatItem';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 import type ChatMessageRow from '../../types/ChatMessageRow';
@@ -21,19 +22,29 @@ function merge(channelId: string, threadId: string | null, incoming: ChatItem[],
   const items = [...byId.values()].sort(order);
   chatState.putTimeline(key, { items, ...patch });
   if (threadId) return;
-  const more = patch.more ?? held.more;
-  chatState.set((s) => ({ notices: { ...s.notices, [channelId]: chatStreams(items, { fromStart: !more }) } }));
+  recount(channelId);
+}
+
+// Looks again at every sender's numbering in a conversation's main timeline, and their marks.
+function recount(channelId: string) {
+  const tl = chatState.timeline(channelId);
+  const marks = chatState.get().marks[channelId] ?? {};
+  chatState.set((s) => ({ notices: { ...s.notices, [channelId]: chatStreams(tl.items, { fromStart: !tl.more, marks }) } }));
 }
 
 async function open(channel: ChatChannelRow, rows: ChatMessageRow[]) {
   const chain = await chatRosters.load(channel);
-  return Promise.all(rows.map((row) => openMessage(row, channel, chain)));
+  const items = await Promise.all(rows.map((row) => openMessage(row, channel, chain)));
+  // whatever opens here is searchable later, from this device
+  chatIndex.note(items);
+  return items;
 }
 
 // A conversation's messages as this tab has them: the newest page first, older pages as the
 // list scrolls up, and live messages as they arrive. A thread is a timeline of its own.
 const chatTimeline = {
   keyOf,
+  recount,
 
   async latest(channel: ChatChannelRow, threadId: string | null = null) {
     const key = keyOf(channel.id, threadId);
@@ -41,6 +52,7 @@ const chatTimeline = {
     try {
       const res = await http.get<{ messages: ChatMessageRow[]; more: boolean }>(`/chat/channels/${channel.id}/messages${threadId ? `?thread=${threadId}` : ''}`);
       merge(channel.id, threadId, await open(channel, res.messages), { more: res.more });
+      chatState.putTimeline(key, { fetched: true });
     } catch (err) {
       chatState.putTimeline(key, { error: err instanceof Error ? err.message : 'Couldn’t load messages.' });
     } finally {

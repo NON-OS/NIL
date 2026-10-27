@@ -13,6 +13,7 @@ import chatTimeline from '../../actions/chat/chatTimeline';
 import chatChannels from '../../actions/chat/chatChannels';
 import chatRosters, { type Chain } from '../../actions/chat/chatRosters';
 import chatRead from '../../actions/chat/chatRead';
+import chatMarks from '../../actions/chat/chatMarks';
 import chatTitle from '../../actions/chat/chatTitle';
 import disappearLabel from '../../lib/disappearLabel';
 import rosterEvents from '../../lib/rosterEvents';
@@ -40,7 +41,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
 
   useEffect(() => {
     chatState.set({ viewing: channel.id });
-    if (!chatState.get().timelines[channel.id]) void chatTimeline.latest(channel);
+    if (!chatState.get().timelines[channel.id]?.fetched) void chatTimeline.latest(channel).then(() => chatMarks.load(channel)).then(() => chatTimeline.recount(channel.id));
     composer.current?.focus();
     return () => chatState.set({ viewing: null });
   }, [channel.id]);

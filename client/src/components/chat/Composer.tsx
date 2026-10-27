@@ -40,7 +40,8 @@ function mentionAt(text: string, caret: number) {
 const Composer = forwardRef<ComposerHandle, Props>(function Composer({ channel, threadId, placeholder, blocked, onEditLast }, handle) {
   const users = useStore((s) => s.users);
   const me = useStore((s) => s.me?.id);
-  const typing = useChat((s) => s.typing[channel.id]);
+  // typing hints are per timeline: the conversation, or one thread in it
+  const typing = useChat((s) => s.typing[channel.id]?.[threadId ?? 'main']);
   const [text, setText] = useState('');
   const [files, setFiles] = useState<File[]>([]);
   const [mention, setMention] = useState<{ start: number; query: string; active: number } | null>(null);
@@ -75,7 +76,13 @@ const Composer = forwardRef<ComposerHandle, Props>(function Composer({ channel, 
     if ((!words && !files.length) || blocked) return;
     if (words.length > chatContent.limits.text) return toast.show('That message is too long. Split it in two.', { tone: 'error' });
     const mentions = people.filter((u) => words.includes(`@${u.name}`)).map((u) => u.id);
-    chatSend.message(channel, { text: words, files, threadId, mentions });
+    const kept = { text, files };
+    chatSend.message(channel, { text: words, files, threadId, mentions }).catch((err) => {
+      // nothing was sealed: the words come back to the box
+      setText(kept.text);
+      setFiles(kept.files);
+      toast.error(err);
+    });
     setText('');
     setFiles([]);
     setMention(null);

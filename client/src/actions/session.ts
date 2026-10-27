@@ -10,6 +10,7 @@ import toast from '../state/toast';
 import keyScope from '../state/keyScope';
 import keyPins from '../state/keyPins';
 import router from '../lib/router';
+import chatDisk from '../lib/chatDisk';
 import socket from '../realtime/socket';
 import type User from '../types/User';
 import type Workspace from '../types/Workspace';
@@ -134,6 +135,8 @@ function signedOut(message?: string) {
   keyScope.reset();
   // a phone wallet goes with the sign-in: the phone is told, and its keys are forgotten here
   void phoneWallet.end();
+  // chat's queue and search index on this device, encrypted as they are, go with the session
+  void chatDisk.clear('');
   pinsChecked = false;
   // a count never used before, so the key directory isn't served from this account's pins
   store.reset({ phase: 'auth', keysRev: store.get().keysRev + 1 });

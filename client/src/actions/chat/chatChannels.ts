@@ -13,6 +13,7 @@ import chatMaintain from './chatMaintain';
 import startEpoch from './startEpoch';
 import openChannel from './openChannel';
 import departures from './departures';
+import chatIndex from './chatIndex';
 import type ChatChannel from '../../types/ChatChannel';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
@@ -22,6 +23,13 @@ type Kind = ChatChannelRow['kind'];
 const teammates = () => Object.values(store.get().users).filter((u) => !u.deactivated && u.kind === 'human' && u.role !== 'guest').map((u) => u.id);
 
 function put(channel: ChatChannel) {
+  // a forward-secret conversation's old keys, and what they opened, go from this tab as well
+  if (channel.purgedEpoch) {
+    chatKeyring.forgetUpTo(channel.id, channel.purgedEpoch);
+    for (const [key, tl] of Object.entries(chatState.get().timelines)) {
+      if (tl.items.some((m) => m.channelId === channel.id && m.seq && m.epoch <= channel.purgedEpoch)) chatState.putTimeline(key, { items: tl.items.filter((m) => m.channelId !== channel.id || !m.seq || m.epoch > channel.purgedEpoch) });
+    }
+  }
   chatState.set((s) => ({ channels: { ...s.channels, [channel.id]: channel } }));
   return channel;
 }
@@ -64,6 +72,7 @@ const chatChannels = {
 
   drop(id: string) {
     chatKeyring.forget(id);
+    void chatIndex.forget(id);
     chatRosters.forget(id);
     chatState.set((s) => {
       const { [id]: gone, ...channels } = s.channels;

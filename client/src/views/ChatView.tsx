@@ -19,6 +19,7 @@ import useRoute from '../hooks/useRoute';
 import router from '../lib/router';
 import cx from '../lib/cx';
 import chatChannels from '../actions/chat/chatChannels';
+import chatSend from '../actions/chat/chatSend';
 
 // Team chat: conversations on the left, the one you're in, and a thread beside it. Ctrl+K (⌘K)
 // jumps between conversations, and Alt+↑/↓ steps through them (with Shift, only unread ones).
@@ -35,9 +36,9 @@ export default function ChatView() {
   const [making, setMaking] = useState<'channel' | 'dm' | null>(null);
   const [settings, setSettings] = useState(false);
 
-  // names and keys open once the keys do
+  // names and keys open once the keys do, and messages waiting on this device go out
   useEffect(() => {
-    if (unlocked) void chatChannels.load();
+    if (unlocked) void chatChannels.load().then(() => chatSend.restore());
   }, [unlocked]);
 
   // a conversation named in the address that isn't listed yet may have just been made
