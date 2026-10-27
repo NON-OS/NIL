@@ -10,7 +10,6 @@ import rateLimit from '../auth/rateLimit.js';
 import chatId from '../chat/chatId.js';
 import chatPeople from '../chat/chatPeople.js';
 import channelAccess from '../chat/channelAccess.js';
-import channelMembers from '../chat/channelMembers.js';
 import canManage from '../chat/canManage.js';
 import memberList from '../chat/memberList.js';
 import parseRoster from '../chat/parseRoster.js';
@@ -18,20 +17,13 @@ import takeGrants from '../chat/takeGrants.js';
 import disappearAfter from '../chat/disappearAfter.js';
 import toChannel from '../chat/toChannel.js';
 import announceChat from '../chat/announceChat.js';
-import dropChatFiles from '../chat/dropChatFiles.js';
+import eraseChannel from '../chat/eraseChannel.js';
 import hub from '../realtime/hub.js';
 
 const router = express.Router();
 const META_CHARS = 8000;
 
 const channelsPerHour = rateLimit({ windowMs: units.HOUR, max: config.chat.channelsPerHour, key: (req) => req.user.id, message: 'You’ve started a lot of conversations in the last hour. Wait a while and try again.' });
-
-function eraseChannel(channel) {
-  sql.tx(() => {
-    dropChatFiles('channel_id = ?', channel.id);
-    sql.run('DELETE FROM chat_channels WHERE id = ?', channel.id);
-  });
-}
 
 // Every conversation you're in, newest first.
 router.get(
@@ -86,8 +78,8 @@ router.get(
   route((req) => ({ channel: toChannel(channelAccess(req.params.id, req.user), req.user) })),
 );
 
-// A new name or topic, sealed under the current epoch's key and signed in the browser, or a new
-// disappearing-messages setting. Either is for whoever manages the channel; in a direct message
+// A new name or topic, sealed under the current epoch's key and signed in the browser, a new
+// disappearing-messages setting, or how many days a forward-secret conversation keeps old keys. Either is for whoever manages the channel; in a direct message
 // both people can set how long messages stay.
 router.patch(
   '/chat/channels/:id',
@@ -104,6 +96,11 @@ router.patch(
       if (!manages && channel.kind !== 'dm') throw HttpError.forbidden('Only whoever manages this conversation can change how long messages stay.');
       sql.run('UPDATE chat_channels SET disappear_seconds = ? WHERE id = ?', disappearAfter(b.disappearSeconds), channel.id);
     }
+    if (b.forwardDays !== undefined) {
+      if (!manages && channel.kind !== 'dm') throw HttpError.forbidden('Only whoever manages this conversation can change how long its old keys are kept.');
+      const days = b.forwardDays === null ? null : check.number(b.forwardDays, 'Days', { min: 1, max: config.chat.maxForwardDays, integer: true });
+      sql.run('UPDATE chat_channels SET forward_days = ? WHERE id = ?', days, channel.id);
+    }
     announceChat(channel, { kind: 'channel' });
     return { channel: toChannel(sql.get('SELECT * FROM chat_channels WHERE id = ?', channel.id), req.user) };
   }),
@@ -116,21 +113,6 @@ router.delete(
     if (channel.kind !== 'channel' || !canManage(channel, req.user)) throw HttpError.forbidden('Only the channel’s creator or an admin can delete it.');
     announceChat(channel, { kind: 'gone' });
     eraseChannel(channel);
-    return { ok: true };
-  }),
-);
-
-// Leaving a channel or group. The people who stay get a new key the next time a browser that
-// manages it opens the conversation; until then the server stops sending you anything from it.
-router.post(
-  '/chat/channels/:id/leave',
-  route((req) => {
-    const channel = channelAccess(req.params.id, req.user);
-    if (channel.audience === 'team' || channel.kind === 'dm') throw HttpError.badRequest('You can mute this conversation, but not leave it.');
-    sql.run('DELETE FROM chat_members WHERE channel_id = ? AND user_id = ?', channel.id, req.user.id);
-    sql.run('DELETE FROM chat_reads WHERE channel_id = ? AND user_id = ?', channel.id, req.user.id);
-    if (!channelMembers(channel).length) eraseChannel(channel);
-    else announceChat(channel, { kind: 'members' }, { also: [req.user.id] });
     return { ok: true };
   }),
 );

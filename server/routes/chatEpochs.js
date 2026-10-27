@@ -3,38 +3,58 @@ import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
 import HttpError from '../lib/HttpError.js';
+import parseJSON from '../lib/parseJSON.js';
 import channelAccess from '../chat/channelAccess.js';
 import channelMembers from '../chat/channelMembers.js';
 import canManage from '../chat/canManage.js';
 import memberList from '../chat/memberList.js';
 import parseRoster from '../chat/parseRoster.js';
 import takeGrants from '../chat/takeGrants.js';
+import departures from '../chat/departures.js';
+import wrapsFor from '../chat/wrapsFor.js';
 import announceChat from '../chat/announceChat.js';
 import hub from '../realtime/hub.js';
 
 const router = express.Router();
+const MAX_PROOFS = 500;
 
 const holders = (channelId, epoch) => sql.all('SELECT user_id FROM chat_epoch_keys WHERE channel_id = ? AND epoch = ?', channelId, epoch).map((r) => r.user_id);
 
-// Every epoch's signed member list from `from` on, with your own sealed copy of each key you
-// were given. Browsers check the chain of lists from the first epoch, so they're all here.
+// The signed departures a new epoch cites for the people it leaves out. Each has to be one the
+// server holds for someone leaving out of this conversation; browsers check the signatures.
+function proofsFor(channel, dropped, raw) {
+  if (raw === undefined) raw = [];
+  if (!Array.isArray(raw) || raw.length > MAX_PROOFS || !raw.every((p) => typeof p === 'string' && p.length <= 4096)) throw HttpError.badRequest('Those departures aren’t ones Nil can read.');
+  const known = new Map(departures(channel).map((d) => [d.userId, d.statement]));
+  for (const id of dropped) if (!known.get(id) || !raw.includes(known.get(id))) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key without their signed leaving.');
+  return raw;
+}
+
+// Every epoch's signed member list from `from` on, the departures it cites, and your own sealed
+// copies of each key you were given. Browsers check the chain of lists from the first epoch.
 router.get(
   '/chat/channels/:id/epochs',
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const from = check.number(req.query.from, 'From', { min: 1, integer: true }) ?? 1;
-    const rows = sql.all(
-      'SELECT e.epoch, e.roster, e.created_by, e.created_at, k.wrapped_key FROM chat_epochs e LEFT JOIN chat_epoch_keys k ON k.channel_id = e.channel_id AND k.epoch = e.epoch AND k.user_id = ? WHERE e.channel_id = ? AND e.epoch >= ? ORDER BY e.epoch LIMIT 1000',
-      req.user.id, channel.id, from,
-    );
-    return { epochs: rows.map((r) => ({ epoch: r.epoch, roster: r.roster, createdBy: r.created_by, createdAt: r.created_at, wrappedKey: r.wrapped_key })) };
+    const rows = sql.all('SELECT epoch, roster, proofs, created_by, created_at FROM chat_epochs WHERE channel_id = ? AND epoch >= ? ORDER BY epoch LIMIT 1000', channel.id, from);
+    return {
+      epochs: rows.map((r) => ({
+        epoch: r.epoch,
+        roster: r.roster,
+        proofs: parseJSON(r.proofs, []),
+        createdBy: r.created_by,
+        createdAt: r.created_at,
+        wrappedKeys: r.epoch > channel.purged_epoch ? wrapsFor(channel.id, r.epoch, req.user.id) : [],
+      })),
+    };
   }),
 );
 
 // Starts the next epoch: a fresh key sealed to everyone on the signed member list. It's how
 // people join and leave. Anyone in the conversation may start one for the same people (the
-// schedule) or, in a team channel, to bring in a teammate; changing who is in it otherwise, or
-// leaving out anyone who holds the current key, is for whoever manages it.
+// schedule), bring a teammate into a team channel, or leave out someone who left, citing their
+// signed departure. Changing who is in it otherwise is for whoever manages it.
 router.post(
   '/chat/channels/:id/epochs',
   route((req) => {
@@ -48,11 +68,14 @@ router.post(
     const changed = after.length !== before.length || after.some((id) => !before.includes(id));
     if (changed && (channel.kind === 'dm' || !manages)) throw HttpError.forbidden('Only whoever manages this conversation can change who is in it.');
     if (!roster.members.every((id) => after.includes(id))) throw HttpError.badRequest('The member list names someone who isn’t in this conversation.');
-    const dropped = holders(channel.id, channel.epoch).filter((id) => after.includes(id) && !roster.members.includes(id));
-    if (dropped.length && !manages) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key.');
+    const current = holders(channel.id, channel.epoch);
+    const kept = current.filter((id) => after.includes(id) && !roster.members.includes(id));
+    if (kept.length && !manages) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key.');
+    const gone = current.filter((id) => !after.includes(id));
+    const proofs = manages ? proofsFor(channel, [], b.proofs) : proofsFor(channel, gone, b.proofs);
     const now = Date.now();
     sql.tx(() => {
-      sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, created_by, created_at) VALUES (?, ?, ?, ?, ?)', channel.id, b.epoch, b.roster, req.user.id, now);
+      sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, proofs, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', channel.id, b.epoch, b.roster, proofs.length ? JSON.stringify(proofs) : null, req.user.id, now);
       sql.run('UPDATE chat_channels SET epoch = ?, epoch_at = ? WHERE id = ?', b.epoch, now, channel.id);
       if (channel.audience === 'people' && changed) {
         for (const id of before.filter((m) => !after.includes(m))) {
@@ -70,13 +93,14 @@ router.post(
 
 // Earlier epochs' keys, for someone who joined after them, so they can read back. Only someone
 // who holds that epoch's key can have sealed it, and only to people in the conversation now.
+// Keys a forward-secret conversation has let go of can't come back.
 router.post(
   '/chat/channels/:id/grants',
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
-    const epoch = check.number(req.body?.epoch, 'Epoch', { min: 1, max: channel.epoch, integer: true });
-    if (!epoch || !holders(channel.id, epoch).includes(req.user.id)) throw HttpError.forbidden('You don’t hold that key.');
-    const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel) });
+    const epoch = check.number(req.body?.epoch, 'Epoch', { min: channel.purged_epoch + 1, max: channel.epoch, integer: true });
+    if (!epoch || !wrapsFor(channel.id, epoch, req.user.id).length) throw HttpError.forbidden('You don’t hold that key.');
+    const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel), history: true });
     for (const userId of given) hub.toUser(userId, { type: 'chat', channelId: channel.id, kind: 'keys' });
     return { ok: true };
   }),

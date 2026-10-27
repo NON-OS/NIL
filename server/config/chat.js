@@ -2,10 +2,14 @@ import envNumber from '../lib/envNumber.js';
 import units from './units.js';
 
 // Team chat. Each channel's messages are encrypted under an epoch key that its members' browsers
-// replace when someone leaves and, at the latest, every CHAT_EPOCH_DAYS days, so a key that leaks
-// opens only a stretch of a channel. The rest are caps on what one request or one person may send.
+// replace when someone joins or leaves and, at the latest, every CHAT_EPOCH_HOURS, so a key that
+// leaks opens only a stretch of a channel. The rest are caps on what one request or one person may send.
 export default Object.freeze({
-  epochMs: envNumber('CHAT_EPOCH_DAYS', 7, { min: 1, max: 365 }) * 24 * units.HOUR,
+  epochMs: envNumber('CHAT_EPOCH_HOURS', 24, { min: 1, max: 24 * 365 }) * units.HOUR,
+  // a forward-secret conversation keeps its old keys at least a day and at most this many days
+  maxForwardDays: envNumber('CHAT_MAX_FORWARD_DAYS', 365, { min: 1 }),
+  // marks of tabs that have sent nothing in this long are dropped
+  markDays: envNumber('CHAT_MARK_DAYS', 90, { min: 1 }),
   // one encrypted message, signature and file keys included
   messageChars: envNumber('CHAT_MESSAGE_KB', 64, { min: 4, max: 1024 }) * 1024,
   messagesPerMinute: envNumber('CHAT_MESSAGES_PER_MINUTE', 120, { min: 1 }),

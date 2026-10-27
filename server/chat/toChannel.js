@@ -1,8 +1,8 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
 import channelMembers from './channelMembers.js';
-
-const keyOf = (channel, epoch, userId) => (epoch ? sql.get('SELECT wrapped_key FROM chat_epoch_keys WHERE channel_id = ? AND epoch = ? AND user_id = ?', channel.id, epoch, userId)?.wrapped_key ?? null : null);
+import departures from './departures.js';
+import wrapsFor from './wrapsFor.js';
 
 // A channel as one member sees it: the ciphertext of its name and topic, who is in it and who
 // holds the current key, their own sealed copies of the keys the name and the newest messages
@@ -30,8 +30,11 @@ export default function toChannel(channel, viewer) {
     disappearSeconds: channel.disappear_seconds,
     members: channelMembers(channel),
     keyHolders: sql.all('SELECT user_id FROM chat_epoch_keys WHERE channel_id = ? AND epoch = ? ORDER BY user_id', channel.id, channel.epoch).map((r) => r.user_id),
-    wrappedKey: keyOf(channel, channel.epoch, viewer.id),
-    metaKey: channel.meta_epoch === channel.epoch ? null : keyOf(channel, channel.meta_epoch, viewer.id),
+    wrappedKeys: wrapsFor(channel.id, channel.epoch, viewer.id),
+    metaKeys: channel.meta_epoch === channel.epoch ? [] : wrapsFor(channel.id, channel.meta_epoch, viewer.id),
+    departures: departures(channel),
+    forwardDays: channel.forward_days,
+    purgedEpoch: channel.purged_epoch,
     readSeq,
     unread,
     notify: read?.notify ?? 'default',

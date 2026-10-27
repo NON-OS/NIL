@@ -77,10 +77,13 @@ router.post(
     if (!Number.isSafeInteger(b.sentAt) || Math.abs(b.sentAt - now) > config.chat.clockSkewMs) throw HttpError.badRequest('This device’s clock is off. Set it right and try again.');
     if ((b.ttl ?? null) !== channel.disappear_seconds) throw new HttpError(409, 'How long messages stay in this conversation just changed. Try again.');
     const bodyCt = cipherText(b.bodyCt, 'Message', { max: config.chat.messageChars });
+    // a tombstone from the start: a message its sender gave up on after numbering it, which keeps
+    // their count whole for everyone reading
+    const tombstone = b.deleted === true;
     const threadId = b.threadId === undefined || b.threadId === null ? null : chatId(b.threadId, 'Thread');
-    if (threadId && !sql.get("SELECT 1 FROM chat_messages WHERE id = ? AND channel_id = ? AND thread_id IS NULL AND kind = 'message' AND deleted = 0", threadId, channel.id)) throw HttpError.badRequest('That thread no longer exists.');
+    if (threadId && !sql.get(`SELECT 1 FROM chat_messages WHERE id = ? AND channel_id = ? AND thread_id IS NULL AND kind = 'message'${tombstone ? '' : ' AND deleted = 0'}`, threadId, channel.id)) throw HttpError.badRequest('That thread no longer exists.');
     const files = idList(b.files, MAX_FILES, 'files');
-    if (files.length && kind !== 'message') throw HttpError.badRequest('Only a message can carry files.');
+    if (files.length && (kind !== 'message' || tombstone)) throw HttpError.badRequest('Only a message can carry files.');
     for (const f of files) if (!sql.get('SELECT 1 FROM chat_files WHERE id = ? AND channel_id = ? AND uploader_id = ? AND message_id IS NULL', f, channel.id, me)) throw HttpError.badRequest('One of those files isn’t ready to send.');
     const members = channelMembers(channel);
     const pinged = new Set(idList(b.ping, MAX_PINGS, 'mentions').filter((u) => members.includes(u)));
@@ -90,16 +93,16 @@ router.post(
     sql.tx(() => {
       const seq = sql.get('SELECT seq FROM chat_channels WHERE id = ?', channel.id).seq + 1;
       sql.run(
-        'INSERT INTO chat_messages (id, channel_id, seq, thread_id, kind, sender_id, epoch, sent_at, body_ct, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        id, channel.id, seq, threadId, kind, me, b.epoch, b.sentAt, bodyCt, now, now, expiresAt,
+        'INSERT INTO chat_messages (id, channel_id, seq, thread_id, kind, sender_id, epoch, sent_at, body_ct, deleted, created_at, updated_at, expires_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, channel.id, seq, threadId, kind, me, b.epoch, b.sentAt, bodyCt, tombstone ? 1 : 0, now, now, expiresAt,
       );
       sql.run('UPDATE chat_channels SET seq = ?, last_at = ? WHERE id = ?', seq, now, channel.id);
-      if (threadId && kind === 'message') sql.run('UPDATE chat_messages SET replies = replies + 1, last_reply_at = ? WHERE id = ?', now, threadId);
+      if (threadId && kind === 'message' && !tombstone) sql.run('UPDATE chat_messages SET replies = replies + 1, last_reply_at = ? WHERE id = ?', now, threadId);
       for (const f of files) sql.run('UPDATE chat_files SET message_id = ? WHERE id = ?', id, f);
       row = sql.get('SELECT * FROM chat_messages WHERE id = ?', id);
-      announceChat(channel, { kind: 'message', message: toChatMessage(row), ...(threadId && kind === 'message' ? { root: toChatMessage(sql.get('SELECT * FROM chat_messages WHERE id = ?', threadId)) } : {}) });
+      announceChat(channel, { kind: 'message', message: toChatMessage(row), ...(threadId && kind === 'message' && !tombstone ? { root: toChatMessage(sql.get('SELECT * FROM chat_messages WHERE id = ?', threadId)) } : {}) });
     });
-    if (kind === 'message') chatPush(channel, me, members, pinged);
+    if (kind === 'message' && !tombstone) chatPush(channel, me, members, pinged);
     return { message: toChatMessage(row) };
   }),
 );

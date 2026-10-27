@@ -136,7 +136,7 @@ test('epochs: a member may start a new key for the same people; changing who is 
   assert.equal((await other('GET', `/api/chat/channels/${channel.id}`)).status, 404);
   const epochs = (await member('GET', url)).data.epochs;
   assert.deepEqual(epochs.map((e) => e.epoch), [1, 2, 3]);
-  assert.ok(epochs.every((e) => e.wrappedKey));
+  assert.ok(epochs.every((e) => e.wrappedKeys.length === 1));
   // history keys go only to people in the conversation now, from someone who holds them
   const grant = { epoch: 1, grants: [{ userId: ids.other, wrappedKey: 'C'.repeat(123) }] };
   assert.equal((await member('POST', `/api/chat/channels/${channel.id}/grants`, grant)).status, 400);
@@ -166,7 +166,8 @@ test('a team channel includes every member and nobody leaves it; a group can be 
   assert.equal((await member('POST', `/api/chat/channels/${team.data.channel.id}/leave`)).status, 400);
   assert.equal((await member('DELETE', `/api/chat/channels/${team.data.channel.id}`)).status, 403);
   const group = (await chat.makeChannel(member, ids.member, { kind: 'group', members: [ids.member, ids.other, ids.owner], keyed: [ids.member, ids.other] })).data.channel;
-  assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`)).status, 200);
+  assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`)).status, 400, 'leaving needs a signed statement');
+  assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`, { statement: chat.statement(ids.other) })).status, 200);
   assert.deepEqual((await member('GET', `/api/chat/channels/${group.id}`)).data.channel.members, [ids.member, ids.owner].sort());
   assert.equal((await owner('DELETE', `/api/chat/channels/${team.data.channel.id}`)).status, 200);
 });

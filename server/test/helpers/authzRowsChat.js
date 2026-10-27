@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import actors from './authzActors.js';
 import chat from './chatChannel.js';
 
-const { MEMBERS } = actors;
+const { MEMBERS, ADMINS } = actors;
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 const channelOf = async ({ world, t }) => (await world.people.member('GET', `/api/chat/channels/${t.chat}`)).data.channel;
 const epochOf = async (ctx) => (await channelOf(ctx)).epoch;
@@ -17,7 +17,16 @@ export default {
   // the member made it; workspace admins manage channels too
   'PATCH /api/chat/channels/:id': { allow: MEMBERS, id: 'chat', body: { disappearSeconds: 3600 } },
   'DELETE /api/chat/channels/:id': { allow: MEMBERS, id: 'fresh.chat' },
-  'POST /api/chat/channels/:id/leave': { allow: MEMBERS, id: 'fresh.chat' },
+  'POST /api/chat/channels/:id/leave': { allow: MEMBERS, id: 'fresh.chat', body: ({ world }, actor) => ({ statement: chat.statement(world.ids[actor] ?? 'nobody') }) },
+  // an admin's signed word that someone removed from the team left every conversation
+  'POST /api/chat/removals': { allow: ADMINS, body: ({ world }, actor) => ({ userId: world.ids.outsider, statement: chat.statement(world.ids[actor] ?? 'nobody', world.ids.outsider) }) },
+  'GET /api/chat/channels/:id/marks': { allow: MEMBERS, id: 'chat' },
+  'PUT /api/chat/channels/:id/marks/:stream': {
+    allow: MEMBERS,
+    id: 'chat',
+    stream: () => blob(12),
+    body: async (ctx) => ({ epoch: await epochOf(ctx), sentAt: Date.now(), bodyCt: blob(100) }),
+  },
   'PUT /api/chat/channels/:id/read': { allow: MEMBERS, id: 'chat', body: { seq: 0 } },
   'PUT /api/chat/channels/:id/notify': { allow: MEMBERS, id: 'chat', body: { notify: 'all' } },
   'GET /api/chat/channels/:id/epochs': { allow: MEMBERS, id: 'chat' },

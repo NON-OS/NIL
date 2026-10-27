@@ -18,6 +18,9 @@ async function makeChannel(call, me, { kind = 'channel', audience = 'people', me
 }
 
 // A message as a browser sends one: ciphertext under the current epoch, with the time now.
+// A signed statement shaped the way a browser makes one (a leaving, or a removal from the team).
+const statement = (by, text = '') => JSON.stringify({ by, text, sig: blob(64), v: 2, facts: [Date.now()] });
+
 const message = (epoch, extra = {}) => ({ id: chatId(), kind: 'message', epoch, sentAt: Date.now(), bodyCt: blob(200), ttl: null, ...extra });
 
-export default { chatId, roster, makeChannel, message };
+export default { chatId, roster, makeChannel, message, statement };
