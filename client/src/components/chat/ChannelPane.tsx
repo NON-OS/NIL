@@ -5,6 +5,7 @@ import MessageList from './MessageList';
 import Composer, { type ComposerHandle } from './Composer';
 import ChatNotices from './ChatNotices';
 import KeyNotice from '../keys/KeyNotice';
+import ChatCallButton from '../calls/ChatCallButton';
 import useChat from '../../state/useChat';
 import useStore from '../../state/useStore';
 import chatState from '../../state/chatState';
@@ -84,6 +85,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
               <Users /> {channel.members.length}
             </span>
           )}
+          <ChatCallButton channel={channel} />
           <button
             type="button"
             className="icon-btn"

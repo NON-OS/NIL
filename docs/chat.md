@@ -88,6 +88,10 @@ In a conversation's settings, whoever manages it can make new messages disappear
 
 A disappearing message is gone from the server and from every browser showing it, but anyone could have copied it, or taken a screenshot, before then.
 
+## Call from a conversation
+
+The phone button at the top of a conversation calls everyone in it, and the camera button starts a video call. They show when [calls](calls.md) are set up on your server and the conversation is small enough for one call.
+
 ## Manage a conversation
 
 The sliders button at the top right opens its settings. A channel is managed by whoever made it and by the workspace's admins; everyone in a group manages it together. There they can rename it, change the topic, add people and take people out.

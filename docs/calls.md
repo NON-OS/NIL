@@ -8,6 +8,8 @@ Calls are for members. Guests don't get them.
 
 Open **Calls** in the sidebar. Everyone on the team is listed with a **Call** button for sound only and a **Video** button. Click one and Nil rings them: in Nil, on every tab they have open, and on their phone if they turned on notifications. The notification says "Incoming call" and nothing else, so a locked phone doesn't show who is calling.
 
+From a [chat](chat.md) conversation, the phone and camera buttons at the top call everyone in it, as long as the conversation is small enough for a call.
+
 To talk with the people on a project, open the project and click the phone button at the top. That starts a call anyone on the team can join, and doesn't ring anyone. While it's going on, the button says **Join call** with the number of people in it, for everyone who opens the project.
 
 Each call holds up to six people unless whoever runs your server set another number. **Add someone** in a call rings one more person.
