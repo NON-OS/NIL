@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import wallet from './wallet.js';
 import client from './client.js';
 import passkeyBody from './passkeyBody.js';
+import authzFilesTargets from './authzFilesTargets.js';
 
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 
@@ -79,5 +80,6 @@ export default async function authzTargets(world) {
       },
     },
   };
-  return { ...t, fresh };
+  const files = await authzFilesTargets(world, t);
+  return { ...t, fresh: { ...fresh, ...files.fresh, own: { ...fresh.own, ...files.own } } };
 }

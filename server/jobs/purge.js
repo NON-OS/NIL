@@ -10,6 +10,7 @@ import sweepComments from '../services/sweepComments.js';
 import expiredRows from '../services/expiredRows.js';
 import snapshots from '../db/snapshots.js';
 import settleStaged from '../services/settleStaged.js';
+import sweepBlobs from '../services/sweepBlobs.js';
 import creditLedger from '../aiCredits/creditLedger.js';
 import signedAllowance from '../ai/signedAllowance.js';
 
@@ -39,6 +40,8 @@ async function sweep(signal) {
 
   // copies staged for a seal or an open-up that never went through; one takes seconds, not an hour
   settleStaged({ olderThan: HOUR });
+  // encrypted uploads left unfinished, and files no folder took in
+  await sweepBlobs({ now });
 
   for (const [table, where, ...params] of expiredRows(now, policy)) await rows((limit) => deleteSome(table, where, limit, ...params));
   // the copies taken before upgrades hold what the policies erased since, so they don't outlast them
