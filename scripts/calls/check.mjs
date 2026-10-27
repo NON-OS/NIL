@@ -12,6 +12,7 @@ import { parseArgs } from 'node:util';
 import AxeBuilder from '@axe-core/playwright';
 import turn from './turn.mjs';
 import browsers from './browsers.mjs';
+import sfu from './sfu.mjs';
 import steps from './steps.mjs';
 
 const { values: opt } = parseArgs({ options: { browser: { type: 'string', default: 'chromium' }, shots: { type: 'string' }, port: { type: 'string', default: process.env.CALLS_PORT ?? '3991' } } });
@@ -32,7 +33,10 @@ console.log(`${opt.browser} ${browser.version()}`);
 const relay = turn();
 if (!relay) console.log('coturn is not installed here; calls are checked with direct connections only.');
 await relay?.start();
-const app = await world({ port: Number(opt.port), env: relay ? { TURN_URLS: relay.url, TURN_SECRET: relay.secret, TURN_TTL_SECONDS: '600' } : {} });
+// with an SFU, calls of more than two move to it, so the three-way call checks the SFU
+const forwarder = relay && browsers.capture(opt.browser) ? await sfu() : null;
+if (!forwarder) console.log('No SFU here (set LIVEKIT_SERVER); every call goes browser to browser.');
+const app = await world({ port: Number(opt.port), env: relay ? { TURN_URLS: relay.url, TURN_SECRET: relay.secret, TURN_TTL_SECONDS: '600', ...(forwarder ? { ...forwarder.env, CALL_MESH_MAX_PEERS: '2' } : {}) } : {} });
 if (opt.shots) fs.mkdirSync(opt.shots, { recursive: true });
 
 async function person(size, { tamper } = {}) {
@@ -58,7 +62,7 @@ async function person(size, { tamper } = {}) {
   });
   const page = await context.newPage();
   page.on('pageerror', (e) => console.error(`${size}: page error: ${e.message}`));
-  page.on('console', (m) => ['error', 'warning'].includes(m.type()) && console.error(`${size}: console ${m.type()}: ${m.text().slice(0, 300)}`));
+  page.on('console', (m) => ['error', 'warning'].includes(m.type()) && console.error(`${size}: console ${m.type()}: ${m.text().replace(/(access_token|join_request)=[^&\s']+/g, '$1=…').slice(0, 400)}`));
   if (tamper) {
     // a dishonest server: it swaps one byte of the certificate fingerprint in every session
     // description it passes this browser, while `tamper.on` is set
@@ -96,11 +100,12 @@ try {
   people.ada = await person('desktop');
   people.ana = await person('phone');
   people.ben = await person('desktop', { tamper });
-  await steps({ app, relay, ...people, tamper, check, axe, shot, capture: browsers.capture(opt.browser) });
+  await steps({ app, relay, ...people, tamper, check, axe, shot, capture: browsers.capture(opt.browser), sfu: Boolean(forwarder) });
 } catch (err) {
   check('the run finished', false, err.stack ?? String(err));
   for (const [name, p] of Object.entries(people)) await shot(p.page, `failed-${name}`).catch(() => {});
   if (relay && opt.shots) fs.writeFileSync(path.join(opt.shots, 'turn.log'), relay.log());
+  if (forwarder && opt.shots) fs.writeFileSync(path.join(opt.shots, 'sfu.log'), forwarder.log());
   for (const [name, p] of Object.entries(people)) {
     const logs = await p.page.evaluate(() => window.__pcs.map((pc) => pc.__log)).catch(() => []);
     if (opt.shots) fs.writeFileSync(path.join(opt.shots, `${opt.browser}-pc-${name}.log`), logs.map((l, i) => `connection ${i}\n${l.join('\n')}`).join('\n\n'));
@@ -109,6 +114,7 @@ try {
   await browser.close();
   app.stop();
   relay?.stop();
+  forwarder?.stop();
 }
 
 const failed = results.filter((r) => !r.ok).length;

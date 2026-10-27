@@ -30,6 +30,13 @@ const calls = `
   );
   CREATE INDEX call_people_user ON call_people(user_id);
 
+  -- who may not ring whom: a person blocked, or '*' for nobody at all while they're not taking calls
+  CREATE TABLE call_blocks (
+    user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    blocked_id TEXT NOT NULL,
+    PRIMARY KEY (user_id, blocked_id)
+  );
+
   -- server processes sharing this database, and the call messages one passes to the others,
   -- kept for seconds
   CREATE TABLE call_instances (

@@ -10,6 +10,8 @@ import callMembership from '../calls/callMembership.js';
 import callSettings from '../calls/callSettings.js';
 import callable from '../calls/callable.js';
 import callLimits from '../calls/callLimits.js';
+import callBlocks from '../calls/callBlocks.js';
+import sfuToken from '../calls/sfuToken.js';
 import turnCredentials from '../calls/turnCredentials.js';
 
 const router = express.Router();
@@ -46,6 +48,26 @@ router.put(
     if (typeof req.body?.direct !== 'boolean') throw HttpError.badRequest('Say whether direct connections are allowed.');
     callSettings.setDirect(req.body.direct, req.user.id);
     return callSettings.status();
+  }),
+);
+
+// Who may ring this person: blocked teammates, and whether they're taking calls at all.
+router.get(
+  '/calls/blocks',
+  route((req) => callBlocks.of(req.user.id)),
+);
+
+router.put(
+  '/calls/blocks',
+  route((req) => {
+    const { dnd, block, unblock } = req.body ?? {};
+    if (dnd !== undefined && typeof dnd !== 'boolean') throw HttpError.badRequest('Say whether you take calls.');
+    for (const id of [block, unblock]) if (id !== undefined && (typeof id !== 'string' || !ID.test(id) || id === req.user.id)) throw HttpError.badRequest('Pick someone on the team.');
+    if (dnd !== undefined) callBlocks.set(req.user.id, callBlocks.everyone, dnd);
+    if (block !== undefined && !sql.get('SELECT 1 FROM users WHERE id = ?', block)) throw HttpError.badRequest('Pick someone on the team.');
+    if (block !== undefined) callBlocks.set(req.user.id, block, true);
+    if (unblock !== undefined) callBlocks.set(req.user.id, unblock, false);
+    return callBlocks.of(req.user.id);
   }),
 );
 
@@ -109,6 +131,21 @@ router.post(
       expiresAt: relay?.expiresAt ?? null,
       ttlSeconds: config.calls.turnTtlSeconds,
     };
+  }),
+);
+
+// A room token for the SFU, for someone in a call that moved there, for the tab they joined from.
+router.post(
+  '/calls/:id/sfu',
+  byPerson(30),
+  route((req) => {
+    available();
+    const call = callFor(req);
+    const person = callRegistry.member(call, req.user.id);
+    if (!person) throw new HttpError(409, 'Join the call first.');
+    if (call.mode !== 'sfu' || !config.calls.sfu) throw new HttpError(409, 'This call goes browser to browser.');
+    const { url, token, identity } = sfuToken({ callId: call.id, userId: req.user.id, session: person.session });
+    return { url, token, identity };
   }),
 );
 

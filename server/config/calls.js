@@ -42,7 +42,10 @@ function sfu() {
     configWarning('SFU_API_KEY and SFU_API_SECRET (at least 32 characters) are both needed for the SFU. Calls stay browser to browser.');
     return null;
   }
-  return Object.freeze({ url: url.replace(/\/$/, ''), key, secret });
+  // where this server reaches the SFU's API, when that differs from where browsers reach it
+  const apiUrl = (env.SFU_API_URL ?? '').trim().replace(/\/$/, '') || null;
+  if (apiUrl && !/^https?:\/\/[a-z0-9.-]+(:\d{1,5})?$/i.test(apiUrl)) configWarning('SFU_API_URL must be an http:// or https:// address with no path. Using SFU_URL.');
+  return Object.freeze({ url: url.replace(/\/$/, ''), key, secret, apiUrl: apiUrl && /^https?:\/\/[a-z0-9.-]+(:\d{1,5})?$/i.test(apiUrl) ? apiUrl : null });
 }
 
 const urls = turnUrls(env.TURN_URLS);
@@ -72,6 +75,9 @@ export default Object.freeze({
   signalsPerMinute: envNumber('CALL_SIGNALS_PER_MINUTE', 240, { min: 30 }),
   maxSignalBytes: envNumber('CALL_SIGNAL_MAX_KB', 24, { min: 8, max: 128 }) * 1024,
   startsPerMinute: envNumber('CALL_STARTS_PER_MINUTE', 6, { min: 1 }),
+  // how often one person may ring the same teammate
+  ringsPerPerson: envNumber('CALL_RINGS_PER_PERSON', 4, { min: 1 }),
+  ringWindowMinutes: envNumber('CALL_RING_WINDOW_MINUTES', 10, { min: 1 }),
   // how long a call's record outlives the last sign of anyone in it, server restarts included
   recordHours: envNumber('CALL_RECORD_HOURS', 12, { min: 1, max: 168 }),
 });

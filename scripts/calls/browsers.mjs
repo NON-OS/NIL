@@ -6,22 +6,28 @@
 // one, so its people join without them and the check leaves out what needs a picture or sound.
 import { chromium, firefox, webkit } from 'playwright-core';
 
+// The check's servers are all on this machine; a proxy set for the outside world mustn't stand in between.
+const env = Object.fromEntries(Object.entries(process.env).filter(([k]) => !/_proxy$/i.test(k)));
+
 const engines = {
   chromium: () =>
     chromium.launch({
+      env,
       executablePath: process.env.CHROMIUM_PATH || undefined,
-      args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-accept-this-tab-capture', '--auto-select-desktop-capture-source=Entire screen'],
+      args: ['--no-proxy-server', '--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-accept-this-tab-capture', '--auto-select-desktop-capture-source=Entire screen'],
     }),
   firefox: () =>
     firefox.launch({
+      env,
       firefoxUserPrefs: {
+        'network.proxy.type': 0,
         'media.navigator.streams.fake': true,
         'media.navigator.permission.disabled': true,
         // Firefox leaves out host candidates for loopback and private networks by default
         'media.peerconnection.ice.loopback': true,
       },
     }),
-  webkit: () => webkit.launch(),
+  webkit: () => webkit.launch({ env }),
 };
 
 // Context options a browser accepts: Firefox has no phone emulation and grants cameras through

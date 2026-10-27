@@ -2,6 +2,7 @@
 // on a computer, Ana joins on a phone, and Ben joins on a computer whose server connection
 // the check can tamper with.
 import { api } from '../a11y/seed.mjs';
+import sfuCall from './sfuCall.mjs';
 
 const until = async (what, fn, ms = 30_000) => {
   const end = Date.now() + ms;
@@ -44,7 +45,7 @@ const sending = (page) => page.evaluate(() => window.__pcs.filter((pc) => pc.con
 
 const connected = (page, n) => until(`${n} connected peer connections`, async () => (await links(page)).filter((l) => l.state === 'connected').length >= n && (await links(page)));
 
-export default async function steps({ app, relay, ada, ana, ben, tamper, check, axe, shot, capture }) {
+export default async function steps({ app, relay, ada, ana, ben, tamper, check, axe, shot, capture, sfu }) {
   // Ada makes the workspace; Ana and Ben join with invites; each unlocks their keys
   await ada.wallet(ada.key);
   await ada.page.goto(app.base);
@@ -164,11 +165,15 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
     await p.page.getByRole('button', { name: /Join call/ }).click();
     await p.page.getByRole('button', { name: 'Join', exact: true }).click();
   }
-  const three = await connected(ada.page, 2);
-  await connected(ana.page, 2);
-  await connected(ben.page, 2);
-  check('three people connect in a project call', true);
-  check('every path in it is relayed', relay ? three.every((l) => l.local === 'relay' && l.remote === 'relay') : true, JSON.stringify(three));
+  if (sfu) {
+    await sfuCall({ ada, ana, ben, check });
+  } else {
+    const three = await connected(ada.page, 2);
+    await connected(ana.page, 2);
+    await connected(ben.page, 2);
+    check('three people connect in a project call', true);
+    check('every path in it is relayed', relay ? three.every((l) => l.local === 'relay' && l.remote === 'relay') : true, JSON.stringify(three));
+  }
   await ada.page.waitForTimeout(1500);
   await shot(ada.page, 'call-group-desktop');
   await shot(ana.page, 'call-group-phone');

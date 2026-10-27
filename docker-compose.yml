@@ -107,6 +107,33 @@ services:
         max-size: 10m
         max-file: "3"
 
+  # The SFU for calls too big to go browser to browser (CALL_MESH_MAX_PEERS), under the calls
+  # profile with coturn. It forwards frames the browsers encrypted under keys it never holds.
+  # Browsers reach its signalling through Caddy at SFU_URL and its media only through coturn.
+  livekit:
+    image: livekit/livekit-server:v1.9.12@sha256:2c13cbf2edcbf13ea7b20d05c10b394d04d8fb3fe358269cff845a90b4de9576
+    profiles:
+      - calls
+    restart: unless-stopped
+    network_mode: host
+    command: ["--config", "/etc/livekit.yaml"]
+    # only its own key pair, never the app's other secrets
+    environment:
+      LIVEKIT_KEYS: "${SFU_API_KEY:-}: ${SFU_API_SECRET:-}"
+    volumes:
+      - ./deploy/livekit/livekit.yaml:/etc/livekit.yaml:ro
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 1g
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
 volumes:
   nonos-data:
     # a fixed name, so backups and restores find it whatever folder the code is in; it's the

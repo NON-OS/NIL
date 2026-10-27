@@ -6,6 +6,8 @@ import callInstance from './callInstance.js';
 import callLimits from './callLimits.js';
 import callRing from './callRing.js';
 import callable from './callable.js';
+import callBlocks from './callBlocks.js';
+import sfuRooms from './sfuRooms.js';
 
 const seconds = (n) => n * 1000;
 
@@ -32,6 +34,7 @@ function stopRinging(call, userId, { missed }) {
 const callMembership = {
   end(call) {
     if (!callRegistry.remove(call.id)) return;
+    if (call.mode === 'sfu') sfuRooms.close(call.id);
     for (const p of callRegistry.ringing(call)) {
       callAnnounce.ringEnd(call, p.user_id);
       callRing(p.user_id, call.id, { missed: true });
@@ -57,8 +60,14 @@ const callMembership = {
       const state = call.people.get(userId)?.state;
       if (userId === by || state === 'member' || state === 'ringing' || !callable(userId)) continue;
       if (taken >= callLimits.max()) break;
-      callRegistry.put(call.id, userId, { state: 'ringing', ring_until: Date.now() + seconds(config.calls.ringSeconds) });
       taken += 1;
+      // someone who blocked the caller, isn't taking calls or was rung too often by them is
+      // asked in without a ring: the caller hears no answer, and they can still join
+      if (!callBlocks.mayRing(by, userId)) {
+        callRegistry.put(call.id, userId, { state: 'allowed' });
+        continue;
+      }
+      callRegistry.put(call.id, userId, { state: 'ringing', ring_until: Date.now() + seconds(config.calls.ringSeconds) });
       callAnnounce.ring(callRegistry.get(call.id), userId);
       callRing(userId, call.id);
       rung.push(userId);
@@ -87,6 +96,8 @@ const callMembership = {
     if (!current && callRegistry.members(call).length >= callLimits.max()) return { error: 'full' };
     const left = callSockets.bind(call.id, userId, ws, session);
     if (left) callAnnounce.send(left.ws, { type: 'call.replaced', callId: call.id });
+    // the tab they left goes from the SFU too
+    if (current && current.session !== session && call.mode === 'sfu') sfuRooms.remove(call.id, userId, current.session);
     else if (current?.connected && current.instance !== callInstance.id) callAnnounce.member(call, current, { type: 'call.replaced', callId: call.id });
     callRegistry.put(call.id, userId, { state: 'member', ring_until: null, session, joined_at: current?.joined_at ?? now, instance: callInstance.id, connected: 1, seen_at: now });
     if (call.people.get(userId)?.state === 'ringing') callAnnounce.ringEnd(call, userId);
@@ -97,7 +108,9 @@ const callMembership = {
   },
 
   leave(call, userId) {
-    if (!callRegistry.member(call, userId)) return;
+    const person = callRegistry.member(call, userId);
+    if (!person) return;
+    if (call.mode === 'sfu') sfuRooms.remove(call.id, userId, person.session);
     callRegistry.put(call.id, userId, { state: 'allowed', session: null, instance: null, connected: 0 });
     callSockets.drop(call.id, userId);
     const now = callRegistry.get(call.id);

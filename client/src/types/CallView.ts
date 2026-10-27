@@ -3,6 +3,8 @@
 export default interface CallView {
   id: string;
   kind: 'person' | 'project';
+  // browser to browser, or on the SFU once the call is too big for that
+  mode: 'mesh' | 'sfu';
   projectId: string | null;
   startedBy: string;
   startedAt: number;

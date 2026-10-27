@@ -544,6 +544,23 @@ button.call-trust {
   font-size: var(--text-sm);
 }
 
+.call-ring {
+  flex-wrap: wrap;
+}
+
+.call-ring-block {
+  order: 3;
+  flex-basis: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #c9ccd3;
+  font-size: var(--text-xs);
+  text-align: left;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .call-ring-actions {
   display: flex;
   gap: 8px;

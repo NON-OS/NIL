@@ -12,9 +12,10 @@ import callRuntime from './callRuntime';
 import callMedia from './callMedia';
 import localMedia from './localMedia';
 import audioLevels from './audioLevels';
+import callPeers from './callPeers';
+import callSfu from './callSfu';
 import ringNotice from './ringNotice';
 import type CallView from '../../types/CallView';
-import type CallPeer from '../../types/CallPeer';
 
 const rt = callRuntime;
 const REFUSALS: Record<string, string> = {
@@ -25,7 +26,6 @@ let declined: string | null = null;
 
 const place = (callId: string) => ({ callId, workspaceKey: store.get().workspaceKey, origin: store.get().origin });
 
-const blank = (userId: string, session: string): CallPeer => ({ userId, session, link: 'connecting', trust: 'unknown', refusal: null, held: true, holding: false, mic: true, cam: false, screen: false, quality: null, speaking: false, media: null, screenMedia: null });
 
 function connect(callId: string, userId: string, session: string) {
   const link = peerLink({
@@ -54,20 +54,10 @@ function connect(callId: string, userId: string, session: string) {
     },
   });
   rt.links.set(userId, link);
-  rt.patch((a) => ({ peers: { ...a.peers, [userId]: blank(userId, session) } }));
-  void keyDirectory.load().then((keys) => trusted(userId, keys.get(userId)?.state ?? 'none', session));
+  callPeers.add(userId, session);
   link.start();
   window.setTimeout(() => link.nudge(), 5000);
   rt.links.forEach((l) => l.tune());
-}
-
-// Someone whose key this person confirmed hears and sees them from the start. Anyone else is
-// sent nothing until this person checks the key or says to go ahead (allow), so a key the
-// server slipped in never gets a picture or a word.
-function trusted(userId: string, trust: CallPeer['trust'], session: string) {
-  const wasHeld = rt.active()?.peers[userId]?.held;
-  rt.patchPeer(userId, { trust, ...(trust === 'confirmed' ? { held: false } : {}) }, session);
-  if (wasHeld && trust === 'confirmed') rt.links.get(userId)?.release();
 }
 
 function drop(userId: string) {
@@ -78,6 +68,7 @@ function drop(userId: string) {
 
 function teardown() {
   for (const userId of [...rt.links.keys()]) drop(userId);
+  void callSfu.close();
   callMedia.stopAll();
   audioLevels.stopAll();
   iceConfig.clear();
@@ -96,13 +87,17 @@ function reconcile(view: CallView) {
     if (member?.session === link.peerSession) continue;
     drop(userId);
     if (!member) {
-      rt.patch((x) => ({ peers: Object.fromEntries(Object.entries(x.peers).filter(([id]) => id !== userId)) }));
+      callPeers.remove(userId);
       rt.say(`${rt.name(userId)} left the call.`);
     }
   }
   rt.patch(() => ({ view }));
   if (a.phase !== 'live') return;
-  for (const m of others) {
+  if (view.mode === 'sfu') {
+    for (const userId of [...rt.links.keys()]) drop(userId);
+    callSfu.reconcile(view, others);
+  }
+  for (const m of view.mode === 'sfu' ? [] : others) {
     if (rt.links.has(m.userId)) continue;
     if (!a.peers[m.userId]) rt.say(`${rt.name(m.userId)} joined the call.`);
     connect(view.id, m.userId, m.session);
@@ -172,6 +167,9 @@ const callSession = {
     } catch {
       return;
     }
+    // on the SFU, the only thing people send each other is their frame keys
+    if ((message as { type?: unknown })?.type === 'media-key') return void callSfu.key(from, message);
+    if (rt.active()!.view.mode === 'sfu') return;
     // a connection their browser refused comes back when they try again; one this browser
     // refused waits for this person to say so
     const current = rt.links.get(from);
@@ -221,7 +219,7 @@ const callSession = {
   refreshTrust() {
     if (!rt.active()) return;
     void keyDirectory.load().then((keys) => {
-      for (const p of Object.values(rt.active()?.peers ?? {})) trusted(p.userId, keys.get(p.userId)?.state ?? 'none', p.session);
+      for (const p of Object.values(rt.active()?.peers ?? {})) callPeers.trusted(p.userId, keys.get(p.userId)?.state ?? 'none', p.session);
     });
   },
 
@@ -230,7 +228,7 @@ const callSession = {
     const peer = rt.active()?.peers[userId];
     if (!peer?.held) return;
     rt.patchPeer(userId, { held: false }, peer.session);
-    rt.links.get(userId)?.release();
+    callPeers.released(userId);
     rt.say(`${rt.name(userId)} can hear you now.`);
   },
 

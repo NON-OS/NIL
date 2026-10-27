@@ -2,6 +2,7 @@ import toast from '../../state/toast';
 import callRuntime from './callRuntime';
 import localMedia from './localMedia';
 import audioLevels from './audioLevels';
+import sfuLink from './sfuLink';
 
 const rt = callRuntime;
 
@@ -10,6 +11,7 @@ function sendAll(slot: 0 | 1 | 2, track: MediaStreamTrack | null) {
     l.replace(slot, track);
     l.sendState();
   });
+  void sfuLink.replace((['audio', 'camera', 'screen'] as const)[slot], track);
 }
 
 function showLocal() {
@@ -71,6 +73,7 @@ const callMedia = {
     rt.tracks.audio.enabled = mic;
     rt.patch(() => ({ mic }));
     rt.links.forEach((l) => l.sendState());
+    sfuLink.mute(!mic);
     rt.say(mic ? 'Microphone on.' : 'Microphone off.');
   },
 
