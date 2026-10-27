@@ -3,36 +3,10 @@
 // the check can tamper with.
 import { api } from '../a11y/seed.mjs';
 import sfuCall from './sfuCall.mjs';
+import setup from './setup.mjs';
+import probes from './probes.mjs';
 
-const until = async (what, fn, ms = 30_000) => {
-  const end = Date.now() + ms;
-  for (;;) {
-    const value = await fn().catch(() => null);
-    if (value) return value;
-    if (Date.now() > end) throw new Error(`timed out waiting for ${what}`);
-    await new Promise((r) => setTimeout(r, 250));
-  }
-};
-
-// each live peer connection's state and the kind of path it took
-const links = (page) =>
-  page.evaluate(async () => {
-    const out = [];
-    for (const pc of window.__pcs) {
-      if (pc.connectionState === 'closed') continue;
-      const stats = await pc.getStats();
-      // Chromium and WebKit name the pair in use on the transport; Firefox marks it selected
-      let pair = null;
-      stats.forEach((s) => {
-        if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId);
-      });
-      stats.forEach((s) => {
-        if (!pair && s.type === 'candidate-pair' && s.selected) pair = s;
-      });
-      out.push({ state: pc.connectionState, local: pair && stats.get(pair.localCandidateId)?.candidateType, remote: pair && stats.get(pair.remoteCandidateId)?.candidateType });
-    }
-    return out;
-  });
+const { until, links, sending, connected } = probes;
 
 // a call control, which a phone keeps behind "More call controls"
 async function control(p, name) {
@@ -40,36 +14,9 @@ async function control(p, name) {
   await p.page.getByRole('button', { name, exact: true }).click();
 }
 
-// the kind of each track every live connection sends, or null for a slot sending nothing
-const sending = (page) => page.evaluate(() => window.__pcs.filter((pc) => pc.connectionState !== 'closed').flatMap((pc) => pc.getSenders().map((s) => s.track?.kind ?? null)));
-
-const connected = (page, n) => until(`${n} connected peer connections`, async () => (await links(page)).filter((l) => l.state === 'connected').length >= n && (await links(page)));
 
 export default async function steps({ app, relay, ada, ana, ben, tamper, check, axe, shot, capture, sfu }) {
-  // Ada makes the workspace; Ana and Ben join with invites; each unlocks their keys
-  await ada.wallet(ada.key);
-  await ada.page.goto(app.base);
-  await ada.page.getByLabel('Setup token').fill(app.setupToken);
-  await ada.page.getByLabel('Workspace name').fill('Northwind');
-  await ada.page.getByLabel('Your name').fill('Ada');
-  await ada.page.getByRole('button', { name: 'Create workspace with your wallet' }).click();
-  await ada.page.locator('.view-head h1').waitFor();
-  for (const [p, name] of [
-    [ana, 'Ana'],
-    [ben, 'Ben'],
-  ]) {
-    const { token } = await api(ada.page, 'POST', '/invites', { role: 'member' });
-    await p.wallet(p.key);
-    await p.page.goto(`${app.base}/invite/${token}`);
-    await p.page.getByLabel('Your name').fill(name);
-    await p.page.getByRole('button', { name: 'Join with your wallet' }).click();
-    await p.page.locator('.view-head h1').waitFor();
-  }
-  for (const p of [ada, ana, ben]) {
-    await p.page.goto(`${app.base}/calls`);
-    await p.page.getByRole('button', { name: 'Unlock your keys' }).click();
-    await p.page.getByRole('button', { name: 'Unlock your keys' }).waitFor({ state: 'detached', timeout: 30_000 });
-  }
+  await setup({ app, ada, ana, ben });
   await axe(ada.page, 'Calls page, desktop');
   await axe(ana.page, 'Calls page, phone');
   await shot(ada.page, 'calls-page-desktop');
@@ -119,6 +66,14 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
     await until('Ada’s camera to be off', async () => (await ada.page.getByRole('button', { name: 'Turn camera on' }).count()) > 0, 5000);
     check('Ctrl+E turns the camera off', true);
     await ada.page.keyboard.press('Control+e');
+    // the system takes the microphone, as a phone does in the background: the call says so, and
+    // one tap brings it back
+    const micLive = () => ada.page.evaluate(() => window.__pcs.flatMap((pc) => pc.getSenders()).some((x) => x.track?.kind === 'audio' && x.track.readyState === 'live'));
+    await ada.page.evaluate(() => window.__pcs.flatMap((pc) => pc.getSenders()).forEach((x) => x.track?.kind === 'audio' && x.track.stop()));
+    const said = await until('the call to say the microphone stopped', async () => (await ada.page.getByText(/Your microphone stopped/).count()) > 0, 10_000).catch(() => false);
+    if (said) await ada.page.getByRole('button', { name: /back on/ }).click();
+    const back = said && (await until('a live microphone again', micLive, 10_000).catch(() => false));
+    check('a microphone the system took says so, and comes back with one tap', Boolean(back));
   } else {
     check('a call connects with no microphone or camera at all', true);
   }
@@ -185,8 +140,11 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
 
   // a shared screen, where the browser can share one without asking
   // where the browser offers screen sharing at all; headless Firefox and WebKit don't
-  if (!capture) {
-    check('screen sharing left out where the browser can’t capture anything', true);
+  // whether this browser hands a page a screen at all: headless Firefox refuses, as a person
+  // cancelling would, and the app says nothing then
+  const canShare = capture && (await ada.page.evaluate(() => Promise.race([navigator.mediaDevices.getDisplayMedia({ video: true }).then((m) => (m.getTracks().forEach((t) => t.stop()), 'ok'), (e) => e.name), new Promise((r) => setTimeout(() => r('no answer'), 5000))])));
+  if (canShare !== 'ok') {
+    check(`screen sharing left out where the browser can’t share a screen (${canShare || 'no capture'})`, true);
   } else if (await ada.page.getByRole('button', { name: 'Share your screen' }).count()) {
     await ada.page.getByRole('button', { name: 'Share your screen' }).click();
     const shared = await until('Ada’s screen on Ben’s side', async () => (await ben.page.locator('figure[aria-label="Ada’s screen"]').count()) > 0, 10_000).catch(() => false);

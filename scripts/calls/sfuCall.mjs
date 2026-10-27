@@ -12,6 +12,14 @@ const until = async (what, fn, ms = 30_000) => {
   }
 };
 
+// Says "Talk anyway" to everyone held back on one screen, once at least `least` show up. Each
+// click redraws the call, so it presses whichever comes first until none is left.
+async function allow(p, least) {
+  const button = () => p.page.getByRole('button', { name: 'Talk anyway' });
+  await until(`${p.size} to show who it holds back`, async () => (await button().count()) >= least, 20_000);
+  for (let i = 0; i < 6 && (await button().count()); i++) await button().first().click();
+}
+
 const pictures = (page) => page.evaluate(() => [...document.querySelectorAll('.call-tile video:not(.mirror)')].filter((v) => v.videoWidth > 0).length);
 
 // every connection to the SFU: its state, whether frames go through a transform, and its path
@@ -20,8 +28,17 @@ const sfuLinks = (page) =>
     const out = [];
     for (const pc of window.__pcs) {
       if (pc.connectionState === 'closed') continue;
-      const encrypted = pc.getConfiguration().encodedInsertableStreams === true || [...pc.getSenders(), ...pc.getReceivers()].filter((x) => x.track).every((x) => x.transform);
+      // Chromium encrypts through insertable streams, set up with the connection; Firefox and
+      // Safari through a script transform on each sender and receiver that carries media. A
+      // receiver counts once frames have arrived on it: Firefox keeps idle ones from the offer
       const stats = await pc.getStats();
+      const receiving = new Set();
+      stats.forEach((s) => {
+        if (s.type === 'inbound-rtp' && s.bytesReceived > 0) receiving.add(s.mid ?? s.trackIdentifier);
+      });
+      const parts = pc.getTransceivers().filter((t) => !t.stopped && t.currentDirection && t.currentDirection !== 'inactive').flatMap((t) => [...(t.currentDirection.includes('send') && t.sender.track ? [t.sender] : []), ...(t.currentDirection.includes('recv') && (receiving.has(t.mid) || receiving.has(t.receiver.track?.id)) ? [t.receiver] : [])]);
+      const encrypted = pc.getConfiguration().encodedInsertableStreams === true || (parts.length > 0 && parts.every((x) => x.transform));
+      const missing = parts.filter((x) => !x.transform).map((x) => `${x.track?.kind}:${x instanceof RTCRtpSender ? 'send' : 'recv'}`);
       let pair = null;
       stats.forEach((s) => {
         if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId);
@@ -29,7 +46,7 @@ const sfuLinks = (page) =>
       stats.forEach((s) => {
         if (!pair && s.type === 'candidate-pair' && s.selected) pair = s;
       });
-      out.push({ state: pc.connectionState, encrypted, local: pair && stats.get(pair.localCandidateId)?.candidateType });
+      out.push({ state: pc.connectionState, encrypted, missing, local: pair && stats.get(pair.localCandidateId)?.candidateType });
     }
     return out;
   });
@@ -40,9 +57,7 @@ export default async function sfuCall({ ada, ana, ben, check }) {
   check('a call of three moves onto the SFU', true);
   // nobody's key is confirmed by everyone, so each says to go ahead for this call
   for (const p of all) {
-    await p.page.waitForTimeout(500);
-    // each click redraws the call, so press whichever is first until none is left
-    for (let i = 0; i < 4 && (await p.page.getByRole('button', { name: 'Talk anyway' }).count()); i++) await p.page.getByRole('button', { name: 'Talk anyway' }).first().click();
+    await allow(p, 1);
     if (await p.page.getByRole('button', { name: 'Turn camera on' }).count()) await p.page.getByRole('button', { name: 'Turn camera on' }).click();
   }
   for (const p of all) await until(`${p.size} to see two pictures`, async () => (await pictures(p.page)) >= 2, 45_000);
@@ -59,8 +74,8 @@ export default async function sfuCall({ ada, ana, ben, check }) {
   // and back in, he gets the new keys
   await ben.page.getByRole('button', { name: /Join call/ }).click();
   await ben.page.getByRole('button', { name: 'Join', exact: true }).click();
-  for (let i = 0; i < 4 && (await ben.page.getByRole('button', { name: 'Talk anyway' }).count()); i++) await ben.page.getByRole('button', { name: 'Talk anyway' }).first().click();
-  for (const p of [ada, ana]) for (let i = 0; i < 4 && (await p.page.getByRole('button', { name: 'Talk anyway' }).count()); i++) await p.page.getByRole('button', { name: 'Talk anyway' }).first().click();
+  // Ben is new to this call again, so everyone says to go ahead again, and he does too
+  for (const p of [ben, ada, ana]) await allow(p, 1);
   await until('Ben to see the others again', async () => (await pictures(ben.page)) >= 2, 45_000);
   check('someone who comes back gets the new keys', true);
 }

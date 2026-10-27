@@ -4,7 +4,10 @@
 // a server swapping a fingerprint is refused, that a three-way project call works, and runs axe
 // on the call screen at desktop and phone sizes. Needs `npm run build` first.
 //
-//   node scripts/calls/check.mjs [--browser chromium|firefox|webkit] [--shots <dir>]
+//   node scripts/calls/check.mjs [--browser chromium|firefox|webkit] [--long] [--shots <dir>]
+//
+// --long runs scripts/calls/longCall.mjs instead: a call past several relay passwords, and a
+// network change under it.
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
@@ -14,8 +17,9 @@ import turn from './turn.mjs';
 import browsers from './browsers.mjs';
 import sfu from './sfu.mjs';
 import steps from './steps.mjs';
+import longCall from './longCall.mjs';
 
-const { values: opt } = parseArgs({ options: { browser: { type: 'string', default: 'chromium' }, shots: { type: 'string' }, port: { type: 'string', default: process.env.CALLS_PORT ?? '3991' } } });
+const { values: opt } = parseArgs({ options: { long: { type: 'boolean', default: false }, browser: { type: 'string', default: 'chromium' }, shots: { type: 'string' }, port: { type: 'string', default: process.env.CALLS_PORT ?? '3991' } } });
 const world = createRequire(import.meta.url)('../a11y/world.cjs');
 const SIZES = {
   desktop: { viewport: { width: 1440, height: 900 } },
@@ -34,9 +38,11 @@ const relay = turn();
 if (!relay) console.log('coturn is not installed here; calls are checked with direct connections only.');
 await relay?.start();
 // with an SFU, calls of more than two move to it, so the three-way call checks the SFU
-const forwarder = relay && browsers.capture(opt.browser) ? await sfu() : null;
+const forwarder = relay && browsers.capture(opt.browser) && !opt.long ? await sfu() : null;
 if (!forwarder) console.log('No SFU here (set LIVEKIT_SERVER); every call goes browser to browser.');
-const app = await world({ port: Number(opt.port), env: relay ? { TURN_URLS: relay.url, TURN_SECRET: relay.secret, TURN_TTL_SECONDS: '600', ...(forwarder ? { ...forwarder.env, CALL_MESH_MAX_PEERS: '2' } : {}) } : {} });
+// the long call has the relay over UDP and TCP, and passwords that last a minute
+const relayUrls = opt.long ? `${relay.url},${relay.url.replace('udp', 'tcp')}` : relay?.url;
+const app = await world({ port: Number(opt.port), env: relay ? { TURN_URLS: relayUrls, TURN_SECRET: relay.secret, TURN_TTL_SECONDS: opt.long ? '60' : '600', ...(forwarder ? { ...forwarder.env, CALL_MESH_MAX_PEERS: '2' } : {}) } : {} });
 if (opt.shots) fs.mkdirSync(opt.shots, { recursive: true });
 
 async function person(size, { tamper } = {}) {
@@ -100,7 +106,8 @@ try {
   people.ada = await person('desktop');
   people.ana = await person('phone');
   people.ben = await person('desktop', { tamper });
-  await steps({ app, relay, ...people, tamper, check, axe, shot, capture: browsers.capture(opt.browser), sfu: Boolean(forwarder) });
+  if (opt.long) await longCall({ app, relay, ...people, check, shot });
+  else await steps({ app, relay, ...people, tamper, check, axe, shot, capture: browsers.capture(opt.browser), sfu: Boolean(forwarder) });
 } catch (err) {
   check('the run finished', false, err.stack ?? String(err));
   for (const [name, p] of Object.entries(people)) await shot(p.page, `failed-${name}`).catch(() => {});
