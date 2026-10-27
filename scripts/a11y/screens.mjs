@@ -13,7 +13,7 @@ const unlockDocs = async (page) => {
   await page.locator('.docs').waitFor();
   const first = page.locator('.doc-link:not(.waiting)').first();
   if (await first.count()) await first.click();
-  else await page.getByRole('button', { name: 'New doc' }).click();
+  else await page.getByRole('button', { name: 'New doc', exact: true }).click();
   await page.locator('.doc-editor').waitFor();
 };
 
