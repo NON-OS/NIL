@@ -56,6 +56,23 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await ana.page.getByRole('button', { name: 'Talk anyway' }).click();
   if (capture) await until('Ana to send to Ada', async () => (await sending(ana.page)).includes('audio'), 5000);
   check('“Talk anyway” starts sending for this call only', !capture || (await sending(ana.page)).includes('audio'));
+  // the relay can't read who speaks or moves: sound at a constant bitrate, every slot through
+  // the padding worker, and the picture still arrives whole
+  const shaped = (page) =>
+    page.evaluate(() => {
+      // Playwright's WebKit on Linux has no frame transforms at all; Safari has
+      if (typeof RTCRtpScriptTransform === 'undefined' && !('createEncodedStreams' in RTCRtpSender.prototype)) return 'none';
+      const live = window.__pcs.filter((pc) => pc.connectionState === 'connected');
+      // Firefox has neither setting and drops both from descriptions; its sound is padded to one
+      // size all the same, and it never pauses for silence
+      const asked = (pc) => /firefox/i.test(navigator.userAgent) || (/cbr=1/.test(pc.remoteDescription?.sdp ?? '') && /usedtx=0/.test(pc.remoteDescription?.sdp ?? ''));
+      const ok = live.every((pc) => asked(pc) && (pc.getConfiguration().encodedInsertableStreams === true || pc.getTransceivers().slice(0, 3).every((t) => t.sender.transform && t.receiver.transform)));
+      return live.length && ok ? 'shaped' : 'not shaped';
+    });
+  const pictureOk = !capture || (await until('Ana’s picture on Ada’s side', async () => ada.page.evaluate(() => [...document.querySelectorAll('.call-tile video:not(.mirror)')].some((v) => v.videoWidth > 0)), 15_000).catch(() => false));
+  const shaping = [await shaped(ada.page), await shaped(ana.page)];
+  if (shaping.includes('none')) check('traffic shaping left out where the browser has no frame transforms', true);
+  else check('browser-to-browser traffic is shaped: constant-bitrate sound, padded sound and video', shaping.every((x) => x === 'shaped') && Boolean(pictureOk), shaping.join(', '));
 
   // Ana mutes; Ada sees it. Without a microphone or camera there's nothing to mute.
   if (capture) {
@@ -95,13 +112,14 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await until('Ada’s call to end', async () => (await ada.page.locator('.call-screen, .call-dock').count()) === 0, 15_000);
   check('hanging up ends a one-to-one call on both sides', true);
 
-  // a dishonest server swaps the fingerprint on its way to Ben: Ben's browser refuses it
+  // a dishonest server changes the sealed handshake on its way to Ben: Ben's browser refuses it
   tamper.on = true;
   await ada.page.goto(`${app.base}/calls`);
   await ada.page.getByRole('button', { name: 'Call Ben', exact: true }).click();
   await ben.page.getByRole('button', { name: 'Answer Ada with sound only' }).click();
   await until('Ben to refuse', async () => (await ben.page.getByRole('alert').filter({ hasText: 'changed on the way' }).count()) > 0, 30_000);
-  check('a swapped fingerprint is refused', tamper.hits > 0, `${tamper.hits} descriptions tampered with`);
+  check('the server can read none of what browsers in a call say to each other', tamper.seen > 0 && tamper.readable === 0, `${tamper.readable} of ${tamper.seen} readable`);
+  check('a message changed on the way is refused', tamper.hits > 0, `${tamper.hits} messages tampered with`);
   await until('Ada to hear of it', async () => (await ada.page.getByRole('alert').filter({ hasText: 'refused it' }).count()) > 0, 15_000);
   check('the other side is told the connection was refused', true);
   check('no media flowed', (await links(ben.page)).every((l) => l.state !== 'connected'));

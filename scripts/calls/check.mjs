@@ -1,8 +1,8 @@
 // Calls in real browsers: three people in Chromium, Firefox or WebKit with fake cameras and microphones, through a
 // real coturn on this machine (scripts/calls/turn.mjs). It checks that calls connect through
 // the relay and nowhere else, survive the relay going away and coming back (ICE restart), that
-// a server swapping a fingerprint is refused, that a three-way project call works, and runs axe
-// on the call screen at desktop and phone sizes. Needs `npm run build` first.
+// a server can read no call message and one it changes is refused, that a three-way project
+// call works, and runs axe on the call screen at desktop and phone sizes. Needs `npm run build` first.
 //
 //   node scripts/calls/check.mjs [--browser chromium|firefox|webkit] [--long] [--shots <dir>]
 //
@@ -70,17 +70,19 @@ async function person(size, { tamper } = {}) {
   page.on('pageerror', (e) => console.error(`${size}: page error: ${e.message}`));
   page.on('console', (m) => ['error', 'warning'].includes(m.type()) && console.error(`${size}: console ${m.type()}: ${m.text().replace(/(access_token|join_request)=[^&\s']+/g, '$1=…').slice(0, 400)}`));
   if (tamper) {
-    // a dishonest server: it swaps one byte of the certificate fingerprint in every session
-    // description it passes this browser, while `tamper.on` is set
+    // a dishonest server, looking at every message browsers in a call send this one: it counts
+    // any it can read, and while `tamper.on` is set it changes a byte in each on the way
     await page.routeWebSocket('**/ws', (ws) => {
       const server = ws.connectToServer();
       ws.onMessage((m) => server.send(m));
       server.onMessage((m) => {
-        if (!tamper.on || typeof m !== 'string' || !m.includes('"call.signal"')) return ws.send(m);
+        if (typeof m !== 'string' || !m.includes('"call.signal"')) return ws.send(m);
         const event = JSON.parse(m);
         const blob = JSON.parse(event.blob);
-        if (typeof blob.sdp === 'string') {
-          blob.sdp = blob.sdp.replace(/a=fingerprint:sha-256 ([0-9A-F]{2})/g, (all, first) => all.replace(first, first === 'AA' ? 'BB' : 'AA'));
+        tamper.seen += 1;
+        if (blob.type !== 'sealed' || /"sdp"|a=fingerprint|a=candidate|"media-key"/.test(event.blob)) tamper.readable += 1;
+        if (tamper.on && typeof blob.box === 'string') {
+          blob.box = blob.box.slice(0, 80) + (blob.box[80] === 'A' ? 'B' : 'A') + blob.box.slice(81);
           tamper.hits += 1;
         }
         ws.send(JSON.stringify({ ...event, blob: JSON.stringify(blob) }));
@@ -100,7 +102,7 @@ async function shot(page, name) {
   if (opt.shots) await page.screenshot({ path: path.join(opt.shots, `${opt.browser}-${name}.png`) });
 }
 
-const tamper = { on: false, hits: 0 };
+const tamper = { on: false, hits: 0, seen: 0, readable: 0 };
 const people = {};
 try {
   people.ada = await person('desktop');
