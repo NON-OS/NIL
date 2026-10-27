@@ -9,7 +9,8 @@ export default function contentSecurityPolicy({ secure, relay = null }) {
     "img-src 'self' data: blob:",
     "font-src 'self'",
     relay ? `connect-src 'self' ${relay}` : "connect-src 'self'",
-    "media-src 'self'",
+    // decrypted audio and video play from blob: URLs made in the page
+    "media-src 'self' blob:",
     "object-src 'none'",
     "frame-src 'none'",
     "frame-ancestors 'none'",

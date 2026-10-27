@@ -12,6 +12,9 @@ interface Writable {
 }
 type SavePicker = (options: { suggestedName: string }) => Promise<{ createWritable(): Promise<Writable> }>;
 
+// below this, a file is small enough to put together in memory and save the usual way
+const STREAM_FROM = 256 * 1024 * 1024;
+
 // Getting a decrypted file out of a shared folder: into memory for a preview, or onto disk.
 const fileDownload = {
   async read(folder: SharedFolder, item: FolderItem, opts: BlobProgress = {}) {
@@ -20,13 +23,13 @@ const fileDownload = {
     return new Blob(parts, { type: safeBlobType(item.type) });
   },
 
-  // Where the browser lets a page write a file a piece at a time, each decrypted chunk goes
-  // straight to disk, and a file that fails its check at the end is thrown away before it's
-  // kept. Elsewhere the file is put together in memory first and handed to the downloads.
+  // A large file goes straight to disk a decrypted chunk at a time, where the browser lets a page
+  // write a file in pieces, and one that fails its check at the end is thrown away before it's
+  // kept. Anything else is put together in memory and handed to the downloads like any other.
   // Resolves false when the person closed the save dialog.
   async save(folder: SharedFolder, item: FolderItem, opts: BlobProgress = {}) {
     const pick = (window as unknown as { showSaveFilePicker?: SavePicker }).showSaveFilePicker;
-    if (!pick) {
+    if (!pick || item.size < STREAM_FROM) {
       saveBlob(await fileDownload.read(folder, item, opts), item.name);
       return true;
     }

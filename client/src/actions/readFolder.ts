@@ -12,6 +12,7 @@ import blobCipher from '../lib/crypto/blobCipher';
 import keyHash from '../lib/crypto/keyHash';
 import fileMeta from '../lib/fileMeta';
 import folderLabel from '../lib/folderLabel';
+import stripBidi from '../lib/stripBidi';
 import keyDirectory from './keyDirectory';
 import type EncryptedFolder from '../types/EncryptedFolder';
 import type EncryptedItem from '../types/EncryptedItem';
@@ -105,7 +106,7 @@ const readFolder = {
     const base = { id: item.id, folderId: item.folderId, parentId: item.parentId, kind: item.kind, keyWrap: item.keyWrap, blob: item.blob, thumb: item.thumb, createdBy: item.createdBy, createdAt: item.createdAt, updatedAt: item.updatedAt };
     try {
       const { signed, f, author } = await openItem(folderKey, item);
-      const shown = item.kind === 'file' ? fileMeta(signed.text, f.type) : { name: folderLabel(signed.text), type: '' };
+      const shown = item.kind === 'file' ? fileMeta(stripBidi(signed.text), f.type) : { name: folderLabel(signed.text), type: '' };
       const rollback = folderVersions.item(item.id, f.edit) === 'rollback';
       return { ...base, ...shown, size: f.size, width: f.width, height: f.height, hash: f.hash, edit: f.edit, by: signed.by, locked: false, rollback, oldKey: author.old };
     } catch {

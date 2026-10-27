@@ -17,6 +17,24 @@ const unlockDocs = async (page) => {
   await page.locator('.doc-editor').waitFor();
 };
 
+// unlocks Files and opens a shared folder with a subfolder in it, making both the first time
+const openFiles = async (page) => {
+  await page.getByRole('button', { name: 'Unlock with your wallet' }).click();
+  const folder = page.locator('.files-folder-card a.files-open').first();
+  await Promise.race([folder.waitFor(), page.getByText('No shared folders yet').waitFor()]);
+  if (await folder.count()) await folder.click();
+  else {
+    await page.getByRole('button', { name: 'New folder' }).first().click();
+    await page.getByLabel('Name').fill('Contracts');
+    await page.getByRole('button', { name: 'Create folder' }).click();
+    await page.getByText('This folder is empty').waitFor();
+    await page.getByRole('button', { name: 'New folder' }).click();
+    await page.getByLabel('Name').fill('Signed');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+  }
+  await page.locator('.files-tile').first().waitFor();
+};
+
 // the network goes while the page is open, and the app is reloaded while it's gone
 const loseNetwork = async (page) => {
   await page.context().setOffline(true);
@@ -71,6 +89,8 @@ const signedIn = [
   { name: 'calendar', path: '/calendar' },
   { name: 'docs', path: '/docs' },
   { name: 'docs-open', path: '/docs', then: unlockDocs },
+  { name: 'files', path: '/files' },
+  { name: 'files-open', path: '/files', then: openFiles },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },

@@ -101,8 +101,8 @@ const folders = {
 
   // Taking someone out gives the folder a new key, sealed for whoever stays, and wraps every
   // file's and subfolder's own key under it, so a copy of the old folder key opens nothing added
-  // or renamed from now on. It also signs the name as yours, which is how a folder whose name
-  // didn't check out gets a clean key.
+  // from now on. Files keep their own keys, so this never re-encrypts them. It also signs the name
+  // as yours, which is how a folder whose name didn't check out gets a clean key.
   async restrict(folder: SharedFolder, keep: string[], audience: Audience) {
     const me = store.get().me!;
     await confirmKeys.ask(keep, 'this folder');
