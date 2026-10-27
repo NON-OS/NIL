@@ -88,6 +88,11 @@ const socket = {
   chatTyping(channelId: string, threadId: string | null) {
     send({ type: 'chat.typing', channelId, threadId });
   },
+
+  // a call's join, leave and handshake messages (actions/calls)
+  call(payload: { type: string; callId: string; [key: string]: unknown }) {
+    send(payload);
+  },
 };
 
 export default socket;

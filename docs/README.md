@@ -14,6 +14,7 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 - [Views and finding things](views.md): My work, My Day, Inbox, Board, All tasks, Calendar, projects and search.
 - [Time and reminders](time-and-reminders.md): the timer, your private timesheet and reminders.
 - [Goals, insights and decks](goals-and-insights.md): goals with numbers, team charts and PowerPoint status decks.
+- [Calls](calls.md): calls with sound, video and screens, encrypted end to end, and setting up the relay.
 - [Keyboard shortcuts](keyboard-shortcuts.md): every key Nil listens for.
 
 ## Privacy and encryption

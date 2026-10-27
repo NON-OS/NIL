@@ -24,6 +24,7 @@ import decks from '../actions/decks';
 import ShareLinkModal from '../components/share/ShareLinkModal';
 import ArchiveMore from '../components/task/ArchiveMore';
 import projectProgress from '../lib/projectProgress';
+import ProjectCallButton from '../components/calls/ProjectCallButton';
 
 export default function ProjectView({ projectId }: { projectId: string }) {
   const project = useStore((s) => s.projects[projectId]);
@@ -84,6 +85,7 @@ export default function ProjectView({ projectId }: { projectId: string }) {
                 <Share2 />
               </button>
             )}
+            {!isGuest && <ProjectCallButton projectId={project.id} />}
             <button type="button" className="icon-btn" onClick={() => decks.open({ kind: 'project', id: project.id })} aria-label="Create a status deck" title="Create a status deck (.pptx)">
               <Presentation />
             </button>

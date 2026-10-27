@@ -14,6 +14,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 - In an anonymous vote, nobody, admins included, can see who chose what.
 - A built-in AI request sent [anonymously](ai-assistants.md#anonymous-requests) isn't tied to anyone in the server's records. Admins see only how many were made each day.
 - The audit file of a sealed vote, which lists every ballot, is ready only once the vote closes.
+- A call with a person is visible only to the people in it and the people rung. Everyone on the team can see that a project call is going on and who is in it, as they can see who is online. Guests don't get calls.
 
 ## What the server operator can read
 
@@ -39,6 +40,8 @@ Everything else is stored in plain form in the server's database, where anyone w
 
 For a conversation, the server knows who is in it, who sent each message, reaction, edit or deletion and when, how large it is, which thread it's in, who the sender mentioned, how far each person has read, and each epoch's signed list of who holds the key. [Chat](chat.md#what-the-server-can-see) has the full list.
 
+[Calls](calls.md) never reach the server at all: sound, video and screens go from browser to browser, encrypted end to end, through the relay when one is set up. Nothing is recorded. The server passes the handshake between the browsers, signed so it can't change it unnoticed, and knows who is in which call and when they joined. It keeps that in memory only, never on disk or in its logs, and forgets it when the call ends.
+
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when.
 
 The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. Each signature also names who the writing is for and which key protects it, so the server can't get a private task or doc handed to someone the writer didn't name, or have you write under a key of its own. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
@@ -55,6 +58,8 @@ The server itself contacts other hosts in these cases:
 - With Nil's verifier (`NOX_VERIFIER_MODE`, see [Verified chain reads](self-hosting.md#verified-chain-reads)), the verifier asks its execution node about the same addresses and transactions, plus the Merkle proofs that check them. In shadow mode the server asks its own node too, so with two different nodes both see each lookup; with one, it learns nothing more than before. The verifier also follows the beacon chain through a consensus API, which only learns that a light client is following it, never what Nil looks up.
 - Anthropic, only when the operator set `ANTHROPIC_API_KEY` and only when someone clicks an AI button. Each feature sends only the text it needs, never a private task, and never who asked. See [AI assistants](ai-assistants.md#built-in-ai).
 - The push service of a browser maker (Google, Apple, Mozilla or Microsoft), only for people who turned on push notifications on a device. Each notification is encrypted for that device, so the push service sees only that one arrived, when, and from which server. The server posts only to the hosts in `PUSH_SERVICES`, and `PUSH_NOTIFICATIONS=off` stops it altogether. See [Time and reminders](time-and-reminders.md#push-notifications).
+
+- Nothing for calls. The TURN relay is the operator's own, usually on the same machine. It sees the IP address of everyone in a call and when they talk, and carries the call encrypted, so it never hears or sees it. By default each browser in a call sees only the relay's address, never another person's. An admin who allows direct connections lets browsers in a call learn each other's addresses. See [Calls](calls.md#how-calls-stay-private).
 
 - The Privacy Pools relayer and association set provider, only on a server with [pool payouts](private-payouts.md#pay-from-the-teams-pool) on and only for admins using the team pool. The server reaches only the hosts in `PRIVACY_POOLS_RELAYER_URL` and `PRIVACY_POOLS_ASP_URL`, on a fixed few paths, refuses redirects, and passes on nothing about the admin: no cookie, no IP address, no headers of theirs. What each one learns is under [The team pool](#the-team-pool).
 

@@ -12,6 +12,7 @@ import logLimited from '../lib/logLimited.js';
 import buildId from '../lib/buildId.js';
 import config from '../config.js';
 import chatTyping from '../chat/chatTyping.js';
+import callSocket from '../calls/callSocket.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -54,6 +55,8 @@ function handleMessage(ws, raw) {
     docAwareness(ws, client, msg);
   } else if (msg?.type === 'chat.typing') {
     chatTyping(client, msg);
+  } else if (typeof msg?.type === 'string' && msg.type.startsWith('call.')) {
+    callSocket(ws, client, msg);
   }
 }
 
@@ -89,14 +92,18 @@ function connected(ws, user, session) {
       handleMessage(ws, raw);
     }),
   );
-  ws.on('close', () => hub.remove(ws));
+  ws.on('close', () => {
+    hub.remove(ws);
+    callSocket.closed(ws);
+  });
   ws.on('error', () => hub.remove(ws));
   // the build lets a tab that reconnects after a deploy see it's running an old version
   ws.send(JSON.stringify({ type: 'hello', presence: hub.presenceFor({ id: user.id, isAdmin: user.isAdmin }), build: buildId() }));
 }
 
 export default function attachRealtime(server) {
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  // a call's handshake carries a whole session description, so frames may be a little larger
+  const wss = new WebSocketServer({ noServer: true, maxPayload: Math.max(16 * 1024, config.calls.maxSignalBytes + 2048) });
   let closing = false;
 
   function upgrade(req, socket, head) {

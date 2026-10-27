@@ -67,6 +67,39 @@ services:
         max-size: 10m
         max-file: "3"
 
+  # The relay for calls, off unless you ask for it with COMPOSE_PROFILES=calls (docs/calls.md,
+  # "Set up calls"). It uses the host's network, since it hands out thousands of UDP ports and
+  # must see the addresses browsers really come from. Its settings are deploy/coturn plus the
+  # TURN_ lines of .env; the secret is the same TURN_SECRET Nil uses. Put the relay host's TLS
+  # certificate and key in TURN_CERT_DIR as fullchain.pem and privkey.pem, readable by coturn.
+  coturn:
+    image: coturn/coturn:4.18.0@sha256:bbefd3e1fdfdc0d58770fe01b581fd8b00d9f3a5580d00acb77cf719a6bc78e3
+    profiles:
+      - calls
+    restart: unless-stopped
+    network_mode: host
+    entrypoint: ["/bin/sh", "/etc/coturn/entrypoint.sh"]
+    env_file:
+      - path: .env
+        required: false
+    volumes:
+      - ./deploy/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./deploy/coturn/entrypoint.sh:/etc/coturn/entrypoint.sh:ro
+      - ${TURN_CERT_DIR:-./deploy/coturn/certs}:/certs:ro
+    read_only: true
+    tmpfs:
+      - /tmp:size=1m,mode=1777
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    mem_limit: 512m
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: "3"
+
 volumes:
   nonos-data:
     # a fixed name, so backups and restores find it whatever folder the code is in; it's the

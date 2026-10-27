@@ -96,6 +96,8 @@ const signedIn = [
   { name: 'chat', path: '/chat' },
   { name: 'chat-open', path: '/chat', then: openChat },
   { name: 'chat-new', path: '/chat', then: newConversation, after: closeDialog },
+  // the calls page; with no relay here it says calls aren't set up, and scripts/calls checks the rest
+  { name: 'calls', path: '/calls' },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },
