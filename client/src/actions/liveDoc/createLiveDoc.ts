@@ -7,6 +7,8 @@ import createInbox from './inbox';
 import createOutbox from './outbox';
 import createSaver from './saver';
 import createPresence from './presence';
+import createUnsent from './unsent';
+import toast from '../../state/toast';
 import type LiveContext from './liveContext';
 import type LiveDoc from '../../types/LiveDoc';
 import type LiveStatus from '../../types/LiveStatus';
@@ -35,6 +37,7 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
       for (const fn of listeners) fn(ctx.status);
     },
     local: () => saver.changed(),
+    settled: () => void unsent.settled(),
     saveNow: () => saver.saveNow(),
     reload: async () => rebase(await docs.open(ctx.docId)),
   };
@@ -59,7 +62,9 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
   const saver = createSaver(ctx, adopt);
   await inbox.receive(start.live.updates);
   const outbox = createOutbox(ctx);
+  const unsent = createUnsent(ctx);
   const presence = createPresence(ctx, me);
+  if (ctx.status.state !== 'readonly' && (await unsent.recover())) toast.show('Changes you made here earlier that hadn’t reached the server are back in the doc and on their way.');
   const unregister = liveDocs.register(start.id, (event) => {
     if (event.type === 'doc-update') void inbox.receive([event as unknown as EncryptedUpdate]);
     else if (event.type === 'doc-aware' && typeof event.ct === 'string') void presence.receive(event.ct);
@@ -85,6 +90,7 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
       outbox.stop();
       await saver.flush().catch(() => {});
       saver.stop();
+      await unsent.stop();
       ydoc.destroy();
     },
   };

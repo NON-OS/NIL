@@ -15,7 +15,11 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Mentioning a teammate in a doc puts a notice in their inbox. The server learns who mentioned whom in which doc, never the words around it.
 - An outline of the doc's headings, and version history that reaches back further: one version a minute for the last hour, one each quarter of an hour for a day, then one a day, up to `DOC_REVISIONS` (100).
 - Docs written as Markdown open in the new editor unchanged and switch over the next time someone edits them.
-- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE` and `DOC_REVISIONS`.
+- Each comment message is signed by its author for its doc and thread, and one whose signature doesn't check out is hidden, so nobody who can edit a doc can comment under someone else's name.
+- Live changes and cursors are padded before they're encrypted, so their size no longer tells the server how much was typed.
+- Changes that haven't reached the server are kept in the browser, encrypted under a key derived from the unlocked identity, and sent the next time the doc opens there, so closing the tab or losing power while offline loses nothing.
+- Pictures and files taken out of a doc are deleted once no version in its history uses them, after a grace period. Each version tells the server which blobs it uses (migration 044).
+- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE`, `DOC_REVISIONS`, `DOC_BLOB_GRACE_DAYS` and `DOC_BLOB_REFS_MAX`.
 
 ### Chat
 
@@ -32,7 +36,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Bigger calls on an SFU, still end to end. With `SFU_URL`, `SFU_API_KEY` and `SFU_API_SECRET` set, a call of more than `CALL_MESH_MAX_PEERS` (4) moves onto LiveKit 1.9.12, run by `docker-compose.yml` under the `calls` profile, and holds up to `CALL_SFU_MAX_PEERS` (50). Every frame is encrypted in the browser with livekit-client 2.22.4's frame encryption (insertable streams in Chrome, `RTCRtpScriptTransform` in Firefox and Safari). Each browser makes its own frame key, a new one whenever anyone joins or leaves, sealed to each other person's key and signed (`nil/call-media-key/v1`). The SFU gets room and participant names derived under a key it doesn't hold, and tokens that last ten minutes and can't send data. Smaller calls stay browser to browser.
 - Nothing goes to someone whose key you haven't confirmed until you click **Talk anyway** or confirm it, in a mesh call or on the SFU.
 - Each signed handshake names the tab the server announced for its sender, and is dropped if it doesn't match.
-- Calls are kept in the database (migration 044) instead of memory, so a call survives the server restarting and works across server processes that share the database. The record holds who is in the call and when, is deleted when the call ends or after `CALL_RECORD_HOURS` (12), and is left out of backups and capsules.
+- Calls are kept in the database (migration 045) instead of memory, so a call survives the server restarting and works across server processes that share the database. The record holds who is in the call and when, is deleted when the call ends or after `CALL_RECORD_HOURS` (12), and is left out of backups and capsules.
 - Relay passwords last ten minutes (`TURN_TTL_SECONDS` is now 600), are bound to one call, and are renewed while a call goes on. The relay username's hash changes from call to call.
 - Direct connections are off on every device until its owner turns them on, even where an admin allows them. STUN servers come from the relay or `STUN_URLS`.
 - People can stop calls ringing them: **Don't let them ring me** on a ringing call, a **Don't ring me** switch and a list of people stopped from ringing you, under **Taking calls**. One person can ring another at most `CALL_RINGS_PER_PERSON` (4) times in `CALL_RING_WINDOW_MINUTES` (10).

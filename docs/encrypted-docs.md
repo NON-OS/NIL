@@ -46,7 +46,7 @@ Add a picture with the image button in the bar, by typing `/image`, or by pastin
 
 Any other file, such as a PDF, a Word file, a spreadsheet or a recording, goes in the same ways, or with the attach button or `/file`. It shows as a card with its name and size. **Preview** opens PDFs, Word files, pictures, audio, video and text right in the browser, and the download button saves it.
 
-Each picture and file is encrypted in your browser before it's uploaded, under a key of its own that is kept inside the doc's text, so only people who can read the doc can open it. Photos lose their hidden details, such as where they were taken and the camera, before they're encrypted. A picture or file you take out of the text stays stored, encrypted, until the doc is deleted, and counts toward your storage.
+Each picture and file is encrypted in your browser before it's uploaded, under a key of its own that is kept inside the doc's text, so only people who can read the doc can open it. Photos lose their hidden details, such as where they were taken and the camera, before they're encrypted. A picture or file you take out of the text stays stored, encrypted, for as long as a version in the doc's history still uses it, and a week after that (the server's `DOC_BLOB_GRACE_DAYS`), then it's deleted. Until then it counts toward your storage.
 
 ## Word, Markdown and PDF
 
@@ -58,7 +58,7 @@ To bring a Word or Markdown file in, click the button beside the plus above the 
 
 Everyone who can read a doc can edit it at the same time. You see each other's cursors, with names, and faces at the top show who else has it open. Changes merge as you type, so nobody's words overwrite anybody else's, even when two people type in the same sentence.
 
-If the connection drops, keep typing. Your changes wait in the tab, the status says **Offline · kept here**, and they go out when the connection is back. Closing the tab while changes are still waiting asks you first.
+If the connection drops, keep typing. Your changes wait in the tab, the status says **Offline · kept here**, and they go out when the connection is back. They're also kept in your browser, encrypted under a key only your unlocked identity can make, so if the tab closes or the device turns off first, they come back the next time you open the doc in that browser and go out then. Closing the tab while changes are still waiting asks you first.
 
 Every few seconds the browser of whoever is typing saves a new signed version that folds the changes in. That keeps the doc quick to open and gives the history something to show.
 
@@ -66,7 +66,7 @@ Every few seconds the browser of whoever is typing saves a new signed version th
 
 Select some words and click **Comment**, or press Ctrl+Alt+M. Write your comment and click **Comment** again. The words get a yellow underline, and the thread opens in the panel on the right. Anyone who can read the doc can reply, resolve a thread or reopen it. Whoever started a thread, or an admin, can delete it. Resolved threads are hidden unless you switch on **Show resolved**.
 
-Comments are part of the doc, so they're encrypted and signed exactly like its text, and they go with the doc when it's shared or re-keyed.
+Comments are part of the doc, so they're encrypted exactly like its text, and they go with the doc when it's shared or re-keyed. Each message is also signed by whoever wrote it, for this doc and this thread, so nobody who can edit the doc can post under someone else's name or move a reply to another thread. A message whose signature doesn't check out is hidden, with a line saying so.
 
 ## Check your teammates' keys
 

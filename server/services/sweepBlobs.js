@@ -4,15 +4,16 @@ import sql from '../db/sql.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import dropBlobs from './dropBlobs.js';
+import unusedDocBlobs from './unusedDocBlobs.js';
 
 // a chunk that arrived under its own name and was never moved into place
 const INCOMING = /^[\w-]+_\d+\.[\w-]+\.in$/;
 
 // Throws away sealed blobs nobody will finish or use: uploads untouched for
 // SEALED_UPLOAD_STALE_MINUTES, finished files a folder never took in within that time (the
-// browser stopped between the upload and adding the file), and anything whose doc or folder is
-// gone. A blob in a doc is only ever named inside the doc's encrypted text, so it stays as long
-// as the doc does, unless someone deletes it.
+// browser stopped between the upload and adding the file), anything whose doc or folder is gone,
+// and pictures and files taken out of a doc that none of its kept versions uses (see
+// unusedDocBlobs).
 export default async function sweepBlobs({ now = Date.now() } = {}) {
   const cutoff = now - config.sealedBlobs.staleMs;
   const ids = [
@@ -27,6 +28,7 @@ export default async function sweepBlobs({ now = Date.now() } = {}) {
          OR (b.scope_kind = 'folder' AND NOT EXISTS (SELECT 1 FROM folders f WHERE f.id = b.scope_id))`,
     ),
   ].map((r) => r.id);
+  ids.push(...unusedDocBlobs(now));
   const dropped = await dropBlobs(ids);
   for (const name of fs.readdirSync(uploadDir)) {
     if (!INCOMING.test(name)) continue;

@@ -160,3 +160,47 @@ test('the open doc applies changes in order, fetches what it missed, leaves out 
   assert.equal(put.body.through, 3);
   assert.equal(store.get().me.id, 'v');
 });
+
+test('live changes are padded, so their size doesn’t tell how much was typed', async () => {
+  const key = crypto.getRandomValues(new Uint8Array(32));
+  const seal = (n) => docLiveCipher.seal(key, 'doc-a', 'update', docLiveCipher.newId(), new Uint8Array(n).fill(7));
+  const small = await Promise.all([1, 120, 900].map((n) => seal(n).then((ct) => ct.length)));
+  assert.equal(new Set(small).size, 1);
+  const big = await seal(5000);
+  assert.equal((await docLiveCipher.open(key, 'doc-a', 'update', big)).payload.length, 5000);
+});
+
+test('changes made offline outlive the tab and go out the next time the doc opens here', async () => {
+  const created = await docs.create({ title: 'Field notes', audience: 'people', people: ['w'] });
+  const key = keyring.docKey(created.id).slice();
+  let online = false;
+  const gate = (reply) => (url, b) => {
+    if (!online) throw new TypeError('Failed to fetch');
+    return reply(url, b);
+  };
+  route('GET', new RegExp(`^/api/docs/${created.id}/updates`), () => ({ updates: [], version: 1 }));
+  route('POST', `/api/docs/${created.id}/updates`, gate(() => ({ seq: 1 })));
+  route('PUT', `/api/docs/${created.id}`, gate(() => ({ doc: { ...stored, version: 2, updatesThrough: 1 } })));
+
+  const first = await createLiveDoc(await docs.open(created.id), 'v', () => {});
+  const p = new Y.XmlElement('paragraph');
+  p.insert(0, [new Y.XmlText('typed on the train')]);
+  first.ydoc.getXmlFragment('body').push([p]);
+  await first.close();
+
+  online = true;
+  const again = await createLiveDoc(await docs.open(created.id), 'v', () => {});
+  assert.match(words(again.ydoc), /typed on the train/);
+  await new Promise((r) => setTimeout(r, 300));
+  const posted = sent.filter((r) => r.method === 'POST' && r.url === `/api/docs/${created.id}/updates`).at(-1);
+  const opened = await docUpdateSeal.open(created.id, key, posted.body.updateCt, ['v', 'w']);
+  const check = new Y.Doc();
+  Y.applyUpdate(check, opened.update);
+  assert.match(words(check), /typed on the train/);
+  await again.close();
+
+  // once the server has them, nothing is kept or laid in again
+  const third = await createLiveDoc(await docs.open(created.id), 'v', () => {});
+  assert.doesNotMatch(words(third.ydoc), /typed on the train/);
+  await third.close();
+});
