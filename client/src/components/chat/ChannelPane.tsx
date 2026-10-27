@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Clock, Settings2, Users } from 'lucide-react';
 import ChannelIcon from './ChannelIcon';
 import MessageList from './MessageList';
@@ -15,6 +15,7 @@ import chatRosters, { type Chain } from '../../actions/chat/chatRosters';
 import chatRead from '../../actions/chat/chatRead';
 import chatTitle from '../../actions/chat/chatTitle';
 import disappearLabel from '../../lib/disappearLabel';
+import rosterEvents from '../../lib/rosterEvents';
 import type ChatChannel from '../../types/ChatChannel';
 
 interface Props {
@@ -34,6 +35,8 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
   const [editing, setEditing] = useState<string | null>(null);
   const composer = useRef<ComposerHandle>(null);
   const title = chatTitle(channel);
+  const users = useStore((s) => s.users);
+  const events = useMemo(() => (chain ? rosterEvents(chain.broken === null ? chain.rosters : chain.rosters.slice(0, chain.broken - 1), users) : []), [chain, users]);
 
   useEffect(() => {
     chatState.set({ viewing: channel.id });
@@ -57,7 +60,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
     if (newest && document.visibilityState === 'visible') chatRead.mark(channel.id, newest);
   }, [channel.id, newest]);
 
-  const blocked = !channel.wrappedKey ? 'Waiting for a key. A teammate’s browser hands it over once they’ve confirmed your key.' : null;
+  const blocked = !channel.wrappedKeys.length ? 'Waiting for a key. A teammate’s browser hands it over once they’ve confirmed your key.' : null;
   const editLast = () => {
     const mine = [...(timeline?.items ?? [])].reverse().find((m) => m.senderId === me && m.type === 'message' && m.state === 'ok' && m.seq && !m.threadId);
     if (mine) setEditing(mine.id);
@@ -110,6 +113,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
           onOlder={() => void chatTimeline.older(channel)}
           onLeave={() => composer.current?.focus()}
           label={`Messages in ${title}`}
+          events={events}
         />
       ) : (
         <div className="chat-empty" />

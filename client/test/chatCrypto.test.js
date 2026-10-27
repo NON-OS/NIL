@@ -40,12 +40,12 @@ const as = async (who, identity) => {
 async function channelOfTwo(kind = 'channel') {
   const shape = { id: id(), kind, audience: 'people' };
   const made = await startEpoch(shape, 1, null, { members: ['v', 'w'], managers: ['v'] });
-  const row = (wrappedKey) => ({ ...shape, epoch: 1, members: ['v', 'w'], keyHolders: ['v', 'w'], wrappedKey, metaKey: null, metaCt: null, metaEpoch: null, createdBy: 'v', rotateAt: null, disappearSeconds: null });
+  const row = (wrappedKey) => ({ ...shape, epoch: 1, members: ['v', 'w'], keyHolders: ['v', 'w'], wrappedKeys: [wrappedKey], metaKeys: [], departures: [], purgedEpoch: 0, forwardDays: null, metaCt: null, metaEpoch: null, createdBy: 'v', rotateAt: null, disappearSeconds: null });
   return { shape, made, row };
 }
 
 const chainFor = async (shape, raw, wrappedKey, prev = null, epoch = 1) => {
-  const roster = await checkRoster(raw, { workspaceKey: store.get().workspaceKey, channelId: shape.id, epoch, wrappedKey }, prev);
+  const roster = await checkRoster(raw, { workspaceKey: store.get().workspaceKey, channelId: shape.id, epoch, wrappedKeys: wrappedKey ? [wrappedKey] : [] }, prev ? [prev] : []);
   return { rosters: [...(prev ? [prev] : []), roster], broken: null, forked: false, keysRev: 0 };
 };
 
@@ -129,23 +129,23 @@ test('keys are sealed only to confirmed people, and the list says exactly who go
 test('only a manager can take someone out, and nobody can rewrite the chain', async () => {
   const { shape, made } = await channelOfTwo();
   const ws = store.get().workspaceKey;
-  const first = await checkRoster(made.raw, { workspaceKey: ws, channelId: shape.id, epoch: 1, wrappedKey: null }, null);
+  const first = await checkRoster(made.raw, { workspaceKey: ws, channelId: shape.id, epoch: 1, wrappedKeys: [] }, []);
   // W isn't a manager: a new key for the same people is fine, dropping V isn't
   await as('w', W);
   await confirm(['v']);
   const same = await startEpoch(shape, 2, first, { members: ['v', 'w'], managers: ['v'] });
-  assert.equal((await checkRoster(same.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKey: null }, first)).by, 'w');
+  assert.equal((await checkRoster(same.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first])).by, 'w');
   const drop = await startEpoch(shape, 2, first, { members: ['w'], managers: [] });
-  await assert.rejects(checkRoster(drop.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKey: null }, first), /wasn’t allowed/);
+  await assert.rejects(checkRoster(drop.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first]), /wasn’t allowed/);
   // V, the manager, may take W out
   await as('v', V);
   const out = await startEpoch(shape, 2, first, { members: ['v'], managers: ['v'] });
-  assert.deepEqual((await checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKey: null }, first)).members, ['v']);
+  assert.deepEqual((await checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first])).members, ['v']);
   // a list that skips back to another chain, or sits at another epoch or conversation, fails
   const elsewhere = await startEpoch({ ...shape, id: id() }, 2, first, { members: ['v', 'w'], managers: ['v'] });
-  await assert.rejects(checkRoster(elsewhere.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKey: null }, first));
-  await assert.rejects(checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 3, wrappedKey: null }, first));
-  await assert.rejects(checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKey: null }, { ...first, hash: 'A'.repeat(43) }));
+  await assert.rejects(checkRoster(elsewhere.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first]));
+  await assert.rejects(checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 3, wrappedKeys: [] }, [first]));
+  await assert.rejects(checkRoster(out.raw, { workspaceKey: ws, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [{ ...first, hash: 'A'.repeat(43) }]));
 });
 
 test('a member list signed with a key nobody can see for its signer is refused', async () => {
@@ -153,7 +153,7 @@ test('a member list signed with a key nobody can see for its signer is refused',
   const ghost = person();
   const facts = { kind: 'channel', audience: 'people', members: ['v', 'z'], managers: ['z'], key: keyHash(crypto.getRandomValues(new Uint8Array(32))), prev: null, at: Date.now() };
   const raw = signedFacts.seal('', { kind: chatRoster.kind, place: chatRoster.place(store.get().workspaceKey, shape.id, 1), facts: chatRoster.list(facts), by: 'z', signingPrivate: ghost.signingPrivate });
-  await assert.rejects(checkRoster(raw, { workspaceKey: store.get().workspaceKey, channelId: shape.id, epoch: 1, wrappedKey: null }, null), /can’t confirm/);
+  await assert.rejects(checkRoster(raw, { workspaceKey: store.get().workspaceKey, channelId: shape.id, epoch: 1, wrappedKeys: [] }, []), /can’t confirm/);
 });
 
 test('a channel name set by someone who doesn’t manage it isn’t shown', async () => {

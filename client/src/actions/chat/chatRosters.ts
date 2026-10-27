@@ -15,7 +15,7 @@ export interface Chain {
   keysRev: number;
 }
 
-type Row = { epoch: number; roster: string; wrappedKey: string | null };
+type Row = { epoch: number; roster: string; proofs: string[]; wrappedKeys: string[] };
 
 const chains = new Map<string, Promise<Chain>>();
 // the newest list this browser checked for each conversation: its epoch and hash
@@ -40,10 +40,9 @@ async function extend(channel: ChatChannelRow, held: Chain | null): Promise<Chai
   const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${from}`);
   for (const row of epochs) {
     if (chain.broken !== null) break;
-    const prev = chain.rosters[chain.rosters.length - 1] ?? null;
     try {
       if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
-      chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKey: row.wrappedKey }, prev));
+      chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKeys: row.wrappedKeys, proofs: row.proofs }, chain.rosters));
     } catch {
       chain.broken = row.epoch;
     }

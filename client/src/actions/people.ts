@@ -7,6 +7,8 @@ import type Workspace from '../types/Workspace';
 import type Invite from '../types/Invite';
 import type Role from '../types/Role';
 import type SharingPolicy from '../types/SharingPolicy';
+import keyring from '../state/keyring';
+import departures from './chat/departures';
 
 const people = {
   async updateMe(patch: Partial<Pick<User, 'name' | 'title' | 'color'>>) {
@@ -24,6 +26,9 @@ const people = {
     try {
       const { user } = await http.patch<{ user: User }>(`/users/${id}`, patch);
       store.set((s) => ({ users: records.put(s.users, user) }));
+      // out of the team means out of every conversation: this browser signs it, so any member's
+      // browser can start each conversation's next key without them
+      if ((patch.deactivated || patch.role === 'guest') && keyring.identity()) await departures.remove(id).catch(() => toast.show('They’re out of the team. Unlock your keys and open Chat to sign them out of its conversations.'));
     } catch (err) {
       toast.error(err);
     }

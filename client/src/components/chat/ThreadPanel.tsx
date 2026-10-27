@@ -59,7 +59,7 @@ export default function ThreadPanel({ channel, rootId, onClose }: { channel: Cha
           label="Replies in this thread"
         />
       )}
-      <Composer ref={composer} channel={channel} threadId={rootId} placeholder="Reply in thread" blocked={!channel.wrappedKey ? 'Waiting for a key.' : null} onEditLast={editLast} />
+      <Composer ref={composer} channel={channel} threadId={rootId} placeholder="Reply in thread" blocked={!channel.wrappedKeys.length ? 'Waiting for a key.' : null} onEditLast={editLast} />
     </aside>
   );
 }

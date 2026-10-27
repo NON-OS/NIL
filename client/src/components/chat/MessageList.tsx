@@ -5,6 +5,7 @@ import useVirtualList from '../../hooks/useVirtualList';
 import useNow from '../../hooks/useNow';
 import useStore from '../../state/useStore';
 import chatRows from '../../lib/chatRows';
+import type { RosterEvent } from '../../lib/rosterEvents';
 import type { Timeline } from '../../state/chatState';
 import type ChatChannel from '../../types/ChatChannel';
 
@@ -19,17 +20,22 @@ interface Props {
   // where Escape sends focus: the composer
   onLeave: () => void;
   label: string;
+  // who came and went, from the checked member lists
+  events?: RosterEvent[];
 }
 
 // A conversation's messages as a feed: only the rows near the screen are in the page, older
 // pages load as it's scrolled up, and it stays at the newest message while you're there. Arrow
 // keys move between messages, Home and End jump to either end, E edits your own message, R
 // replies in a thread, and Escape goes back to writing.
-export default function MessageList({ channel, timeline, inThread, editing, onEditing, onThread, onOlder, onLeave, label }: Props) {
+export default function MessageList({ channel, timeline, inThread, editing, onEditing, onThread, onOlder, onLeave, label, events }: Props) {
   const me = useStore((s) => s.me?.id ?? null);
   // disappearing messages go from the screen as their time runs out
   const now = useNow(30_000);
-  const rows = useMemo(() => chatRows(timeline.items, { me, readSeq: inThread ? Number.MAX_SAFE_INTEGER : channel.readSeq, now }), [timeline.items, me, channel.readSeq, inThread, now]);
+  const rows = useMemo(
+    () => chatRows(timeline.items, { me, readSeq: inThread ? Number.MAX_SAFE_INTEGER : channel.readSeq, now, events, fromStart: !timeline.more }),
+    [timeline.items, me, channel.readSeq, inThread, now, events, timeline.more],
+  );
   const keyAt = useCallback((i: number) => rows[i].key, [rows]);
   const list = useVirtualList({ count: rows.length, keyAt, estimate: 56, onTop: timeline.more ? onOlder : undefined });
   const focusWanted = useRef<number | null>(null);
@@ -104,6 +110,8 @@ export default function MessageList({ channel, timeline, inThread, editing, onEd
                 <div className="chat-unread" role="separator">
                   New
                 </div>
+              ) : row.kind === 'event' ? (
+                <p className="chat-event">{row.text}</p>
               ) : (
                 <MessageRow item={row.item} channel={channel} grouped={row.grouped} reactions={row.reactions} index={index} inThread={inThread} editing={editing === row.item.id} onEditing={onEditing} onThread={onThread} />
               )}

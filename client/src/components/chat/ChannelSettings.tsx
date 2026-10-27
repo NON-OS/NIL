@@ -85,6 +85,11 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
                 <Avatar user={users[id]} size={24} />
                 <span className="grow">{users[id]?.name ?? 'Someone'}</span>
                 <small>{channel.keyHolders.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
+                {peopleChange && !channel.keyHolders.includes(id) && (
+                  <button type="button" className="btn btn-sm" onClick={() => void run(() => chatChannels.setMembers(channel, channel.members), 'New key, sealed to everyone whose key you’ve confirmed.')}>
+                    Give key
+                  </button>
+                )}
                 {peopleChange && id !== me?.id && (
                   <ConfirmButton className="btn btn-sm btn-ghost" confirmLabel="Remove?" label={`Remove ${users[id]?.name ?? 'them'}`} onConfirm={() => void run(() => chatChannels.setMembers(channel, channel.members.filter((m) => m !== id)), 'Removed. The conversation has a new key.')}>
                     Remove

@@ -12,6 +12,7 @@ import ThreadPanel from '../components/chat/ThreadPanel';
 import QuickSwitcher from '../components/chat/QuickSwitcher';
 import NewConversation from '../components/chat/NewConversation';
 import ChannelSettings from '../components/chat/ChannelSettings';
+import RemovalNotice from '../components/chat/RemovalNotice';
 import useStore from '../state/useStore';
 import useChat from '../state/useChat';
 import useRoute from '../hooks/useRoute';
@@ -125,6 +126,7 @@ export default function ChatView() {
   return (
     <div className="view-fill">
       <ViewHeader title="Chat" icon={<MessagesSquare size={17} />} subtitle="End-to-end encrypted" actions={unlocked && loaded ? jump : null} />
+      {unlocked && loaded && <RemovalNotice />}
       <div className="chat-body">{body}</div>
       {switcher && <QuickSwitcher onOpen={(id) => open(id)} onClose={() => setSwitcher(false)} />}
       {making && <NewConversation initial={making} onClose={() => setMaking(null)} onMade={(id) => open(id)} />}

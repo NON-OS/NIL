@@ -12,6 +12,7 @@ import chatMeta, { type Meta } from './chatMeta';
 import chatMaintain from './chatMaintain';
 import startEpoch from './startEpoch';
 import openChannel from './openChannel';
+import departures from './departures';
 import type ChatChannel from '../../types/ChatChannel';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
@@ -34,6 +35,12 @@ async function keyNow(channel: ChatChannel) {
 // The conversations this person is in, and everything that changes one as a whole.
 const chatChannels = {
   teammates,
+
+  // whether this person may rename it, change its settings and take people out
+  manages(channel: ChatChannelRow) {
+    const me = store.get().me;
+    return channel.kind === 'group' || (channel.kind === 'channel' && (channel.createdBy === me?.id || isAdmin(me)));
+  },
 
   async load() {
     try {
@@ -97,17 +104,30 @@ const chatChannels = {
     put({ ...channel, notify });
   },
 
-  // Adding people asks to check their keys first; taking someone out starts a new key without them.
+  // Adding people, or giving the key to someone waiting for it, asks to check their keys first;
+  // taking someone out starts a new key without them.
   async setMembers(channel: ChatChannel, members: string[]) {
-    const adding = members.filter((id) => !channel.members.includes(id));
+    const adding = members.filter((id) => !channel.keyHolders.includes(id));
     if (adding.length) await confirmKeys.ask(adding, 'this conversation');
     await chatMaintain(channel, { members: [...new Set(members)].sort() });
     return chatChannels.refresh(channel.id);
   },
 
+  // Leaving signs a statement here, so any member left can start the next key without you.
   async leave(channel: ChatChannel) {
-    await http.post(`/chat/channels/${channel.id}/leave`);
+    await departures.leave(channel.id);
     chatChannels.drop(channel.id);
+  },
+
+  async forward(channel: ChatChannel, days: number | null) {
+    const res = await http.patch<{ channel: ChatChannelRow }>(`/chat/channels/${channel.id}`, { forwardDays: days });
+    return put(await openChannel(res.channel));
+  },
+
+  // An admin's signed word that these people, out of the team now, are out of every conversation.
+  async signRemovals(userIds: string[]) {
+    for (const userId of userIds) await departures.remove(userId);
+    await chatChannels.load();
   },
 
   async remove(channel: ChatChannel) {
@@ -119,7 +139,10 @@ const chatChannels = {
   // it can't, since another member's browser will.
   async tend(channel: ChatChannel) {
     try {
-      if (await chatMaintain(channel)) await chatChannels.refresh(channel.id);
+      if (!(await chatMaintain(channel))) return;
+      const fresh = await chatChannels.refresh(channel.id);
+      // a forward-secret conversation's old keys go, so whoever manages it moves the name along
+      if (fresh?.forwardDays && fresh.metaState === 'ok' && fresh.metaEpoch !== fresh.epoch && chatChannels.manages(fresh)) await chatChannels.rename(fresh, { name: fresh.name, topic: fresh.topic });
     } catch (err) {
       if (err instanceof ApiError && err.status === 409) await chatChannels.refresh(channel.id);
     }

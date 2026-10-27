@@ -28,6 +28,6 @@ export default async function startEpoch(channel: Shape, epoch: number, prev: Ch
     at: Date.now(),
   };
   const raw = signedFacts.seal('', { kind: chatRoster.kind, place: chatRoster.place(store.get().workspaceKey, channel.id, epoch), facts: chatRoster.list(facts), by: me, signingPrivate: id.signingPrivate });
-  const roster: ChatRoster = { ...facts, epoch, by: me, hash: chatRoster.hash(raw), wrappedKey: grants[0].wrappedKey };
+  const roster: ChatRoster = { ...facts, epoch, by: me, hash: chatRoster.hash(raw), wrappedKeys: [grants[0].wrappedKey], departed: [] };
   return { key, raw, grants, roster };
 }
