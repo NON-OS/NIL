@@ -152,7 +152,7 @@ test('relay passwords stop working at their time, and only this server’s secre
   // what coturn checks with use-auth-secret: the HMAC, then that the time in the name is still ahead
   const coturnAccepts = (username, credential, now) => crypto.createHmac('sha1', SECRET).update(username).digest('base64') === credential && Number(username.split(':')[0]) > Math.floor(now / 1000);
   const issued = Date.now();
-  const creds = turnCredentials(ids.ana, issued);
+  const creds = turnCredentials(ids.ana, 'call-one', issued);
   assert.ok(coturnAccepts(creds.username, creds.credential, issued));
   assert.ok(coturnAccepts(creds.username, creds.credential, issued + 119_000));
   assert.ok(!coturnAccepts(creds.username, creds.credential, issued + 121_000));
@@ -161,7 +161,9 @@ test('relay passwords stop working at their time, and only this server’s secre
   assert.ok(!coturnAccepts(stretched, creds.credential, issued));
   // and nobody else's name is in it
   assert.ok(!creds.username.includes(ids.ana));
-  assert.notEqual(turnCredentials(ids.owner, issued).username, creds.username);
+  assert.notEqual(turnCredentials(ids.owner, 'call-one', issued).username, creds.username);
+  // nor can one call's name be tied to the next one's
+  assert.notEqual(turnCredentials(ids.ana, 'call-two', issued).username.split(':')[1], creds.username.split(':')[1]);
 });
 
 test('someone removed from the team mid-call is out of it at once', async () => {

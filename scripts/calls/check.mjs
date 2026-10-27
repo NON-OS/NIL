@@ -1,20 +1,20 @@
-// Calls in real browsers: three people in Chromium with fake cameras and microphones, through a
+// Calls in real browsers: three people in Chromium, Firefox or WebKit with fake cameras and microphones, through a
 // real coturn on this machine (scripts/calls/turn.mjs). It checks that calls connect through
 // the relay and nowhere else, survive the relay going away and coming back (ICE restart), that
 // a server swapping a fingerprint is refused, that a three-way project call works, and runs axe
 // on the call screen at desktop and phone sizes. Needs `npm run build` first.
 //
-//   node scripts/calls/check.mjs [--shots <dir>]
+//   node scripts/calls/check.mjs [--browser chromium|firefox|webkit] [--shots <dir>]
 import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { parseArgs } from 'node:util';
-import { chromium } from 'playwright-core';
 import AxeBuilder from '@axe-core/playwright';
 import turn from './turn.mjs';
+import browsers from './browsers.mjs';
 import steps from './steps.mjs';
 
-const { values: opt } = parseArgs({ options: { shots: { type: 'string' }, port: { type: 'string', default: process.env.CALLS_PORT ?? '3991' } } });
+const { values: opt } = parseArgs({ options: { browser: { type: 'string', default: 'chromium' }, shots: { type: 'string' }, port: { type: 'string', default: process.env.CALLS_PORT ?? '3991' } } });
 const world = createRequire(import.meta.url)('../a11y/world.cjs');
 const SIZES = {
   desktop: { viewport: { width: 1440, height: 900 } },
@@ -26,10 +26,9 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? 'ok  ' : 'FAIL'}  ${name}${detail ? `: ${detail}` : ''}`);
 };
 
-const browser = await chromium.launch({
-  executablePath: process.env.CHROMIUM_PATH || undefined,
-  args: ['--use-fake-device-for-media-stream', '--use-fake-ui-for-media-stream', '--auto-accept-this-tab-capture', '--auto-select-desktop-capture-source=Entire screen'],
-});
+if (!browsers.names.includes(opt.browser)) throw new Error(`--browser is one of ${browsers.names.join(', ')}`);
+const browser = await browsers.launch(opt.browser);
+console.log(`${opt.browser} ${browser.version()}`);
 const relay = turn();
 if (!relay) console.log('coturn is not installed here; calls are checked with direct connections only.');
 await relay?.start();
@@ -37,7 +36,7 @@ const app = await world({ port: Number(opt.port), env: relay ? { TURN_URLS: rela
 if (opt.shots) fs.mkdirSync(opt.shots, { recursive: true });
 
 async function person(size, { tamper } = {}) {
-  const context = await browser.newContext({ ...SIZES[size], colorScheme: 'light', permissions: ['camera', 'microphone'] });
+  const context = await browser.newContext({ ...browsers.contextOptions(opt.browser, SIZES[size]), colorScheme: 'light' });
   // every peer connection the page makes, so the check can read its statistics
   await context.addInitScript(() => {
     const Native = window.RTCPeerConnection;
@@ -88,7 +87,7 @@ async function axe(page, name) {
 }
 
 async function shot(page, name) {
-  if (opt.shots) await page.screenshot({ path: path.join(opt.shots, `${name}.png`) });
+  if (opt.shots) await page.screenshot({ path: path.join(opt.shots, `${opt.browser}-${name}.png`) });
 }
 
 const tamper = { on: false, hits: 0 };
@@ -97,14 +96,14 @@ try {
   people.ada = await person('desktop');
   people.ana = await person('phone');
   people.ben = await person('desktop', { tamper });
-  await steps({ app, relay, ...people, tamper, check, axe, shot });
+  await steps({ app, relay, ...people, tamper, check, axe, shot, capture: browsers.capture(opt.browser) });
 } catch (err) {
   check('the run finished', false, err.stack ?? String(err));
   for (const [name, p] of Object.entries(people)) await shot(p.page, `failed-${name}`).catch(() => {});
   if (relay && opt.shots) fs.writeFileSync(path.join(opt.shots, 'turn.log'), relay.log());
   for (const [name, p] of Object.entries(people)) {
     const logs = await p.page.evaluate(() => window.__pcs.map((pc) => pc.__log)).catch(() => []);
-    if (opt.shots) fs.writeFileSync(path.join(opt.shots, `pc-${name}.log`), logs.map((l, i) => `connection ${i}\n${l.join('\n')}`).join('\n\n'));
+    if (opt.shots) fs.writeFileSync(path.join(opt.shots, `${opt.browser}-pc-${name}.log`), logs.map((l, i) => `connection ${i}\n${l.join('\n')}`).join('\n\n'));
   }
 } finally {
   await browser.close();

@@ -9,6 +9,7 @@ import callRegistry from '../calls/callRegistry.js';
 import callMembership from '../calls/callMembership.js';
 import callSettings from '../calls/callSettings.js';
 import callable from '../calls/callable.js';
+import callLimits from '../calls/callLimits.js';
 import turnCredentials from '../calls/turnCredentials.js';
 
 const router = express.Router();
@@ -29,7 +30,7 @@ function callFor(req) {
 }
 
 function userIds(value) {
-  if (!Array.isArray(value) || !value.length || value.length > config.calls.maxPeers || !value.every((id) => typeof id === 'string' && ID.test(id))) throw HttpError.badRequest('Pick who to call.');
+  if (!Array.isArray(value) || !value.length || value.length > callLimits.max() || !value.every((id) => typeof id === 'string' && ID.test(id))) throw HttpError.badRequest('Pick who to call.');
   return value;
 }
 
@@ -80,11 +81,11 @@ router.post(
   byPerson(config.calls.startsPerMinute * 4),
   route((req) => {
     const call = callFor(req);
-    if (!call.members.has(req.user.id)) throw new HttpError(409, 'Join the call before asking anyone in.');
+    if (!callRegistry.member(call, req.user.id)) throw new HttpError(409, 'Join the call before asking anyone in.');
     const people = userIds(req.body?.userIds);
     if (!people.every(callable)) throw HttpError.badRequest('You can call active members of the team.');
     const rung = callMembership.invite(call, req.user.id, people);
-    return { rung, call: callRegistry.view(call) };
+    return { rung, call: callRegistry.view(callRegistry.get(call.id)) };
   }),
 );
 
@@ -95,12 +96,15 @@ router.post(
   route((req) => {
     available();
     const call = callFor(req);
-    if (!callRegistry.mayJoin(call, req.user.id) && !call.members.has(req.user.id)) throw HttpError.notFound('That call');
+    if (!callRegistry.mayJoin(call, req.user.id)) throw HttpError.notFound('That call');
     const direct = callSettings.direct();
     const { turn } = config.calls;
-    const relay = turn.configured ? turnCredentials(req.user.id) : null;
+    const relay = turn.configured ? turnCredentials(req.user.id, call.id) : null;
+    // with direct connections allowed, browsers also need to learn their own public address,
+    // from the relay's STUN side or STUN_URLS, or they could only ever connect on one network
+    const stun = direct ? [...new Set([...config.calls.stunUrls, ...turn.urls.filter((u) => u.startsWith('turn:')).map((u) => u.replace(/^turn:/, 'stun:').replace(/\?.*$/, ''))])] : [];
     return {
-      iceServers: relay ? [{ urls: relay.urls, username: relay.username, credential: relay.credential }] : [],
+      iceServers: [...(relay ? [{ urls: relay.urls, username: relay.username, credential: relay.credential }] : []), ...(stun.length ? [{ urls: stun }] : [])],
       policy: direct ? 'all' : 'relay',
       expiresAt: relay?.expiresAt ?? null,
       ttlSeconds: config.calls.turnTtlSeconds,

@@ -28,7 +28,7 @@ function offer(over: Partial<{ to: string; at: number; peerSession: string; call
   return { message, nonce };
 }
 
-const asBen = (over: Partial<LinkExpect> = {}): LinkExpect => ({ place, from: ana.id, me: ben.id, mySession: benSession, type: 'offer', now: Date.now(), seen: new Set(), ...over });
+const asBen = (over: Partial<LinkExpect> = {}): LinkExpect => ({ place, from: ana.id, me: ben.id, mySession: benSession, peerSession: anaSession, type: 'offer', now: Date.now(), seen: new Set(), ...over });
 
 test('the fingerprints are read from every section of a description, once each', () => {
   assert.deepEqual(sdpFingerprints(sdp(fp('ab'))), [`sha-256 ${fp('AB')}`]);
@@ -40,7 +40,7 @@ test('an honest offer and its answer check out against the keys teammates confir
   const checked = callLink.verify(message, asBen(), [pub(ana.key)]);
   assert.equal(checked.ok, true);
   const answer = callLink.seal(sdp(fp('CD')), { from: ben.id, to: ana.id, type: 'answer', nonce: callLink.nonce(), peerNonce: nonce, session: benSession, peerSession: anaSession, at: Date.now() }, { place, signingPrivate: ben.key });
-  const asAna: LinkExpect = { place, from: ben.id, me: ana.id, mySession: anaSession, type: 'answer', myNonce: nonce, now: Date.now(), seen: new Set() };
+  const asAna: LinkExpect = { place, from: ben.id, me: ana.id, mySession: anaSession, peerSession: benSession, type: 'answer', myNonce: nonce, now: Date.now(), seen: new Set() };
   assert.equal(callLink.verify(answer, asAna, [pub(ben.key)]).ok, true);
   // the same answer for an offer this tab never made is stale
   assert.deepEqual(callLink.verify(answer, { ...asAna, myNonce: callLink.nonce(), seen: new Set() }, [pub(ben.key)]), { ok: false, reason: 'stale' });
@@ -72,6 +72,8 @@ test('a statement for another person, tab, call or time, or one seen before, is 
   assert.equal((callLink.verify(offer({ to: 'cy-id-00003' }).message, asBen(), key) as { reason: string }).reason, 'wrong-people');
   assert.equal((callLink.verify(offer().message, asBen({ from: 'cy-id-00003' }), key) as { reason: string }).reason, 'wrong-people');
   assert.equal((callLink.verify(offer({ peerSession: 'ben-old-tab-1' }).message, asBen(), key) as { reason: string }).reason, 'stale');
+  // an offer Ana's earlier tab made, replayed to the connection with her new one
+  assert.equal((callLink.verify(offer().message, asBen({ peerSession: 'ana-new-tab-2' }), key) as { reason: string }).reason, 'stale');
   assert.equal((callLink.verify(offer({ callId: 'another-call' }).message, asBen(), key) as { reason: string }).reason, 'forged');
   assert.equal((callLink.verify(offer({ at: Date.now() - 3_600_000 }).message, asBen(), key) as { reason: string }).reason, 'stale');
   const seen = new Set<string>();

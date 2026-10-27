@@ -2,12 +2,14 @@ import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
 import { pipeline } from 'node:stream/promises';
+import { DatabaseSync } from 'node:sqlite';
 import db from '../db/connection.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import signingKey from '../proofs/signingKey.js';
 import secretBox from '../agents/secretBox.js';
 import deriveKey from './deriveKey.js';
+import dropCallRows from '../calls/dropCallRows.js';
 import format from './format.js';
 
 function frame(name, size) {
@@ -45,6 +47,13 @@ export default async function writeCapsule(passphrase, out, { signal } = {}) {
     const snapshot = path.join(tmpDir, 'nonos.db');
     // VACUUM INTO gives a consistent copy while the server keeps running
     db.exec(`VACUUM INTO '${snapshot.replace(/'/g, "''")}'`);
+    const copy = new DatabaseSync(snapshot);
+    try {
+      dropCallRows(copy);
+      copy.exec('VACUUM');
+    } finally {
+      copy.close();
+    }
     signingKey.publicKey();
     const entries = [
       { name: 'nonos.db', file: snapshot },

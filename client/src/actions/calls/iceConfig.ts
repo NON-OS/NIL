@@ -1,4 +1,5 @@
 import callApi, { type IceGrant } from './callApi';
+import storage from '../../lib/storage';
 
 let grant: IceGrant | null = null;
 let refresh: number | undefined;
@@ -22,13 +23,17 @@ const iceConfig = {
     return iceConfig.current();
   },
 
-  // Relay only, unless an admin allowed direct connections: then a browser may also offer its
-  // own addresses, and the other side learns them.
+  // Relay only, unless an admin allowed direct connections and this person also turned them on
+  // for this device: then a browser may also offer its own addresses, and the other side learns
+  // them. The server alone can never switch a browser to showing its address.
   current(): RTCConfiguration {
-    return { iceServers: grant?.iceServers ?? [], iceTransportPolicy: grant?.policy ?? 'relay', bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require' };
+    return { iceServers: grant?.iceServers ?? [], iceTransportPolicy: iceConfig.relayOnly() ? 'relay' : 'all', bundlePolicy: 'max-bundle', rtcpMuxPolicy: 'require' };
   },
 
-  relayOnly: () => (grant?.policy ?? 'relay') === 'relay',
+  relayOnly: () => grant?.policy !== 'all' || !iceConfig.directHere(),
+
+  directHere: () => storage.get<boolean>('call-direct', false) === true,
+  setDirectHere: (on: boolean) => storage.set('call-direct', on),
 
   clear() {
     clearTimeout(refresh);

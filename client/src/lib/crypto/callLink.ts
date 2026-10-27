@@ -47,6 +47,8 @@ export interface LinkExpect {
   from: string;
   me: string;
   mySession: string;
+  // the tab the server says the sender joined from: a statement from any other tab is old
+  peerSession: string;
   type: LinkType;
   // for an answer: the nonce of the offer it answers
   myNonce?: string | null;
@@ -120,7 +122,7 @@ const callLink = {
       return { ok: false, reason: 'malformed' };
     }
     if (signed.by !== expect.from || facts.from !== expect.from || facts.to !== expect.me || facts.type !== expect.type) return { ok: false, reason: 'wrong-people' };
-    if (facts.peerSession !== expect.mySession) return { ok: false, reason: 'stale' };
+    if (facts.peerSession !== expect.mySession || facts.session !== expect.peerSession) return { ok: false, reason: 'stale' };
     if (expect.type === 'answer' && facts.peerNonce !== expect.myNonce) return { ok: false, reason: 'stale' };
     if (Math.abs(expect.now - facts.at) > SKEW_MS) return { ok: false, reason: 'stale' };
     if (expect.seen.has(facts.nonce)) return { ok: false, reason: 'replayed' };

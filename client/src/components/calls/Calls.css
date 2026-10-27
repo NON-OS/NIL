@@ -260,6 +260,43 @@
   height: 18px;
 }
 
+/* someone this browser sends nothing to yet, until their key is checked or the person says so */
+.call-held {
+  position: absolute;
+  top: 8px;
+  right: 48px;
+  left: 8px;
+  display: grid;
+  gap: 6px;
+  padding: 8px 10px;
+  border: 1px solid #5c4a1a;
+  border-radius: var(--r-md);
+  background: #2a2412;
+  color: #ffe2a3;
+  font-size: var(--text-xs);
+}
+
+.call-held p,
+.call-held-them {
+  margin: 0;
+}
+
+.call-held .call-tile-actions {
+  justify-content: flex-start;
+}
+
+.call-held-them {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  max-width: calc(100% - 16px);
+  padding: 3px 8px;
+  border-radius: var(--r-sm);
+  background: rgba(10, 11, 13, 0.78);
+  color: #c9ccd3;
+  font-size: var(--text-xs);
+}
+
 .call-tile-state.refused {
   background: #15171b;
 }
@@ -627,4 +664,13 @@ button.call-trust {
   .call-dock {
     transition: border-color 0.15s;
   }
+}
+
+/* notices sit above a call's controls, never over the button that hangs up */
+body:has(.call-screen) .toasts {
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 88px);
+}
+
+body:has(.call-dock) .toasts {
+  bottom: calc(max(18px, env(safe-area-inset-bottom)) + 76px);
 }

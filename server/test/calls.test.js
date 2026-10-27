@@ -47,7 +47,7 @@ after(() => {
 test('members see whether calls work here; only admins allow direct connections', async () => {
   const status = await people.ana('GET', '/api/calls/settings');
   assert.equal(status.status, 200);
-  assert.deepEqual(status.data, { available: true, reason: null, relay: true, direct: false, maxPeers: 3, ringSeconds: 3 });
+  assert.deepEqual(status.data, { available: true, reason: null, relay: true, direct: false, maxPeers: 3, sfu: false, meshMaxPeers: 4, ringSeconds: 3 });
   assert.equal((await people.guest('GET', '/api/calls/settings')).status, 403);
   assert.equal((await people.ana('PUT', '/api/calls/settings', { direct: true })).status, 403);
   assert.equal((await people.owner('PUT', '/api/calls/settings', { direct: 'yes' })).status, 400);

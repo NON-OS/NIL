@@ -79,9 +79,16 @@ services:
     restart: unless-stopped
     network_mode: host
     entrypoint: ["/bin/sh", "/etc/coturn/entrypoint.sh"]
-    env_file:
-      - path: .env
-        required: false
+    # only the relay's own settings, taken from .env by name: never the app's other secrets,
+    # on a service that faces the internet
+    environment:
+      TURN_SECRET: ${TURN_SECRET:-}
+      TURN_REALM: ${TURN_REALM:-}
+      TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+      TURN_ALLOWED_PEER_IP: ${TURN_ALLOWED_PEER_IP:-}
+      TURN_MIN_PORT: ${TURN_MIN_PORT:-}
+      TURN_MAX_PORT: ${TURN_MAX_PORT:-}
+      TURN_LOG: ${TURN_LOG:-off}
     volumes:
       - ./deploy/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
       - ./deploy/coturn/entrypoint.sh:/etc/coturn/entrypoint.sh:ro

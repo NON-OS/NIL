@@ -25,7 +25,7 @@ let declined: string | null = null;
 
 const place = (callId: string) => ({ callId, workspaceKey: store.get().workspaceKey, origin: store.get().origin });
 
-const blank = (userId: string, session: string): CallPeer => ({ userId, session, link: 'connecting', trust: 'unknown', refusal: null, mic: true, cam: false, screen: false, quality: null, speaking: false, media: null, screenMedia: null });
+const blank = (userId: string, session: string): CallPeer => ({ userId, session, link: 'connecting', trust: 'unknown', refusal: null, held: true, holding: false, mic: true, cam: false, screen: false, quality: null, speaking: false, media: null, screenMedia: null });
 
 function connect(callId: string, userId: string, session: string) {
   const link = peerLink({
@@ -37,6 +37,7 @@ function connect(callId: string, userId: string, session: string) {
     offerer: rt.me() < userId,
     config: iceConfig.current,
     tracks: () => rt.tracks,
+    allowed: () => !rt.active()?.peers[userId]?.held,
     state: () => ({ mic: Boolean(rt.active()?.mic), cam: Boolean(rt.active()?.cam), screen: Boolean(rt.active()?.screen) }),
     others: () => rt.links.size,
     send: (message) => socket.call({ type: 'call.signal', callId, to: userId, blob: JSON.stringify(message) }),
@@ -54,10 +55,19 @@ function connect(callId: string, userId: string, session: string) {
   });
   rt.links.set(userId, link);
   rt.patch((a) => ({ peers: { ...a.peers, [userId]: blank(userId, session) } }));
-  void keyDirectory.load().then((keys) => rt.patchPeer(userId, { trust: keys.get(userId)?.state ?? 'none' }, session));
+  void keyDirectory.load().then((keys) => trusted(userId, keys.get(userId)?.state ?? 'none', session));
   link.start();
   window.setTimeout(() => link.nudge(), 5000);
   rt.links.forEach((l) => l.tune());
+}
+
+// Someone whose key this person confirmed hears and sees them from the start. Anyone else is
+// sent nothing until this person checks the key or says to go ahead (allow), so a key the
+// server slipped in never gets a picture or a word.
+function trusted(userId: string, trust: CallPeer['trust'], session: string) {
+  const wasHeld = rt.active()?.peers[userId]?.held;
+  rt.patchPeer(userId, { trust, ...(trust === 'confirmed' ? { held: false } : {}) }, session);
+  if (wasHeld && trust === 'confirmed') rt.links.get(userId)?.release();
 }
 
 function drop(userId: string) {
@@ -211,8 +221,17 @@ const callSession = {
   refreshTrust() {
     if (!rt.active()) return;
     void keyDirectory.load().then((keys) => {
-      for (const p of Object.values(rt.active()?.peers ?? {})) rt.patchPeer(p.userId, { trust: keys.get(p.userId)?.state ?? 'none' }, p.session);
+      for (const p of Object.values(rt.active()?.peers ?? {})) trusted(p.userId, keys.get(p.userId)?.state ?? 'none', p.session);
     });
+  },
+
+  // this person chose to talk to someone whose key they haven't confirmed, for this call only
+  allow(userId: string) {
+    const peer = rt.active()?.peers[userId];
+    if (!peer?.held) return;
+    rt.patchPeer(userId, { held: false }, peer.session);
+    rt.links.get(userId)?.release();
+    rt.say(`${rt.name(userId)} can hear you now.`);
   },
 
   // tries a refused connection again, once this person has checked the key

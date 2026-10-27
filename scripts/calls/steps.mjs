@@ -20,9 +20,13 @@ const links = (page) =>
     for (const pc of window.__pcs) {
       if (pc.connectionState === 'closed') continue;
       const stats = await pc.getStats();
+      // Chromium and WebKit name the pair in use on the transport; Firefox marks it selected
       let pair = null;
       stats.forEach((s) => {
         if (s.type === 'transport' && s.selectedCandidatePairId) pair = stats.get(s.selectedCandidatePairId);
+      });
+      stats.forEach((s) => {
+        if (!pair && s.type === 'candidate-pair' && s.selected) pair = s;
       });
       out.push({ state: pc.connectionState, local: pair && stats.get(pair.localCandidateId)?.candidateType, remote: pair && stats.get(pair.remoteCandidateId)?.candidateType });
     }
@@ -35,9 +39,12 @@ async function control(p, name) {
   await p.page.getByRole('button', { name, exact: true }).click();
 }
 
+// the kind of each track every live connection sends, or null for a slot sending nothing
+const sending = (page) => page.evaluate(() => window.__pcs.filter((pc) => pc.connectionState !== 'closed').flatMap((pc) => pc.getSenders().map((s) => s.track?.kind ?? null)));
+
 const connected = (page, n) => until(`${n} connected peer connections`, async () => (await links(page)).filter((l) => l.state === 'connected').length >= n && (await links(page)));
 
-export default async function steps({ app, relay, ada, ana, ben, tamper, check, axe, shot }) {
+export default async function steps({ app, relay, ada, ana, ben, tamper, check, axe, shot, capture }) {
   // Ada makes the workspace; Ana and Ben join with invites; each unlocks their keys
   await ada.wallet(ada.key);
   await ada.page.goto(app.base);
@@ -67,7 +74,8 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await shot(ada.page, 'calls-page-desktop');
 
   // a video call from Ada to Ana, answered on Ana's phone
-  await ada.page.reload();
+  // Ana's keys reach Ada's list live, once Ana has unlocked
+  await until('Ana to be callable', () => ada.page.getByRole('button', { name: 'Video call Ana' }).isEnabled());
   await ada.page.getByRole('button', { name: 'Video call Ana' }).click();
   await ana.page.getByRole('button', { name: 'Answer Ada with video' }).click();
   await ana.page.locator('.call-screen').waitFor({ timeout: 15_000 }).catch(async () => {
@@ -77,7 +85,7 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await connected(ana.page, 1);
   check('a one-to-one video call connects', true);
   check('it goes through the relay and nowhere else', relay ? pair.every((l) => l.local === 'relay' && l.remote === 'relay') : true, JSON.stringify(pair));
-  await until('Ana’s video on Ada’s screen', () => ada.page.locator('.call-main video').count());
+  if (capture) await until('Ana’s video on Ada’s screen', () => ada.page.locator('.call-main video').count());
   await ada.page.waitForTimeout(1500);
   check('Ana shows as unverified to Ada until Ada confirms her key', (await ada.page.getByRole('button', { name: /Unverified: check Ana/ }).count()) === 1);
   await shot(ada.page, 'call-duo-desktop');
@@ -85,20 +93,34 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await axe(ada.page, 'call screen, desktop');
   await axe(ana.page, 'call screen, phone');
 
-  // the same "check their keys" flow as Docs
+  // neither has confirmed the other's key, so neither sends a thing until they choose to
+  check('nothing goes to a teammate whose key isn’t confirmed', (await sending(ada.page)).every((t) => t === null) && (await sending(ana.page)).every((t) => t === null), JSON.stringify(await sending(ada.page)));
+  check('and the call says so', (await ada.page.getByText(/can’t see or hear you yet/).count()) > 0);
+
+  // the same "check their keys" flow as Docs; a confirmed key starts the sound and picture
   await ada.page.getByRole('button', { name: /Unverified: check Ana/ }).click();
   await ada.page.getByRole('button', { name: /Confirm the key for Ana/ }).click();
   await until('the badge to say confirmed', async () => (await ada.page.getByText('Key confirmed').count()) > 0);
   check('confirming the key turns the badge to confirmed', true);
+  if (capture) await until('Ada to send to Ana', async () => (await sending(ada.page)).includes('audio'), 5000);
+  check('and Ada’s sound and picture start going to Ana', !capture || (await sending(ada.page)).includes('audio'));
+  // Ana goes ahead without checking, for this call
+  await ana.page.getByRole('button', { name: 'Talk anyway' }).click();
+  if (capture) await until('Ana to send to Ada', async () => (await sending(ana.page)).includes('audio'), 5000);
+  check('“Talk anyway” starts sending for this call only', !capture || (await sending(ana.page)).includes('audio'));
 
-  // Ana mutes; Ada sees it
-  await ana.page.getByRole('button', { name: 'Mute', exact: true }).click();
-  await until('Ana to show as muted', async () => (await ada.page.locator('.call-main [aria-label="Muted"]').count()) > 0, 10_000);
-  check('muting shows on the other side', true);
-  await ada.page.keyboard.press('Control+e');
-  await until('Ada’s camera to be off', async () => (await ada.page.getByRole('button', { name: 'Turn camera on' }).count()) > 0, 5000);
-  check('Ctrl+E turns the camera off', true);
-  await ada.page.keyboard.press('Control+e');
+  // Ana mutes; Ada sees it. Without a microphone or camera there's nothing to mute.
+  if (capture) {
+    await ana.page.getByRole('button', { name: 'Mute', exact: true }).click();
+    await until('Ana to show as muted', async () => (await ada.page.locator('.call-main [aria-label="Muted"]').count()) > 0, 10_000);
+    check('muting shows on the other side', true);
+    await ada.page.keyboard.press('Control+e');
+    await until('Ada’s camera to be off', async () => (await ada.page.getByRole('button', { name: 'Turn camera on' }).count()) > 0, 5000);
+    check('Ctrl+E turns the camera off', true);
+    await ada.page.keyboard.press('Control+e');
+  } else {
+    check('a call connects with no microphone or camera at all', true);
+  }
 
   // the relay goes away mid-call and comes back: the call recovers with an ICE restart
   if (relay) {
@@ -157,12 +179,21 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await axe(ada.page, 'speaker layout, desktop');
 
   // a shared screen, where the browser can share one without asking
-  await ada.page.getByRole('button', { name: 'Share your screen' }).click();
-  const shared = await until('Ada’s screen on Ben’s side', async () => (await ben.page.locator('figure[aria-label="Ada’s screen"]').count()) > 0, 10_000).catch(() => false);
-  check('a shared screen reaches the others', Boolean(shared), shared ? '' : 'headless Chromium may not share a screen without a person choosing one');
-  if (shared) {
-    await ben.page.waitForTimeout(1500);
-    await shot(ben.page, 'call-screen-share-desktop');
+  // where the browser offers screen sharing at all; headless Firefox and WebKit don't
+  if (!capture) {
+    check('screen sharing left out where the browser can’t capture anything', true);
+  } else if (await ada.page.getByRole('button', { name: 'Share your screen' }).count()) {
+    await ada.page.getByRole('button', { name: 'Share your screen' }).click();
+    const shared = await until('Ada’s screen on Ben’s side', async () => (await ben.page.locator('figure[aria-label="Ada’s screen"]').count()) > 0, 10_000).catch(() => false);
+    // headless Firefox has no screen to share, and says so
+    const noScreen = !shared && (await ada.page.getByText('No screen was found.').count()) > 0;
+    check(noScreen ? 'with no screen to share, the app says so' : 'a shared screen reaches the others', Boolean(shared) || noScreen);
+    if (shared) {
+      await ben.page.waitForTimeout(1500);
+      await shot(ben.page, 'call-screen-share-desktop');
+    }
+  } else {
+    check('no share button where the browser can’t share a screen', true);
   }
 
   // minimized, the call keeps going in a dock

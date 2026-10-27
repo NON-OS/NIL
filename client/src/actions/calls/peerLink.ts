@@ -21,6 +21,9 @@ export interface LinkOptions {
   offerer: boolean;
   config: () => RTCConfiguration;
   tracks: () => LinkTracks;
+  // whether this person may hear and see this browser yet: not until their key is confirmed or
+  // this person says so
+  allowed: () => boolean;
   state: () => { mic: boolean; cam: boolean; screen: boolean };
   others: () => number;
   send: (message: object) => void;
@@ -73,7 +76,7 @@ export default function peerLink(o: LinkOptions) {
   };
 
   function attach() {
-    const { audio, camera, screen } = o.tracks();
+    const { audio, camera, screen } = o.allowed() ? o.tracks() : { audio: null, camera: null, screen: null };
     pc.getTransceivers()
       .slice(0, 3)
       .forEach((t, i) => {
@@ -143,7 +146,7 @@ export default function peerLink(o: LinkOptions) {
 
   async function verified(message: LinkMessage, type: LinkType) {
     const keys = (await keyDirectory.signers(o.peer, null)).map((s) => s.key);
-    const result = callLink.verify(message, { place: o.place, from: o.peer, me: o.me, mySession: o.mySession, type, myNonce, pinned, now: Date.now(), seen }, keys);
+    const result = callLink.verify(message, { place: o.place, from: o.peer, me: o.me, mySession: o.mySession, peerSession: o.peerSession, type, myNonce, pinned, now: Date.now(), seen }, keys);
     // a description that's merely late, or one seen before, is dropped; anything that doesn't
     // check out as theirs ends the connection
     if (!result.ok) {
@@ -220,14 +223,14 @@ export default function peerLink(o: LinkOptions) {
   };
 
   function sendState() {
-    if (channel.readyState === 'open') channel.send(JSON.stringify({ t: 'state', ...o.state() }));
+    if (channel.readyState === 'open') channel.send(JSON.stringify({ t: 'state', ...o.state(), held: !o.allowed() }));
   }
   channel.onopen = sendState;
   channel.onmessage = (e) => {
     if (typeof e.data !== 'string' || e.data.length > 200) return;
     try {
       const m = JSON.parse(e.data);
-      if (m?.t === 'state') o.update({ mic: m.mic === true, cam: m.cam === true, screen: m.screen === true });
+      if (m?.t === 'state') o.update({ mic: m.mic === true, cam: m.cam === true, screen: m.screen === true, holding: m.held === true });
     } catch {}
   };
 
@@ -268,8 +271,14 @@ export default function peerLink(o: LinkOptions) {
       else o.send({ type: 'restart' });
     },
     replace(slot: 0 | 1 | 2, track: MediaStreamTrack | null) {
-      void pc.getTransceivers()[slot]?.sender.replaceTrack(track).catch(() => {});
+      void pc.getTransceivers()[slot]?.sender.replaceTrack(o.allowed() ? track : null).catch(() => {});
       tune();
+    },
+    // starts sending once this person allowed it; the slots are there, so no new handshake
+    release() {
+      if (closed || !pc.getTransceivers().length) return;
+      attach();
+      sendState();
     },
     tune,
     sendState,

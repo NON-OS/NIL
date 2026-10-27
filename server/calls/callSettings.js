@@ -1,5 +1,6 @@
 import config from '../config.js';
 import settingsStore from '../services/settingsStore.js';
+import callLimits from './callLimits.js';
 
 // The workspace's call settings, and what the app needs to know before offering a call.
 // Direct connections are off unless an admin turns them on: with them, browsers in a call may
@@ -13,12 +14,12 @@ const callSettings = {
 
   // Calls work when they're on, and either the relay is set up or direct connections are allowed.
   status() {
-    const { enabled, onion, turn, maxPeers, ringSeconds } = config.calls;
+    const { enabled, onion, turn, ringSeconds, meshMaxPeers } = config.calls;
     const direct = callSettings.direct();
     let reason = null;
     if (!enabled) reason = onion ? 'tor' : 'off';
     else if (!turn.configured && !direct) reason = 'no-relay';
-    return { available: reason === null, reason, relay: turn.configured, direct, maxPeers, ringSeconds };
+    return { available: reason === null, reason, relay: turn.configured, direct, maxPeers: callLimits.max(), sfu: callLimits.sfu(), meshMaxPeers, ringSeconds };
   },
 };
 
