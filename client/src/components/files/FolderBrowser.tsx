@@ -1,5 +1,5 @@
 import './Files.css';
-import { lazy, Suspense, useCallback, useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useState, type DragEvent, type KeyboardEvent } from 'react';
 import { FolderOpen, SearchX, UploadCloud } from 'lucide-react';
 import EmptyState from '../ui/EmptyState';
 import Spinner from '../ui/Spinner';
@@ -45,6 +45,13 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
   const items = listing?.items ?? [];
   const canWrite = Boolean(folder) && folder!.warning !== 'unverified';
   const canManage = Boolean(folder) && (folder!.createdBy === me.id || isAdmin(me));
+
+  // another folder starts with a clean search and nothing open over it
+  useEffect(() => {
+    setQuery('');
+    setPreview(null);
+    setDialog(null);
+  }, [folderId]);
 
   const upload = useCallback(
     (files: File[], into: string | null = parent) => {

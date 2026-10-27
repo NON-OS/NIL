@@ -42,7 +42,7 @@ A capsule doesn't carry Nil Pro with it. On a server that charges, the new serve
 
 If you run the server, back up its data folder as well as downloading capsules. The most important file is the signing key in `DATA_DIR/keys`. Earlier proofs stop matching the workspace without it. Every message that unlocks someone's encryption keys names the workspace by that key, so without it no wallet opens anyone's keys, and recovery kits, which are tied to the old key, won't restore either. Everyone would start over with new keys, and every doc and private task would stay locked. [Production deployment](deploy.md#10-backups) has scripts for nightly and cold backups and for restoring them.
 
-Backups and capsules hold most of the workspace in readable form once opened: team tasks, comments, files and the signing key. Only docs, the words of private tasks and encrypted ballots stay encrypted. Encrypt backups before they leave the server.
+Backups and capsules hold most of the workspace in readable form once opened: team tasks, comments, files and the signing key. Only docs, files in Files and inside docs, the words of private tasks and encrypted ballots stay encrypted. Encrypt backups before they leave the server.
 
 ## Capsules and recovery kits
 

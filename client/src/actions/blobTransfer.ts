@@ -10,8 +10,15 @@ import type BlobProgress from '../types/BlobProgress';
 const AHEAD = 3;
 const CHANGED = 'This file couldn’t be decrypted. It may have been changed on the server.';
 
+// The header's nonce prefix, once the server's description of the blob fits the format: as many
+// chunks as its size makes, and a last chunk that holds at least its tag.
 function checkInfo(info: BlobInfo, id: string) {
-  const fits = info?.id === id && Number.isSafeInteger(info.size) && info.chunks === Math.ceil(info.size / (blobCipher.CHUNK + blobCipher.TAG)) && blobCipher.chunkSize(info.chunks - 1, info.chunks, info.size) >= blobCipher.TAG;
+  let fits = false;
+  try {
+    fits = info?.id === id && Number.isSafeInteger(info.size) && info.chunks === Math.ceil(info.size / (blobCipher.CHUNK + blobCipher.TAG)) && blobCipher.chunkSize(info.chunks - 1, info.chunks, info.size) >= blobCipher.TAG;
+  } catch {
+    fits = false;
+  }
   if (!fits) throw new Error(CHANGED);
   return blobCipher.prefix(b64u.decode(info.header));
 }

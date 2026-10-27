@@ -1,5 +1,5 @@
 import '../Files.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Maximize2, ZoomIn, ZoomOut } from 'lucide-react';
 import useObjectUrl from '../../../hooks/useObjectUrl';
 import cx from '../../../lib/cx';
@@ -12,14 +12,18 @@ export default function ImagePreview({ blob, name }: { blob: Blob; name: string 
   const url = useObjectUrl(blob);
   const [zoom, setZoom] = useState<number | null>(null);
   const [natural, setNatural] = useState<{ width: number; height: number } | null>(null);
-  const step = (dir: 1 | -1) => setZoom((z) => {
-    const now = z ?? 1;
-    return (dir > 0 ? STEPS.find((s) => s > now) : [...STEPS].reverse().find((s) => s < now)) ?? now;
-  });
+  const img = useRef<HTMLImageElement>(null);
+  // zooming starts from the size the image is shown at, fitted or not
+  const step = (dir: 1 | -1) =>
+    setZoom((z) => {
+      const el = img.current;
+      const now = z ?? (el && el.naturalWidth ? el.clientWidth / el.naturalWidth : 1);
+      return (dir > 0 ? STEPS.find((s) => s > now + 0.01) : [...STEPS].reverse().find((s) => s < now - 0.01)) ?? now;
+    });
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || (e.target as HTMLElement).matches?.('input, textarea')) return;
       if (e.key === '+' || e.key === '=') step(1);
       else if (e.key === '-') step(-1);
       else if (e.key === '0') setZoom(null);
@@ -47,7 +51,7 @@ export default function ImagePreview({ blob, name }: { blob: Blob; name: string 
       </div>
       <div className="files-viewer-scroll">
         <div className={cx('files-zoom', zoom === null && 'fit')} onDoubleClick={() => setZoom((z) => (z === null ? 1 : null))}>
-          {url && <img src={url} alt={name} style={zoom === null || !natural ? undefined : { width: natural.width * zoom }} onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />}
+          {url && <img ref={img} src={url} alt={name} style={zoom === null || !natural ? undefined : { width: natural.width * zoom }} onLoad={(e) => setNatural({ width: e.currentTarget.naturalWidth, height: e.currentTarget.naturalHeight })} />}
         </div>
       </div>
     </div>

@@ -6,6 +6,9 @@ import type { PDFDocumentProxy, RenderTask } from 'pdfjs-dist';
 import Spinner from '../../ui/Spinner';
 
 const STEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 3];
+// the largest canvas every browser draws; past it Safari on iOS shows nothing, so a page that
+// would be larger is drawn a little less sharp instead
+const MAX_CANVAS = 16_777_216;
 
 // A decrypted PDF drawn page by page with pdf.js, loaded the first time a PDF is opened. It's the
 // build that carries its own polyfills, so browsers a year or two old show PDFs too, and its
@@ -57,7 +60,8 @@ export default function PdfPreview({ blob }: { blob: Blob }) {
       const width = (scroller.current?.clientWidth ?? base.width) - 32;
       const scale = zoom ?? Math.max(0.25, width / base.width);
       setShown(scale);
-      const ratio = window.devicePixelRatio || 1;
+      const dpr = window.devicePixelRatio || 1;
+      const ratio = Math.min(dpr, Math.sqrt(MAX_CANVAS / (base.width * base.height * scale * scale)));
       const viewport = p.getViewport({ scale: scale * ratio });
       const el = canvas.current;
       el.width = Math.floor(viewport.width);
@@ -75,7 +79,7 @@ export default function PdfPreview({ blob }: { blob: Blob }) {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.metaKey || e.ctrlKey || e.altKey || !doc) return;
+      if (e.metaKey || e.ctrlKey || e.altKey || !doc || (e.target as HTMLElement).matches?.('input, textarea')) return;
       if (e.key === 'PageDown') setPage((p) => Math.min(doc.numPages, p + 1));
       else if (e.key === 'PageUp') setPage((p) => Math.max(1, p - 1));
       else if (e.key === '+' || e.key === '=') zoomBy(1);

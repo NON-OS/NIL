@@ -31,6 +31,7 @@ The sidebar on the left lists the main sections. Each has a two-key shortcut: pr
 | All tasks | A list you can filter, group, sort and edit in bulk | `G` `L` |
 | Calendar | Tasks on a month grid by due date | `G` `C` |
 | Docs | End-to-end encrypted documents | `G` `D` |
+| Files | Shared folders of end-to-end encrypted files | `G` `F` |
 | Goals | The outcomes your tasks add up to | `G` `G` |
 | Insights | Charts of how the team is moving | `G` `S` |
 | Time | Your private timesheet | `G` `M` |
@@ -40,7 +41,7 @@ The sidebar on the left lists the main sections. Each has a two-key shortcut: pr
 
 Your projects are listed under the sections. Click your name at the bottom of the sidebar for **Settings** (`G` `T`), keyboard shortcuts and signing out. The question mark next to your name opens this help.
 
-Guests see fewer sections: Docs, Goals and Votes are for members only.
+Guests see fewer sections: Docs, Files, Goals and Votes are for members only.
 
 To jump anywhere, press `⌘K` on a Mac or `Ctrl+K` elsewhere, or press `/`. Type part of a task title, a task key such as NON-42, a project or a page. Press `C` to create a task.
 

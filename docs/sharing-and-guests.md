@@ -6,7 +6,7 @@ There are three ways to show work to people outside your team: make them a guest
 
 A guest is someone with an account who sees only part of the workspace: the projects shared with them and any task assigned to them. Use it for clients, contractors and freelancers.
 
-Guests can open, create and work on tasks in their projects, comment, track their own time and download their own proofs of work. They can't see Docs, Goals or Votes, can't create share links or projects, and their Settings show only **Profile**, **Sign-in & security** and **Connect AI**. Of the people in the workspace, they see the admins and the people on their tasks.
+Guests can open, create and work on tasks in their projects, comment, track their own time and download their own proofs of work. They can't see Docs, Files, Goals or Votes, can't create share links or projects, and their Settings show only **Profile**, **Sign-in & security** and **Connect AI**. Of the people in the workspace, they see the admins and the people on their tasks.
 
 Guests never take a paid seat on servers that charge for [Nil Pro](nox-and-nil-pro.md).
 

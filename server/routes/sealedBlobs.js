@@ -141,7 +141,10 @@ router.get(
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, no-store');
     res.setHeader('Content-Length', fs.statSync(file).size);
-    fs.createReadStream(file).pipe(res);
+    // a blob deleted while it's being read just ends the response
+    fs.createReadStream(file)
+      .on('error', () => res.destroy())
+      .pipe(res);
   }),
 );
 

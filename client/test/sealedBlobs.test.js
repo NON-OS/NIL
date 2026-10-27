@@ -124,11 +124,15 @@ test('photos are drawn again before they’re encrypted, so their hidden details
     // a browser that can't write WebP hands back PNG, and the name says so
     const webp = await sealedBlobs.upload(new Blob(['RIFF'], { type: 'image/webp' }), { scope, name: 'sticker.webp' });
     assert.deepEqual([webp.mime, webp.name], ['image/png', 'sticker.png']);
+    // a pasted photo with no type is known by its first bytes, and cleaned all the same
+    const pasted = await sealedBlobs.upload(new Blob([Uint8Array.of(0xff, 0xd8, 0xff, 0xe1, 0x45, 0x78, 0x69, 0x66)]), { scope, name: 'image' });
+    assert.deepEqual([pasted.mime, pasted.name, pasted.width], ['image/jpeg', 'image.jpg', 4032]);
+    assert.equal(await (await sealedBlobs.read(pasted)).text(), 'pixels 4032x3024');
     // SVG is never treated as an image
     const svg = await sealedBlobs.upload(new Blob(['<svg onload="alert(1)"/>'], { type: 'image/svg+xml' }), { scope, name: 'logo.svg' });
     assert.deepEqual([svg.mime, svg.width], ['image/svg+xml', undefined]);
     assert.equal((await sealedBlobs.read(svg)).type, 'application/octet-stream');
-    assert.equal(drawn.length, 2);
+    assert.equal(drawn.length, 3);
 
     // an image that can't be read is refused, never sent as it is
     globalThis.createImageBitmap = async () => {
