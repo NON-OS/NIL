@@ -10,6 +10,7 @@ import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
 import sealGate from './sealGate';
+import chatCounters from './chatCounters';
 import markHistory from '../../state/markHistory';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
@@ -18,6 +19,8 @@ type Row = { userId: string; stream: string; epoch: number; sentAt: number; body
 const PUBLISH_MS = 1500;
 // channel id -> stream -> what this tab (or a queue it flushed) has sent there
 const mine = new Map<string, Map<string, Scopes>>();
+// channel id -> message id -> its newest edit made in this tab, -1 when deleted
+const edited = new Map<string, Map<string, number>>();
 const timers = new Map<string, number>();
 
 const place = (channelId: string, epoch: number, stream: string, senderId: string, sentAt: number) => ({ workspaceKey: store.get().workspaceKey, channelId, epoch, message: { id: `mark.${stream}`, senderId, sentAt } });
@@ -29,10 +32,15 @@ async function publish(channelId: string) {
   const key = await sealGate(channel).then((chain) => chatKeys.get(channel, chain, channel.epoch)).catch(() => null);
   if (!key) return;
   const me = store.get().me!.id;
-  for (const [stream, scopes] of mine.get(channelId) ?? []) {
+  const ownStream = chatCounters.stream;
+  const streams = mine.get(channelId) ?? new Map<string, Scopes>();
+  if (edited.get(channelId)?.size && !streams.has(ownStream)) streams.set(ownStream, {});
+  for (const [stream, scopes] of streams) {
     const sentAt = Date.now();
     const at = place(channelId, channel.epoch, stream, me, sentAt);
-    const json = signedFacts.seal(JSON.stringify(scopes), { kind: chatMarkFacts.kind, place: [at.workspaceKey, channelId, channel.epoch, stream, me, sentAt], facts: chatMarkFacts.list(sentAt, keyHash(key)), by: me, signingPrivate: id.signingPrivate });
+    // a tab's edits ride on its own stream's mark
+    const edits = stream === ownStream ? Object.fromEntries([...(edited.get(channelId) ?? [])].slice(-chatMarkFacts.maxEdits)) : undefined;
+    const json = signedFacts.seal(JSON.stringify(edits ? { ...scopes, edits } : scopes), { kind: chatMarkFacts.kind, place: [at.workspaceKey, channelId, channel.epoch, stream, me, sentAt], facts: chatMarkFacts.list(sentAt, keyHash(key)), by: me, signingPrivate: id.signingPrivate });
     await http.put(`/chat/channels/${channelId}/marks/${stream}`, { epoch: channel.epoch, sentAt, bodyCt: await chatText.seal(key, at, json) }).catch(() => {});
   }
 }
@@ -47,6 +55,16 @@ const chatMarks = {
     if ((scopes[scope]?.n ?? 0) < n) scopes[scope] = { n, until };
     byStream.set(stream, scopes);
     mine.set(channelId, byStream);
+    clearTimeout(timers.get(channelId));
+    timers.set(channelId, window.setTimeout(() => void publish(channelId), PUBLISH_MS));
+  },
+
+  // An edit or deletion this tab made, so a device that never saw it can't be shown the old one.
+  edit(channelId: string, messageId: string, edit: number, deleted: boolean) {
+    const held = edited.get(channelId) ?? new Map<string, number>();
+    held.delete(messageId);
+    held.set(messageId, deleted ? -1 : edit);
+    edited.set(channelId, held);
     clearTimeout(timers.get(channelId));
     timers.set(channelId, window.setTimeout(() => void publish(channelId), PUBLISH_MS));
   },
@@ -67,7 +85,11 @@ const chatMarks = {
       // never behind a mark seen before: a server can't serve an older one to hide what it held back
       const name = `${row.userId}/${row.stream}`;
       const scopes = markHistory.newest(channel.id, name, f.at, chatMarkFacts.scopes(signed.text));
-      chatState.set((s) => ({ marks: { ...s.marks, [channel.id]: { ...(s.marks[channel.id] ?? {}), [name]: { senderId: row.userId, scopes } } } }));
+      // edits only ever count forward, whichever mark told of them
+      const before = chatState.get().marks[channel.id]?.[name]?.edits ?? {};
+      const edits = { ...before };
+      for (const [id, n] of Object.entries(chatMarkFacts.edits(signed.text))) if (edits[id] === undefined || (edits[id] !== -1 && (n === -1 || n > edits[id]))) edits[id] = n;
+      chatState.set((s) => ({ marks: { ...s.marks, [channel.id]: { ...(s.marks[channel.id] ?? {}), [name]: { senderId: row.userId, scopes, edits } } } }));
     } catch {}
   },
 

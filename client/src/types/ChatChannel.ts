@@ -10,6 +10,8 @@ export default interface ChatChannel extends ChatChannelRow {
   // who holds the current key, from the newest member list that checked out; null until checked.
   // What the conversation is called and who it shows come from this, never the server's list.
   signedMembers: string[] | null;
+  // who of them manage it, from the same list: what decides who may change people and settings
+  signedManagers: string[] | null;
   // the disappearing and forward-secrecy settings as whoever manages it signed them, next to the
   // name; null when nobody has signed any
   signedSettings: { disappear: number | null; forward: number | null } | null;

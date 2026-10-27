@@ -1,6 +1,9 @@
 import express from 'express';
 import keyChanges from '../chat/keyChanges.js';
 import channelKeyChanges from '../chat/channelKeyChanges.js';
+import chatBudget from '../chat/chatBudget.js';
+import config from '../config.js';
+import units from '../config/units.js';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
@@ -19,6 +22,7 @@ import hub from '../realtime/hub.js';
 
 const router = express.Router();
 const MAX_PROOFS = 500;
+const PAGE = 200;
 
 const holders = (channelId, epoch) => sql.all('SELECT user_id FROM chat_epoch_keys WHERE channel_id = ? AND epoch = ?', channelId, epoch).map((r) => r.user_id);
 
@@ -39,7 +43,10 @@ router.get(
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const from = check.number(req.query.from, 'From', { min: 1, integer: true }) ?? 1;
-    const rows = sql.all('SELECT epoch, roster, proofs, created_by, created_at FROM chat_epochs WHERE channel_id = ? AND epoch >= ? ORDER BY epoch LIMIT 1000', channel.id, from);
+    // with `keys`, only your sealed copies, for after someone hands you older keys
+    const keysOnly = req.query.keys === '1';
+    const rows = sql.all('SELECT epoch, roster, proofs, created_by, created_at FROM chat_epochs WHERE channel_id = ? AND epoch >= ? ORDER BY epoch LIMIT ?', channel.id, from, PAGE);
+    if (keysOnly) return { epochs: rows.map((r) => ({ epoch: r.epoch, wrappedKeys: r.epoch > channel.purged_epoch ? wrapsFor(channel.id, r.epoch, req.user.id) : [] })) };
     return {
       epochs: rows.map((r) => ({
         epoch: r.epoch,
@@ -60,7 +67,6 @@ router.get(
 router.post(
   '/chat/channels/:id/epochs',
   keyChanges,
-  channelKeyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const b = req.body ?? {};
@@ -83,6 +89,14 @@ router.post(
     if (!manages && current.some((id) => !after.includes(id) && !cited.proven.includes(id))) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key without their signed leaving.');
     const proofs = cited.stored;
     const now = Date.now();
+    // a new key for the same people, from someone who doesn't manage it, comes on the schedule,
+    // or now and then for a member whose copy didn't open; not as often as one member likes
+    const same = !changed && roster.members.length === current.length && roster.members.every((id) => current.includes(id));
+    if (same && !manages && now - channel.epoch_at < config.chat.epochMs / 2 && sql.get('SELECT 1 FROM chat_epochs WHERE channel_id = ? AND created_by = ? AND created_at > ?', channel.id, req.user.id, now - units.HOUR)) {
+      throw new HttpError(429, 'You gave this conversation a new key a short while ago. It gets the next one on schedule.');
+    }
+    chatBudget(req.user.id, b.roster.length + JSON.stringify(b.grants ?? []).length);
+    channelKeyChanges(channel.id);
     sql.tx(() => {
       sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, proofs, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', channel.id, b.epoch, b.roster, proofs.length ? JSON.stringify(proofs) : null, req.user.id, now);
       sql.run('UPDATE chat_channels SET epoch = ?, epoch_at = ? WHERE id = ?', b.epoch, now, channel.id);
@@ -110,6 +124,7 @@ router.post(
     const channel = channelAccess(req.params.id, req.user);
     const epoch = check.number(req.body?.epoch, 'Epoch', { min: channel.purged_epoch + 1, max: channel.epoch, integer: true });
     if (!epoch || !wrapsFor(channel.id, epoch, req.user.id).length) throw HttpError.forbidden('You don’t hold that key.');
+    chatBudget(req.user.id, JSON.stringify(req.body?.grants ?? []).length);
     const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel), history: true });
     for (const userId of given) hub.toUser(userId, { type: 'chat', channelId: channel.id, kind: 'keys' });
     return { ok: true };

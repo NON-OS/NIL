@@ -1,6 +1,8 @@
 import store from '../../state/store';
 import keyDirectory from '../keyDirectory';
 import chatRosters, { type Chain } from './chatRosters';
+import settingsMatch from '../../lib/settingsMatch';
+import type ChatChannel from '../../types/ChatChannel';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
 // Whose keys this browser hasn't confirmed among everyone who holds the conversation's current
@@ -18,9 +20,15 @@ async function unconfirmed(channel: ChatChannelRow, chain: Chain) {
 // whatever is written would then be the server's to read. Nor while someone who is out of the
 // conversation still holds its key: what's written waits for the next key, which any member's
 // browser starts on its own once their departure is signed. Throws when either is so; the
-// conversation's notices name who and offer what to do.
-export default async function sealGate(channel: ChatChannelRow) {
+// conversation's notices name who and offer what to do. Signing the settings again is the one
+// thing that goes ahead while the server's copy differs (`settings: false`), since it mends it.
+export default async function sealGate(channel: ChatChannel, { settings = true } = {}) {
   const chain = await chatRosters.load(channel);
+  // a server showing an older key than this browser already checked, or another history, would
+  // have it seal under a key someone taken out still holds
+  if (chain.forked || channel.epoch < chatRosters.seenEpoch(channel.id)) throw new Error('The server showed this conversation as it was before its newest key. Nothing is sent until it shows the newest again.');
+  // nor under settings the server changed: a message's time to go is the signed one
+  if (settings && channel.metaState !== 'locked' && !settingsMatch(channel)) throw new Error('This conversation’s settings on the server aren’t the ones its manager signed. Nothing is sent until they are.');
   if ((await unconfirmed(channel, chain)).length) throw new Error('Check the keys of everyone in this conversation before writing here.');
   if (chatRosters.at(chain, channel.epoch)!.members.some((id) => !channel.members.includes(id))) throw new Error('Someone who left still holds this conversation’s key. It goes out once a new key starts.');
   return chain;

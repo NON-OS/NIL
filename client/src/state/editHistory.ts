@@ -21,8 +21,10 @@ const editHistory = {
     const here = slot();
     if (!here) return;
     const all = storage.get<Record<string, number>>(here, {});
+    const held = all[messageId];
+    // a deletion always counts, and stays; otherwise only a newer edit does (formal/Nil/ChatHistory.lean)
+    if (held === DELETED || (!deleted && held !== undefined && held >= edit)) return;
     const next = deleted ? DELETED : edit;
-    if (all[messageId] === DELETED || (all[messageId] ?? -2) >= next) return;
     const entries = Object.entries({ ...all, [messageId]: next });
     storage.set(here, Object.fromEntries(entries.slice(-KEEP)));
   },

@@ -1,6 +1,6 @@
 # Formal verification
 
-Some of Nil's rules are simple to state and costly to get wrong: one ballot per voter, a vote total that only the trustees can open, a payout address only the payee can spend from, a warning when a server hands back an old version of a private task, and invoices that never charge too little or match the wrong payment. The `formal` folder holds models of these rules written in Lean 4, with machine-checked proofs that the models have the properties below.
+Some of Nil's rules are simple to state and costly to get wrong: one ballot per voter, a vote total that only the trustees can open, a payout address only the payee can spend from, a warning when a server hands back an old version of a private task, invoices that never charge too little or match the wrong payment, and who may change who holds an encrypted chat's key, with how a browser catches a server that holds chat messages back, replays them, reorders them or shows them as they were. The `formal` folder holds models of these rules written in Lean 4, with machine-checked proofs that the models have the properties below.
 
 The proofs are about models. A model is a small, exact description of what a piece of Nil's code computes, written next to the code it describes. Tests then check that the real JavaScript gives the same answers as the model on the same inputs. This page says what is proven, what is left out, and how the two are tied together.
 
@@ -56,6 +56,43 @@ The model follows `client/src/lib/isRollback.ts` and `client/src/state/taskVersi
 - `usdToUnits_covers`, `unitsToUsd_le` and `noxDue_ge`: price conversions round in the treasury's favour, and credit from a payment is never worth more than what arrived.
 - `draw_off_balance` and `cancel_refunds`: the credit a new invoice draws comes off the balance exactly, and a cancelled or expired invoice hands back what it drew plus what was paid into it.
 
+### Who holds a chat's key (`formal/Nil/ChatRoster.lean`)
+
+The model follows `client/src/lib/chatRosterRule.ts`, the rule every browser checks each signed member list against, and `server/chat/rosterRule.js`, the same rule the server applies before it takes a list. People are numbers, and `proven` is who has a signed departure that counts.
+
+- `signer_in`: whoever signs a list is on it.
+- `first_by_manager`: a conversation's first list is signed by someone it names as a manager, and names no list before it.
+- `later`: every list is newer than the one it follows, and keeps the kind of conversation and who it's for.
+- `dm_fixed`: a direct message keeps its two people.
+- `outsider_refused`: someone not in the conversation can't sign its next list.
+- `drop_needs_proof`: someone who doesn't manage the conversation can leave a person out only when that person's departure is proven.
+- `no_private_add`: nobody comes into a conversation for some people unless a manager brings them in.
+- `managers_kept`: someone who doesn't manage the conversation can't make themselves, or anyone, a manager.
+- `member_stays`: along any history of lists, someone stays in unless a manager left them out or their departure was proven.
+- `time_increases` and `shape_fixed`: along any history, time only moves forward and the kind of conversation never changes.
+
+### Held-back, replayed and reordered chat messages (`formal/Nil/ChatStreams.lean`)
+
+The model follows `client/src/actions/chat/chatStreams.ts`, sorting included: each sending tab numbers its messages in a timeline, and a browser compares the numbers with the order the server gave.
+
+- `held_back_reported`: a message held back between two that arrived is reported as missing, whatever order the server delivered them in and however many it sent twice, when they were set to disappear alike.
+- `replay_reported`: one number under two ids is reported as a replay, in any order.
+- `reorder_reported`: a message the server placed after one with a higher number is reported as a reordering.
+- `tail_reported`: a tab's signed mark ahead of every number delivered from it is reported as messages held back at the end.
+- `honest_silent`: a server that delivers a tab's messages 1 to k in order, each once, raises nothing, nor does the tab's mark.
+
+### Chat shown as it was (`formal/Nil/ChatHistory.lean`)
+
+The model follows `client/src/state/editHistory.ts`, as `openMessage` uses it, and `client/src/lib/lateUnderOldKey.ts`.
+
+- `deleted_stays` and `record_deleted_absorbs`: once a browser saw a message deleted, it never shows it again, and nothing recorded later undoes that.
+- `older_refused`: after a version of a message is opened, any older one is refused.
+- `honest_never_stale`: a server that shows each message's versions in the order they were made never trips it.
+- `late_caught`: a message under an older key that the server placed after an unedited one under a newer key is caught, wherever the two are.
+- `honest_none_late`: messages a server took in turn are never flagged.
+
+Writing this model found a bug: the browser's record skipped a deletion of a message it had already seen edited, so such a message could come back. The record now always keeps a deletion, and the differential test fails on the old code.
+
 ## What is not proven
 
 The proofs say nothing about code they don't model. In particular:
@@ -65,6 +102,7 @@ The proofs say nothing about code they don't model. In particular:
 - The curve and hash implementations. Point addition, scalar multiplication, keccak and HMAC come from libraries. The models only assume the group laws, and treat the hash and the HMAC round function as arbitrary functions.
 - Secrecy. Nothing here shows that a ciphertext, a nullifier or a stealth address hides anything. That rests on cryptographic hardness assumptions, which are outside these models.
 - Side channels, timing, the network, the database and the browser's storage.
+- For chat: the signatures and encryption themselves, which come from the noble libraries, and whether a departure statement's signature checks out, which the models take as given in `proven`. The models cover the rules applied once those checks are done.
 
 The models also leave out a few details of the code, on purpose:
 
@@ -84,6 +122,9 @@ The tests read the vectors and call Nil's real functions:
 - `server/test/formalTally.test.js` encrypts ballots on Baby Jubjub, sums them with `aggregateBallots` and decrypts them with `combineTotals` from the key shares the model computed.
 - `client/test/formalRollback.test.js` replays rollback sequences through `isRollback` and `taskVersions`.
 - `client/test/formalStealth.test.js` checks that `stealthKey` gives the payee the key to the address `newStealthPayment` paid.
+- `client/test/formalChatRoster.test.js` runs every member-list case through both the browser's `chatRosterRule` and the server's `rosterRule`, which must each give the model's answer.
+- `client/test/formalChatStreams.test.js` feeds timelines an honest or dishonest server might deliver, with the marks it served, to `chatStreams`, whose notices must be the model's.
+- `client/test/formalChatHistory.test.js` replays message versions through `editHistory` the way `openMessage` uses it, and timelines through `lateUnderOldKey`.
 
 Two of them guard the fix for the leading-zero bug the audit found: ballot nullifiers and voting keys written any way but the canonical one are refused, by both ballot checks and by the voting key route.
 

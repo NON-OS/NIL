@@ -12,8 +12,9 @@ import type ChatItem from '../../types/ChatItem';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
-// how far apart a sender's clock and the one that started the next key may be
-const SKEW_MS = 10 * 60_000;
+// how far apart a sender's clock and the one that started the next key may be: each is within
+// the server's allowance (CHAT_CLOCK_SKEW_SECONDS, ten minutes) of the server's
+const SKEW_MS = 20 * 60_000;
 
 const shell = (row: ChatMessageRow, state: ChatItem['state']): ChatItem => ({
   id: row.id,
@@ -61,10 +62,11 @@ export default async function openMessage(row: ChatMessageRow, channel: ChatChan
     const kindFits = row.kind === 'reaction' ? f.type === 'reaction' || f.type === 'deleted' : f.type !== 'reaction';
     const fits = signed.by === row.senderId && roster?.members.includes(signed.by) && f.key === keyHash(key) && f.thread === row.threadId && f.edit === row.edits && row.deleted === (f.type === 'deleted') && kindFits;
     const statement = { kind: chatFacts.kind, place: chatFacts.place(at), facts: chatFacts.list(f) };
-    // someone out of the conversation still has its old keys: anything they claim to have written
-    // under one after the next key started without them is the server's doing, not a message
+    // the server takes messages only under a conversation's newest key, so anything signed under
+    // one after the next key started is the server's doing with someone who kept the old key,
+    // someone taken out, say; not a message
     const next = chatRosters.at(chain, row.epoch + 1);
-    const afterOut = next && !next.members.includes(signed.by) && Math.max(f.at, row.sentAt) > next.at + SKEW_MS;
+    const afterOut = next && Math.max(f.at, row.sentAt) > next.at + SKEW_MS;
     if (!fits || afterOut || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
     if (editHistory.stale(row.id, f.edit, f.type === 'deleted')) throw new Error('older edit');
     editHistory.record(row.id, f.edit, f.type === 'deleted');

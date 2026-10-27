@@ -52,6 +52,8 @@ router.patch(
           if (role === 'guest') voterGroups.leave(row.id);
           else voterGroups.join(row.id);
           if (role !== 'guest') sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
+          // a member again: a signed removal from when they were made a guest no longer counts
+          if (role !== 'guest' && row.role === 'guest') sql.run('DELETE FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', row.id);
           guestScope.forget(row.id);
           lostAccess.user(row.id);
           sql.afterCommit(() => {
@@ -76,6 +78,8 @@ router.patch(
           const role = sql.get('SELECT role FROM users WHERE id = ?', row.id).role;
           if (!off && row.deactivated) seatGate(role);
           sql.run('UPDATE users SET deactivated = ? WHERE id = ?', off ? 1 : 0, row.id);
+          // back on the team: a signed removal from before no longer says anything about them
+          if (!off) sql.run('DELETE FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', row.id);
           // an admin let back in starts over as a new admin when it comes to approving owner resets
           if (!off && row.deactivated && isAdminRole(role)) sql.run('UPDATE users SET admin_since = ? WHERE id = ?', Date.now(), row.id);
           if (off) voterGroups.leave(row.id);

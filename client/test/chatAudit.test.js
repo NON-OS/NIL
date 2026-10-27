@@ -18,6 +18,7 @@ const id = () => b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
 const USERS = [{ id: 'v', name: 'Vic' }, { id: 'w', name: 'Wen' }, { id: 'e', name: 'Eve' }];
 let V, W, E;
 
+
 beforeEach(async () => {
   reset();
   [V, W, E] = [person(), person(), person()];
@@ -36,7 +37,7 @@ async function group() {
   await confirm(['w']);
   const mine = made.grants.find((g) => g.userId === 'v').wrappedKey;
   route('GET', `/api/chat/channels/${shape.id}/epochs?from=1`, () => ({ epochs: [{ epoch: 1, roster: made.raw, proofs: [], wrappedKeys: [mine] }] }));
-  const row = { ...shape, epoch: 1, members: ['e', 'v', 'w'], keyHolders: ['e', 'v', 'w'], wrappedKeys: [mine], metaKeys: [], metaEpoch: null, purgedEpoch: 0, departures: [] };
+  const row = { ...shape, epoch: 1, members: ['e', 'v', 'w'], keyHolders: ['e', 'v', 'w'], wrappedKeys: [mine], metaKeys: [], metaEpoch: null, purgedEpoch: 0, departures: [], metaState: 'none', signedSettings: null, disappearSeconds: null, forwardDays: null };
   return { shape, made, row };
 }
 
@@ -73,4 +74,29 @@ test('a removed member’s old key can’t carry messages dated after the next k
   await confirm(['w', 'e']);
   assert.equal((await openMessage(before, { ...row, epoch: 2 }, chain)).state, 'ok');
   assert.equal((await openMessage(later, { ...row, epoch: 2 }, chain)).state, 'unverified');
+});
+
+test('sealing refuses settings the server changed, an older key than seen, and another history', async () => {
+  const { row } = await group();
+  await confirm(['e']);
+  await assert.rejects(sealGate({ ...row, disappearSeconds: 60 }), /settings/, 'nothing signed means neither is on');
+  await assert.rejects(sealGate({ ...row, metaState: 'ok', signedSettings: { disappear: 3600, forward: null } }), /settings/);
+  assert.ok(await sealGate({ ...row, disappearSeconds: 3600, metaState: 'ok', signedSettings: { disappear: 3600, forward: null } }));
+  // a manager signing the settings again is what mends them
+  assert.ok(await sealGate({ ...row, disappearSeconds: 60 }, { settings: false }));
+  // once this browser checked key 1, a server showing the conversation as before it is refused
+  assert.equal(chatRosters.seenEpoch(row.id), 1);
+  await assert.rejects(sealGate({ ...row, epoch: 0 }), /before its newest key/);
+  await assert.rejects(sealGate({ ...row, metaState: 'unverified' }), /settings/);
+});
+
+test('a list is dated after the one before it, however far ahead that one claims to be', async () => {
+  const { shape, made } = await group();
+  const workspaceKey = store.get().workspaceKey;
+  const first = await checkRoster(made.raw, { workspaceKey, channelId: shape.id, epoch: 1, wrappedKeys: [] }, []);
+  const ahead = { ...first, at: Date.now() + 9 * 60_000 };
+  const next = await startEpoch(shape, 2, ahead, { members: ['v', 'w'], managers: ['v', 'w'] });
+  assert.ok(next.roster.at > ahead.at, 'the next list still follows');
+  const far = await startEpoch(shape, 2, { ...first, at: Date.now() + 60 * 60_000 }, { members: ['v', 'w'], managers: ['v', 'w'] });
+  await assert.rejects(checkRoster(far.raw, { workspaceKey, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [{ ...first, at: Date.now() + 60 * 60_000 - 1 }]), /future/);
 });

@@ -17,6 +17,8 @@ export default Object.freeze({
   memberBytes: envNumber('CHAT_MEMBER_MB', 1024, { min: 1 }) * units.MB,
   messagesPerMinute: envNumber('CHAT_MESSAGES_PER_MINUTE', 120, { min: 1 }),
   channelsPerHour: envNumber('CHAT_CHANNELS_PER_HOUR', 30, { min: 1 }),
+  // channels for the whole team one person may have made, since everyone gets them and can't leave
+  teamChannelsPerPerson: envNumber('CHAT_TEAM_CHANNELS_PER_PERSON', 25, { min: 1 }),
   // new keys, handed-on keys, leavings and settings changes one person may make a minute
   keyChangesPerMinute: envNumber('CHAT_KEY_CHANGES_PER_MINUTE', 30, { min: 1 }),
   maxMembers: envNumber('CHAT_MAX_MEMBERS', 500, { min: 2, max: 5000 }),

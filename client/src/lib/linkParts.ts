@@ -1,3 +1,5 @@
+import stripBidi from './stripBidi';
+
 // Message text in pieces: plain text, web links, and @mentions of people in the conversation.
 // Links are only ever made clickable, never fetched: no previews, so the server never sees what
 // anyone reads. Only http and https links count.
@@ -28,7 +30,9 @@ export default function linkParts(text: string, people: { id: string; name: stri
   let last = 0;
   for (const m of text.matchAll(LINK)) {
     push(text.slice(last, m.index));
-    out.push({ kind: 'link', text: m[0], href: m[0] });
+    // a link reads exactly as it goes: nothing in it may turn round which way it's shown
+    const link = stripBidi(m[0]);
+    out.push({ kind: 'link', text: link, href: link });
     last = m.index! + m[0].length;
   }
   push(text.slice(last));

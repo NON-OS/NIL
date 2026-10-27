@@ -25,7 +25,7 @@ export interface ChatState {
   typing: Record<string, Record<string, Record<string, number>>>;
   notices: Record<string, ChatNotice[]>;
   // channel id -> sending tab's stream -> its checked high-water mark
-  marks: Record<string, Record<string, { senderId: string; scopes: Scopes }>>;
+  marks: Record<string, Record<string, { senderId: string; scopes: Scopes; edits: Record<string, number> }>>;
   // the conversation on screen, so live messages there count as read
   viewing: string | null;
 }

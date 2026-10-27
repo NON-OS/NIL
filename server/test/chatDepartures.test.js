@@ -131,3 +131,17 @@ test('an admin signs that someone left the team, and only for someone who did', 
   assert.equal((await owner('POST', '/api/chat/removals', { userId: ids.ben, statement })).status, 200);
   assert.deepEqual((await ann('GET', `/api/chat/channels/${ch.id}`)).data.channel.departures, [{ userId: ids.ben, statement }]);
 });
+
+test('back on the team, a signed removal from before no longer counts', async () => {
+  const { default: sql } = await import('../db/sql.js');
+  await owner('PATCH', `/api/users/${ids.ben}`, { deactivated: false });
+  assert.equal(sql.get('SELECT COUNT(*) AS n FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', ids.ben).n, 0);
+});
+
+test('one person can make only so many channels for the whole team', async () => {
+  const { default: sql } = await import('../db/sql.js');
+  const made = [];
+  for (let i = 0; i < 26; i++) made.push((await chat.makeChannel(cat, ids.cat, { audience: 'team', keyed: [ids.cat] })).status);
+  assert.ok(made.includes(400), 'refused past CHAT_TEAM_CHANNELS_PER_PERSON');
+  assert.equal(sql.get("SELECT COUNT(*) AS n FROM chat_channels WHERE audience = 'team' AND created_by = ?", ids.cat).n, 25);
+});

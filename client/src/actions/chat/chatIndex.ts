@@ -67,7 +67,8 @@ async function flush() {
 
 // What counts as gone: past its time, or older than a forward-secret conversation keeps.
 function gone(e: Entry, now: number) {
-  const days = chatState.get().channels[e.channelId]?.forwardDays;
+  const held = chatState.get().channels[e.channelId];
+  const days = held?.signedSettings?.forward ?? held?.forwardDays;
   return (e.until !== null && e.until <= now) || (days ? e.sentAt < now - days * DAY : false);
 }
 
@@ -83,7 +84,8 @@ const chatIndex = {
       if (!m.seq || m.state !== 'ok' || m.reaction) continue;
       // what's meant to vanish never lands on the device: disappearing messages, and anything in
       // a forward-secret conversation, are searched only while this tab holds them
-      if (m.expiresAt || chatState.get().channels[m.channelId]?.forwardDays) continue;
+      const where = chatState.get().channels[m.channelId];
+      if (m.expiresAt || where?.forwardDays || where?.signedSettings?.forward) continue;
       const name = bucketOf(m.channelId, m.sentAt);
       const changes = pending.get(name) ?? new Map<string, Entry | null>();
       const text = [m.text, ...m.files.map((f) => f.name)].join(' ').trim();

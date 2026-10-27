@@ -16,7 +16,7 @@ const ben = client(base);
 const ids = {};
 
 before(async () => {
-  srv = await startServer({ env: { CHAT_KEY_CHANGES_PER_MINUTE: '12' } });
+  srv = await startServer({ env: { CHAT_KEY_CHANGES_PER_MINUTE: '30' } });
   const owner = client(base);
   await owner.wallet(wallet(), 'setup', { name: 'Olivia', workspaceName: 'Acme' });
   for (const [c, key] of [[ann, 'ann'], [ben, 'ben']]) {
@@ -64,7 +64,9 @@ test('a list has to follow the one before it, after it, and keep who manages it'
 test('a direct message keeps its two people and can start over, and departures carry a real signature', async () => {
   const dm = (await chat.makeChannel(ann, ids.ann, { kind: 'dm', members: [ids.ann, ids.ben] })).data.channel;
   const g = await channel();
-  assert.equal((await ann('POST', `/api/chat/channels/${dm.id}/epochs`, await chat.next(ann, dm.id, { by: ids.ann, members: [ids.ann, ids.ben] }))).status, 200);
+  assert.equal((await ben('POST', `/api/chat/channels/${dm.id}/epochs`, await chat.next(ben, dm.id, { by: ids.ben, members: [ids.ann, ids.ben] }))).status, 200);
+  // a new key for the same people again, off schedule, is refused: nobody floods the chain
+  assert.equal((await ben('POST', `/api/chat/channels/${dm.id}/epochs`, await chat.next(ben, dm.id, { by: ids.ben, members: [ids.ann, ids.ben] }))).status, 429);
   assert.equal((await ann('POST', `/api/chat/channels/${g.id}/start-over`)).status, 400, 'only a direct message starts over');
   assert.equal((await ben('POST', `/api/chat/channels/${dm.id}/start-over`)).status, 200);
   const fresh = await chat.makeChannel(ann, ids.ann, { kind: 'dm', members: [ids.ann, ids.ben] });

@@ -87,3 +87,9 @@ test('reading positions are rate limited like everything else', async () => {
   for (let i = 0; i < 110; i++) codes.push((await ann('PUT', `/api/chat/channels/${ch.id}/read`, { seq: 0 })).status);
   assert.ok(codes.includes(429));
 });
+
+test('someone handed older keys fetches only their copies; the checked lists stay as they are', async () => {
+  const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann] })).data.channel;
+  const page = (await ann('GET', `/api/chat/channels/${ch.id}/epochs?keys=1`)).data.epochs;
+  assert.deepEqual(Object.keys(page[0]).sort(), ['epoch', 'wrappedKeys']);
+});

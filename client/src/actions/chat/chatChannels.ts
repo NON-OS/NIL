@@ -4,7 +4,6 @@ import store from '../../state/store';
 import chatState from '../../state/chatState';
 import chatKeyring from '../../state/chatKeyring';
 import b64u from '../../lib/crypto/b64u';
-import isAdmin from '../../lib/isAdmin';
 import confirmKeys from '../confirmKeys';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
@@ -42,8 +41,8 @@ function put(channel: ChatChannel) {
   return channel;
 }
 
-async function keyNow(channel: ChatChannel) {
-  const key = await chatKeys.get(channel, await sealGate(channel), channel.epoch);
+async function keyNow(channel: ChatChannel, gate = {}) {
+  const key = await chatKeys.get(channel, await sealGate(channel, gate), channel.epoch);
   if (!key) throw new Error('You don’t hold this conversation’s key yet.');
   return key;
 }
@@ -52,10 +51,11 @@ async function keyNow(channel: ChatChannel) {
 const chatChannels = {
   teammates,
 
-  // whether this person may rename it, change its settings and take people out
-  manages(channel: ChatChannelRow) {
-    const me = store.get().me;
-    return channel.kind === 'group' || (channel.kind === 'channel' && (channel.createdBy === me?.id || isAdmin(me)));
+  // whether this person may rename it, change its settings and take people out: what its newest
+  // checked member list says, which every browser holds them to
+  manages(channel: ChatChannel) {
+    const me = store.get().me?.id;
+    return channel.kind !== 'dm' && Boolean(me && channel.signedManagers?.includes(me));
   },
 
   async load() {
@@ -96,8 +96,8 @@ const chatChannels = {
     const members = audience === 'team' ? teammates() : [...new Set([me, ...people])].sort();
     if (audience === 'people') await confirmKeys.ask(members.filter((id) => id !== me), 'this conversation');
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
-    const users = store.get().users;
-    const managers = kind === 'channel' ? members.filter((u) => u === me || isAdmin(users[u])) : members;
+    // whoever starts a channel manages it; the server's word on who is an admin makes nobody one
+    const managers = kind === 'channel' ? [me] : members;
     const made = await startEpoch({ id, kind, audience }, 1, null, { members, managers });
     // the name, topic and how long messages stay are signed together from the start
     const metaCt = meta?.name || meta?.topic || disappearSeconds ? await chatMeta.seal(made.key, id, 1, { ...meta, disappear: disappearSeconds }) : null;
@@ -112,9 +112,10 @@ const chatChannels = {
   // The name, topic and settings are signed together; a change to any reseals the lot under the
   // current key, and the server's copy of the settings goes in the same request.
   async rename(channel: ChatChannel, meta: Partial<Meta>) {
-    const settings = { disappear: channel.disappearSeconds, forward: channel.forwardDays };
+    // what isn't changing stays as it was signed, never as the server has it
+    const settings = channel.signedSettings ?? { disappear: null, forward: null };
     const next = { name: channel.name, topic: channel.topic, ...settings, ...meta };
-    const metaCt = await chatMeta.seal(await keyNow(channel), channel.id, channel.epoch, next);
+    const metaCt = await chatMeta.seal(await keyNow(channel, { settings: false }), channel.id, channel.epoch, next);
     const res = await http.patch<{ channel: ChatChannelRow }>(`/chat/channels/${channel.id}`, { metaCt, metaEpoch: channel.epoch, disappearSeconds: next.disappear, forwardDays: next.forward });
     return put(await openChannel(res.channel));
   },
@@ -130,7 +131,8 @@ const chatChannels = {
   // taking someone out starts a new key without them.
   async setMembers(channel: ChatChannel, members: string[]) {
     const adding = members.filter((id) => !channel.keyHolders.includes(id));
-    if (adding.length) await confirmKeys.ask(adding, 'this conversation');
+    // a team channel's people are the team's: only someone left out is chosen here
+    if (adding.length && channel.audience === 'people') await confirmKeys.ask(adding, 'this conversation');
     await chatMaintain(channel, { members: [...new Set(members)].sort() });
     return chatChannels.refresh(channel.id);
   },

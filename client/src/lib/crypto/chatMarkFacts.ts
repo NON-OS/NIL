@@ -7,6 +7,7 @@ export interface Scopes {
 }
 
 const ID = /^([A-Za-z0-9_-]{22}|main)$/;
+const MAX_EDITS = 100;
 
 // A tab's high-water mark in a conversation: how far it has numbered what it sent in each
 // timeline, signed by its sender and sealed under the epoch's key. A reader who sees a mark ahead
@@ -29,6 +30,17 @@ const chatMarkFacts = {
     }
     return out;
   },
+
+  // The newest edit of each message the tab changed lately, under `edits`, -1 for one it deleted.
+  // A reader holds only that sender's own messages to it.
+  edits(text: string): Record<string, number> {
+    const value = JSON.parse(text)?.edits;
+    const out: Record<string, number> = {};
+    if (!value || typeof value !== 'object') return out;
+    for (const [id, n] of Object.entries(value).slice(0, MAX_EDITS)) if (/^[A-Za-z0-9_-]{22}$/.test(id) && Number.isSafeInteger(n) && (n as number) >= -1 && (n as number) < 2 ** 31) out[id] = n as number;
+    return out;
+  },
+  maxEdits: MAX_EDITS,
 };
 
 export default chatMarkFacts;

@@ -4,6 +4,7 @@ import chatRosters from './chatRosters';
 import openMessage from './openMessage';
 import chatStreams from './chatStreams';
 import chatIndex from './chatIndex';
+import lateUnderOldKey from '../../lib/lateUnderOldKey';
 import type ChatItem from '../../types/ChatItem';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 import type ChatMessageRow from '../../types/ChatMessageRow';
@@ -19,9 +20,21 @@ function merge(channelId: string, threadId: string | null, incoming: ChatItem[],
   const held = chatState.timeline(key);
   const byId = new Map(held.items.map((m) => [m.id, m]));
   for (const m of incoming) byId.set(m.id, m);
-  const items = [...byId.values()].sort(order);
-  chatState.putTimeline(key, { items, ...patch });
+  chatState.putTimeline(key, { items: flag(channelId, [...byId.values()].sort(order)), ...patch });
   recount(channelId, threadId);
+}
+
+// Marks a message as not confirmed when the server placed it late under an older key, or showed
+// a version older than its sender's mark says they made, or a deleted one as if it weren't.
+function flag(channelId: string, sorted: ChatItem[]) {
+  const late = lateUnderOldKey(sorted);
+  const marks = Object.values(chatState.get().marks[channelId] ?? {});
+  const older = (m: ChatItem) =>
+    marks.some((k) => {
+      const n = k.senderId === m.senderId ? k.edits[m.id] : undefined;
+      return n !== undefined && (n === -1 ? m.type !== 'deleted' : m.edit < n);
+    });
+  return sorted.map((m) => (m.state !== 'unverified' && (late.has(m.id) || older(m)) ? { ...m, state: 'unverified' as const } : m));
 }
 
 // Looks again at every sender's numbering in a conversation's main timeline, or one thread's,
@@ -47,6 +60,7 @@ const chatTimeline = {
   keyOf,
   // the main timeline and every thread this tab has loaded, after the marks changed
   recount(channelId: string) {
+    for (const [key, tl] of Object.entries(chatState.get().timelines)) if (key === channelId || tl.items.some((m) => m.channelId === channelId)) chatState.putTimeline(key, { items: flag(channelId, tl.items) });
     recount(channelId);
     for (const [key, tl] of Object.entries(chatState.get().timelines)) if (key.startsWith('thread:') && tl.items.some((m) => m.channelId === channelId)) recount(channelId, key.slice(7));
   },

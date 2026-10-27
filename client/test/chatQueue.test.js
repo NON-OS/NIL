@@ -110,7 +110,7 @@ test('a mark is signed by its tab’s sender and opens only as theirs', async ()
   // as V's it opens; filed under W, who didn't sign it, it doesn't
   const row = { userId: 'v', stream: sent.stream, epoch: 1, sentAt: sent.sentAt, bodyCt: sent.bodyCt };
   await chatMarks.open(channel(1), row);
-  assert.deepEqual(chatState.get().marks[shape.id][`v/${sent.stream}`], { senderId: 'v', scopes: { main: { n: 9, until: null } } });
+  assert.deepEqual(chatState.get().marks[shape.id][`v/${sent.stream}`], { senderId: 'v', scopes: { main: { n: 9, until: null } }, edits: {} });
   chatState.set({ marks: {} });
   await chatMarks.open(channel(1), { ...row, userId: 'w' });
   assert.equal(chatState.get().marks[shape.id], undefined);

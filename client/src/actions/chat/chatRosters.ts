@@ -72,11 +72,32 @@ const chatRosters = {
     return run;
   },
 
+  // Copies of older keys someone handed this person: only the sealed copies are fetched again,
+  // never the checked lists, so handing keys over can't make every member check everything again.
+  async refreshKeys(channel: ChatChannelRow) {
+    const held = await (chains.get(channel.id) ?? Promise.resolve(null)).catch(() => null);
+    if (!held) return;
+    const rosters = [...held.rosters];
+    for (let from = 1, page = 0; from <= rosters.length && page < 100; page++) {
+      const { epochs } = await http.get<{ epochs: { epoch: number; wrappedKeys: string[] }[] }>(`/chat/channels/${channel.id}/epochs?from=${from}&keys=1`);
+      if (!epochs.length) break;
+      for (const e of epochs) if (rosters[e.epoch - 1]) rosters[e.epoch - 1] = { ...rosters[e.epoch - 1], wrappedKeys: e.wrappedKeys };
+      from = epochs[epochs.length - 1].epoch + 1;
+    }
+    chains.set(channel.id, Promise.resolve({ ...held, rosters }));
+  },
+
   // A list this tab just signed and the server took, so it needn't be fetched to be known.
   async add(channel: ChatChannelRow, roster: ChatRoster) {
     const held = await (chains.get(channel.id) ?? Promise.resolve(null)).catch(() => null);
     if (!held || held.broken !== null || held.rosters.length !== roster.epoch - 1) return chains.delete(channel.id);
     chains.set(channel.id, Promise.resolve(remember(channel.id, { ...held, rosters: [...held.rosters, roster] })));
+  },
+
+  // the newest epoch this browser checked for a conversation, in any tab or visit
+  seenEpoch(channelId: string) {
+    const here = slot();
+    return here ? (storage.get<Record<string, [number, string]>>(here, {})[channelId]?.[0] ?? 0) : 0;
   },
 
   at: (chain: Chain, epoch: number) => (chain.broken !== null && epoch >= chain.broken ? null : (chain.rosters[epoch - 1] ?? null)),

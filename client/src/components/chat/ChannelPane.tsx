@@ -20,6 +20,7 @@ import keyDirectory from '../../actions/keyDirectory';
 import confirmKeys from '../../actions/confirmKeys';
 import disappearLabel from '../../lib/disappearLabel';
 import rosterEvents from '../../lib/rosterEvents';
+import settingsMatch from '../../lib/settingsMatch';
 import type ChatChannel from '../../types/ChatChannel';
 
 interface Props {
@@ -81,8 +82,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
   const names = unchecked.length > 3 ? `${shown.join(', ')} and ${unchecked.length - 3} more` : shown.join(', ');
   // the server acts on its own copy of the settings; one that differs from what was signed would
   // keep messages it should delete
-  const signed = channel.signedSettings;
-  const tampered = Boolean(signed && (signed.disappear !== channel.disappearSeconds || signed.forward !== channel.forwardDays));
+  const tampered = channel.metaState !== 'locked' && !settingsMatch(channel);
   // someone out of the conversation still holds its current key until the next one starts
   const holdingOut = (channel.signedMembers ?? []).filter((id) => !channel.members.includes(id));
   const leftNames = holdingOut.map((id) => users[id]?.name ?? 'someone').join(', ');

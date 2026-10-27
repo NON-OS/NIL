@@ -4,6 +4,7 @@ import chatKeys from './chatKeys';
 import chatTimeline from './chatTimeline';
 import sealMessage from './sealMessage';
 import sealGate from './sealGate';
+import chatMarks from './chatMarks';
 import type ChatItem from '../../types/ChatItem';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
@@ -21,6 +22,7 @@ async function rewrite(item: ChatItem, text: string | null) {
   const content = deleted ? {} : { text, files: item.files, mentions: item.mentions, emoji: item.emoji, target: item.target };
   const bodyCt = await sealMessage({ id: item.id, channelId: channel.id, epoch: channel.epoch, sentAt: item.sentAt, key, facts, content });
   const { message } = await http.put<{ message: ChatMessageRow }>(`/chat/messages/${item.id}`, { epoch: channel.epoch, bodyCt, edits: edit, deleted });
+  chatMarks.edit(channel.id, item.id, edit, deleted);
   return chatTimeline.arrive(channel, message);
 }
 

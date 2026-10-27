@@ -51,11 +51,16 @@ export default async function chatEvents(event: any) {
       return;
     }
     case 'typing': {
-      const until = Date.now() + TYPING_MS;
+      const now = Date.now();
       const scope = typeof event.threadId === 'string' ? event.threadId : 'main';
       chatState.set((st) => {
-        const here = st.typing[id] ?? {};
-        return { typing: { ...st.typing, [id]: { ...here, [scope]: { ...(here[scope] ?? {}), [event.userId]: until } } } };
+        // hints that ran out go as new ones come, so they never pile up
+        const here: Record<string, Record<string, number>> = {};
+        for (const [s, who] of Object.entries(st.typing[id] ?? {})) {
+          const live = Object.fromEntries(Object.entries(who).filter(([, until]) => until > now));
+          if (Object.keys(live).length) here[s] = live;
+        }
+        return { typing: { ...st.typing, [id]: { ...here, [scope]: { ...(here[scope] ?? {}), [event.userId]: now + TYPING_MS } } } };
       });
       return;
     }
@@ -69,8 +74,8 @@ export default async function chatEvents(event: any) {
       return chatChannels.drop(id);
     case 'keys':
     case 'epoch': {
-      // a new epoch extends the checked chain; keys handed over later mean fetching it again
-      if (event.kind === 'keys') chatRosters.forget(id);
+      // a new epoch extends the checked chain; keys handed over later only refresh the copies
+      if (event.kind === 'keys' && channel) await chatRosters.refreshKeys(channel).catch(() => chatRosters.forget(id));
       const next = await chatChannels.refresh(id);
       if (next) await chatTimeline.reopen(next);
       return;

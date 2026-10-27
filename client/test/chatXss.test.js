@@ -25,7 +25,7 @@ const PAYLOADS = [
 ];
 const people = [{ id: 'u1', name: '<b onclick=alert(1)>Mallory</b>' }];
 // every element in the output is one of the few the components draw, none with a handler
-const ALLOWED = new Set(['div', 'span', 'a', 'button', 'small', 'svg', 'path', 'rect', 'line', 'polyline', 'circle']);
+const ALLOWED = new Set(['div', 'span', 'bdi', 'a', 'button', 'small', 'svg', 'path', 'rect', 'line', 'polyline', 'circle']);
 const runs = (html) =>
   [...html.matchAll(/<\/?([a-z0-9-]+)([^>]*)>/gi)].some(([, tag, attrs]) => !ALLOWED.has(tag.toLowerCase()) || /\son\w+\s*=/i.test(attrs.replace(/"[^"]*"/g, '""')) || /href="\s*javascript:/i.test(attrs));
 
@@ -36,7 +36,10 @@ test('message text renders as text: no tags, no handlers, only http(s) links', (
     for (const [, href] of html.matchAll(/href="([^"]*)"/g)) assert.match(href, /^https?:\/\/[^"<>\s]+$/);
   }
   const linked = renderToStaticMarkup(createElement(MessageText, { text: 'see https://example.com/a?b=1.', people: [], me: 'u2' }));
-  assert.match(linked, /<a href="https:\/\/example.com\/a\?b=1" target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">/);
+  assert.match(linked, /<bdi dir="ltr"><a href="https:\/\/example.com\/a\?b=1" target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">/);
+  // a link can't be shown reading the other way round from where it goes
+  const turned = renderToStaticMarkup(createElement(MessageText, { text: 'https://example.com/\u202Egnp.exe', people: [], me: 'u2' }));
+  assert.ok(!turned.includes('\u202E') && turned.includes('href="https://example.com/gnp.exe"'), turned);
 });
 
 test('file names and types from a message are cleaned and shown as text', () => {

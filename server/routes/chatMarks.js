@@ -9,6 +9,7 @@ import rateLimit from '../auth/rateLimit.js';
 import channelAccess from '../chat/channelAccess.js';
 import wrapsFor from '../chat/wrapsFor.js';
 import announceChat from '../chat/announceChat.js';
+import chatBudget from '../chat/chatBudget.js';
 
 const router = express.Router();
 const STREAM = /^[A-Za-z0-9_-]{16}$/;
@@ -44,6 +45,7 @@ router.put(
     const now = Date.now();
     if (!Number.isSafeInteger(b.sentAt) || Math.abs(b.sentAt - now) > config.chat.clockSkewMs) throw HttpError.badRequest('This device’s clock is off. Set it right and try again.');
     const bodyCt = cipherText(b.bodyCt, 'Mark', { max: MARK_CHARS });
+    chatBudget(req.user.id, bodyCt.length);
     // a stream is filed under its sender, so nobody can take another's
     const held = sql.get('SELECT sent_at FROM chat_marks WHERE channel_id = ? AND user_id = ? AND stream = ?', channel.id, req.user.id, stream);
     // a mark only moves forward

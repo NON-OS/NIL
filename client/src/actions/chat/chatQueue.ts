@@ -7,6 +7,7 @@ import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
 import sealMessage from './sealMessage';
 import sealGate from './sealGate';
+import type ChatChannel from '../../types/ChatChannel';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 import type ChatItem from '../../types/ChatItem';
 
@@ -35,7 +36,7 @@ export interface Queued {
 
 const prefix = () => `${store.get().workspaceKey}:${store.get().me?.id ?? ''}:`;
 
-async function seal(channel: ChatChannelRow, q: Omit<Queued, 'epoch' | 'sentAt' | 'ttl' | 'bodyCt'>, content: Partial<Content>): Promise<Queued> {
+async function seal(channel: ChatChannel, q: Omit<Queued, 'epoch' | 'sentAt' | 'ttl' | 'bodyCt'>, content: Partial<Content>): Promise<Queued> {
   // a tombstone carries nothing, so it may go even to people whose keys aren't checked yet
   const chain = q.type === 'deleted' ? await chatRosters.load(channel) : await sealGate(channel);
   const key = await chatKeys.get(channel, chain, channel.epoch);
@@ -66,7 +67,7 @@ const chatQueue = {
     }
   },
 
-  async reseal(channel: ChatChannelRow, q: Queued, { tombstone = false } = {}) {
+  async reseal(channel: ChatChannel, q: Queued, { tombstone = false } = {}) {
     const content = tombstone ? {} : await chatQueue.open(channel, q);
     if (!content) throw new Error('This message can’t be opened here any more to send it.');
     const type = tombstone ? 'deleted' : q.type;

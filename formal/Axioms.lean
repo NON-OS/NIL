@@ -88,3 +88,9 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.ChatStreams.reorder_reported
   Nil.ChatStreams.tail_reported
   Nil.ChatStreams.honest_silent
+  Nil.ChatHistory.deleted_stays
+  Nil.ChatHistory.record_deleted_absorbs
+  Nil.ChatHistory.older_refused
+  Nil.ChatHistory.honest_never_stale
+  Nil.ChatHistory.honest_none_late
+  Nil.ChatHistory.late_caught
