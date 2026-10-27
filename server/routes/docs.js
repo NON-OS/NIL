@@ -12,9 +12,10 @@ import docRecipients from '../services/docRecipients.js';
 import hub from '../realtime/hub.js';
 import toDoc from '../mappers/toDoc.js';
 import contentWrites from '../auth/contentWrites.js';
+import pendingDocUpdates from '../services/pendingDocUpdates.js';
+import thinRevisions from '../services/thinRevisions.js';
 
 const router = express.Router();
-const KEEP_REVISIONS = 25;
 
 const manager = (doc, user) => doc.created_by === user.id || user.isAdmin;
 const readers = (docId) => sql.all('SELECT user_id FROM doc_keys WHERE doc_id = ?', docId).map((r) => r.user_id);
@@ -40,7 +41,9 @@ router.get(
   '/docs/:id',
   route((req) => {
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
-    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id) }) };
+    // the live changes made since this version, which the browser lays on top
+    const live = { updatesThrough: doc.updates_through, updates: pendingDocUpdates(doc.id, doc.updates_through) };
+    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id), ...live }) };
   }),
 );
 
@@ -78,15 +81,22 @@ router.put(
     if (base !== doc.version) throw new HttpError(409, 'Someone saved a newer version of this doc.');
     const titleCt = cipherText(req.body?.titleCt, 'Title', { max: 4000 });
     const bodyCt = cipherText(req.body?.bodyCt, 'Body');
+    // how far into the live changes this version reaches; those changes are folded in, so they go
+    const through = req.body?.through === undefined ? null : check.number(req.body.through, 'Changes', { min: 0, integer: true });
+    if (through !== null && through > doc.update_seq) throw HttpError.badRequest('That version names changes this doc never had.');
     const now = Date.now();
     sql.tx(() => {
       sql.run('INSERT OR REPLACE INTO doc_revisions (doc_id, version, title_ct, body_ct, updated_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', doc.id, doc.version, doc.title_ct, doc.body_ct, doc.updated_by, doc.updated_at);
-      sql.run('DELETE FROM doc_revisions WHERE doc_id = ? AND version <= ?', doc.id, doc.version - KEEP_REVISIONS);
+      thinRevisions(doc.id, now);
       sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, doc.id);
+      if (through !== null) {
+        sql.run('DELETE FROM doc_updates WHERE doc_id = ? AND seq <= ?', doc.id, through);
+        sql.run('UPDATE docs SET updates_through = MAX(updates_through, ?) WHERE id = ?', through, doc.id);
+      }
     });
     announceDoc(doc.id);
     const fresh = sql.get('SELECT * FROM docs WHERE id = ?', doc.id);
-    return { doc: toDoc(fresh, wrappedKey, { bodyCt: fresh.body_ct, readers: readers(doc.id) }) };
+    return { doc: toDoc(fresh, wrappedKey, { bodyCt: fresh.body_ct, readers: readers(doc.id), updatesThrough: fresh.updates_through }) };
   }),
 );
 
@@ -120,6 +130,9 @@ router.post(
         cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), doc.id,
       );
       sql.run('DELETE FROM doc_revisions WHERE doc_id = ?', doc.id);
+      // live changes sealed under the old key go with it; the new version holds them all
+      sql.run('DELETE FROM doc_updates WHERE doc_id = ?', doc.id);
+      sql.run('UPDATE docs SET updates_through = update_seq WHERE id = ?', doc.id);
       grantDocKeys(doc.id, grants, req.user.id, { replace: true });
     });
     announceDoc(doc.id, before);

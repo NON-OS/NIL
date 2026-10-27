@@ -7,6 +7,7 @@ import tokenHash from '../auth/tokenHash.js';
 import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
+import docAwareness from './docAwareness.js';
 import logLimited from '../lib/logLimited.js';
 import buildId from '../lib/buildId.js';
 import config from '../config.js';
@@ -48,6 +49,8 @@ function handleMessage(ws, raw) {
     if (!canSeeTask(task, { id: client.userId })) return;
     const typing = { type: 'typing', taskId: task.id, userId: client.userId };
     hub.broadcast((viewer) => (canSeeTask(task, viewer) ? typing : null), { except: ws });
+  } else if (msg?.type === 'doc-open' || msg?.type === 'doc-aware') {
+    docAwareness(ws, client, msg);
   }
 }
 

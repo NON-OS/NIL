@@ -78,13 +78,14 @@ test('team docs show up as waiting for people who don’t hold the key yet', asy
   assert.equal((await ben('GET', '/api/docs')).data.docs.length, 1);
 });
 
-test('saves are versioned: stale writes are refused and history is kept', async () => {
+test('saves are versioned: stale writes are refused and history is kept, thinned', async () => {
   const first = await ana('PUT', `/api/docs/${ids.doc}`, { baseVersion: 1, titleCt: blob(40), bodyCt: blob(300) });
   assert.equal(first.data.doc.version, 2);
   assert.equal((await owner('PUT', `/api/docs/${ids.doc}`, { baseVersion: 1, titleCt: blob(40), bodyCt: blob(300) })).status, 409);
   await owner('PUT', `/api/docs/${ids.doc}`, { baseVersion: 2, titleCt: blob(40), bodyCt: blob(300) });
+  // two versions saved within a minute of each other: history keeps the newer one
   const revisions = (await ana('GET', `/api/docs/${ids.doc}/revisions`)).data;
-  assert.deepEqual(revisions.map((r) => r.version), [2, 1]);
+  assert.deepEqual(revisions.map((r) => r.version), [2]);
   assert.equal((await owner('PUT', `/api/docs/${ids.doc}`, { baseVersion: 3, titleCt: 'not base64!', bodyCt: blob(300) })).status, 400);
 });
 
