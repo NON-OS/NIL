@@ -12,6 +12,7 @@ import keyPins from '../state/keyPins';
 import router from '../lib/router';
 import chatDisk from '../lib/chatDisk';
 import socket from '../realtime/socket';
+import sealedLocal from '../lib/sealedLocal/sealedLocal';
 import type User from '../types/User';
 import type Workspace from '../types/Workspace';
 import type Project from '../types/Project';
@@ -179,6 +180,8 @@ const session = {
   async signOutEverywhere(keys = false) {
     try {
       await http.post('/me/sign-out-everywhere', { keys });
+      // revoked keys leave nothing worth keeping in this browser
+      if (keys) await sealedLocal.wipe();
     } finally {
       signedOut(keys ? 'Signed out on every device, and your access keys were revoked.' : 'Signed out on every device.');
     }

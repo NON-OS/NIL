@@ -11,8 +11,8 @@ const MAX_LIVE_BYTES = 256_000;
 const MAX_RETRY_MS = 30_000;
 
 // Sends this tab's changes as they happen: merged for a moment, signed, sealed with the doc key
-// and posted. Changes the server didn't take wait here and go again, so typing offline is kept
-// for as long as the tab stays open.
+// and posted. Changes the server didn't take wait here and go again; the browser also keeps them
+// encrypted (see unsent) in case the tab closes first.
 export default function createOutbox(ctx: LiveContext) {
   let queue: Uint8Array[] = [];
   let timer: ReturnType<typeof setTimeout> | undefined;
@@ -46,11 +46,18 @@ export default function createOutbox(ctx: LiveContext) {
       await post(update);
       retry = 1000;
       ctx.setStatus({ state: queue.length ? 'sending' : 'saved' });
+      if (!queue.length) ctx.settled();
     } catch (err: any) {
       queue.unshift(update);
       if (err?.status === 409 || err?.status === 400) {
         // the doc wants a new version first, or the change is too big to go live: a version carries it
-        await ctx.saveNow().then(() => (queue = []), () => ctx.setStatus({ state: 'offline' }));
+        await ctx.saveNow().then(
+          () => {
+            queue = [];
+            ctx.settled();
+          },
+          () => ctx.setStatus({ state: 'offline' }),
+        );
       } else {
         ctx.setStatus({ state: 'offline' });
         retry = Math.min(retry * 2, MAX_RETRY_MS);

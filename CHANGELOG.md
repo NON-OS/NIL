@@ -15,7 +15,11 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Mentioning a teammate in a doc puts a notice in their inbox. The server learns who mentioned whom in which doc, never the words around it.
 - An outline of the doc's headings, and version history that reaches back further: one version a minute for the last hour, one each quarter of an hour for a day, then one a day, up to `DOC_REVISIONS` (100).
 - Docs written as Markdown open in the new editor unchanged and switch over the next time someone edits them.
-- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE` and `DOC_REVISIONS`.
+- Each comment message is signed by its author for its doc and thread, and one whose signature doesn't check out is hidden, so nobody who can edit a doc can comment under someone else's name.
+- Live changes and cursors are padded before they're encrypted, so their size no longer tells the server how much was typed.
+- Changes that haven't reached the server are kept in the browser, encrypted under a key derived from the unlocked identity, and sent the next time the doc opens there, so closing the tab or losing power while offline loses nothing.
+- Pictures and files taken out of a doc are deleted once no version in its history uses them, after a grace period. Each version tells the server which blobs it uses (migration 044).
+- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE`, `DOC_REVISIONS`, `DOC_BLOB_GRACE_DAYS` and `DOC_BLOB_REFS_MAX`.
 
 ### Chat
 

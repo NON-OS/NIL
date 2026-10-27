@@ -13,6 +13,7 @@ import CommentComposer from './CommentComposer';
 interface Props {
   editor: Editor;
   ydoc: Y.Doc;
+  docId: string;
   active: string | null;
   onActive: (id: string | null) => void;
   onClose: () => void;
@@ -21,9 +22,9 @@ interface Props {
 }
 
 // The comments beside the doc, in reading order. Clicking one selects the words it's about.
-export default function CommentsPanel({ editor, ydoc, active, onActive, onClose, draft }: Props) {
+export default function CommentsPanel({ editor, ydoc, docId, active, onActive, onClose, draft }: Props) {
   const me = useStore((s) => s.me)!;
-  const threads = useThreads(ydoc);
+  const threads = useThreads(ydoc, docId);
   const [showResolved, setShowResolved] = useState(false);
   // where each thread's words are now, kept current as the text around them changes
   const order = useEditorState({ editor, selector: ({ editor: e }) => threadOrder(e), equalityFn: (a, b) => JSON.stringify([...a]) === JSON.stringify([...(b ?? [])]) });
@@ -73,9 +74,9 @@ export default function CommentsPanel({ editor, ydoc, active, onActive, onClose,
               thread={t}
               active={t.id === active}
               orphaned={!order.has(t.id)}
-              canDelete={t.by === me.id || isAdminUser(me)}
+              canDelete={(t.by !== '' && t.by === me.id) || isAdminUser(me)}
               onFocus={() => focus(t.id)}
-              onReply={(text) => docComments.reply(ydoc, t.id, me.id, text)}
+              onReply={(text) => docComments.reply(ydoc, docId, t.id, text)}
               onResolve={(r) => docComments.resolve(ydoc, t.id, r)}
               onDelete={() => remove(t.id)}
             />

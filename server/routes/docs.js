@@ -15,6 +15,7 @@ import toDoc from '../mappers/toDoc.js';
 import contentWrites from '../auth/contentWrites.js';
 import pendingDocUpdates from '../services/pendingDocUpdates.js';
 import thinRevisions from '../services/thinRevisions.js';
+import docBlobRefs from '../services/docBlobRefs.js';
 
 const router = express.Router();
 
@@ -60,8 +61,8 @@ router.post(
     const now = Date.now();
     sql.tx(() => {
       sql.run(
-        'INSERT INTO docs (id, title_ct, body_ct, audience, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        id, cipherText(b.titleCt, 'Title', { max: 4000 }), cipherText(b.bodyCt, 'Body'), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now,
+        'INSERT INTO docs (id, title_ct, body_ct, audience, created_by, updated_by, created_at, updated_at, blob_refs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, cipherText(b.titleCt, 'Title', { max: 4000 }), cipherText(b.bodyCt, 'Body'), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now, docBlobRefs(b.blobs),
       );
       grantDocKeys(id, grants, req.user.id);
     });
@@ -87,9 +88,9 @@ router.put(
     if (through !== null && through > doc.update_seq) throw HttpError.badRequest('That version names changes this doc never had.');
     const now = Date.now();
     sql.tx(() => {
-      sql.run('INSERT OR REPLACE INTO doc_revisions (doc_id, version, title_ct, body_ct, updated_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', doc.id, doc.version, doc.title_ct, doc.body_ct, doc.updated_by, doc.updated_at);
+      sql.run('INSERT OR REPLACE INTO doc_revisions (doc_id, version, title_ct, body_ct, updated_by, created_at, blob_refs) VALUES (?, ?, ?, ?, ?, ?, ?)', doc.id, doc.version, doc.title_ct, doc.body_ct, doc.updated_by, doc.updated_at, doc.blob_refs);
       thinRevisions(doc.id, now);
-      sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, doc.id);
+      sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, docBlobRefs(req.body?.blobs), doc.id);
       if (through !== null) {
         sql.run('DELETE FROM doc_updates WHERE doc_id = ? AND seq <= ?', doc.id, through);
         sql.run('UPDATE docs SET updates_through = MAX(updates_through, ?) WHERE id = ?', through, doc.id);
@@ -127,8 +128,8 @@ router.post(
     const before = readers(doc.id);
     sql.tx(() => {
       sql.run(
-        'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?',
-        cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), doc.id,
+        'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?',
+        cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), docBlobRefs(req.body?.blobs), doc.id,
       );
       sql.run('DELETE FROM doc_revisions WHERE doc_id = ?', doc.id);
       // live changes sealed under the old key go with it; the new version holds them all

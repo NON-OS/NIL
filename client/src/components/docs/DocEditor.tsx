@@ -72,7 +72,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
   };
   const sendComment = (text: string) => {
     if (!editor || !live || !draft) return;
-    const id = docComments.start(live.ydoc, me.id, draft.quote, text);
+    const id = docComments.start(live.ydoc, doc.id, draft.quote, text);
     editor.chain().setTextSelection({ from: draft.from, to: draft.to }).setMark('comment', { thread: id }).run();
     setDraft(null);
     setThread(id);
@@ -145,7 +145,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
             <RichEditor live={live} readOnly={readOnly} onEditor={setEditor} onLink={() => setModal('link')} onComment={startComment} onPick={attach.pick} onFiles={(files) => void attach.insert(files)} />
           </div>
         </div>
-        {editor && panel === 'comments' && <CommentsPanel editor={editor} ydoc={live.ydoc} active={thread} onActive={setThread} onClose={() => setPanel(null)} draft={draft && { quote: draft.quote, onSend: sendComment, onCancel: () => setDraft(null) }} />}
+        {editor && panel === 'comments' && <CommentsPanel editor={editor} ydoc={live.ydoc} docId={doc.id} active={thread} onActive={setThread} onClose={() => setPanel(null)} draft={draft && { quote: draft.quote, onSend: sendComment, onCancel: () => setDraft(null) }} />}
         {editor && panel === 'outline' && <OutlinePanel editor={editor} onClose={() => setPanel(null)} />}
       </div>
       {modal === 'link' && editor && <LinkEditor editor={editor} onClose={() => setModal(null)} />}
