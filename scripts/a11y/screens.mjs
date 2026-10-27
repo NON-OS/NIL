@@ -32,6 +32,9 @@ const openChat = async (page) => {
 };
 const newConversation = async (page) => {
   await openChat(page);
+  // on a phone the conversation covers the list, so step back to it first
+  const back = page.getByRole('button', { name: 'All conversations' });
+  if (await back.isVisible()) await back.click();
   await page.getByRole('button', { name: 'New conversation' }).click();
   await page.getByRole('dialog').waitFor();
 };
