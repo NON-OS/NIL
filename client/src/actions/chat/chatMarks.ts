@@ -9,6 +9,7 @@ import keyHash from '../../lib/crypto/keyHash';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
+import sealGate from './sealGate';
 import markHistory from '../../state/markHistory';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
@@ -25,7 +26,7 @@ async function publish(channelId: string) {
   const channel = chatState.get().channels[channelId];
   const id = keyring.identity();
   if (!channel || !id) return;
-  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch).catch(() => null);
+  const key = await sealGate(channel).then((chain) => chatKeys.get(channel, chain, channel.epoch)).catch(() => null);
   if (!key) return;
   const me = store.get().me!.id;
   for (const [stream, scopes] of mine.get(channelId) ?? []) {

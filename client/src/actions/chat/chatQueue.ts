@@ -6,6 +6,7 @@ import chatContent, { type Content } from '../../lib/chatContent';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
 import sealMessage from './sealMessage';
+import sealGate from './sealGate';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 import type ChatItem from '../../types/ChatItem';
 
@@ -35,7 +36,9 @@ export interface Queued {
 const prefix = () => `${store.get().workspaceKey}:${store.get().me?.id ?? ''}:`;
 
 async function seal(channel: ChatChannelRow, q: Omit<Queued, 'epoch' | 'sentAt' | 'ttl' | 'bodyCt'>, content: Partial<Content>): Promise<Queued> {
-  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch);
+  // a tombstone carries nothing, so it may go even to people whose keys aren't checked yet
+  const chain = q.type === 'deleted' ? await chatRosters.load(channel) : await sealGate(channel);
+  const key = await chatKeys.get(channel, chain, channel.epoch);
   if (!key) throw new Error('You don’t hold this conversation’s key yet. A teammate’s browser hands it over once they’ve confirmed your key.');
   const sentAt = Date.now();
   const ttl = channel.disappearSeconds;

@@ -17,8 +17,12 @@ async function value(spec, ctx, actor, allowed, shared) {
 
 export default async function authzResolve(path, row, ctx, actor, { allowed = true, shared = new Map() } = {}) {
   let url = path;
-  for (const [, name] of path.matchAll(/:(\w+)/g)) url = url.replace(`:${name}`, encodeURIComponent(await value(row[name], ctx, actor, allowed, shared)));
+  const params = {};
+  for (const [, name] of path.matchAll(/:(\w+)/g)) {
+    params[name] = await value(row[name], ctx, actor, allowed, shared);
+    url = url.replace(`:${name}`, encodeURIComponent(params[name]));
+  }
   const query = row.query ? `?${await row.query(ctx, actor)}` : '';
-  const body = typeof row.body === 'function' ? await row.body(ctx, actor) : row.body;
+  const body = typeof row.body === 'function' ? await row.body(ctx, actor, params) : row.body;
   return { url: url + query, body, raw: row.raw, headers: row.headers };
 }

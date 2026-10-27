@@ -9,6 +9,7 @@ import chatFiles from './chatFiles';
 import chatTimeline from './chatTimeline';
 import chatMarks from './chatMarks';
 import chatQueue, { type Queued } from './chatQueue';
+import sealGate from './sealGate';
 import type { Content } from '../../lib/chatContent';
 import type ChatItem from '../../types/ChatItem';
 import type ChatChannel from '../../types/ChatChannel';
@@ -67,6 +68,9 @@ async function deliver(q: Queued, retry = true): Promise<void> {
   if (q.epoch !== channel.epoch || q.ttl !== channel.disappearSeconds || Date.now() - q.sentAt > FRESH_MS) {
     q = await chatQueue.reseal(channel, q, { tombstone: q.type === 'deleted' });
     await chatQueue.save(q);
+  } else if (q.type !== 'deleted') {
+    // sealed a moment ago under this key, but whoever holds it may have changed since
+    await sealGate(channel);
   }
   for (const id of q.files.filter((f) => !q.sent.includes(f))) {
     const body = await chatQueue.getFile(id);

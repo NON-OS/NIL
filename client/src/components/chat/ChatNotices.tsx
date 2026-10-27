@@ -8,7 +8,7 @@ const EMPTY: never[] = [];
 // What this browser noticed about what the server sent: messages it held back, sent twice or
 // reordered, and member lists that didn't check out. Each is a reason to talk to whoever runs
 // the server, and to compare keys.
-export default function ChatNotices({ channelId, chain }: { channelId: string; chain: Chain | null }) {
+export default function ChatNotices({ channelId, chain, onStartOver }: { channelId: string; chain: Chain | null; onStartOver?: () => void }) {
   const users = useStore((s) => s.users);
   const notices = useChat((s) => s.notices[channelId] ?? EMPTY);
   const name = (id: string | null) => (id ? (users[id]?.name ?? 'someone') : 'someone');
@@ -29,6 +29,11 @@ export default function ChatNotices({ channelId, chain }: { channelId: string; c
             {l}
           </p>
         ))}
+        {chain?.broken && onStartOver && (
+          <button type="button" className="btn btn-sm" style={{ marginTop: 6 }} onClick={onStartOver}>
+            Start a fresh conversation
+          </button>
+        )}
       </div>
     </div>
   );

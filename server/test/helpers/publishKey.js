@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { ed25519 } from '@noble/curves/ed25519';
 import keyStatement from '../../keys/keyStatement.js';
+import signers from './signers.js';
 
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 
@@ -25,6 +26,9 @@ export default async function publishKey(call, w, options = {}) {
     ...(wrap ? { wrap: { address: w.address, nonce: blob(6).replace(/[-_]/g, 'x'), issuedAt: new Date(createdAt).toISOString(), wrapped: blob(60) } } : {}),
   };
   const res = await call('PUT', '/api/me/encryption-key', body);
-  if (res.status === 200 && !options.signingKey) call.signer = { userId, signingPrivate };
+  if (res.status === 200 && !options.signingKey) {
+    call.signer = { userId, signingPrivate };
+    signers.set(userId, { signingPrivate, workspaceKey });
+  }
   return { ...res, sent: body, message };
 }

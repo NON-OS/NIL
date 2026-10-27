@@ -53,7 +53,7 @@ router.post(
     const existing = pair && sql.get('SELECT * FROM chat_channels WHERE pair = ?', pair);
     if (existing) return { channel: toChannel(existing, req.user), existing: true };
     if (sql.get('SELECT 1 FROM chat_channels WHERE id = ?', id)) throw HttpError.badRequest('Pick a fresh conversation id.');
-    const roster = parseRoster(b.roster, { channel: { kind, audience }, by: me });
+    const roster = parseRoster(b.roster, { channel: { id, kind, audience }, by: me, epoch: 1, prev: null });
     if (!roster.members.every((m) => members.includes(m))) throw HttpError.badRequest('The member list names someone who isn’t in this conversation.');
     const metaCt = b.metaCt === undefined || b.metaCt === null ? null : cipherText(b.metaCt, 'Name', { max: META_CHARS });
     if (kind === 'channel' && !metaCt) throw HttpError.badRequest('Give the channel a name.');

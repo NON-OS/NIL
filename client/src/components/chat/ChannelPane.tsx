@@ -8,6 +8,7 @@ import KeyNotice from '../keys/KeyNotice';
 import ChatCallButton from '../calls/ChatCallButton';
 import useChat from '../../state/useChat';
 import useStore from '../../state/useStore';
+import toast from '../../state/toast';
 import chatState from '../../state/chatState';
 import chatTimeline from '../../actions/chat/chatTimeline';
 import chatChannels from '../../actions/chat/chatChannels';
@@ -26,11 +27,12 @@ interface Props {
   onThread: (id: string) => void;
   onSettings: () => void;
   onBack: () => void;
+  onOpen: (id: string) => void;
 }
 
 // One conversation: who it is, anything the browser noticed about it, its messages, and the box
 // to write in. It reads as you look at it, and brings its key up to date when this browser should.
-export default function ChannelPane({ channel, onThread, onSettings, onBack }: Props) {
+export default function ChannelPane({ channel, onThread, onSettings, onBack, onOpen }: Props) {
   const timeline = useChat((s) => s.timelines[channel.id]);
   const keysRev = useStore((s) => s.keysRev);
   const me = useStore((s) => s.me?.id);
@@ -63,29 +65,35 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
     if (newest && document.visibilityState === 'visible') chatRead.mark(channel.id, newest);
   }, [channel.id, newest]);
 
-  // In anything but a team channel, everyone who would read what you write has to be someone
-  // whose key you checked: the member list could name an account the server made.
+  // Everyone who would read what you write has to be someone whose key you checked: the member
+  // list could name an account the server made. Sealing refuses otherwise; this says why.
   const [unchecked, setUnchecked] = useState<string[]>([]);
   useEffect(() => {
     let live = true;
-    if (channel.audience === 'team' || !channel.signedMembers) return setUnchecked([]);
+    if (!channel.signedMembers) return setUnchecked([]);
     void keyDirectory.load().then((keys) => live && setUnchecked(channel.signedMembers!.filter((id) => id !== me && keys.get(id)?.state !== 'confirmed')));
     return () => {
       live = false;
     };
-  }, [channel.signedMembers, channel.audience, keysRev, me]);
-  const names = unchecked.map((id) => users[id]?.name ?? 'someone').join(', ');
+  }, [channel.signedMembers, keysRev, me]);
+  const shown = unchecked.slice(0, 3).map((id) => users[id]?.name ?? 'someone');
+  const names = unchecked.length > 3 ? `${shown.join(', ')} and ${unchecked.length - 3} more` : shown.join(', ');
   // the server acts on its own copy of the settings; one that differs from what was signed would
   // keep messages it should delete
   const signed = channel.signedSettings;
   const tampered = Boolean(signed && (signed.disappear !== channel.disappearSeconds || signed.forward !== channel.forwardDays));
+  // someone out of the conversation still holds its current key until the next one starts
+  const holdingOut = (channel.signedMembers ?? []).filter((id) => !channel.members.includes(id));
+  const leftNames = holdingOut.map((id) => users[id]?.name ?? 'someone').join(', ');
   const blocked = !channel.wrappedKeys.length
     ? 'Waiting for a key. A teammate’s browser hands it over once they’ve confirmed your key.'
     : tampered
       ? 'The server’s settings for this conversation don’t match the signed ones.'
       : unchecked.length
         ? `Check the key of ${names} before writing here.`
-        : null;
+        : holdingOut.length
+          ? `${leftNames} left but still ${holdingOut.length === 1 ? 'holds' : 'hold'} the key. Nil writes here again once a new key starts.`
+          : null;
   const editLast = () => {
     const mine = [...(timeline?.items ?? [])].reverse().find((m) => m.senderId === me && m.type === 'message' && m.state === 'ok' && m.seq && !m.threadId);
     if (mine) setEditing(mine.id);
@@ -126,7 +134,11 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
         </div>
       </header>
       <KeyNotice reason="this conversation" />
-      <ChatNotices channelId={channel.id} chain={chain} />
+      <ChatNotices
+        channelId={channel.id}
+        chain={chain}
+        onStartOver={channel.kind === 'dm' ? () => void chatChannels.startOver(channel).then((c) => onOpen(c.id), (err) => toast.error(err)) : undefined}
+      />
       {tampered && (
         <div className="chat-notice danger" role="alert">
           <span>How long messages stay, or how long old keys are kept, isn’t what whoever manages this conversation signed. Nil won’t send here until it is: tell whoever runs your server, or set it again in the settings.</span>
@@ -138,6 +150,11 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
           <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show(unchecked, 'this conversation')}>
             Check keys
           </button>
+        </div>
+      )}
+      {holdingOut.length > 0 && channel.wrappedKeys.length > 0 && (
+        <div className="chat-notice" role="status">
+          <span>{`${leftNames} left this conversation but ${holdingOut.length === 1 ? 'holds' : 'hold'} its current key. Any member’s browser starts a new key without them once their leaving is signed; if it isn’t, whoever manages the conversation can take them out.`}</span>
         </div>
       )}
       {timeline ? (

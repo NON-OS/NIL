@@ -1,5 +1,6 @@
 import express from 'express';
 import keyChanges from '../chat/keyChanges.js';
+import channelKeyChanges from '../chat/channelKeyChanges.js';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
 import check from '../lib/check.js';
@@ -59,21 +60,25 @@ router.get(
 router.post(
   '/chat/channels/:id/epochs',
   keyChanges,
+  channelKeyChanges,
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
     const b = req.body ?? {};
     if (b.epoch !== channel.epoch + 1) throw new HttpError(409, 'Someone else just gave this conversation a new key. Try again.');
-    const roster = parseRoster(b.roster, { channel, by: req.user.id });
+    const prev = sql.get('SELECT roster FROM chat_epochs WHERE channel_id = ? AND epoch = ?', channel.id, channel.epoch)?.roster ?? null;
+    const roster = parseRoster(b.roster, { channel, by: req.user.id, epoch: b.epoch, prev });
     const before = channelMembers(channel);
     const after = channel.audience === 'team' || b.members === undefined ? before : memberList(b.members, channel.kind, req.user.id);
-    const manages = canManage(channel, req.user);
+    // managing takes both: the server's say on who may change the people, and the signed list's
+    // on who may sign for it, which is what every browser checks
+    const manages = canManage(channel, req.user) && roster.manager;
     const changed = after.length !== before.length || after.some((id) => !before.includes(id));
     if (changed && (channel.kind === 'dm' || !manages)) throw HttpError.forbidden('Only whoever manages this conversation can change who is in it.');
     if (!roster.members.every((id) => after.includes(id))) throw HttpError.badRequest('The member list names someone who isn’t in this conversation.');
     const current = holders(channel.id, channel.epoch);
     const kept = current.filter((id) => after.includes(id) && !roster.members.includes(id));
     if (kept.length && !manages) throw HttpError.forbidden('Only whoever manages this conversation can leave someone out of its new key.');
-    const gone = current.filter((id) => !after.includes(id));
+    const gone = [...new Set([...current.filter((id) => !after.includes(id)), ...roster.dropped])];
     const proofs = manages ? proofsFor(channel, [], b.proofs) : proofsFor(channel, gone, b.proofs);
     const now = Date.now();
     sql.tx(() => {

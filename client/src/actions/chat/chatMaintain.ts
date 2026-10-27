@@ -10,6 +10,8 @@ import type ChatChannelRow from '../../types/ChatChannelRow';
 
 // how many earlier epochs a newcomer is handed, so they can read back
 const HISTORY = 50;
+// the longest any key is used before a new one starts, whatever the server says
+const MAX_EPOCH_MS = 7 * 86_400_000;
 
 const same = (a: string[], b: string[]) => a.length === b.length && a.every((id) => b.includes(id));
 const managersFor = (channel: ChatChannelRow, members: string[]) => {
@@ -47,7 +49,10 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const head = chain.rosters[chain.rosters.length - 1];
   if (chain.broken !== null || !head || !head.members.includes(me) || head.epoch !== channel.epoch) return false;
   const wanted = members ?? channel.members;
-  const due = channel.rotateAt !== null && Date.now() > channel.rotateAt;
+  // due by the signed list's own time, so a server that holds back its clock can't keep a key on
+  // past the schedule; it may ask for sooner, never later than a week
+  const every = Math.min(channel.rotateAt !== null && channel.epochAt !== null ? channel.rotateAt - channel.epochAt : MAX_EPOCH_MS, MAX_EPOCH_MS);
+  const due = Date.now() > head.at + every;
   if (!members && !due && same(head.members, wanted) && same(head.members, channel.keyHolders)) return false;
   // the cached directory is enough to decide; sealing looks again, fresh
   const keys = await keyDirectory.load();

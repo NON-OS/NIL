@@ -1,9 +1,9 @@
 import http from '../../api/http';
 import chatState from '../../state/chatState';
 import chatKeys from './chatKeys';
-import chatRosters from './chatRosters';
 import chatTimeline from './chatTimeline';
 import sealMessage from './sealMessage';
+import sealGate from './sealGate';
 import type ChatItem from '../../types/ChatItem';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
@@ -12,7 +12,7 @@ import type ChatMessageRow from '../../types/ChatMessageRow';
 async function rewrite(item: ChatItem, text: string | null) {
   const channel = chatState.get().channels[item.channelId];
   if (!channel) throw new Error('This conversation is gone.');
-  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch);
+  const key = await chatKeys.get(channel, await sealGate(channel), channel.epoch);
   if (!key) throw new Error('You don’t hold this conversation’s key yet.');
   const deleted = text === null;
   const edit = item.edit + 1;

@@ -60,11 +60,13 @@ test('only members reach chat: guests are turned away, and a conversation you’
 
 test('a conversation starts with a member list the server checks against what it’s told', async () => {
   // keys sealed to people not on the list, or a list naming someone not in it, are refused
-  const r = chat.roster({ by: ids.member, members: [ids.member, ids.other] });
-  const bad = await member('POST', '/api/chat/channels', { id: chat.chatId(), kind: 'channel', audience: 'people', members: [ids.member], metaCt: 'A'.repeat(40), ...r });
+  const badId = chat.chatId();
+  const r = chat.roster({ by: ids.member, channelId: badId, members: [ids.member, ids.other] });
+  const bad = await member('POST', '/api/chat/channels', { id: badId, kind: 'channel', audience: 'people', members: [ids.member], metaCt: 'A'.repeat(40), ...r });
   assert.equal(bad.status, 400);
-  const wrongSigner = chat.roster({ by: ids.other, members: [ids.member, ids.other] });
-  assert.equal((await member('POST', '/api/chat/channels', { id: chat.chatId(), kind: 'group', members: [ids.other, ids.owner], ...wrongSigner })).status, 400);
+  const wrongId = chat.chatId();
+  const wrongSigner = chat.roster({ by: ids.other, channelId: wrongId, kind: 'group', members: [ids.member, ids.other, ids.owner], managers: [ids.member, ids.other, ids.owner] });
+  assert.equal((await member('POST', '/api/chat/channels', { id: wrongId, kind: 'group', members: [ids.other, ids.owner], ...wrongSigner })).status, 400);
   // a direct message is between two people, once
   const dm = await chat.makeChannel(member, ids.member, { kind: 'dm', members: [ids.member, ids.other] });
   assert.equal(dm.status, 200, JSON.stringify(dm.data));
@@ -121,15 +123,15 @@ test('only the sender edits or deletes, one edit at a time, and a deletion stays
 test('epochs: a member may start a new key for the same people; changing who is in it is for managers', async () => {
   const { channel } = (await chat.makeChannel(member, ids.member, { members: [ids.member, ids.other], keyed: [ids.member, ids.other] })).data;
   const url = `/api/chat/channels/${channel.id}/epochs`;
-  const next = (by, members, extra = {}) => ({ epoch: 2, ...chat.roster({ by, members, managers: [ids.member] }), ...extra });
-  assert.equal((await other('POST', url, next(ids.other, [ids.other]))).status, 403, 'leaving out someone who holds the key');
-  assert.equal((await other('POST', url, next(ids.other, [ids.member, ids.other], { members: [ids.other] }))).status, 403, 'taking someone out');
-  assert.equal((await other('POST', url, { ...next(ids.other, [ids.member, ids.other]), epoch: 3 })).status, 409);
-  assert.equal((await other('POST', url, next(ids.member, [ids.member, ids.other]))).status, 400, 'a list signed as someone else');
-  assert.equal((await other('POST', url, next(ids.other, [ids.member, ids.other]))).status, 200);
+  const next = async (by, members, extra = {}) => ({ ...(await chat.next(other, channel.id, { by, members, managers: [ids.member] })), ...extra });
+  assert.equal((await other('POST', url, await next(ids.other, [ids.other]))).status, 403, 'leaving out someone who holds the key');
+  assert.equal((await other('POST', url, await next(ids.other, [ids.member, ids.other], { members: [ids.other] }))).status, 403, 'taking someone out');
+  assert.equal((await other('POST', url, { ...(await next(ids.other, [ids.member, ids.other])), epoch: 3 })).status, 409);
+  assert.equal((await other('POST', url, await next(ids.member, [ids.member, ids.other]))).status, 400, 'a list signed as someone else');
+  assert.equal((await other('POST', url, await next(ids.other, [ids.member, ids.other]))).status, 200);
   // the manager takes the other person out with epoch 3; they lose the conversation, live
   const live = await socket(srv.base, other.cookie());
-  const out = await member('POST', url, { epoch: 3, ...chat.roster({ by: ids.member, members: [ids.member] }), members: [ids.member] });
+  const out = await member('POST', url, { ...(await chat.next(member, channel.id, { by: ids.member, members: [ids.member] })), members: [ids.member] });
   assert.equal(out.status, 200, JSON.stringify(out.data));
   await until(() => live.events.find((e) => e.type === 'chat' && e.channelId === channel.id && e.kind === 'epoch'), { what: 'the removed member’s tab hearing of it' });
   live.close();
@@ -167,7 +169,7 @@ test('a team channel includes every member and nobody leaves it; a group can be 
   assert.equal((await member('DELETE', `/api/chat/channels/${team.data.channel.id}`)).status, 403);
   const group = (await chat.makeChannel(member, ids.member, { kind: 'group', members: [ids.member, ids.other, ids.owner], keyed: [ids.member, ids.other] })).data.channel;
   assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`)).status, 400, 'leaving needs a signed statement');
-  assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`, { statement: chat.statement(ids.other) })).status, 200);
+  assert.equal((await other('POST', `/api/chat/channels/${group.id}/leave`, { statement: chat.statement(ids.other, { channelId: group.id }) })).status, 200);
   assert.deepEqual((await member('GET', `/api/chat/channels/${group.id}`)).data.channel.members, [ids.member, ids.owner].sort());
   assert.equal((await owner('DELETE', `/api/chat/channels/${team.data.channel.id}`)).status, 200);
 });

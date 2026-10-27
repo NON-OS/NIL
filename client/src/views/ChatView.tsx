@@ -119,7 +119,7 @@ export default function ChatView() {
       <div className={cx('chat', channel && 'has-channel', channel && threadId && 'has-thread')}>
         <ChannelList current={currentId} onOpen={open} onNew={setMaking} />
         {channel ? (
-          <ChannelPane key={channel.id} channel={channel} onThread={(id) => open(channel.id, id)} onSettings={() => setSettings(true)} onBack={() => router.navigate('/chat')} />
+          <ChannelPane key={channel.id} channel={channel} onThread={(id) => open(channel.id, id)} onSettings={() => setSettings(true)} onBack={() => router.navigate('/chat')} onOpen={open} />
         ) : (
           <div className="chat-pane chat-empty">
             <p>Pick a conversation, or press Ctrl+K to jump to one.</p>

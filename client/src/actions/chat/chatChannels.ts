@@ -8,6 +8,7 @@ import isAdmin from '../../lib/isAdmin';
 import confirmKeys from '../confirmKeys';
 import chatKeys from './chatKeys';
 import chatRosters from './chatRosters';
+import sealGate from './sealGate';
 import chatMeta, { type Meta } from './chatMeta';
 import chatMaintain from './chatMaintain';
 import startEpoch from './startEpoch';
@@ -42,7 +43,7 @@ function put(channel: ChatChannel) {
 }
 
 async function keyNow(channel: ChatChannel) {
-  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch);
+  const key = await chatKeys.get(channel, await sealGate(channel), channel.epoch);
   if (!key) throw new Error('You don’t hold this conversation’s key yet.');
   return key;
 }
@@ -138,6 +139,16 @@ const chatChannels = {
   async leave(channel: ChatChannel) {
     await departures.leave(channel.id);
     chatChannels.drop(channel.id);
+  },
+
+  // A direct message whose member lists stopped checking out can't be mended, since nothing after
+  // the break can be trusted: either person may set it aside and start a fresh one, which needs
+  // the other's key checked again. The old one stays, with what can still be read in it.
+  async startOver(channel: ChatChannel) {
+    const other = (channel.signedMembers ?? channel.members).find((id) => id !== store.get().me!.id);
+    if (channel.kind !== 'dm' || !other) throw new Error('Only a direct message can start over.');
+    await http.post(`/chat/channels/${channel.id}/start-over`);
+    return chatChannels.create({ kind: 'dm', people: [other] });
   },
 
   forward: (channel: ChatChannel, days: number | null) => chatChannels.rename(channel, { forward: days }),

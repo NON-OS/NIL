@@ -12,14 +12,22 @@ const holders = ({ world }) => [world.ids.member, world.ids.admin, world.ids.own
 // started with the admin and the owner; guests, agents and removed people are never in one.
 export default {
   'GET /api/chat': { allow: MEMBERS },
-  'POST /api/chat/channels': { allow: MEMBERS, body: ({ world }, actor) => ({ id: chat.chatId(), kind: 'group', members: holders({ world }), ...chat.roster({ by: world.ids[actor] ?? 'nobody', kind: 'group', members: holders({ world }), managers: holders({ world }) }) }) },
+  'POST /api/chat/channels': {
+    allow: MEMBERS,
+    body: ({ world }, actor) => {
+      const id = chat.chatId();
+      return { id, kind: 'group', members: holders({ world }), ...chat.roster({ by: world.ids[actor] ?? 'nobody', channelId: id, kind: 'group', members: holders({ world }), managers: holders({ world }) }) };
+    },
+  },
   'GET /api/chat/channels/:id': { allow: MEMBERS, id: 'chat' },
   // the member made it; workspace admins manage channels too
   'PATCH /api/chat/channels/:id': { allow: MEMBERS, id: 'chat', body: { disappearSeconds: 3600 } },
   'DELETE /api/chat/channels/:id': { allow: MEMBERS, id: 'fresh.chat' },
-  'POST /api/chat/channels/:id/leave': { allow: MEMBERS, id: 'fresh.chat', body: ({ world }, actor) => ({ statement: chat.statement(world.ids[actor] ?? 'nobody') }) },
+  'POST /api/chat/channels/:id/leave': { allow: MEMBERS, id: 'fresh.chat', body: ({ world }, actor, { id }) => ({ statement: chat.statement(world.ids[actor] ?? 'nobody', { channelId: id }) }) },
+  // a direct message the member has with the admin, set aside by either of them
+  'POST /api/chat/channels/:id/start-over': { allow: ['member', 'admin'], id: 'fresh.chatDm' },
   // an admin's signed word that someone removed from the team left every conversation
-  'POST /api/chat/removals': { allow: ADMINS, body: ({ world }, actor) => ({ userId: world.ids.outsider, statement: chat.statement(world.ids[actor] ?? 'nobody', world.ids.outsider) }) },
+  'POST /api/chat/removals': { allow: ADMINS, body: ({ world }, actor) => ({ userId: world.ids.outsider, statement: chat.statement(world.ids[actor] ?? 'nobody', { userId: world.ids.outsider }) }) },
   'GET /api/chat/channels/:id/marks': { allow: MEMBERS, id: 'chat' },
   'PUT /api/chat/channels/:id/marks/:stream': {
     allow: MEMBERS,
@@ -34,7 +42,7 @@ export default {
   'POST /api/chat/channels/:id/epochs': {
     allow: MEMBERS,
     id: 'chat',
-    body: async (ctx, actor) => ({ epoch: (await epochOf(ctx)) + 1, ...chat.roster({ by: ctx.world.ids[actor] ?? 'nobody', members: holders(ctx), managers: [ctx.world.ids.member] }) }),
+    body: async (ctx, actor) => chat.next(ctx.world.people.member, ctx.t.chat, { by: ctx.world.ids[actor] ?? 'nobody', members: holders(ctx), managers: [ctx.world.ids.member] }),
   },
   'POST /api/chat/channels/:id/grants': { allow: MEMBERS, id: 'chat', body: ({ world }) => ({ epoch: 1, grants: [{ userId: world.ids.member, wrappedKey: blob(92) }] }) },
   'GET /api/chat/channels/:id/messages': { allow: MEMBERS, id: 'chat' },
