@@ -28,6 +28,7 @@ export default function RichEditor({ live, readOnly, onEditor, ...handlers }: Pr
   const editor = useEditor(
     {
       extensions: editorExtensions({
+        docId: live.current().id,
         ydoc: live.ydoc,
         awareness: live.awareness,
         me,

@@ -23,7 +23,7 @@ Click the plus button above the list. A new doc opens, shared with the whole tea
 The bar above the text has the usual formatting: headings, bold, italic, underline, strikethrough, inline code, highlight, links, bulleted, numbered and to-do lists, quotes, code blocks, alignment and tables. You rarely need it:
 
 - Type `/` for a list of blocks to add, such as headings, lists, a to-do list, a table, a quote, a code block or a divider. Keep typing to narrow it, then press Enter.
-- Type `@` and a name to mention a teammate.
+- Type `@` and a name to mention a teammate. They get a notice in their inbox, and a push notification if they've switched those on, saying you mentioned them in a doc. The notice carries which doc, never its words.
 - Select some words for a small bar with formatting, a link and **Comment**.
 - Markdown shortcuts work as you type: `#` and a space for a heading, `-` for a list, `[ ]` for a to-do, three backticks for code.
 - Ctrl+K (Cmd+K on a Mac) adds a link. Links go to web pages and email addresses only.

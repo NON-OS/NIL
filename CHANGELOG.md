@@ -9,6 +9,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Docs have a rich editor: headings, lists, to-do lists, tables, quotes, code blocks, highlights, alignment, links and mentions, with `/` for blocks, `@` for people, a bar over selected text and Markdown shortcuts as you type.
 - Everyone who can read a doc can edit it at once and see each other's cursors. Changes merge as people type, so the "Someone saved a newer version" conflict is gone. Each change is signed and encrypted in the browser; the server numbers and passes on ciphertext, and folds changes into a signed version every few seconds (migration 041).
 - Comments on selected words, with replies, resolve and reopen, kept inside the doc and encrypted with it.
+- Mentioning a teammate in a doc puts a notice in their inbox. The server learns who mentioned whom in which doc, never the words around it.
 - An outline of the doc's headings, and version history that reaches back further: one version a minute for the last hour, one each quarter of an hour for a day, then one a day, up to `DOC_REVISIONS` (100).
 - Docs written as Markdown open in the new editor unchanged and switch over the next time someone edits them.
 - New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE` and `DOC_REVISIONS`.

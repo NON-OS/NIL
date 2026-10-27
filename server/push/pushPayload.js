@@ -11,6 +11,8 @@ const PRIVATE = {
   reminder: 'Reminder',
   assigned: 'A private task was assigned to you',
   mention: 'You were mentioned on a private task',
+  // a doc's words never reach the server, so this is all a doc mention can say
+  doc_mention: 'You were mentioned in a doc',
   due_soon: 'A private task is due',
   due_today: 'A private task is due',
 };
@@ -42,6 +44,8 @@ export default function pushPayload({ id, type, task, data = {}, actorName, name
       return named(names ? `${actor} assigned you a task` : 'A task was assigned to you', taskTitle);
     case 'mention':
       return named(names ? `${actor} mentioned you` : 'You were mentioned on a task', taskTitle);
+    case 'doc_mention':
+      return named(names ? `${actor} mentioned you in a doc` : 'You were mentioned in a doc');
     case 'due_soon':
       return named('Due soon', taskTitle);
     case 'due_today':

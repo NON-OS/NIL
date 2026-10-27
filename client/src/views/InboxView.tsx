@@ -16,8 +16,12 @@ import dates from '../lib/dates';
 import cx from '../lib/cx';
 import type InboxItem from '../types/InboxItem';
 import router from '../lib/router';
+import openedText from '../state/openedText';
 
 type Tab = 'all' | 'unread' | 'mentions';
+
+// A doc's title, if this tab has opened it since the keys were unlocked; the notice itself never holds it.
+const docTitle = (id: unknown) => openedText.docs().find((d) => d.id === id)?.title ?? 'a doc';
 
 function dayLabel(ts: number) {
   const day = dates.toISO(new Date(ts));
@@ -44,7 +48,7 @@ export default function InboxView() {
   }, [items]);
 
   const shown = useMemo(() => {
-    const list = (items ?? []).filter((n) => (tab === 'unread' ? !n.readAt : tab === 'mentions' ? n.type === 'mention' : true));
+    const list = (items ?? []).filter((n) => (tab === 'unread' ? !n.readAt : tab === 'mentions' ? n.type === 'mention' || n.type === 'doc_mention' : true));
     const groups: { label: string; items: InboxItem[] }[] = [];
     for (const n of list) {
       const label = dayLabel(n.createdAt);
@@ -58,6 +62,7 @@ export default function InboxView() {
     if (!n.readAt) inbox.markRead([n.id]);
     const task = n.taskId ? tasks[n.taskId] : undefined;
     if (task) detail.open(task);
+    else if (n.type === 'doc_mention') router.navigate(`/docs/${n.data.docId}`);
     else if (n.type === 'proposal') router.navigate('/votes');
     else if (n.type === 'plan_ending') router.navigate('/settings?tab=plan');
     else if (n.type === 'billing_stalled') router.navigate(n.data.code === 'bounty_pending' ? '/bounties' : '/settings?tab=plan');
@@ -115,7 +120,7 @@ export default function InboxView() {
                           </span>
                           <span className="task">
                             {task && <span className="key mono">{prefix}-{task.number}</span>}
-                            {notice?.text || (task?.title ?? n.data.title ?? (n.type.startsWith('agent_') ? n.data.reason ?? 'Settings → Agents' : 'a deleted task'))}
+                            {notice?.text || (task?.title ?? n.data.title ?? (n.type === 'doc_mention' ? docTitle(n.data.docId) : null) ?? (n.type.startsWith('agent_') ? n.data.reason ?? 'Settings → Agents' : 'a deleted task'))}
                           </span>
                           {n.data.excerpt && <span className="inbox-excerpt">{n.data.excerpt}</span>}
                         </span>

@@ -112,6 +112,22 @@ test('cursors pass only between tabs that hold the key and have the doc open', a
   for (const s of [mine, anas, bens]) s.close();
 });
 
+test('mentioning someone tells only people holding the doc’s key, once in a while', async () => {
+  const doc = blob(16);
+  const grants = [ids.owner, ids.ana].map((userId) => ({ userId, wrappedKey: wrapped() }));
+  await owner('POST', '/api/docs', { id: doc, titleCt: blob(40), bodyCt: blob(200), audience: 'people', grants });
+  const sent = await owner('POST', `/api/docs/${doc}/mentions`, { userIds: [ids.ana, ids.ben, ids.owner] });
+  assert.equal(sent.data.told, 1);
+  assert.equal((await owner('POST', `/api/docs/${doc}/mentions`, { userIds: [ids.ana] })).data.told, 0);
+  const notices = (await ana('GET', '/api/notifications')).data;
+  const list = Array.isArray(notices) ? notices : notices.notifications ?? notices.items;
+  const mine = list.filter((n) => n.type === 'doc_mention');
+  assert.equal(mine.length, 1);
+  assert.deepEqual(mine[0].data, { docId: doc });
+  assert.equal((await ben('POST', `/api/docs/${doc}/mentions`, { userIds: [ids.ana] })).status, 404);
+  assert.equal((await owner('POST', `/api/docs/${doc}/mentions`, { userIds: 'ana' })).status, 400);
+});
+
 test('history keeps recent versions close together and older ones spread out', () => {
   const now = 100 * 24 * 3_600_000;
   const row = (version, agoMs) => ({ version, created_at: now - agoMs });

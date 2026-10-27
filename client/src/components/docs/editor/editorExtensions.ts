@@ -9,9 +9,12 @@ import docNodes from './docNodes';
 import SlashCommands from './SlashCommands';
 import mentionSuggestion from './mentionSuggestion';
 import caretRender from './caretRender';
+import MentionNotices from './MentionNotices';
+import http from '../../../api/http';
 import cursorColor from '../../../lib/docState/cursorColor';
 
 interface Options {
+  docId: string;
   ydoc: Y.Doc;
   awareness: Awareness;
   me: string;
@@ -22,7 +25,7 @@ interface Options {
 
 // The live editor: the doc schema, bound to the shared state, with teammates' cursors, the /
 // and @ menus, Markdown for pasting, and a few keys of Nil's own.
-export default function editorExtensions({ ydoc, awareness, me, pick, comment, link }: Options) {
+export default function editorExtensions({ docId, ydoc, awareness, me, pick, comment, link }: Options) {
   const keys = Extension.create({
     name: 'nilDocKeys',
     addKeyboardShortcuts: () => ({
@@ -38,6 +41,7 @@ export default function editorExtensions({ ydoc, awareness, me, pick, comment, l
     CharacterCount,
     Markdown,
     SlashCommands.configure({ pick }),
+    MentionNotices.configure({ me, notify: (userIds) => void http.post(`/docs/${docId}/mentions`, { userIds }).catch(() => {}) }),
     keys,
   ];
 }
