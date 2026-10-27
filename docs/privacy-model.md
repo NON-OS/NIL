@@ -40,7 +40,7 @@ Everything else is stored in plain form in the server's database, where anyone w
 - bounty amounts and payment records,
 - signed votes, with each voter's wallet and choice.
 
-For a conversation, the server knows who is in it, who sent each message, reaction, edit or deletion and when, how large it is, which thread it's in, who the sender mentioned, how far each person has read, and each epoch's signed list of who holds the key. [Chat](chat.md#what-the-server-can-see) has the full list.
+For a conversation, the server knows who is in it, who sent each message, reaction, edit or deletion and when, how large it is, which thread it's in, who the sender mentioned, how far each person has read, each epoch's signed list of who holds the key, the signed statements that someone left, and when each sending tab published its mark. [Chat](chat.md#what-the-server-can-see) has the full list.
 
 [Calls](calls.md) never reach the server at all: sound, video and screens go from browser to browser, encrypted end to end, through the relay when one is set up. Nothing is recorded. The server passes the handshake between the browsers, signed so it can't change it unnoticed, and knows who is in which call and when they joined. It keeps that in memory only, never on disk or in its logs, and forgets it when the call ends.
 
