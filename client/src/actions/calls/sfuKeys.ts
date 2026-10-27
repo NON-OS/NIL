@@ -1,9 +1,9 @@
 import keyring from '../../state/keyring';
-import socket from '../../realtime/socket';
 import b64u from '../../lib/crypto/b64u';
 import callMediaKey, { type MediaKeyMessage } from '../../lib/crypto/callMediaKey';
 import keyDirectory from '../keyDirectory';
 import callRuntime from './callRuntime';
+import callSignals from './callSignals';
 import type { LinkPlace } from '../../lib/crypto/callLink';
 
 // LiveKit keeps up to this many keys for each sender, by index; ours go round them by epoch
@@ -39,7 +39,7 @@ async function sendTo(userId: string, key: Uint8Array, at: number) {
   // only to someone whose key this person can see and hasn't held back from
   if (!id || !place || !entry || entry.state === 'changed' || rt.active()?.peers[userId]?.held !== false) return;
   const message = await callMediaKey.seal(key, { from: rt.me(), to: userId, identity: myIdentity, frames: myLists, epoch: at, at: Date.now() }, { place, recipientPublic: b64u.decode(entry.publicKey), signingPrivate: id.signingPrivate });
-  socket.call({ type: 'call.signal', callId: place.callId, to: userId, blob: JSON.stringify(message) });
+  callSignals.send(place.callId, userId, message);
 }
 
 // This browser's frame keys on the SFU, and everyone else's. Each person makes their own key,

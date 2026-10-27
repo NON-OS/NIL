@@ -3,6 +3,7 @@ import bitrateFor from '../../lib/calls/bitrateFor';
 import keyring from '../../state/keyring';
 import keyDirectory from '../keyDirectory';
 import linkStats, { type StatsTotals } from './linkStats';
+import meshShaping from './meshShaping';
 import type CallPeer from '../../types/CallPeer';
 
 export interface LinkTracks {
@@ -44,7 +45,8 @@ const SOFT = new Set(['stale', 'replayed', 'unexpected']);
 // this browser holds for its sender before it's used (see callLink). A network that drops is
 // recovered with an ICE restart, by the offering side, as often as it takes.
 export default function peerLink(o: LinkOptions) {
-  const pc = new RTCPeerConnection(o.config());
+  const config = () => ({ ...o.config(), ...meshShaping.config() });
+  const pc = new RTCPeerConnection(config());
   const seen = new Set<string>();
   let pinned: string[] | null = null;
   let myNonce: string | null = null;
@@ -67,6 +69,8 @@ export default function peerLink(o: LinkOptions) {
   // Both browsers keep three slots in the same order (sound, camera, screen), so turning the
   // camera or a screen on or off swaps a track and never needs a new handshake.
   if (o.offerer) for (const kind of ['audio', 'video', 'video'] as const) pc.addTransceiver(kind, { direction: 'sendrecv' });
+  // video this browser sends, padded once the other browser says it takes padding off
+  const padded = meshShaping.attach(pc);
   const channel = pc.createDataChannel('nil', { negotiated: true, id: 0 });
 
   pc.ontrack = (e) => {
@@ -110,7 +114,7 @@ export default function peerLink(o: LinkOptions) {
       const timer = window.setTimeout(finish, GATHER_MS);
       pc.addEventListener('icecandidate', onCandidate);
     });
-    await pc.setLocalDescription(description);
+    await pc.setLocalDescription({ ...description, sdp: description.sdp && meshShaping.constantSound(description.sdp) });
     await done;
   }
 
@@ -118,7 +122,8 @@ export default function peerLink(o: LinkOptions) {
     const id = keyring.identity();
     if (!id) throw new Error('Your keys are locked.');
     const nonce = callLink.nonce();
-    const message = callLink.seal(pc.localDescription!.sdp, { from: o.me, to: o.peer, type, nonce, peerNonce, session: o.mySession, peerSession: o.peerSession, at: Date.now() }, { place: o.place, signingPrivate: id.signingPrivate });
+    // asking for constant-bitrate sound in what goes out, since Firefox keeps it out of its own
+    const message = callLink.seal(meshShaping.constantSound(pc.localDescription!.sdp), { from: o.me, to: o.peer, type, nonce, peerNonce, session: o.mySession, peerSession: o.peerSession, at: Date.now() }, { place: o.place, signingPrivate: id.signingPrivate });
     return { message, nonce };
   }
 
@@ -162,6 +167,7 @@ export default function peerLink(o: LinkOptions) {
     if (!facts || closed) return;
     if (pc.signalingState !== 'stable') await pc.setLocalDescription({ type: 'rollback' });
     await pc.setRemoteDescription({ type: 'offer', sdp: message.sdp });
+    padded.push(...meshShaping.attach(pc));
     attach();
     await describe(await pc.createAnswer());
     o.send(seal('answer', facts.nonce).message);
@@ -223,14 +229,17 @@ export default function peerLink(o: LinkOptions) {
   };
 
   function sendState() {
-    if (channel.readyState === 'open') channel.send(JSON.stringify({ t: 'state', ...o.state(), held: !o.allowed() }));
+    if (channel.readyState === 'open') channel.send(JSON.stringify({ t: 'state', ...o.state(), held: !o.allowed(), strip: meshShaping.supported }));
   }
   channel.onopen = sendState;
   channel.onmessage = (e) => {
     if (typeof e.data !== 'string' || e.data.length > 200) return;
     try {
       const m = JSON.parse(e.data);
-      if (m?.t === 'state') o.update({ mic: m.mic === true, cam: m.cam === true, screen: m.screen === true, holding: m.held === true });
+      if (m?.t !== 'state') return;
+      o.update({ mic: m.mic === true, cam: m.cam === true, screen: m.screen === true, holding: m.held === true });
+      // they take padding off, so this browser's frames to them go out padded
+      if (m.strip === true) meshShaping.pad(padded);
     } catch {}
   };
 
@@ -256,6 +265,8 @@ export default function peerLink(o: LinkOptions) {
       if (message.type === 'offer' && !o.offerer) run(() => onOffer(message as LinkMessage));
       else if (message.type === 'answer' && o.offerer) run(() => onAnswer(message as LinkMessage));
       else if (message.type === 'restart' && o.offerer && pc.signalingState !== 'have-local-offer') run(() => offer(connectedOnce));
+      // a blob not sealed to this person, or changed on the way: not from them
+      else if (message.type === 'unreadable') refuse('tampered');
       else if (message.type === 'refused') {
         close();
         o.update({ link: 'refused', refusal: 'theirs' });
@@ -266,7 +277,7 @@ export default function peerLink(o: LinkOptions) {
     // new relay passwords: used for the next path, which a restart asks for now
     refresh() {
       if (closed) return;
-      pc.setConfiguration(o.config());
+      pc.setConfiguration(config());
       if (o.offerer) run(() => offer(true));
       else o.send({ type: 'restart' });
     },

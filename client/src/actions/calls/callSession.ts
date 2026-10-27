@@ -15,6 +15,7 @@ import audioLevels from './audioLevels';
 import callPeers from './callPeers';
 import callSfu from './callSfu';
 import callLifecycle from './callLifecycle';
+import callSignals from './callSignals';
 import ringNotice from './ringNotice';
 import type CallView from '../../types/CallView';
 
@@ -41,7 +42,7 @@ function connect(callId: string, userId: string, session: string) {
     allowed: () => !rt.active()?.peers[userId]?.held,
     state: () => ({ mic: Boolean(rt.active()?.mic), cam: Boolean(rt.active()?.cam), screen: Boolean(rt.active()?.screen) }),
     others: () => rt.links.size,
-    send: (message) => socket.call({ type: 'call.signal', callId, to: userId, blob: JSON.stringify(message) }),
+    send: (message) => callSignals.send(callId, userId, message),
     update(patch) {
       if (patch.media) audioLevels.watch(`peer:${userId}`, patch.media, (speaking) => rt.patchPeer(userId, { speaking }, session));
       // someone starts sharing their screen: show it large
@@ -69,6 +70,7 @@ function drop(userId: string) {
 
 function teardown() {
   callLifecycle.stop();
+  callSignals.clear();
   for (const userId of [...rt.links.keys()]) drop(userId);
   void callSfu.close();
   callMedia.stopAll();
@@ -123,6 +125,23 @@ async function ready() {
   if (!vault.unlocked()) await vault.unlock({ passkey: store.get().passkeys.length > 0 });
 }
 
+// What one person in the call said to this one, once opened: on the SFU only frame keys, on
+// the mesh the handshake for the connection between the two.
+function heard(callId: string, from: string, message: { type?: unknown }) {
+  if (message.type === 'media-key') return void callSfu.key(from, message);
+  if (rt.active()!.view.mode === 'sfu') return;
+  // a connection their browser refused comes back when they try again; one this browser
+  // refused waits for this person to say so
+  const current = rt.links.get(from);
+  if (current?.closed() && rt.active()!.peers[from]?.refusal === 'theirs') drop(from);
+  if (!rt.links.has(from)) {
+    const member = rt.active()!.view.members.find((m) => m.userId === from);
+    if (!member || member.userId === rt.me()) return;
+    connect(callId, from, member.session);
+  }
+  rt.links.get(from)!.handle(message);
+}
+
 const callSession = {
   async start(target: { with: string[] } | { projectId: string }, { video = false } = {}) {
     await ready();
@@ -169,27 +188,12 @@ const callSession = {
 
   update: reconcile,
 
+  // a message from someone in the call, sealed to this person (callSignals)
   signal(callId: string, from: string, blob: unknown) {
     if (rt.active()?.id !== callId || typeof blob !== 'string' || blob.length > 64_000) return;
-    let message: unknown;
-    try {
-      message = JSON.parse(blob);
-    } catch {
-      return;
-    }
-    // on the SFU, the only thing people send each other is their frame keys
-    if ((message as { type?: unknown })?.type === 'media-key') return void callSfu.key(from, message);
-    if (rt.active()!.view.mode === 'sfu') return;
-    // a connection their browser refused comes back when they try again; one this browser
-    // refused waits for this person to say so
-    const current = rt.links.get(from);
-    if (current?.closed() && rt.active()!.peers[from]?.refusal === 'theirs') drop(from);
-    if (!rt.links.has(from)) {
-      const member = rt.active()!.view.members.find((m) => m.userId === from);
-      if (!member || member.userId === rt.me()) return;
-      connect(callId, from, member.session);
-    }
-    rt.links.get(from)!.handle(message as { type?: unknown });
+    callSignals.receive(from, blob, (message) => {
+      if (rt.active()?.id === callId) heard(callId, from, message);
+    });
   },
 
   declined(callId: string, userId: string) {

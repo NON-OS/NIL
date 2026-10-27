@@ -14,6 +14,11 @@ let roster = '';
 let waiting: { from: string; message: unknown }[] = [];
 // keys are taken one at a time, in the order they came, so a newer one never lands first
 let taking: Promise<unknown> = Promise.resolve();
+// a new frame key this often even when nobody joins or leaves, so a key taken from a browser
+// mid-call opens only minutes of it
+const ROTATE_MS = 5 * 60_000;
+let rotation: number | undefined;
+let people: string[] = [];
 
 function flush() {
   const early = waiting;
@@ -52,8 +57,10 @@ const callSfu = {
     if (waiting.length) void connecting.then(flush);
     if (next !== roster) {
       roster = next;
-      const ids = others.map((m) => m.userId);
-      void connecting.then(() => sfuKeys.rotate(ids));
+      people = others.map((m) => m.userId);
+      void connecting.then(() => sfuKeys.rotate(people));
+      clearInterval(rotation);
+      rotation = window.setInterval(() => void sfuKeys.rotate(people), ROTATE_MS);
     }
   },
 
@@ -68,6 +75,8 @@ const callSfu = {
   async close() {
     connecting = null;
     roster = '';
+    clearInterval(rotation);
+    people = [];
     waiting = [];
     taking = Promise.resolve();
     await sfuLink.close();
