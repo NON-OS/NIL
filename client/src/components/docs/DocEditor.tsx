@@ -1,3 +1,4 @@
+import './Docs.css';
 import './editor/Editor.css';
 import './editor/Side.css';
 import { useEffect, useState } from 'react';

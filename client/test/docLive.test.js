@@ -3,9 +3,6 @@ import assert from 'node:assert/strict';
 import * as Y from 'yjs';
 import { store, keyring, entry, person, signIn, route, reset, confirm, sent } from './helpers/fakeBrowser.js';
 
-// the editor's schema code looks at the page's root element when it loads
-document.documentElement ??= { style: {} };
-
 const load = (path) => import(`../src/${path}.ts`).then((m) => m.default);
 const docs = await load('actions/docs');
 const docUpdateSeal = await load('actions/docUpdateSeal');
