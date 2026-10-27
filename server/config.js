@@ -33,6 +33,7 @@ import aiCredits from './config/aiCredits.js';
 import agents from './config/agents.js';
 import verification from './config/verification.js';
 import walletConnect from './config/walletConnect.js';
+import calls from './config/calls.js';
 import PUBLIC_NODE from './config/publicNode.js';
 
 // Every setting is optional except APP_URL, and NOX_RPC_URL on a server reached over the network.
@@ -105,6 +106,7 @@ const config = Object.freeze({
   agents,
   verification,
   walletConnect,
+  calls,
 });
 
 // Settings that work but are wrong for a public server. Only production gets these, so a
