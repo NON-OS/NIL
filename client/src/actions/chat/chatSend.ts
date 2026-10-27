@@ -19,6 +19,8 @@ import type ChatMessageRow from '../../types/ChatMessageRow';
 // what the server accepts (CHAT_CLOCK_SKEW_SECONDS)
 const FRESH_MS = 4 * 60_000;
 let flushing = false;
+// a flush asked for while one runs, for what was written meanwhile
+let again = false;
 
 const offline = (err: unknown) => err instanceof ApiError && err.status === 0;
 
@@ -96,9 +98,11 @@ async function deliver(q: Queued, retry = true): Promise<void> {
   if (message) await chatTimeline.arrive(channel, message);
 }
 
-async function flush() {
-  if (flushing || !store.get().docsUnlocked) return;
+async function flush(): Promise<void> {
+  if (!store.get().docsUnlocked) return;
+  if (flushing) return void (again = true);
   flushing = true;
+  again = false;
   try {
     for (const q of await chatQueue.list()) {
       if (q.failed) continue;
@@ -116,6 +120,7 @@ async function flush() {
   } finally {
     flushing = false;
   }
+  if (again && navigator.onLine) return flush();
 }
 
 window.addEventListener('online', () => void flush());
