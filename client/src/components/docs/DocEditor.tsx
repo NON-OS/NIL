@@ -19,6 +19,8 @@ import useLiveDoc from './editor/useLiveDoc';
 import useYText from './editor/useYText';
 import docComments from './editor/docComments';
 import restoreVersion from './editor/restoreVersion';
+import editorMarkdown from '../../lib/docConvert/editorMarkdown';
+import importMarkdown from '../../lib/docConvert/importMarkdown';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
@@ -72,7 +74,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
     setThread(id);
   };
 
-  const download = () => editor && saveBlob(new Blob([`# ${title}\n\n${editor.getMarkdown()}\n`], { type: 'text/markdown' }), fileName(title, 'md'));
+  const download = () => editor && saveBlob(new Blob([`# ${title}\n\n${editorMarkdown(editor)}`], { type: 'text/markdown' }), fileName(title, 'md'));
   const remove = () => docs.remove(doc).then(onDeleted).catch(toast.error);
   const toggle = (p: 'comments' | 'outline') => setPanel((cur) => (cur === p ? null : p));
 
@@ -123,7 +125,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
       </div>
       {modal === 'link' && editor && <LinkEditor editor={editor} onClose={() => setModal(null)} />}
       {modal === 'share' && <ShareDocModal doc={live.current()} canManage={canManage} onClose={() => setModal(null)} onDone={onReload} />}
-      {modal === 'draft' && editor && <DraftModal title={title} body={editor.getMarkdown()} onClose={() => setModal(null)} onDraft={(text) => editor.chain().focus('end').insertContent(text, { contentType: 'markdown' }).run()} />}
+      {modal === 'draft' && editor && <DraftModal title={title} body={editorMarkdown(editor)} onClose={() => setModal(null)} onDraft={(text) => editor.chain().focus('end').insertContent(importMarkdown(text).content ?? []).run()} />}
       {modal === 'history' && editor && <DocHistory doc={live.current()} onClose={() => setModal(null)} onRestore={(t, b) => restoreVersion(editor, setTitle, t, b)} />}
     </section>
   );

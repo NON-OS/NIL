@@ -4,7 +4,6 @@ import { Extension } from '@tiptap/core';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { CharacterCount, Placeholder } from '@tiptap/extensions';
-import { Markdown } from '@tiptap/markdown';
 import docNodes from './docNodes';
 import SlashCommands from './SlashCommands';
 import mentionSuggestion from './mentionSuggestion';
@@ -24,7 +23,7 @@ interface Options {
 }
 
 // The live editor: the doc schema, bound to the shared state, with teammates' cursors, the /
-// and @ menus, Markdown for pasting, and a few keys of Nil's own.
+// and @ menus, and a few keys of Nil's own.
 export default function editorExtensions({ docId, ydoc, awareness, me, pick, comment, link }: Options) {
   const keys = Extension.create({
     name: 'nilDocKeys',
@@ -39,7 +38,6 @@ export default function editorExtensions({ docId, ydoc, awareness, me, pick, com
     CollaborationCaret.configure({ provider: { awareness }, user: { id: me, color: cursorColor(me) }, render: caretRender }),
     Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? 'Heading' : 'Write, or type / for blocks and @ for people') }),
     CharacterCount,
-    Markdown,
     SlashCommands.configure({ pick }),
     MentionNotices.configure({ me, notify: (userIds) => void http.post(`/docs/${docId}/mentions`, { userIds }).catch(() => {}) }),
     keys,
