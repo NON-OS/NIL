@@ -23,7 +23,9 @@ let sink: KeySink | null = null;
 let place: LinkPlace | null = null;
 let myIdentity = '';
 let epoch = 0;
-let current: Uint8Array | null = null;
+// the key frames go out under now, and the one about to replace it, each with its counter
+let current: { key: Uint8Array; at: number } | null = null;
+let next: { key: Uint8Array; at: number } | null = null;
 let switchTimer: number | undefined;
 const lastFrom = new Map<string, number>();
 const userOf = new Map<string, string>();
@@ -55,11 +57,13 @@ const sfuKeys = {
     epoch = Math.max(epoch + 1, Math.floor(Date.now() / 1000));
     const key = callMediaKey.newKey();
     const at = epoch;
+    next = { key, at };
     await Promise.all(others.map((userId) => sendTo(userId, key, at).catch(() => {})));
     const use = () => {
       if (at !== epoch || !sink) return;
-      current?.fill(0);
-      current = key;
+      current?.key.fill(0);
+      current = { key, at };
+      next = null;
       void sink.put(myIdentity, key, at % RING);
     };
     clearTimeout(switchTimer);
@@ -67,9 +71,11 @@ const sfuKeys = {
     else use();
   },
 
-  // someone this person just let hear them gets the key in use now
-  share(userId: string) {
-    if (current) void sendTo(userId, current, epoch);
+  // someone this person just let hear them gets the key in use now and, in the moment before
+  // a new one takes over, that one too, oldest first so it isn't taken for a replay
+  async share(userId: string) {
+    const keys = [current, next].filter((k): k is { key: Uint8Array; at: number } => k !== null);
+    for (const k of keys) await sendTo(userId, k.key, k.at).catch(() => {});
   },
 
   // a key someone sent this browser; anything that doesn't check out is dropped
@@ -78,7 +84,10 @@ const sfuKeys = {
     if (!sink || !place || !id) return false;
     const signers = (await keyDirectory.signers(from, null)).map((s) => s.key);
     const opened = await callMediaKey.open(message, { place, from, me: rt.me(), last: lastFrom.get(from) ?? 0, now: Date.now() }, signers, id);
-    if (!opened.ok) return false;
+    // the name the key is for must be the one the server gave the sender's tab, so nobody in the
+    // call can take over someone else's frames with a key of their own
+    const member = rt.active()?.view.members.find((m) => m.userId === from);
+    if (!opened.ok || !member?.sfu || member.sfu !== opened.facts.identity) return false;
     lastFrom.set(from, opened.facts.epoch);
     for (const [identity, user] of userOf) if (user === from && identity !== opened.facts.identity) userOf.delete(identity);
     userOf.set(opened.facts.identity, from);
@@ -95,8 +104,9 @@ const sfuKeys = {
 
   stop() {
     clearTimeout(switchTimer);
-    current?.fill(0);
+    current?.key.fill(0);
     current = null;
+    next = null;
     sink = null;
     place = null;
     epoch = 0;

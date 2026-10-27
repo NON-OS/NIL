@@ -8,6 +8,7 @@ export default interface CallView {
   projectId: string | null;
   startedBy: string;
   startedAt: number;
-  members: { userId: string; session: string; joinedAt: number }[];
+  // sfu: the name each tab goes by on the SFU, once the call is there
+  members: { userId: string; session: string; joinedAt: number; sfu?: string }[];
   ringing: string[];
 }

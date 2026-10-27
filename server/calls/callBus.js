@@ -10,10 +10,6 @@ import callSockets from './callSockets.js';
 const KEEP_MS = 10_000;
 let last = null;
 
-function sendTo(ws, data) {
-  if (ws && ws.readyState === ws.OPEN) ws.send(data);
-}
-
 function deliver({ scope, user_id: userId, call_id: callId, session, body }) {
   if (scope === 'team') {
     const event = JSON.parse(body);
@@ -21,7 +17,7 @@ function deliver({ scope, user_id: userId, call_id: callId, session, body }) {
   }
   if (scope === 'user') return hub.toUser(userId, JSON.parse(body));
   const target = callSockets.get(callId, userId);
-  if (target && target.session === session) sendTo(target.ws, body);
+  if (target && target.session === session) hub.toSocket(target.ws, body);
 }
 
 function share(row) {
@@ -30,7 +26,7 @@ function share(row) {
 }
 
 const callBus = {
-  send: sendTo,
+  send: (ws, data) => hub.toSocket(ws, data),
 
   user(userId, event) {
     const row = { scope: 'user', user_id: userId, body: JSON.stringify(event) };

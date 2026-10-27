@@ -31,7 +31,7 @@ const callPeers = {
   // starts sending to someone: on the mesh their connection's slots, on the SFU the frame key
   released(userId: string) {
     rt.links.get(userId)?.release();
-    sfuKeys.share(userId);
+    void sfuKeys.share(userId);
   },
 };
 

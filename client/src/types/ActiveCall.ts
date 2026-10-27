@@ -20,6 +20,8 @@ export default interface ActiveCall {
   minimized: boolean;
   // who the speaker layout shows large; null follows whoever is talking
   pinned: string | null;
+  // a microphone or camera the system took while the tab was away, waiting for a tap to come back
+  interrupted: { mic: boolean; cam: boolean } | null;
   // where call sound plays, where the browser lets a page choose
   speaker: string | null;
   // everyone this person has been connected to in this call, for "no answer" and "they left"

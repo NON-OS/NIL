@@ -3,6 +3,7 @@ import config from '../config.js';
 
 const b64 = (value) => Buffer.from(typeof value === 'string' ? value : JSON.stringify(value)).toString('base64url');
 const keyed = (secret, text) => crypto.createHmac('sha256', secret).update(text).digest('base64url').slice(0, 22);
+const identityOf = (callId, userId, session) => keyed(config.calls.sfu.secret, `nil/sfu-identity/v1\n${callId}\n${userId}\n${session}`);
 
 // A LiveKit access token (a JWT, HS256 under the SFU's API secret) for one person's tab in one
 // call. The room and the person go by keyed hashes, so the SFU never learns a call id or who
@@ -12,7 +13,7 @@ const keyed = (secret, text) => crypto.createHmac('sha256', secret).update(text)
 export default function sfuToken({ callId, userId = null, session = null, admin = false, now = Date.now() }) {
   const { key, secret, url } = config.calls.sfu;
   const room = keyed(secret, `nil/sfu-room/v1\n${callId}`);
-  const identity = userId ? keyed(secret, `nil/sfu-identity/v1\n${callId}\n${userId}\n${session}`) : null;
+  const identity = userId ? identityOf(callId, userId, session) : null;
   const seconds = Math.floor(now / 1000);
   const grant = admin ? { room, roomAdmin: true } : { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: false, canUpdateOwnMetadata: false };
   const payload = { iss: key, nbf: seconds - 10, exp: seconds + config.calls.turnTtlSeconds, video: grant, ...(identity ? { sub: identity } : {}) };
@@ -20,3 +21,7 @@ export default function sfuToken({ callId, userId = null, session = null, admin 
   const token = `${unsigned}.${crypto.createHmac('sha256', secret).update(unsigned).digest('base64url')}`;
   return { url, token, room, identity };
 }
+
+// the name one person's tab goes by on the SFU, which everyone in the call is told, so a frame
+// key someone signs for another person's name is refused
+sfuToken.identity = identityOf;

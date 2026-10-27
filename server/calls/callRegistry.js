@@ -1,6 +1,7 @@
 import sql from '../db/sql.js';
 import config from '../config.js';
 import newId from '../lib/newId.js';
+import sfuToken from './sfuToken.js';
 
 // Every live call, in the database so it outlives a restart and is shared by every server
 // process: who started it, who is in it or being rung, and nothing else. A call is deleted the
@@ -27,7 +28,7 @@ const callRegistry = {
     startedBy: call.startedBy,
     startedAt: call.startedAt,
     mode: call.mode,
-    members: inState(call, 'member').map((p) => ({ userId: p.user_id, session: p.session, joinedAt: p.joined_at })),
+    members: inState(call, 'member').map((p) => ({ userId: p.user_id, session: p.session, joinedAt: p.joined_at, ...(call.mode === 'sfu' && config.calls.sfu ? { sfu: sfuToken.identity(call.id, p.user_id, p.session) } : {}) })),
     ringing: inState(call, 'ringing').map((p) => p.user_id),
   }),
 

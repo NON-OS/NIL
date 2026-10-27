@@ -121,6 +121,9 @@ const callMedia = {
     if (kind === 'speaker') rt.patch(() => ({ speaker: deviceId }));
   },
 
+  // after the system took the microphone: a new one, at the mute state the person had
+  reopenMic: () => openMic(),
+
   stopAll() {
     for (const key of ['audio', 'camera', 'screen'] as const) {
       rt.tracks[key]?.stop();

@@ -73,13 +73,15 @@ test('a call outgrows the mesh, moves to the SFU, and hands room tokens only to 
   const benSession = session();
   tabs.ben.send({ type: 'call.join', callId, session: benSession });
   assert.equal((await tabs.ben.next('call.joined', (e) => e.call.id === callId)).call.mode, 'sfu');
-  await tabs.owner.next('call.update', (e) => e.call.id === callId && e.call.mode === 'sfu', { seen: true });
+  const moved = await tabs.owner.next('call.update', (e) => e.call.id === callId && e.call.mode === 'sfu', { seen: true });
 
   const grant = (await people.ben('POST', `/api/calls/${callId}/sfu`)).data;
   assert.equal(grant.url, 'wss://sfu.example.org');
   const c = claims(grant.token);
   assert.equal(c.iss, 'nilkey');
   assert.equal(c.sub, grant.identity);
+  // everyone in the call is told which name on the SFU is Ben's, so nobody else can sign keys for it
+  assert.equal(moved.call.members.find((m) => m.userId === ids.ben).sfu, grant.identity);
   assert.ok(![ids.ben, callId].some((id) => grant.token.includes(id) || JSON.stringify(c).includes(id)), 'the SFU learns neither who nor which call');
   assert.deepEqual(Object.keys(c.video).sort(), ['canPublish', 'canPublishData', 'canSubscribe', 'canUpdateOwnMetadata', 'room', 'roomJoin']);
   assert.equal(c.video.canPublishData, false);

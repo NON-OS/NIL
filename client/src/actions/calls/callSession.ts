@@ -14,6 +14,7 @@ import localMedia from './localMedia';
 import audioLevels from './audioLevels';
 import callPeers from './callPeers';
 import callSfu from './callSfu';
+import callLifecycle from './callLifecycle';
 import ringNotice from './ringNotice';
 import type CallView from '../../types/CallView';
 
@@ -67,6 +68,7 @@ function drop(userId: string) {
 }
 
 function teardown() {
+  callLifecycle.stop();
   for (const userId of [...rt.links.keys()]) drop(userId);
   void callSfu.close();
   callMedia.stopAll();
@@ -109,6 +111,13 @@ function reconcile(view: CallView) {
   }
 }
 
+// back into a call this tab dropped out of, if it's still going
+async function rejoinCall(callId: string) {
+  const view = (await callApi.list().catch(() => [])).find((c) => c.id === callId);
+  if (!view) return void toast.show('That call has ended.');
+  await callSession.enter(view).catch(toast.error);
+}
+
 // Unlocks this person's keys if they aren't yet: every connection is signed with them.
 async function ready() {
   if (!vault.unlocked()) await vault.unlock({ passkey: store.get().passkeys.length > 0 });
@@ -134,7 +143,7 @@ const callSession = {
     ringNotice.stop(view.id);
     callStore.set((s) => ({
       ringing: s.ringing.filter((id) => id !== view.id),
-      active: { id: view.id, view, phase: 'joining', mic: true, cam: false, screen: false, micBlocked: false, camBlocked: false, speaking: false, local: null, localScreen: null, peers: {}, layout: 'grid', minimized: false, pinned: null, everConnected: false, speaker: localMedia.prefs().speaker },
+      active: { id: view.id, view, phase: 'joining', mic: true, cam: false, screen: false, micBlocked: false, camBlocked: false, speaking: false, local: null, localScreen: null, peers: {}, layout: 'grid', minimized: false, pinned: null, everConnected: false, interrupted: null, speaker: localMedia.prefs().speaker },
     }));
     try {
       await callMedia.open({ video });
@@ -143,12 +152,13 @@ const callSession = {
       teardown();
       throw err;
     }
+    callLifecycle.start();
     callSession.rejoin();
   },
 
   rejoin() {
     const a = rt.active();
-    if (a) socket.call({ type: 'call.join', callId: a.id, session: rt.session(), resume: a.phase === 'live', ...(a.view.projectId ? { projectId: a.view.projectId } : {}) });
+    if (a) socket.call({ type: 'call.join', callId: a.id, session: rt.session() });
   },
 
   joined(view: CallView) {
@@ -187,9 +197,14 @@ const callSession = {
   },
 
   refused(callId: string, reason: string) {
-    if (rt.active()?.id !== callId) return;
+    const a = rt.active();
+    if (a?.id !== callId) return;
+    const wasIn = a.phase === 'live';
     teardown();
-    toast.show(reason === 'full' ? 'This call is full.' : 'That call has ended.', { tone: 'error' });
+    if (reason === 'full') return void toast.show('This call is full.', { tone: 'error' });
+    if (!wasIn) return void toast.show('That call has ended.', { tone: 'error' });
+    // away longer than the call waits for anyone, as when a phone slept: the way back in
+    toast.show('You were away from the call for too long, so you left it.', { tone: 'error', action: { label: 'Rejoin', run: () => void rejoinCall(callId) } });
   },
 
   // the same person joined from another tab, which now has the call
