@@ -2,6 +2,7 @@ import crypto from 'node:crypto';
 import wallet from './wallet.js';
 import client from './client.js';
 import passkeyBody from './passkeyBody.js';
+import chat from './chatChannel.js';
 
 const blob = (bytes) => crypto.randomBytes(bytes).toString('base64url');
 
@@ -31,6 +32,10 @@ export default async function authzTargets(world) {
   t.label = (await owner('POST', '/api/labels', { name: 'bug' })).data.label.id;
   t.goal = (await owner('POST', '/api/goals', { title: 'Ship it' })).data.goal.id;
   t.doc = await newDoc();
+  const newChat = async () => (await chat.makeChannel(member, ids.member, { members: [ids.member, ids.admin, ids.owner] })).data.channel.id;
+  t.chat = await newChat();
+  const chatEpoch = async () => (await member('GET', `/api/chat/channels/${t.chat}`)).data.channel.epoch;
+  t.chatFile = (await member('POST', `/api/chat/channels/${t.chat}/files`, new TextEncoder().encode('ciphertext'), { 'Content-Type': 'application/octet-stream', 'X-Chat-File': chat.chatId() })).data.file.id;
   t.proposal = (await owner('POST', '/api/proposals', { title: 'Lunch?', options: ['Pizza', 'Salad'] })).data.proposal.id;
   t.inviteToken = (await owner('POST', '/api/invites', { role: 'member', reusable: true })).data.token;
   await owner('PUT', '/api/sharing', { shareLinks: true });
@@ -49,6 +54,7 @@ export default async function authzTargets(world) {
     comment: async () => (await member('POST', `/api/tasks/${t.task}/comments`, { body: 'Throwaway' })).data.comment.id,
     attachment: () => upload(t.task),
     doc: newDoc,
+    chat: newChat,
     proposal: async () => (await owner('POST', '/api/proposals', { title: 'Throwaway', options: ['A', 'B'] })).data.proposal.id,
     shareLink: async () => (await member('POST', '/api/share-links', { kind: 'project', targetId: ids.shared })).data.link.id,
     agent: async () => (await owner('POST', '/api/agents', { name: `Throwaway ${blob(4)}`, access: 'read', runner: 'external' })).data.agent.id,
@@ -64,6 +70,7 @@ export default async function authzTargets(world) {
     reset: async () => (await admin('POST', `/api/users/${ids.member}/sign-in-reset`, {})).data.reset.id,
     // the caller's own: a personal key, a time entry, a reminder, their wallet, a second wallet, a passkey
     own: {
+      chatMessage: async (who) => (await people[who]('POST', `/api/chat/channels/${t.chat}/messages`, chat.message(await chatEpoch(), { ttl: (await member('GET', `/api/chat/channels/${t.chat}`)).data.channel.disappearSeconds }))).data.message.id,
       token: async (who) => (await people[who]('POST', '/api/me/tokens', { name: 'Throwaway' })).data.tokens[0].id,
       time: async (who) => (await people[who]('POST', '/api/time', { startedAt: Date.now() - 120_000, endedAt: Date.now() - 60_000 })).data.entry.id,
       reminder: async (who) => (await people[who]('POST', '/api/reminders', { remindAt: Date.now() + 3_600_000, note: 'Throwaway' })).data.reminder.id,
