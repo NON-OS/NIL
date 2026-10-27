@@ -6,6 +6,8 @@ export default function toFolder(row, wrappedKey, readers) {
     nameCt: row.name_ct,
     version: row.version,
     keyRev: row.key_rev,
+    // items whose own key is older than this are waiting to be encrypted again
+    resealRev: row.reseal_rev,
     audience: row.audience,
     createdBy: row.created_by,
     updatedBy: row.updated_by,

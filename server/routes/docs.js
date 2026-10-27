@@ -16,6 +16,7 @@ import contentWrites from '../auth/contentWrites.js';
 import pendingDocUpdates from '../services/pendingDocUpdates.js';
 import thinRevisions from '../services/thinRevisions.js';
 import docBlobRefs from '../services/docBlobRefs.js';
+import docReseal from '../services/docReseal.js';
 
 const router = express.Router();
 
@@ -45,7 +46,7 @@ router.get(
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
     // the live changes made since this version, which the browser lays on top
     const live = { updatesThrough: doc.updates_through, updates: pendingDocUpdates(doc.id, doc.updates_through) };
-    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id), ...live }) };
+    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id), ...live, reseal: docReseal(doc.id) }) };
   }),
 );
 
@@ -114,7 +115,8 @@ router.post(
 );
 
 // Removing someone means a brand-new doc key: the browser re-encrypts the doc and seals the
-// new key for whoever stays. Old revisions used the old key, so they go.
+// new key for whoever stays. Old revisions used the old key, so they go, and the doc's files
+// wait to be encrypted again by whoever opens the doc next with its key.
 router.post(
   '/docs/:id/rotate',
   contentWrites,
@@ -126,7 +128,10 @@ router.post(
     const grants = Array.isArray(req.body?.grants) ? req.body.grants : [];
     if (!grants.some((g) => g?.userId === req.user.id)) throw HttpError.badRequest('Keep a key for yourself.');
     const before = readers(doc.id);
+    // someone taken out may have kept the keys to the doc's files, so each is encrypted again
+    const removed = before.some((id) => !grants.some((g) => g?.userId === id));
     sql.tx(() => {
+      if (removed) sql.run("UPDATE sealed_blobs SET reseal = 1, replaces = NULL WHERE scope_kind = 'doc' AND scope_id = ? AND finished_at IS NOT NULL", doc.id);
       sql.run(
         'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?',
         cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), docBlobRefs(req.body?.blobs), doc.id,

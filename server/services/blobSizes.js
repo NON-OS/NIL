@@ -18,6 +18,9 @@ const blobSizes = {
   },
 
   chunk: (blob, index) => (index < blob.chunks - 1 ? FULL : blob.size - (blob.chunks - 1) * FULL),
+
+  // the most a file's list of chunk hashes may take: 32 bytes for each chunk of the largest file
+  hashesMax: 32 * Math.ceil(maxFileBytes / chunkBytes) + tagBytes * Math.ceil((32 * Math.ceil(maxFileBytes / chunkBytes)) / chunkBytes),
 };
 
 export default blobSizes;

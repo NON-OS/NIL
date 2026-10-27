@@ -16,11 +16,32 @@ export default async function authzFilesTargets(world, t) {
   t.folder = await newFolder();
   t.folderItem = await newItem();
   t.blob = (await sealedBlob.upload(member, docScope)).id;
+  // a folder someone was taken out of, whose items wait to be encrypted again
+  const { default: sql } = await import('../../db/sql.js');
+  t.resealFolder = await newFolder();
+  sql.run('UPDATE folders SET reseal_rev = key_rev WHERE id = ?', t.resealFolder);
 
   const fresh = {
     folder: newFolder,
     folderItem: newItem,
     blob: async () => (await sealedBlob.upload(member, docScope)).id,
+    // a subfolder in the member's folder, and one already in its trash
+    trashedItem: async () => {
+      const id = await newItem();
+      await member('DELETE', `/api/folders/${t.folder}/items/${id}`);
+      return id;
+    },
+    waitingItem: async () => {
+      const id = (await sharedFolder.add(member, { id: t.resealFolder, keyRev: 1 }, { kind: 'folder' })).data.item.id;
+      sql.run('UPDATE folder_items SET key_rev = 0 WHERE id = ?', id);
+      return id;
+    },
+    // a doc's file waiting to be encrypted again, and the member's fresh copy of it
+    docCopy: async () => {
+      const { id: old } = await sealedBlob.upload(member, docScope);
+      sql.run('UPDATE sealed_blobs SET reseal = 1 WHERE id = ?', old);
+      return (await sealedBlob.upload(member, docScope, 100, { replaces: old })).id;
+    },
   };
   // the caller's own uploads, started and, for finishing, with their one chunk in
   const own = {

@@ -20,12 +20,13 @@ const sealedBlob = {
   header,
   // the start request's body for a file of `plain` bytes
   body: (scope, plain) => ({ scope, size: sizes(plain).reduce((a, b) => a + b, 0), chunks: chunkCount(plain), header: header() }),
-  start: (c, scope, plain) => c('POST', '/api/blobs', sealedBlob.body(scope, plain)),
+  start: (c, scope, plain, extra = {}) => c('POST', '/api/blobs', { ...sealedBlob.body(scope, plain), ...extra }),
   put: (c, id, index, bytes) => c('PUT', `/api/blobs/${id}/chunks/${index}`, new Uint8Array(bytes), OPAQUE),
 
-  // Uploads and finishes a blob of `plain` bytes; returns its id and the chunks sent.
-  async upload(c, scope, plain = 100) {
-    const started = await sealedBlob.start(c, scope, plain);
+  // Uploads and finishes a blob of `plain` bytes, with anything `extra` the start takes (such as
+  // the blob a fresh copy replaces); returns its id and the chunks sent.
+  async upload(c, scope, plain = 100, extra = {}) {
+    const started = await sealedBlob.start(c, scope, plain, extra);
     if (started.status !== 200) throw new Error(`start answered ${started.status}: ${JSON.stringify(started.data)}`);
     const id = started.data.blob;
     const chunks = sizes(plain).map((n) => crypto.randomBytes(n));

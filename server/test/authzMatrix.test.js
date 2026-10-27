@@ -102,6 +102,22 @@ test('the JSON API: every route, every caller', async () => {
   assert.deepEqual(misses, []);
 });
 
+// A member like any other, but without a key to the doc and folders the Files rows point at: to
+// them those don't exist, and only the rows marked `keyless` let them through.
+test('Files: a member who holds no key to a doc or folder gets nowhere with it', async () => {
+  const misses = [];
+  for (const [key, row] of Object.entries(rowsFiles)) {
+    const [method, routePath] = key.split(' ');
+    const allowed = Boolean(row.keyless);
+    const sent = await authzResolve(routePath, row, ctx, 'keyless', { allowed: false });
+    const res = await authzRequest(ctx.world, 'keyless', { method, ...sent });
+    cells += 1;
+    const fits = allowed ? res.status >= 200 && res.status < 300 : [403, 404].includes(res.status);
+    if (!fits) misses.push(`${key} as a member without a key: got ${res.status}, expected ${allowed ? 'allowed' : 'refused'} ${JSON.stringify(res.data).slice(0, 160)}`);
+  }
+  assert.deepEqual(misses, []);
+});
+
 test('the agent REST API: every route, every caller, by key only', async () => {
   const misses = [];
   for (const [key, row] of Object.entries(rowsAgentApi)) misses.push(...(await runRow(key, row, { bearer: true })));

@@ -28,6 +28,7 @@ import signingKey from '../proofs/signingKey.js';
 import creditSetting from '../aiCredits/creditSetting.js';
 import aiAvailable from '../ai/provider/aiAvailable.js';
 import providerSummary from '../ai/provider/providerSummary.js';
+import filesLimits from '../services/filesLimits.js';
 
 const router = express.Router();
 
@@ -107,6 +108,8 @@ router.get(
       stealth: config.nox.enabled ? { announcer: config.stealth.announcer, gasTopUpWei: config.stealth.gasTopUpWei, registry: config.stealth.registry } : null,
       // admins see the pool tools only when the server has private pool payouts on
       privacyPools: config.pools.enabled && req.user.isAdmin,
+      // Files is for members; guests never get it
+      files: guestScope.of(req.user.id) ? null : filesLimits(),
       sourceUrl: config.sourceUrl,
       // the web app this server hands out, so an open tab can notice it's out of date
       build: buildId(),

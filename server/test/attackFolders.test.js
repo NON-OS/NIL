@@ -90,14 +90,15 @@ test('a folder can’t go inside itself or into another shared folder', async ()
   const b = (await sharedFolder.add(ana, folder, { kind: 'folder', parentId: a.id })).data.item;
   const c = (await sharedFolder.add(ana, folder, { kind: 'folder', parentId: b.id })).data.item;
   const foreign = (await sharedFolder.add(ana, other, { kind: 'folder' })).data.item;
-  const move = (item, parentId) => ana('PATCH', `/api/folders/${folder.id}/items/${item.id}`, { parentId, metaCt: cipher(300) });
+  const move = (item, parentId) => ana('PATCH', `/api/folders/${folder.id}/items/${item.id}`, { parentId, keyRev: 1, metaCt: cipher(300) });
   assert.equal((await move(a, a.id)).status, 400);
   assert.equal((await move(a, c.id)).status, 400, 'into its own grandchild');
   assert.equal((await move(a, foreign.id)).status, 400);
   assert.equal((await sharedFolder.add(ana, folder, { kind: 'folder', parentId: foreign.id })).status, 400);
   const f = await file(ana, folder);
   assert.equal((await move(c, f.id)).status, 400, 'into a file');
-  assert.equal((await ana('PATCH', `/api/folders/${other.id}/items/${a.id}`, { parentId: null, metaCt: cipher(300) })).status, 404);
+  assert.equal((await ana('PATCH', `/api/folders/${other.id}/items/${a.id}`, { parentId: null, keyRev: 1, metaCt: cipher(300) })).status, 404);
+  assert.equal((await ana('PATCH', `/api/folders/${folder.id}/items/${c.id}`, { parentId: null, keyRev: 2, metaCt: cipher(300) })).status, 409, 'details sealed under another folder key');
   assert.equal((await move(c, null)).status, 200);
   assert.equal((await items(ana, folder)).find((i) => i.id === c.id).parentId, null);
 });
@@ -105,17 +106,19 @@ test('a folder can’t go inside itself or into another shared folder', async ()
 test('a new folder key re-wraps every file key, all or nothing, and shuts out who was taken out', async () => {
   const folder = await sharedFolder.create(ana, [ids.ana, ids.ben, ids.cy]);
   const [one, two] = [await file(ana, folder), await file(cy, folder)];
-  const rotate = (c, extra) => c('POST', `/api/folders/${folder.id}/rotate`, { baseVersion: 1, audience: 'people', nameCt: cipher(120), grants: sharedFolder.grants([ids.ana, ids.ben]), items: [one, two].map((i) => ({ id: i.id, keyWrap: cipher(60) })), ...extra });
+  const fresh = (list) => list.map((i) => ({ id: i.id, keyWrap: cipher(60), metaCt: cipher(300) }));
+  const rotate = (c, extra) => c('POST', `/api/folders/${folder.id}/rotate`, { baseVersion: 1, audience: 'people', nameCt: cipher(120), grants: sharedFolder.grants([ids.ana, ids.ben]), items: fresh([one, two]), ...extra });
   assert.equal((await rotate(ben)).status, 403, 'Ben didn’t make the folder');
-  assert.equal((await rotate(ana, { items: [{ id: one.id, keyWrap: cipher(60) }] })).status, 409, 'a file left behind');
-  assert.equal((await rotate(ana, { items: [one, two].map((i) => ({ id: i.id, keyWrap: cipher(59) })) })).status, 400);
+  assert.equal((await rotate(ana, { items: fresh([one]) })).status, 409, 'a file left behind');
+  assert.equal((await rotate(ana, { items: [one, two].map((i) => ({ id: i.id, keyWrap: cipher(59), metaCt: cipher(300) })) })).status, 400);
+  assert.equal((await rotate(ana, { items: [one, two].map((i) => ({ id: i.id, keyWrap: cipher(60) })) })).status, 400, 'details not encrypted again');
   assert.equal((await rotate(ana, { baseVersion: 2 })).status, 409);
   assert.equal((await rotate(ana, { grants: sharedFolder.grants([ids.ben]) })).status, 400);
   assert.deepEqual((await items(ana, folder)).map((i) => i.keyWrap), [one.keyWrap, two.keyWrap], 'nothing changed');
 
-  const wraps = [one, two].map((i) => ({ id: i.id, keyWrap: cipher(60) }));
+  const wraps = fresh([one, two]);
   assert.equal((await rotate(ana, { items: wraps })).status, 200);
-  assert.deepEqual((await items(ben, folder)).map((i) => i.keyWrap), wraps.map((w) => w.keyWrap));
+  assert.deepEqual((await items(ben, folder)).map((i) => [i.keyWrap, i.metaCt]), wraps.map((w) => [w.keyWrap, w.metaCt]));
   assert.equal((await cy('GET', `/api/folders/${folder.id}`)).status, 404);
   assert.equal((await cy('GET', `/api/blobs/${two.blob.id}`)).status, 404, 'Cy can’t fetch even the file she uploaded');
   // a file wrapped under the old key is refused, so nobody's left with one they can't open
@@ -129,11 +132,14 @@ test('only whoever added something, or an admin, deletes it, and a folder goes w
   const inner = await file(ben, folder, { parentId: sub.id });
   const thumbless = await file(ana, folder);
   const del = (c, item) => c('DELETE', `/api/folders/${folder.id}/items/${item.id}`);
+  const live = async () => (await items(ana, folder)).filter((i) => !i.deletedAt).map((i) => i.id);
   assert.equal((await del(ben, sub)).status, 403);
-  assert.equal((await del(ana, inner)).status, 403);
+  assert.equal((await del(ana, inner)).status, 200, 'Ana made the folder, so she manages what’s in it');
+  assert.equal((await ana('POST', `/api/folders/${folder.id}/items/${inner.id}/restore`)).status, 200);
   assert.equal((await ana('DELETE', `/api/blobs/${thumbless.blob.id}`)).status, 409, 'a file’s blob goes with the file');
   assert.equal((await del(ana, sub)).status, 200);
-  assert.deepEqual((await items(ana, folder)).map((i) => i.id), [thumbless.id]);
+  assert.deepEqual(await live(), [thumbless.id]);
+  assert.equal((await ana('DELETE', `/api/folders/${folder.id}/trash/${sub.id}`)).status, 200);
   assert.equal(sql.get('SELECT COUNT(*) AS n FROM sealed_blobs WHERE id = ?', inner.blob.id).n, 0);
   assert.deepEqual(chunkFiles(inner.blob.id), []);
   assert.equal((await del(owner, thumbless)).status, 200, 'an admin may');
@@ -149,6 +155,7 @@ test('a folder holds at most FOLDER_ITEMS_MAX things, and renames start from the
   const folder = await sharedFolder.create(ana, [ids.ana, ids.ben]);
   for (let i = 0; i < 12; i++) assert.equal((await sharedFolder.add(ana, folder, { kind: 'folder' })).status, 200);
   assert.equal((await sharedFolder.add(ana, folder, { kind: 'folder' })).status, 413);
-  assert.equal((await ben('PUT', `/api/folders/${folder.id}`, { baseVersion: 1, nameCt: cipher(120) })).status, 200);
+  assert.equal((await ben('PUT', `/api/folders/${folder.id}`, { baseVersion: 1, nameCt: cipher(120) })).status, 403, 'only whoever manages the folder names it');
+  assert.equal((await ana('PUT', `/api/folders/${folder.id}`, { baseVersion: 1, nameCt: cipher(120) })).status, 200);
   assert.equal((await ana('PUT', `/api/folders/${folder.id}`, { baseVersion: 1, nameCt: cipher(120) })).status, 409);
 });
