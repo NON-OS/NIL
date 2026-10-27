@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { EditorContent, useEditor, type Editor } from '@tiptap/react';
+import { TextSelection } from '@tiptap/pm/state';
 import useStore from '../../../state/useStore';
 import editorExtensions from './editorExtensions';
 import SelectionMenu from './SelectionMenu';
@@ -9,7 +10,7 @@ interface Handlers {
   onLink: () => void;
   onComment: () => void;
   onPick: (kind: 'image' | 'file') => void;
-  onFiles?: (files: File[]) => boolean;
+  onFiles?: (files: File[]) => void;
 }
 
 interface Props extends Handlers {
@@ -39,9 +40,21 @@ export default function RichEditor({ live, readOnly, onEditor, ...handlers }: Pr
       editable: !readOnly,
       editorProps: {
         attributes: { class: 'doc-prose', 'aria-label': 'Doc text', spellcheck: 'true' },
-        // dropped or pasted files become encrypted images and attachments
-        handleDrop: (_view, event) => Boolean(event.dataTransfer?.files.length && h.current.onFiles?.([...event.dataTransfer.files])),
-        handlePaste: (_view, event) => Boolean(event.clipboardData?.files.length && h.current.onFiles?.([...event.clipboardData.files])),
+        // dropped or pasted files become encrypted images and attachments, where they were dropped
+        handleDrop: (view, event) => {
+          const files = [...(event.dataTransfer?.files ?? [])];
+          if (!files.length || !h.current.onFiles) return false;
+          const at = view.posAtCoords({ left: event.clientX, top: event.clientY });
+          if (at) view.dispatch(view.state.tr.setSelection(TextSelection.near(view.state.doc.resolve(at.pos))));
+          h.current.onFiles(files);
+          return true;
+        },
+        handlePaste: (_view, event) => {
+          const files = [...(event.clipboardData?.files ?? [])];
+          if (!files.length || !h.current.onFiles) return false;
+          h.current.onFiles(files);
+          return true;
+        },
       },
     },
     [live],

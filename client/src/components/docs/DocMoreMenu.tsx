@@ -1,19 +1,22 @@
 import { useRef, useState } from 'react';
-import { Download, History, MoreHorizontal, Printer, Trash2 } from 'lucide-react';
+import { FileDown, FileText, FileUp, History, MoreHorizontal, Printer, Trash2 } from 'lucide-react';
 import Popover from '../ui/Popover';
 import ConfirmButton from '../ui/ConfirmButton';
 
 interface Props {
   onHistory: () => void;
-  onDownload: () => void;
+  onWord: () => void;
+  onMarkdown: () => void;
   onPrint: () => void;
+  // left out where the doc can't be written to
+  onImport?: () => void;
   // left out for people who may not delete the doc
   onDelete?: () => void;
 }
 
-// The doc toolbar's quieter actions, named in full for touch screens. Delete sits apart at
+// The doc toolbar's quieter actions, named in full. Delete sits apart at
 // the bottom and asks twice, so a slip aimed at Print can't remove the doc for everyone.
-export default function DocMoreMenu({ onHistory, onDownload, onPrint, onDelete }: Props) {
+export default function DocMoreMenu({ onHistory, onWord, onMarkdown, onPrint, onImport, onDelete }: Props) {
   const [open, setOpen] = useState(false);
   const anchor = useRef<HTMLButtonElement>(null);
   const run = (action: () => void) => () => {
@@ -31,12 +34,21 @@ export default function DocMoreMenu({ onHistory, onDownload, onPrint, onDelete }
           <button type="button" className="menu-item" onClick={run(onHistory)}>
             <History size={15} /> Version history
           </button>
-          <button type="button" className="menu-item" onClick={run(onDownload)}>
-            <Download size={15} /> Download as Markdown
+          <div className="menu-divider" />
+          <button type="button" className="menu-item" onClick={run(onWord)}>
+            <FileDown size={15} /> Download as Word
+          </button>
+          <button type="button" className="menu-item" onClick={run(onMarkdown)}>
+            <FileText size={15} /> Download as Markdown
           </button>
           <button type="button" className="menu-item" onClick={run(onPrint)}>
             <Printer size={15} /> Print or save as PDF
           </button>
+          {onImport && (
+            <button type="button" className="menu-item" onClick={run(onImport)}>
+              <FileUp size={15} /> Add a Word or Markdown file
+            </button>
+          )}
           {onDelete && (
             <>
               <div className="menu-divider" />

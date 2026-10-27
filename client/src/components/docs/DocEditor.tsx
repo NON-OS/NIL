@@ -1,7 +1,7 @@
 import './Docs.css';
 import './editor/Editor.css';
 import './editor/Side.css';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { Editor } from '@tiptap/react';
 import { ArrowLeft, ListTree, MessageSquare, Sparkles, Users } from 'lucide-react';
 import DocMoreMenu from './DocMoreMenu';
@@ -21,12 +21,15 @@ import useYText from './editor/useYText';
 import docComments from './editor/docComments';
 import restoreVersion from './editor/restoreVersion';
 import editorMarkdown from '../../lib/docConvert/editorMarkdown';
+import useDocAttach from './editor/useDocAttach';
+import docExport from './editor/docExport';
+import docImport from './editor/docImport';
+import pendingImport from '../../state/pendingImport';
 import importMarkdown from '../../lib/docConvert/importMarkdown';
 import Spinner from '../ui/Spinner';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
 import docs from '../../actions/docs';
-import saveBlob from '../../lib/saveBlob';
 import isAdminUser from '../../lib/isAdmin';
 import type DocItem from '../../types/DocItem';
 
@@ -38,8 +41,6 @@ interface Props {
   // the title as it's typed, so the list beside the doc keeps up
   onTitle: (title: string) => void;
 }
-
-const fileName = (title: string, ext: string) => `${(title || 'doc').replace(/[^\w-]+/g, '-').replace(/^-|-$/g, '').toLowerCase() || 'doc'}.${ext}`;
 
 // One doc, open for live editing with everyone else who has it open. Every change is signed and
 // encrypted in this tab before it leaves; the server passes on and stores only ciphertext.
@@ -54,6 +55,8 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
   const [draft, setDraft] = useState<{ from: number; to: number; quote: string } | null>(null);
   const [modal, setModal] = useState<'link' | 'share' | 'history' | 'draft' | null>(null);
   const canManage = doc.createdBy === me.id || isAdminUser(me);
+  const attach = useDocAttach(doc.id, editor);
+  const importInput = useRef<HTMLInputElement>(null);
   useEffect(() => {
     if (live) onTitle(title);
   }, [live, title]);
@@ -75,7 +78,21 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
     setThread(id);
   };
 
-  const download = () => editor && saveBlob(new Blob([`# ${title}\n\n${editorMarkdown(editor)}`], { type: 'text/markdown' }), fileName(title, 'md'));
+  const exportAs = (format: 'docx' | 'md') => editor && docExport(editor, title, format).catch(toast.error);
+  const importFile = async (file: File) => {
+    if (!editor) return;
+    try {
+      const named = await docImport(editor, doc.id, file);
+      if (!title.trim() || title === file.name.replace(/\.[^.]+$/, '')) setTitle((named || file.name.replace(/\.[^.]+$/, '')).slice(0, 200));
+    } catch (err) {
+      toast.error(err);
+    }
+  };
+  // a doc made from a file picks it up as soon as its editor is ready
+  useEffect(() => {
+    const file = editor && !readOnly ? pendingImport.take(doc.id) : null;
+    if (file) void importFile(file);
+  }, [editor]);
   const remove = () => docs.remove(doc).then(onDeleted).catch(toast.error);
   const toggle = (p: 'comments' | 'outline') => setPanel((cur) => (cur === p ? null : p));
 
@@ -110,15 +127,22 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
         <button type="button" className="btn btn-sm" onClick={() => setModal('share')} aria-label={`Share, ${audience}`}>
           <Users /> {audience}
         </button>
-        <DocMoreMenu onHistory={() => setModal('history')} onDownload={download} onPrint={() => window.print()} onDelete={canManage ? remove : undefined} />
+        <DocMoreMenu onHistory={() => setModal('history')} onWord={() => exportAs('docx')} onMarkdown={() => exportAs('md')} onPrint={() => window.print()} onImport={readOnly ? undefined : () => importInput.current?.click()} onDelete={canManage ? remove : undefined} />
       </div>
-      {editor && !readOnly && <FormatBar editor={editor} onLink={() => setModal('link')} onPick={() => toast.show('Images and files arrive with Files.')} />}
+      {editor && !readOnly && <FormatBar editor={editor} onLink={() => setModal('link')} onPick={attach.pick} />}
+      {attach.uploading && (
+        <div className="doc-uploading" role="status">
+          Encrypting {attach.uploading.name}… <span className="num">{Math.round(attach.uploading.progress * 100)}%</span>
+        </div>
+      )}
+      <input {...attach.inputProps} />
+      <input ref={importInput} type="file" hidden aria-hidden tabIndex={-1} accept=".docx,.md,.markdown,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain" onChange={(e) => { const f = e.target.files?.[0]; e.target.value = ''; if (f) void importFile(f); }} />
       <DocBanners doc={doc} status={status} canManage={canManage} error={null} />
       <div className="doc-main">
         <div className="doc-body">
           <div>
             <input className="doc-title" value={title} onChange={(e) => setTitle(e.target.value.slice(0, 200))} onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), editor?.commands.focus('start'))} placeholder="Untitled" aria-label="Title" maxLength={200} readOnly={readOnly} />
-            <RichEditor live={live} readOnly={readOnly} onEditor={setEditor} onLink={() => setModal('link')} onComment={startComment} onPick={() => toast.show('Images and files arrive with Files.')} />
+            <RichEditor live={live} readOnly={readOnly} onEditor={setEditor} onLink={() => setModal('link')} onComment={startComment} onPick={attach.pick} onFiles={(files) => void attach.insert(files)} />
           </div>
         </div>
         {editor && panel === 'comments' && <CommentsPanel editor={editor} ydoc={live.ydoc} active={thread} onActive={setThread} onClose={() => setPanel(null)} draft={draft && { quote: draft.quote, onSend: sendComment, onCancel: () => setDraft(null) }} />}

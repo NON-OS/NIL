@@ -36,9 +36,23 @@ The buttons along the top:
 | The speech bubble | Opens the doc's comments |
 | The list | Opens an outline of the doc's headings |
 | The people button, showing Team or a number | Sets who can read the doc |
-| The three dots | Version history, download as Markdown (decrypted), print or save as PDF, and delete. Only a doc's creator or an admin can delete it, and it goes for everyone |
+| The three dots | Version history, download as Word or Markdown (decrypted, in your browser), print or save as PDF, add a Word or Markdown file to the doc, and delete. Only a doc's creator or an admin can delete it, and it goes for everyone |
 
 The **Search docs** box above the list looks through titles and text that your browser has decrypted. The server never sees what you search for.
+
+## Images and files
+
+Add a picture with the image button in the bar, by typing `/image`, or by pasting or dropping it into the text. PNG, JPEG, GIF and WebP pictures show in the doc. Select one to give it a description for people who can't see it.
+
+Any other file, such as a PDF, a Word file, a spreadsheet or a recording, goes in the same ways, or with the attach button or `/file`. It shows as a card with its name and size. **Preview** opens PDFs, Word files, pictures, audio, video and text right in the browser, and the download button saves it.
+
+Each picture and file is encrypted in your browser before it's uploaded, under a key of its own that is kept inside the doc's text, so only people who can read the doc can open it. Photos lose their hidden details, such as where they were taken and the camera, before they're encrypted. A picture or file you take out of the text stays stored, encrypted, until the doc is deleted, and counts toward your storage.
+
+## Word, Markdown and PDF
+
+The three dots download the doc as a Word file or as Markdown. Both are made in your browser from what's on screen; a doc with pictures downloads as Markdown in a zip, with the pictures in a folder beside it. **Print or save as PDF** prints the text without the toolbars, or saves it as a PDF from your browser's print dialog.
+
+To bring a Word or Markdown file in, click the button beside the plus above the list and choose **From a Word or Markdown file**, which makes a new doc from it. **Add a Word or Markdown file** in the three dots adds one to the end of the doc you're in. Pictures in a Word file come in encrypted like any other. Headings, lists, to-dos, tables, links and pictures carry over. Comments and tracked changes in a Word file don't, and pictures in old formats (EMF, WMF, TIFF) are left out.
 
 ## Edit together
 

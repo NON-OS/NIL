@@ -4,7 +4,12 @@ import { Extension } from '@tiptap/core';
 import Collaboration from '@tiptap/extension-collaboration';
 import CollaborationCaret from '@tiptap/extension-collaboration-caret';
 import { CharacterCount, Placeholder } from '@tiptap/extensions';
+import { ReactNodeViewRenderer } from '@tiptap/react';
 import docNodes from './docNodes';
+import SealedImage from './SealedImage';
+import SealedFile from './SealedFile';
+import SealedImageView from './SealedImageView';
+import SealedFileView from './SealedFileView';
 import SlashCommands from './SlashCommands';
 import mentionSuggestion from './mentionSuggestion';
 import caretRender from './caretRender';
@@ -33,7 +38,10 @@ export default function editorExtensions({ docId, ydoc, awareness, me, pick, com
     }),
   });
   return [
-    ...docNodes({ undo: false, mention: { suggestion: mentionSuggestion } }),
+    // images and files show decrypted in the editor; elsewhere they're plain nodes
+    ...docNodes({ undo: false, mention: { suggestion: mentionSuggestion } }).filter((e) => e.name !== 'sealedImage' && e.name !== 'sealedFile'),
+    SealedImage.extend({ addNodeView: () => ReactNodeViewRenderer(SealedImageView) }),
+    SealedFile.extend({ addNodeView: () => ReactNodeViewRenderer(SealedFileView) }),
     Collaboration.configure({ document: ydoc, field: 'body' }),
     CollaborationCaret.configure({ provider: { awareness }, user: { id: me, color: cursorColor(me) }, render: caretRender }),
     Placeholder.configure({ placeholder: ({ node }) => (node.type.name === 'heading' ? 'Heading' : 'Write, or type / for blocks and @ for people') }),

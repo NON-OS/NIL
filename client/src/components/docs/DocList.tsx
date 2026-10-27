@@ -12,14 +12,17 @@ interface Props {
   current: string | undefined;
   onOpen: (id: string) => void;
   onNew: (template?: DocTemplate) => void;
+  // a new doc made from a Word or Markdown file
+  onImport: (file: File) => void;
 }
 
 // Search runs over titles decrypted in this tab; the server never sees what you look for.
-export default function DocList({ docs, waiting, current, onOpen, onNew }: Props) {
+export default function DocList({ docs, waiting, current, onOpen, onNew, onImport }: Props) {
   const users = useStore((s) => s.users);
   const [query, setQuery] = useState('');
   const [picking, setPicking] = useState(false);
   const templatesAnchor = useRef<HTMLButtonElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
     return q ? docs.filter((d) => d.title.toLowerCase().includes(q) || d.text?.toLowerCase().includes(q)) : docs;
@@ -42,8 +45,25 @@ export default function DocList({ docs, waiting, current, onOpen, onNew }: Props
                 {t.label}
               </button>
             ))}
+            <div className="menu-divider" />
+            <button type="button" role="menuitem" className="menu-item" onClick={() => (setPicking(false), fileInput.current?.click())}>
+              From a Word or Markdown file
+            </button>
           </div>
         </Popover>
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          aria-hidden
+          tabIndex={-1}
+          accept=".docx,.md,.markdown,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) onImport(file);
+          }}
+        />
       </div>
       <div className="doc-list-items">
         {shown.map((d) => (

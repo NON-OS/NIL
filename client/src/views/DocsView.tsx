@@ -15,6 +15,7 @@ import socket from '../realtime/socket';
 import cx from '../lib/cx';
 import type DocItem from '../types/DocItem';
 import type { DocTemplate } from '../lib/docState/docTemplates';
+import pendingImport from '../state/pendingImport';
 
 // the editor is the heavy part, so the list shows while it loads
 const DocEditor = lazy(() => import('../components/docs/DocEditor'));
@@ -69,6 +70,18 @@ export default function DocsView() {
     }
   };
 
+  // a doc named after the file, which its editor fills in once it opens
+  const importDoc = async (file: File) => {
+    try {
+      const doc = await docs.create({ title: file.name.replace(/\.[^.]+$/, '').slice(0, 200), audience: 'team' });
+      pendingImport.set(doc.id, file);
+      await refresh();
+      router.navigate(`/docs/${doc.id}`);
+    } catch (err) {
+      toast.error(err);
+    }
+  };
+
   return (
     <div className="main" style={{ display: 'flex', flexDirection: 'column' }}>
       <ViewHeader title="Docs" icon={<FileText size={17} />} subtitle="End-to-end encrypted" />
@@ -82,7 +95,7 @@ export default function DocsView() {
         <>
           <KeyNotice reason="team docs" />
           <div className={cx('docs', currentId && 'has-doc')}>
-            <DocList docs={list.docs} waiting={list.waiting} current={currentId} onOpen={(id) => router.navigate(`/docs/${id}`)} onNew={create} />
+            <DocList docs={list.docs} waiting={list.waiting} current={currentId} onOpen={(id) => router.navigate(`/docs/${id}`)} onNew={create} onImport={importDoc} />
             {open ? (
               <Suspense
                 fallback={
