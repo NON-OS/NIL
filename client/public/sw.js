@@ -155,7 +155,9 @@ self.addEventListener('push', (event) => {
       body: text(message.body),
       tag: text(message.tag) || undefined,
       icon: '/icons/icon-192.png',
-      data: { task: text(message.task) || null },
+      // a ring stays up until it's answered or replaced by "Missed call"
+      requireInteraction: Boolean(text(message.call)),
+      data: { task: text(message.task) || null, call: text(message.call) || null },
     }),
   );
 });
@@ -164,13 +166,17 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const taskId = event.notification.data?.task ?? null;
-  const url = taskId ? `/?open-task=${encodeURIComponent(taskId)}` : '/inbox';
+  const callId = event.notification.data?.call ?? null;
+  // a ring or a missed call opens the Calls page, where a ring waits to be answered
+  const call = Boolean(callId) || String(event.notification.tag || '').startsWith('nil-call-');
+  const url = call ? `/calls${callId ? `?call=${encodeURIComponent(callId)}` : ''}` : taskId ? `/?open-task=${encodeURIComponent(taskId)}` : '/inbox';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
       const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
       if (!open) return self.clients.openWindow(url);
       await open.focus();
-      open.postMessage({ type: 'nil:open', taskId });
+      if (call) open.postMessage({ type: 'nil:call', callId });
+      else open.postMessage({ type: 'nil:open', taskId });
     }),
   );
 });

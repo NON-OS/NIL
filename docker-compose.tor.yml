@@ -5,6 +5,10 @@ services:
     # No port on the host: an onion-only server must not also answer on its normal IP address.
     # To run next to an HTTPS proxy on the host, list a file that publishes the port after this one.
     ports: !reset []
+    environment:
+      # Tor carries TCP alone, and calls need UDP and a path between browsers, so they're off.
+      # Nil turns them off on its own for an .onion APP_URL too.
+      CALLS: "off"
 
   tor:
     build: ./deploy/tor

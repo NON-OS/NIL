@@ -11,6 +11,7 @@ import checkBuild from '../actions/checkBuild';
 import recountArchive from '../actions/recountArchive';
 import isArchived from '../lib/isArchived';
 import agentActivity from '../actions/agentActivity';
+import callEvents from '../actions/calls/callEvents';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
@@ -160,5 +161,8 @@ export default function applyEvent(event: any): void {
       store.set({ typing: { ...s.typing, [event.taskId]: forTask } });
       break;
     }
+    // calls keep their own store (actions/calls)
+    default:
+      if (typeof event.type === 'string' && event.type.startsWith('call.')) callEvents(event);
   }
 }

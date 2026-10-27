@@ -72,6 +72,11 @@ const socket = {
   typing(taskId: string) {
     send({ type: 'typing', taskId });
   },
+
+  // a call's join, leave and handshake messages (actions/calls)
+  call(payload: { type: string; callId: string; [key: string]: unknown }) {
+    send(payload);
+  },
 };
 
 export default socket;
