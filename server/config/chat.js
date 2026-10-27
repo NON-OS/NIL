@@ -23,11 +23,14 @@ export default Object.freeze({
   keyChangesPerMinute: envNumber('CHAT_KEY_CHANGES_PER_MINUTE', 30, { min: 1 }),
   // new keys one conversation may get a day, whoever starts them
   epochsPerDay: envNumber('CHAT_EPOCHS_PER_DAY', 200, { min: 10 }),
+  // and that one person may start in one conversation a day
+  epochsPerPersonPerDay: envNumber('CHAT_EPOCHS_PER_PERSON_PER_DAY', 24, { min: 4 }),
   maxMembers: envNumber('CHAT_MAX_MEMBERS', 500, { min: 2, max: 5000 }),
   groupMax: envNumber('CHAT_GROUP_MAX', 12, { min: 3, max: 50 }),
   pageSize: envNumber('CHAT_PAGE_SIZE', 60, { min: 10, max: 200 }),
   // how far a browser's clock may be from the server's when it seals a message
-  clockSkewMs: envNumber('CHAT_CLOCK_SKEW_SECONDS', 600, { min: 30 }) * units.SECOND,
+  // (at most ten minutes, which browsers count on when they check member lists and names)
+  clockSkewMs: envNumber('CHAT_CLOCK_SKEW_SECONDS', 600, { min: 30, max: 600 }) * units.SECOND,
   // files sent and never posted in a message go after this long
   unpostedFileMs: envNumber('CHAT_UNPOSTED_FILE_MINUTES', 60, { min: 5 }) * units.MINUTE,
   // the longest a channel can keep disappearing messages, and how often expired ones are removed

@@ -32,7 +32,7 @@ export default async function checkRoster(
   // dated ahead of every clock that matters, it would hold off whoever signs the next one
   if (f.at > Date.now() + AHEAD_MS) throw new Error('This member list is dated in the future.');
   const statement = { kind: chatRoster.kind, place: chatRoster.place(at.workspaceKey, at.channelId, at.epoch), facts: chatRoster.list(f) };
-  const author = await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k));
+  const author = await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k), { former: true });
   if (!author) throw new Error('Nil can’t confirm who started this key.');
   const prev = history[history.length - 1];
   const roster: ChatRoster = { ...f, epoch: at.epoch, by: signed.by, hash: chatRoster.hash(raw), wrappedKeys: at.wrappedKeys, departed: [] };

@@ -92,12 +92,21 @@ router.post(
     const now = Date.now();
     // a new key for the same people comes on the schedule, or now and then for a member whose copy
     // didn't open; not as often as one member likes, manager or not
-    const same = !changed && roster.members.length === current.length && roster.members.every((id) => current.includes(id));
+    // measured against the list before, which a member can't change by resetting their own keys
+    const listed = parseJSON(prev, null)?.facts?.[2] ?? [];
+    const same = !changed && roster.members.length === listed.length && roster.members.every((id) => listed.includes(id));
+    // a key that only leaves people out is never held back: it's how someone who left goes
+    const onlyDrops = roster.members.length < listed.length && roster.members.every((id) => listed.includes(id));
     if (same && now - channel.epoch_at < config.chat.epochMs / 2 && sql.get('SELECT 1 FROM chat_epochs WHERE channel_id = ? AND epoch > 1 AND created_by = ? AND created_at > ?', channel.id, req.user.id, now - units.HOUR)) {
       throw new HttpError(429, 'You gave this conversation a new key a short while ago. It gets the next one on schedule.');
     }
-    // and however they come, only so many a day, so its history stays one any browser can check
-    if (sql.get('SELECT COUNT(*) AS n FROM chat_epochs WHERE channel_id = ? AND created_at > ?', channel.id, now - 24 * units.HOUR).n >= config.chat.epochsPerDay) {
+    // and otherwise only so many a day, from each person and in all, so its history stays one any
+    // browser can check and no one member uses up what the others need
+    const day = now - 24 * units.HOUR;
+    if (!onlyDrops && sql.get('SELECT COUNT(*) AS n FROM chat_epochs WHERE channel_id = ? AND created_by = ? AND created_at > ?', channel.id, req.user.id, day).n >= config.chat.epochsPerPersonPerDay) {
+      throw new HttpError(429, 'You’ve changed this conversation’s key many times today. Try again tomorrow.');
+    }
+    if (!onlyDrops && sql.get('SELECT COUNT(*) AS n FROM chat_epochs WHERE channel_id = ? AND created_at > ?', channel.id, day).n >= config.chat.epochsPerDay) {
       throw new HttpError(429, 'This conversation’s key changed many times today. Try again tomorrow.');
     }
     chatBudget(req.user.id, b.roster.length + JSON.stringify(b.grants ?? []).length);
@@ -112,8 +121,8 @@ router.post(
         for (const id of after.filter((m) => !before.includes(m))) sql.run('INSERT INTO chat_members (channel_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)', channel.id, id, req.user.id, now);
       }
       takeGrants(channel.id, b.epoch, b.grants, req.user.id, { exactly: roster.members });
-      // counted only once everything about it checked out
-      channelKeyChanges(channel.id);
+      // counted only once everything about it checked out; leaving people out is never held back
+      if (!onlyDrops) channelKeyChanges(channel.id);
       announceChat(channel, { kind: 'epoch', epoch: b.epoch }, { also: before.filter((m) => !after.includes(m)) });
     });
     return { epoch: b.epoch };

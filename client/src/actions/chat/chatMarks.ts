@@ -81,7 +81,7 @@ const chatMarks = {
       const { signed, facts } = signedFacts.open(await chatText.open(key, at, row.bodyCt));
       const f = chatMarkFacts.parse(facts ?? []);
       const statement = { kind: chatMarkFacts.kind, place: [at.workspaceKey, channel.id, row.epoch, row.stream, row.userId, row.sentAt], facts: chatMarkFacts.list(f.at, f.key) };
-      if (signed.by !== row.userId || f.key !== keyHash(key) || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) return;
+      if (signed.by !== row.userId || f.key !== keyHash(key) || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k), { former: true }))) return;
       // never behind a mark seen before: a server can't serve an older one to hide what it held back
       const name = `${row.userId}/${row.stream}`;
       const scopes = markHistory.newest(channel.id, name, f.at, chatMarkFacts.scopes(signed.text));

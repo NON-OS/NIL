@@ -46,7 +46,7 @@ For a conversation, the server knows who is in it, who sent each message, reacti
 
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when. For a file in a shared folder, it knows who added it, renamed it or moved it and when.
 
-The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. Each signature also names who the writing is for and which key protects it, so the server can't get a private task or doc handed to someone the writer didn't name, or have you write under a key of its own. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
+The server also hands out everyone's public keys, and the ones they replaced, each with the wallet signature it was published with, so what they signed before still checks out. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. Each signature also names who the writing is for and which key protects it, so the server can't get a private task or doc handed to someone the writer didn't name, or have you write under a key of its own. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
 
 ## What leaves your server
 

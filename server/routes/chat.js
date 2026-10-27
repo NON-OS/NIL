@@ -11,7 +11,6 @@ import rateLimit from '../auth/rateLimit.js';
 import chatId from '../chat/chatId.js';
 import chatPeople from '../chat/chatPeople.js';
 import channelAccess from '../chat/channelAccess.js';
-import canManage from '../chat/canManage.js';
 import signedLead from '../chat/signedLead.js';
 import memberList from '../chat/memberList.js';
 import parseRoster from '../chat/parseRoster.js';
@@ -123,7 +122,8 @@ router.delete(
   '/chat/channels/:id',
   route((req) => {
     const channel = channelAccess(req.params.id, req.user);
-    if (channel.kind !== 'channel' || !canManage(channel, req.user)) throw HttpError.forbidden('Only the channel’s creator or an admin can delete it.');
+    // whoever manages it by its signed list, or a workspace admin, who can remove anything on the server
+    if (channel.kind !== 'channel' || !(signedLead(channel).includes(req.user.id) || req.user.isAdmin)) throw HttpError.forbidden('Only whoever manages the channel, or an admin, can delete it.');
     announceChat(channel, { kind: 'gone' });
     eraseChannel(channel);
     return { ok: true };

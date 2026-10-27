@@ -43,3 +43,26 @@ test('a name or settings older than ones opened here, or none at all, are caught
   assert.equal(metaHistory.stale('c', null, null), true, 'a name that went missing');
   assert.equal(metaHistory.stale('other', null, null), false);
 });
+
+test('a key someone replaced still checks what they signed before, and only that', async () => {
+  const { entry, route } = await import('./helpers/fakeBrowser.js');
+  const keyDirectory = await load('actions/keyDirectory');
+  const store = await load('state/store');
+  const { ed25519 } = await import('@noble/curves/ed25519');
+  const W = person();
+  const old = person();
+  const replacedAt = Date.now() - 1000;
+  route('GET', '/api/encryption-keys', () => [entry('w', W, { createdAt: replacedAt })]);
+  route('GET', '/api/encryption-keys/earlier', () => [entry('w', old, { createdAt: replacedAt - 5000 })]);
+  store.set((s) => ({ keysRev: s.keysRev + 1, users: { ...s.users, w: { id: 'w', name: 'Wen', kind: 'human', deactivated: false } } }));
+  const text = new TextEncoder().encode('signed by the old key');
+  const sig = ed25519.sign(text, old.signingPrivate);
+  const check = (k) => ed25519.verify(sig, text, k);
+  assert.ok(await keyDirectory.author('w', replacedAt - 10, check), 'signed while it was theirs');
+  assert.equal(await keyDirectory.author('w', replacedAt + 10, check), null, 'not after it was replaced');
+  // someone who left the team: chat still checks what they signed while they were in
+  store.set((s) => ({ keysRev: s.keysRev + 1, users: { ...s.users, w: { ...s.users.w, deactivated: true } } }));
+  route('GET', '/api/encryption-keys', () => [{ ...entry('w', W, { createdAt: replacedAt }), active: false }]);
+  assert.equal(await keyDirectory.author('w', replacedAt - 10, check), null, 'not for docs and tasks');
+  assert.ok(await keyDirectory.author('w', replacedAt - 10, check, { former: true }), 'for chat');
+});

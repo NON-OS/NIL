@@ -100,3 +100,27 @@ test('a list is dated after the one before it, however far ahead that one claims
   const far = await startEpoch(shape, 2, { ...first, at: Date.now() + 60 * 60_000 }, { members: ['v', 'w'], managers: ['v', 'w'] });
   await assert.rejects(checkRoster(far.raw, { workspaceKey, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [{ ...first, at: Date.now() + 60 * 60_000 - 1 }]), /future/);
 });
+
+test('something signed under one member’s name with another’s key is refused: a message, a list, a departure', async () => {
+  const { shape, made, row } = await group();
+  await confirm(['e']);
+  const workspaceKey = store.get().workspaceKey;
+  const first = await checkRoster(made.raw, { workspaceKey, channelId: shape.id, epoch: 1, wrappedKeys: row.wrappedKeys }, []);
+  const chain = { rosters: [first], broken: null, forked: false, keysRev: 0 };
+  // Eve signs with her own key, under Wen's name
+  signIn('w', E, USERS);
+  const sentAt = Date.now();
+  const msgId = id();
+  const bodyCt = await sealMessage({ id: msgId, channelId: shape.id, epoch: 1, sentAt, key: made.key, facts: { type: 'message', edit: 0, stream: 'ffffffffffffffff', n: 1, thread: null, ttl: null }, content: { text: 'from Wen, honest' } });
+  const forgedList = await startEpoch(shape, 2, first, { members: ['v', 'w', 'e'], managers: ['v', 'w', 'e'] });
+  const departures = (await import('../src/actions/chat/departures.ts')).default;
+  const signedFacts = (await import('../src/lib/crypto/signedFacts.ts')).default;
+  const chatDeparture = (await import('../src/lib/crypto/chatDeparture.ts')).default;
+  const forgedLeave = signedFacts.seal('', { kind: chatDeparture.kinds.leave, place: chatDeparture.place('leave', workspaceKey, shape.id, 'w'), facts: chatDeparture.list(Date.now()), by: 'w', signingPrivate: E.signingPrivate });
+  signIn('v', V, USERS);
+  await confirm(['w', 'e']);
+  const msg = { id: msgId, channelId: shape.id, seq: 1, threadId: null, kind: 'message', senderId: 'w', epoch: 1, sentAt, bodyCt, edits: 0, deleted: false, replies: 0, lastReplyAt: null, createdAt: 1, updatedAt: 1, expiresAt: null };
+  assert.equal((await openMessage(msg, row, chain)).state, 'unverified');
+  await assert.rejects(checkRoster(forgedList.raw, { workspaceKey, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first]), /confirm who started/);
+  assert.equal(await departures.check(forgedLeave, shape.id, 'w'), null);
+});

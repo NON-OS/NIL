@@ -18,7 +18,7 @@ const ids = {};
 const wallets = {};
 
 before(async () => {
-  srv = await startServer({ env: { CHAT_MEMBER_MB: '1', CHAT_MESSAGES_PER_MINUTE: '100' } });
+  srv = await startServer({ env: { CHAT_MEMBER_MB: '1', CHAT_MESSAGES_PER_MINUTE: '100', CHAT_EPOCHS_PER_PERSON_PER_DAY: '4' } });
   ids.owner = (await owner.wallet(wallet(), 'setup', { name: 'Olivia', workspaceName: 'Acme' })).data.user.id;
   for (const [c, key] of [[ann, 'ann'], [ben, 'ben']]) {
     wallets[key] = wallet();
@@ -92,4 +92,28 @@ test('someone handed older keys fetches only their copies; the checked lists sta
   const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann] })).data.channel;
   const page = (await ann('GET', `/api/chat/channels/${ch.id}/epochs?keys=1`)).data.epochs;
   assert.deepEqual(Object.keys(page[0]).sort(), ['epoch', 'wrappedKeys']);
+});
+
+test('each person starts only so many keys a day in one conversation, but leaving someone out is never held back', async () => {
+  const join = async (name) => {
+    const c = client(base);
+    const w = wallet();
+    const inv = await owner('POST', '/api/invites', { role: 'member' });
+    const id = (await c.wallet(w, 'invite', { name, inviteToken: inv.data.token })).data.user.id;
+    await publishKey(c, w);
+    return id;
+  };
+  const [dee, eve] = [await join('Dee'), await join('Eve')];
+  const made = await chat.makeChannel(ann, ids.ann, { members: [ids.ann, dee, eve], managers: [ids.ann] });
+  assert.equal(made.status, 200, JSON.stringify(made.data));
+  const ch = made.data.channel;
+  const url = `/api/chat/channels/${ch.id}/epochs`;
+  const set = async (members) => ann('POST', url, { ...(await chat.next(ann, ch.id, { by: ids.ann, members, managers: [ids.ann] })), members });
+  let refused = false;
+  for (let i = 0; i < 5 && !refused; i++) {
+    assert.equal((await set([ids.ann, eve])).status, 200, 'taking Dee out');
+    refused = (await set([ids.ann, dee, eve])).status === 429;
+  }
+  assert.ok(refused, 'bringing her back stops at CHAT_EPOCHS_PER_PERSON_PER_DAY');
+  assert.equal((await set([ids.ann])).status, 200, 'taking Eve out still goes through');
 });

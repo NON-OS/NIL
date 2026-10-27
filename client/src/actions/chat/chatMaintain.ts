@@ -62,7 +62,7 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const proofs: (string | null)[] = [];
   for (const id of removing) {
     const raw = channel.departures.find((d) => d.userId === id)?.statement ?? null;
-    proofs.push(raw && (await departureCounts([raw], channel.id, id, chain.rosters)) ? raw : null);
+    proofs.push(raw && (await departureCounts([raw], channel.id, id, chain.rosters, { admins: manager })) ? raw : null);
   }
   // in a team channel, who is on the team is the workspace's to say, so whoever manages it leaves
   // out anyone no longer on it; anywhere else that takes their own say

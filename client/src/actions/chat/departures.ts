@@ -30,7 +30,7 @@ const departures = {
       for (const kind of ['leave', 'removal'] as const) {
         if (signed.text !== chatDeparture.text(kind, userId) || (kind === 'leave' && signed.by !== userId)) continue;
         const statement = { kind: chatDeparture.kinds[kind], place: chatDeparture.place(kind, workspaceKey, channelId, userId), facts: chatDeparture.list(at) };
-        if (await keyDirectory.author(signed.by, at, (k) => signedFacts.verify(signed, statement, k))) return { kind, by: signed.by, at };
+        if (await keyDirectory.author(signed.by, at, (k) => signedFacts.verify(signed, statement, k), { former: true })) return { kind, by: signed.by, at };
       }
     } catch {}
     return null;

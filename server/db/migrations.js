@@ -43,10 +43,11 @@ import chat from './migrations/042-chat.js';
 import sealedBlobsAndFiles from './migrations/043-sealed-blobs-and-files.js';
 import docBlobRefs from './migrations/044-doc-blob-refs.js';
 import chatDepartures from './migrations/045-chat-departures.js';
+import keyHistory from './migrations/046-key-history.js';
 
 // Append new migrations to the end. Never edit one that has shipped.
 // An object entry with `rebuild: true` runs with foreign keys off, which SQLite
 // needs for table rebuilds; foreign keys are re-checked before committing.
-const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, passkeyWraps, aiCredits, tracesAndLimits, privacyPools, signInHardening, lookupIndexes, voteReview, laterLookupIndexes, publicBallots, publicVotes, overpaidCredit, aiProvider, docUpdates, chat, sealedBlobsAndFiles, docBlobRefs, chatDepartures];
+const migrations = [initial, optionalEmail, identityAndProofs, walletOnly, noxBounties, holdersAndVotes, everyday, encryptedDocs, apiTokens, rewardTokens, sharing, publicBounties, plan, privacy, votePower, encryptedBallots, sealedTasks, sealedFiles, purgeIndexes, heldBallots, dueTimesPushFeeds, everydayTeams, signedKeys, signInResets, billing, agents, smartWalletBallots, tokenFees, passkeyWraps, aiCredits, tracesAndLimits, privacyPools, signInHardening, lookupIndexes, voteReview, laterLookupIndexes, publicBallots, publicVotes, overpaidCredit, aiProvider, docUpdates, chat, sealedBlobsAndFiles, docBlobRefs, chatDepartures, keyHistory];
 
 export default migrations;

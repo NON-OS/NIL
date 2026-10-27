@@ -16,18 +16,18 @@ function joinedAt(history: ChatRoster[], userId: string) {
 
 // Whether one of `proofs` is a signed departure of `userId` that counts after the newest list in
 // `history`: their own leaving of the conversation, or a removal from the team signed by someone
-// who manages it (rosterLead) or by an admin whose key this person confirmed, signed since they
-// last joined. The server applies the same test to what it stores (server/chat/departureCounts.js),
-// so it takes no list browsers would refuse; a browser that hasn't confirmed the admin's key yet
-// catches up once it does. Who is an admin is the server's word, so an admin who agrees with the
-// server could sign one for someone who never left; the timeline shows it.
-export default async function departureCounts(proofs: string[], channelId: string, userId: string, history: ChatRoster[]) {
+// who manages it (rosterLead), signed since they last joined. Nothing in it depends on anyone's
+// role now, so a list that counted once counts for good, in every browser and on the server
+// (server/chat/departureCounts.js). With `admins`, a removal signed by an admin whose key this
+// person confirmed counts too: that's for someone who manages the conversation deciding to act on
+// it, signing the next list themselves, never for checking a list someone else signed.
+export default async function departureCounts(proofs: string[], channelId: string, userId: string, history: ChatRoster[], { admins = false } = {}) {
   const prev = history[history.length - 1];
   if (!prev) return false;
   const users = store.get().users;
   const me = store.get().me?.id;
-  const keys = await keyDirectory.load();
-  const vouched = (id: string) => isAdmin(users[id]) && !users[id]?.deactivated && (id === me || keys.get(id)?.state === 'confirmed');
+  const keys = admins ? await keyDirectory.load() : null;
+  const vouched = (id: string) => Boolean(keys) && isAdmin(users[id]) && !users[id]?.deactivated && (id === me || keys!.get(id)?.state === 'confirmed');
   for (const raw of proofs) {
     const d = await departures.check(raw, channelId, userId);
     if (d && (d.kind === 'leave' || rosterLead(prev).includes(d.by) || vouched(d.by)) && d.at >= joinedAt(history, userId)) return true;

@@ -14,18 +14,17 @@ function joinedAt(channelId, epoch, userId) {
   return at;
 }
 
-const isAdmin = (userId) => Boolean(sql.get("SELECT 1 FROM users WHERE id = ? AND deactivated = 0 AND role IN ('owner', 'admin')", userId));
-
 // Whether a stored departure statement (its signature was checked when it was filed) counts for
 // leaving `userId` out of the list after `prev`, the way browsers decide it (departureCounts in
 // the web app): their own leaving, or a removal from the team signed by someone who manages the
-// conversation or by an admin, signed since they last joined. Browsers also need the admin's key
-// confirmed; one that hasn't yet catches up once it does.
+// conversation, signed since they last joined. Nothing in it depends on anyone's role now, so a
+// list it let through checks out for good. An admin's removal moves a conversation on through
+// someone who manages it, who signs the next list.
 export default function departureCounts(statement, channel, userId, prev) {
   const value = parseJSON(statement, null);
   const at = value?.facts?.[0];
   if (!value || !Number.isSafeInteger(at)) return false;
   const leave = value.text === '' && value.by === userId;
-  const removal = value.text === userId && (rosterLead(prev).includes(value.by) || isAdmin(value.by));
+  const removal = value.text === userId && rosterLead(prev).includes(value.by);
   return (leave || removal) && at >= joinedAt(channel.id, channel.epoch, userId);
 }

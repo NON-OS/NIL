@@ -65,7 +65,7 @@ const chatMeta = {
       const next = chatRosters.at(chain, epoch + 1);
       const current = (!next || f.at <= next.at + SKEW_MS) && f.at <= Date.now() + SKEW_MS;
       const fits = roster && rosterLead(roster).includes(signed.by) && f.key === keyHash(key) && current && !metaHistory.stale(channel.id, epoch, f.at);
-      if (!fits || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
+      if (!fits || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k), { former: true }))) throw new Error('unverified');
       const meta = chatMeta.clean(JSON.parse(signed.text));
       metaHistory.record(channel.id, epoch, f.at);
       return { name: meta.name, topic: meta.topic, metaState: 'ok', signedSettings: { disappear: meta.disappear, forward: meta.forward } };

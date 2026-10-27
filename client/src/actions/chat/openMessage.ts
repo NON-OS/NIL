@@ -67,7 +67,7 @@ export default async function openMessage(row: ChatMessageRow, channel: ChatChan
     // someone taken out, say; not a message
     const next = chatRosters.at(chain, row.epoch + 1);
     const afterOut = next && Math.max(f.at, row.sentAt) > next.at + SKEW_MS;
-    if (!fits || afterOut || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
+    if (!fits || afterOut || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k), { former: true }))) throw new Error('unverified');
     if (editHistory.stale(row.id, f.edit, f.type === 'deleted')) throw new Error('older edit');
     editHistory.record(row.id, f.edit, f.type === 'deleted');
     const content = f.type === 'deleted' ? chatContent.parse('{}') : chatContent.parse(signed.text);
