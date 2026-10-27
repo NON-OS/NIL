@@ -15,6 +15,7 @@ const REFUSED: Record<string, string> = {
   theirs: 'Their browser couldn’t verify this connection and refused it.',
   forged: 'The connection wasn’t signed with the key you hold for them, so Nil refused it.',
   tampered: 'The connection details were changed on the way, so Nil refused it.',
+  frames: 'Frames arrived in their name that they didn’t send, so Nil stopped showing them for this call.',
 };
 
 interface Props {
@@ -80,9 +81,11 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
                 Check their keys
               </button>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => callSession.retry(userId)}>
-              Try again
-            </button>
+            {peer.refusal !== 'frames' && (
+              <button type="button" className="btn btn-sm" onClick={() => callSession.retry(userId)}>
+                Try again
+              </button>
+            )}
           </div>
         </div>
       )}

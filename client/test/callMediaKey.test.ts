@@ -14,7 +14,7 @@ const ana = { id: 'ana-0000001', ...person() };
 const ben = { id: 'ben-0000002', ...person() };
 const eve = person();
 const place = { callId: 'call-0000001', workspaceKey: 'ws', origin: 'https://nil.example.com' };
-const facts = (over = {}) => ({ from: ana.id, to: ben.id, identity: 'ana-on-sfu-1', epoch: 3, at: Date.now(), ...over });
+const facts = (over = {}) => ({ from: ana.id, to: ben.id, identity: 'ana-on-sfu-1', frames: 'A'.repeat(43), epoch: 3, at: Date.now(), ...over });
 const asBen = (over = {}) => ({ place, from: ana.id, me: ben.id, last: 2, now: Date.now(), ...over });
 const sealFor = (key: Uint8Array, over = {}, who = ana) => callMediaKey.seal(key, facts(over), { place, recipientPublic: ben.publicKey, signingPrivate: who.signing });
 

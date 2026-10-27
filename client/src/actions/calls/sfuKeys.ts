@@ -17,11 +17,14 @@ const rt = callRuntime;
 export interface KeySink {
   // hands LiveKit a key for one sender's name on the SFU
   put(identity: string, raw: Uint8Array, index: number): Promise<void>;
+  // and the key that sender's lists of frames are signed with
+  lists(identity: string, publicKey: Uint8Array): void;
 }
 
 let sink: KeySink | null = null;
 let place: LinkPlace | null = null;
 let myIdentity = '';
+let myLists = '';
 let epoch = 0;
 // the key frames go out under now, and the one about to replace it, each with its counter
 let current: { key: Uint8Array; at: number } | null = null;
@@ -35,17 +38,18 @@ async function sendTo(userId: string, key: Uint8Array, at: number) {
   const entry = (await keyDirectory.load()).get(userId);
   // only to someone whose key this person can see and hasn't held back from
   if (!id || !place || !entry || entry.state === 'changed' || rt.active()?.peers[userId]?.held !== false) return;
-  const message = await callMediaKey.seal(key, { from: rt.me(), to: userId, identity: myIdentity, epoch: at, at: Date.now() }, { place, recipientPublic: b64u.decode(entry.publicKey), signingPrivate: id.signingPrivate });
+  const message = await callMediaKey.seal(key, { from: rt.me(), to: userId, identity: myIdentity, frames: myLists, epoch: at, at: Date.now() }, { place, recipientPublic: b64u.decode(entry.publicKey), signingPrivate: id.signingPrivate });
   socket.call({ type: 'call.signal', callId: place.callId, to: userId, blob: JSON.stringify(message) });
 }
 
 // This browser's frame keys on the SFU, and everyone else's. Each person makes their own key,
 // a new one whenever someone joins or leaves, and seals it to the others (see callMediaKey).
 const sfuKeys = {
-  start(where: LinkPlace, identity: string, keys: KeySink) {
+  start(where: LinkPlace, identity: string, keys: KeySink, listKey: Uint8Array) {
     sfuKeys.stop();
     place = where;
     myIdentity = identity;
+    myLists = b64u.encode(listKey);
     sink = keys;
   },
 
@@ -91,6 +95,7 @@ const sfuKeys = {
     lastFrom.set(from, opened.facts.epoch);
     for (const [identity, user] of userOf) if (user === from && identity !== opened.facts.identity) userOf.delete(identity);
     userOf.set(opened.facts.identity, from);
+    sink.lists(opened.facts.identity, b64u.decode(opened.facts.frames));
     await sink.put(opened.facts.identity, opened.key, opened.facts.epoch % RING);
     opened.key.fill(0);
     return true;

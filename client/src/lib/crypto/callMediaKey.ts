@@ -9,7 +9,8 @@ import type { LinkPlace } from './callLink';
 // the people in the call hold. Each sender makes its own key and a new one whenever anyone joins
 // or leaves, seals it to each person's X25519 key, and signs it with its Ed25519 key, naming the
 // call, who it's for, the name the sender goes by on the SFU, an epoch that only goes up and a
-// hash of the key. A browser takes a key only from a sender it holds a key for, only for itself,
+// hash of the key, and the Ed25519 key the sender's frame lists are signed with for this call
+// (frameManifest). A browser takes a key only from a sender it holds a key for, only for itself,
 // and only newer than the last one from that sender. So the server and the SFU never hold a key,
 // can't hand anyone one of their own, and can't pass one person's frames off as another's.
 
@@ -18,6 +19,8 @@ export interface MediaKeyFacts {
   to: string;
   // the name the sender's frames carry on the SFU
   identity: string;
+  // the public key this sender signs its lists of frames with, as base64url
+  frames: string;
   epoch: number;
   hash: string;
   at: number;
@@ -35,12 +38,12 @@ const SKEW_MS = 10 * 60_000;
 const IDENTITY = /^[A-Za-z0-9_-]{8,43}$/;
 
 const place = (p: LinkPlace) => [p.callId, p.workspaceKey, p.origin];
-const list = (f: MediaKeyFacts) => [f.from, f.to, f.identity, f.epoch, f.hash, f.at];
+const list = (f: MediaKeyFacts) => [f.from, f.to, f.identity, f.frames, f.epoch, f.hash, f.at];
 
 function parse(raw: unknown[]): MediaKeyFacts {
-  const [from, to, identity, epoch, hash, at] = raw;
-  if (raw.length !== 6 || !factChecks.person(from) || !factChecks.person(to) || typeof identity !== 'string' || !IDENTITY.test(identity) || !factChecks.count(epoch, 2 ** 31) || !factChecks.hash(hash) || !factChecks.time(at)) throw new Error('malformed');
-  return { from, to, identity, epoch, hash, at };
+  const [from, to, identity, frames, epoch, hash, at] = raw;
+  if (raw.length !== 7 || !factChecks.person(from) || !factChecks.person(to) || typeof identity !== 'string' || !IDENTITY.test(identity) || !factChecks.hash(frames) || !factChecks.count(epoch, 2 ** 31) || !factChecks.hash(hash) || !factChecks.time(at)) throw new Error('malformed');
+  return { from, to, identity, frames, epoch, hash, at };
 }
 
 const callMediaKey = {

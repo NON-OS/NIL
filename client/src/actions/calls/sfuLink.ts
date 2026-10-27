@@ -3,6 +3,7 @@ import callRuntime from './callRuntime';
 import iceConfig from './iceConfig';
 import sfuKeys from './sfuKeys';
 import audioLevels from './audioLevels';
+import { ed25519 } from '@noble/curves/ed25519';
 import type { LinkPlace } from '../../lib/crypto/callLink';
 import type CallPeer from '../../types/CallPeer';
 
@@ -13,6 +14,7 @@ type Publication = import('livekit-client').LocalTrackPublication;
 const rt = callRuntime;
 let room: Room | null = null;
 let lk: LiveKit | null = null;
+let worker: Worker | null = null;
 const published = new Map<'audio' | 'camera' | 'screen', Publication>();
 // whose sound the speaking ring listens to, by track
 const hearing = new Map<string, string>();
@@ -39,7 +41,7 @@ function refresh() {
   for (const participant of room.remoteParticipants.values()) {
     const userId = sfuKeys.userOf(participant.identity);
     const peer = userId ? rt.active()?.peers[userId] : null;
-    if (!peer) continue;
+    if (!peer || peer.link === 'refused') continue;
     const patch = streamsOf(participant);
     const sound = patch.media?.getAudioTracks()[0];
     if (sound && hearing.get(userId!) !== sound.id) {
@@ -48,6 +50,16 @@ function refresh() {
     }
     rt.patchPeer(userId!, { ...patch, quality: null }, peer.session);
   }
+}
+
+// Frames came under someone's name that they never signed for: the SFU, with someone who holds
+// their key, made them up. Nothing more of theirs is shown in this call.
+function forged(identity: string) {
+  const userId = sfuKeys.userOf(identity);
+  const peer = userId ? rt.active()?.peers[userId] : null;
+  if (!userId || !peer) return;
+  rt.patchPeer(userId, { link: 'refused', refusal: 'frames', media: null, screenMedia: null }, peer.session);
+  rt.say(`Nil stopped showing ${rt.name(userId)}: frames arrived in their name that they didn’t send.`);
 }
 
 function linkAll(link: CallPeer['link']) {
@@ -62,6 +74,8 @@ const sfuLink = {
     lk ??= await import('livekit-client');
     if (!lk.isE2EESupported()) throw new Error('This call is too big to go browser to browser, and this browser can’t encrypt it end to end on the server that carries big calls. Join from a recent Chrome, Edge, Firefox or Safari.');
     const grant = await callApi.sfu(place.callId);
+    // LiveKit's worker, wrapped so every frame is signed and padded (frameGuard.worker)
+    const guard = (worker = new Worker(new URL('../../lib/calls/frameGuard.worker.ts', import.meta.url), { type: 'module' }));
     const provider = new (class extends lk.BaseKeyProvider {
       constructor() {
         super({ sharedKey: false, ratchetWindowSize: 0, failureTolerance: -1, keyringSize: 16 });
@@ -69,10 +83,20 @@ const sfuLink = {
       async put(identity: string, raw: Uint8Array, index: number) {
         this.onSetEncryptionKey(await lk!.createKeyMaterialFromBuffer(raw.slice().buffer), identity, index);
       }
+      lists(identity: string, publicKey: Uint8Array) {
+        guard.postMessage({ kind: 'nil-verifier', data: { identity, publicKey } });
+      }
     })();
-    sfuKeys.start(place, grant.identity, provider);
-    const worker = new Worker(new URL('livekit-client/e2ee-worker', import.meta.url), { type: 'module' });
-    room = new lk.Room({ e2ee: { keyProvider: provider, worker }, adaptiveStream: true, dynacast: true });
+    // a key of this tab's own for this call, for signing its lists of frames
+    const listSecret = ed25519.utils.randomPrivateKey();
+    guard.postMessage({ kind: 'nil-signer', data: { identity: grant.identity, secret: listSecret } });
+    guard.addEventListener('message', (ev: MessageEvent<{ kind?: string; data?: { participantIdentity?: string } }>) => {
+      if (ev.data?.kind === 'nil-forged' && ev.data.data?.participantIdentity) forged(ev.data.data.participantIdentity);
+    });
+    sfuKeys.start(place, grant.identity, provider, ed25519.getPublicKey(listSecret));
+    listSecret.fill(0);
+    // sound at a steady rate and size, so the SFU can't tell speech from silence
+    room = new lk.Room({ e2ee: { keyProvider: provider, worker: guard }, adaptiveStream: true, dynacast: true, publishDefaults: { dtx: false, red: false, videoCodec: 'vp8', backupCodec: false } });
     await room.setE2EEEnabled(true);
     room
       .on(lk.RoomEvent.TrackSubscribed, refresh)
@@ -112,6 +136,8 @@ const sfuLink = {
     hearing.clear();
     sfuKeys.stop();
     await leaving?.disconnect().catch(() => {});
+    worker?.terminate();
+    worker = null;
   },
 
   active: () => room !== null,
