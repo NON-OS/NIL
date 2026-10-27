@@ -65,6 +65,10 @@ export default async function sfuCall({ ada, ana, ben, check }) {
   const links = (await Promise.all(all.map((p) => sfuLinks(p.page)))).flat().filter((l) => l.state === 'connected');
   check('every frame to and from the SFU is encrypted in the browser', links.length > 0 && links.every((l) => l.encrypted), JSON.stringify(links));
   check('and every path to the SFU goes through the relay', links.every((l) => l.local === 'relay'), JSON.stringify(links));
+  // every frame carries its sender's signed word for it: none of the real ones is taken for a fake
+  await ada.page.waitForTimeout(5000);
+  const doubted = (await Promise.all(all.map((p) => p.page.getByText(/Frames arrived in their name/).count()))).reduce((a, b) => a + b, 0);
+  check('every frame checks out against its sender’s signed lists', doubted === 0 && (await pictures(ada.page)) >= 2);
 
   // Ben leaves: Ada and Ana each make a new key he never gets, and still see each other
   await ben.page.getByRole('button', { name: 'Leave the call' }).click();

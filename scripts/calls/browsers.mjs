@@ -3,7 +3,9 @@
 // has; Firefox and WebKit come from PLAYWRIGHT_BROWSERS_PATH when it points at a folder holding
 // them (npx playwright-core install firefox webkit), so the preinstalled Chromium is never
 // touched. Playwright's WebKit on Linux can't be given a camera or microphone, not even a mock
-// one, so its people join without them and the check leaves out what needs a picture or sound.
+// one, so there its people join without them and the check leaves out what needs a picture or
+// sound. On macOS WebKit has mock devices, and the CI job there runs the whole check, SFU too.
+const macWebKit = process.platform === 'darwin';
 import { chromium, firefox, webkit } from 'playwright-core';
 
 // The check's servers are all on this machine; a proxy set for the outside world mustn't stand in between.
@@ -35,8 +37,8 @@ const engines = {
 function contextOptions(name, size) {
   const { isMobile, ...rest } = size;
   if (name === 'firefox') return rest;
-  if (name === 'webkit') return size;
+  if (name === 'webkit') return macWebKit ? { ...size, permissions: ['camera', 'microphone'] } : size;
   return { ...size, permissions: ['camera', 'microphone'] };
 }
 
-export default { names: Object.keys(engines), launch: (name) => engines[name](), contextOptions, capture: (name) => name !== 'webkit' };
+export default { names: Object.keys(engines), launch: (name) => engines[name](), contextOptions, capture: (name) => name !== 'webkit' || macWebKit };

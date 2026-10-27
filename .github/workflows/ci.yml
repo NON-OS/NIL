@@ -137,3 +137,28 @@ jobs:
           docker run --rm -v upgrade:/data --entrypoint ls nil:ci /data | grep -q '^pre-migration-.*-schema-16\.db$'
           docker stop upgrade
           test "$(docker inspect upgrade --format '{{.State.ExitCode}}')" = 0
+
+  # The calls check in Safari's engine, which Linux can't give a camera or microphone: on macOS,
+  # with coturn and the SFU. LiveKit ships no macOS build of 1.9.12, so it's built from its Go
+  # module at that tag, which the Go checksum database pins.
+  calls-webkit:
+    runs-on: macos-14
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: brew install coturn
+      - name: Build LiveKit 1.9.12
+        run: GOBIN="$RUNNER_TEMP/livekit" go install github.com/livekit/livekit-server@v1.9.12
+      - run: npx playwright-core install webkit
+      - name: Calls check in WebKit, SFU included
+        env:
+          LIVEKIT_SERVER: ${{ runner.temp }}/livekit/livekit-server
+        run: node scripts/calls/check.mjs --browser webkit
