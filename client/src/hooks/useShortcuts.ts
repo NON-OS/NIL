@@ -5,7 +5,7 @@ import store from '../state/store';
 import ui from '../actions/ui';
 import cryptoOnly from '../lib/cryptoOnly';
 
-const GOTO: Record<string, string> = { h: '/', i: '/inbox', b: '/board', l: '/list', c: '/calendar', g: '/goals', s: '/insights', n: '/bounties', v: '/votes', m: '/time', d: '/docs', a: '/calls', p: '/proofs', t: '/settings', k: '/chat' };
+const GOTO: Record<string, string> = { h: '/', i: '/inbox', b: '/board', l: '/list', c: '/calendar', g: '/goals', s: '/insights', n: '/bounties', v: '/votes', m: '/time', d: '/docs', f: '/files', a: '/calls', p: '/proofs', t: '/settings', k: '/chat' };
 
 // Global keys. "g" starts a two-key jump (g then b = board), like Gmail and Linear.
 export default function useShortcuts() {

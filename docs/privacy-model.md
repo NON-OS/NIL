@@ -6,7 +6,7 @@ This page lists what Nil protects and what it doesn't. It covers who can see wha
 
 - Private tasks are shown only to their creator and their assignee. Admins don't see them.
 - Your timesheet, your reminders and your My Day list are yours alone.
-- Docs are shown only to the people they're shared with.
+- Docs are shown only to the people they're shared with, and the files in Files only to the people their shared folder is for.
 - Conversations in [chat](chat.md) are shown only to the people in them. Guests and agents aren't part of chat.
 - Wallet addresses, last-seen times, private payout addresses and voting-key commitments are shown only to admins and to the person themselves. Teammates see the name each person picked. The one exception is the wallet that signed your encryption keys: members see its address next to your key fingerprint, so they can check the key. To show a different one, add another wallet to your keys, remove the wallet that signed, and unlock again: Nil then asks the wallet you're using to sign your keys.
 - Bounty payments are shown only to admins and to the person paid, because a transaction reveals the receiving wallet.
@@ -22,6 +22,7 @@ Some things are encrypted in your browser with keys the server never has:
 
 - [encrypted docs](encrypted-docs.md), titles included,
 - [chat](chat.md) messages, reactions, files and their names, and channel names and topics,
+- [files](files.md) in shared folders and inside docs, with their names, types, thumbnails and pixel sizes, and the names of folders,
 - the title, notes, checklist, comments and files of [private tasks](private-tasks.md), file names and types included,
 - the ballots of [encrypted weighted votes](votes.md#encrypted-weighted-votes-beta).
 
@@ -29,7 +30,8 @@ Everything else is stored in plain form in the server's database, where anyone w
 
 - team tasks, their comments and their history,
 - files on team tasks, with their names,
-- the size of every file, including encrypted ones, to within a few bytes,
+- the size of every file, including encrypted ones, to within a few bytes per megabyte,
+- which shared folders exist, who can open each one, how many files and folders each holds, how they nest and which files have a thumbnail, which says they're images,
 - goals, projects and labels,
 - time entries, reminders and their notes,
 - the list of people, their names, roles and wallet addresses,
@@ -43,12 +45,13 @@ For a conversation, the server knows who is in it, who sent each message, reacti
 [Calls](calls.md) never reach the server at all: sound, video and screens go from browser to browser, encrypted end to end, through the relay when one is set up. Nothing is recorded. The server passes the handshake between the browsers, signed so it can't change it unnoticed, and knows who is in which call and when they joined. It keeps that in memory only, never on disk or in its logs, and forgets it when the call ends.
 
 For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when.
+For a private task, the server still knows that it exists, who created it, who it's assigned to, its status, dates, project, labels and the other fields listed in [Private tasks](private-tasks.md#what-is-encrypted-and-what-isnt). For a doc, it knows who can read it, who changed it and when. For a file in a shared folder, it knows who added it, renamed it or moved it and when.
 
 The server also hands out everyone's public keys. Teammates' browsers check those keys and the signatures on what each person writes. Once you've compared fingerprints with someone, the server can't swap their key or change their words without your browser noticing. Each signature also names who the writing is for and which key protects it, so the server can't get a private task or doc handed to someone the writer didn't name, or have you write under a key of its own. [Encryption and trust](encryption.md) explains the checks and what an operator could still do.
 
 ## What leaves your server
 
-Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDNs, third-party fonts or third-party scripts. The fonts and the zero-knowledge circuit files are served by your own server. Zero-knowledge proofs (anonymous ballots, encrypted ballots, anonymous AI credits and private payouts) are made and checked in your browser by the prover, a separate program your server also sends, which the app runs as a Web Worker and talks to only by messages. The Content Security Policy only allows connections to the server itself, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, which Nil doesn't control.
+Your browser loads nothing from other hosts. Nil has no analytics, trackers, CDNs, third-party fonts or third-party scripts. The fonts, the zero-knowledge circuit files and the PDF viewer, with the decoders and fonts it uses, are served by your own server. Files you preview are decrypted and shown in your browser, never sent anywhere to be converted. Zero-knowledge proofs (anonymous ballots, encrypted ballots, anonymous AI credits and private payouts) are made and checked in your browser by the prover, a separate program your server also sends, which the app runs as a Web Worker and talks to only by messages. The Content Security Policy only allows connections to the server itself, so the app can't contact another host. Block-explorer links open only when you click them. Your wallet extension makes its own network requests, which Nil doesn't control.
 
 The one exception is a [wallet on your phone](signing-in.md#use-a-wallet-on-your-phone). On a server that sets `WALLETCONNECT_PROJECT_ID`, the policy also allows WalletConnect's relay, and a browser connects to it only while someone uses a phone wallet. The relay, run by WalletConnect's operator, carries end-to-end encrypted messages between the computer and the phone. It can't read them, but it sees connection metadata: both IP addresses, timing and message sizes, the browser, the workspace's address and the project ID, and, from wallet apps built on WalletConnect's software, the hash of a transaction they send.
 
@@ -92,7 +95,7 @@ Timing and amounts give the most away. A deposit of 250 USDC followed an hour la
 - Every change needs a custom header and a same-origin check, which blocks cross-site request forgery. The live connection and the MCP endpoint check the origin too.
 - The server sends a strict Content Security Policy with no inline or outside scripts, plus `X-Frame-Options: DENY`, `Referrer-Policy: no-referrer`, cross-origin opener and resource policies, a restrictive `Permissions-Policy` that still lets the site itself use passkeys, and HSTS over HTTPS.
 - Sign-in, bounty applications, ballots, AI and other sensitive requests are rate-limited. Limits by address count an IPv6 /64 as one client and also cap each /56 and /48.
-- Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run.
+- Uploads get random names and owner-only file permissions. Only images and PDFs display in the browser; everything else downloads, so an uploaded HTML file can never run. Encrypted files are only ever served as opaque downloads in a sandbox, and once decrypted, only images other than SVG, PDFs, audio, video and plain text keep their type, so a decrypted file can't run as a page of Nil either.
 - SQLite's `secure_delete` is on, so deleted rows are overwritten in the database file, and erasing anything also clears the write-ahead log. Trash is erased after 30 days by default and read notifications after 90 days.
 - Receipts are signed with a key kept outside the database, in `DATA_DIR/keys`.
 - CSV exports neutralise spreadsheet formulas.
@@ -111,7 +114,10 @@ Timing and amounts give the most away. A deposit of 250 USDC followed an hour la
 - A [public vote](votes.md#public-votes) shows anyone with its link every ballot's wallet, choice and voting power, and the wallets that make up a member's ballot in its audit file.
 - A signed vote with public ballots shows every member each ballot's member, wallet address and choice, and in a weighted vote their power. Any member can download its audit file then, which in a weighted vote also lists each voter's wallets at the snapshot.
 - Signed votes are not secret from admins: the audit file lists each ballot's wallet address and choice, and in a weighted vote the voter's wallets at the snapshot, which shows they belong together.
-- Files on team tasks aren't encrypted, and an encrypted file still shows its size. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
+- Files on team tasks aren't encrypted, and an encrypted file still shows its size.
+- Someone taken out of a shared folder keeps whatever they downloaded or previewed. Files keep their own keys when the folder gets a new one, so if they kept a file's key and the server hands them its encrypted copy, they can still read that file, and the name it's given later. Taking them out stops them fetching anything from Nil and keeps every file added afterwards from them.
+- Photos lose their hidden details before they're uploaded only when they're JPEG, PNG or WebP. GIF, HEIC, AVIF, TIFF and every other format are uploaded with whatever details they hold, and so are documents, whose own metadata Nil never touches.
+- Previews decrypt the whole file into the browser tab, as do downloads in browsers that can't write a file to disk a piece at a time. Like everything else you unlock, it's readable there until the tab lets go of it. Reminder notes and time entry notes are stored in plain form, though only their owner sees them in the app.
 - Making a private task visible to the team again sends its words and files back to the server in plain form. The files go up just before the switch; if the switch doesn't go through, those plain copies are deleted, at the latest within the hour.
 - Encryption only helps if the app your browser runs is Nil's own code. Whoever runs the server could serve changed code that reads everything you unlock. Anyone can [check what a server sends](verify-a-server.md) against a release, byte for byte, but that proves what the server sent to the check, not to everyone at every moment. Running a build you trust on a server you control is the strongest defence.
 - The server decides which wallets belong to whom, and your browser can't check that. The first key your browser sees for a teammate could come from the server, so compare fingerprints before you rely on it. A new browser or device starts over, and so does a workspace or account your browser hasn't used before. Nil warns when your browser already holds teammates' keys for another one, and locks your keys if the server switches an open tab to a different workspace or account.

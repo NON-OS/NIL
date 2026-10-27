@@ -58,7 +58,7 @@ export default function createApp() {
   const json = express.json({ limit: config.maxJsonBytes, verify: jsonDepthLimit(config.maxJsonDepth) });
   const isUpload = (req) =>
     (req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore')) ||
-    (req.method === 'PUT' && /^\/attachments\/[^/]+\/content$/.test(req.path));
+    (req.method === 'PUT' && (/^\/attachments\/[^/]+\/content$/.test(req.path) || /^\/blobs\/[^/]+\/chunks\/[^/]+$/.test(req.path)));
   app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : json(req, res, next)), csrfGuard, api);
 
   if (fs.existsSync(DIST)) {

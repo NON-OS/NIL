@@ -30,6 +30,7 @@ const GROUPS = [
       ['G G', 'Goals'],
       ['G S', 'Insights'],
       ['G D', 'Docs'],
+      ['G F', 'Files'],
       ['G A', 'Calls'],
       ['G M', 'Time'],
       ['G N', 'Bounties'],

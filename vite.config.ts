@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 import buildStamp from './client/vite/buildStamp';
 import devProver from './client/vite/devProver';
+import pdfAssets from './client/vite/pdfAssets';
 
 const API = process.env.NONOS_API || 'http://localhost:3000';
 // where npm run build:prover puts the prover, a separate program the app runs as a Web Worker
@@ -20,7 +21,7 @@ function vendorChunk(id: string) {
 
 export default defineConfig({
   root: 'client',
-  plugins: [react(), buildStamp(), devProver(PROVER_BUILD)],
+  plugins: [react(), buildStamp(), devProver(PROVER_BUILD), pdfAssets()],
   build: {
     outDir: '../dist',
     emptyOutDir: true,

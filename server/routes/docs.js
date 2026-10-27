@@ -9,6 +9,7 @@ import docAccess from '../services/docAccess.js';
 import grantDocKeys from '../services/grantDocKeys.js';
 import announceDoc from '../services/announceDoc.js';
 import docRecipients from '../services/docRecipients.js';
+import dropBlobs from '../services/dropBlobs.js';
 import hub from '../realtime/hub.js';
 import toDoc from '../mappers/toDoc.js';
 import contentWrites from '../auth/contentWrites.js';
@@ -161,6 +162,8 @@ router.delete(
     if (!manager(doc, req.user)) throw HttpError.forbidden('Only the doc’s creator or an admin can delete it.');
     const everyone = docRecipients(doc.id);
     sql.run('DELETE FROM docs WHERE id = ?', doc.id);
+    // the doc's images and files go with it
+    dropBlobs(sql.all("SELECT id FROM sealed_blobs WHERE scope_kind = 'doc' AND scope_id = ?", doc.id).map((b) => b.id));
     for (const userId of everyone) hub.toUser(userId, { type: 'docs', id: doc.id });
     return { ok: true };
   }),

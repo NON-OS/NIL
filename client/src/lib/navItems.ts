@@ -1,4 +1,4 @@
-import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Home, Inbox, Kanban, List, MessagesSquare, Phone, Target, Timer, Vote } from 'lucide-react';
+import { BadgeCheck, BarChart3, CalendarDays, Coins, FileText, Folder, Home, Inbox, Kanban, List, MessagesSquare, Phone, Target, Timer, Vote } from 'lucide-react';
 
 // The main sections, in order. Their position doubles as the small mono number in each
 // page header, the brand's numbered-section style; `key` is the G-then-key shortcut.
@@ -11,6 +11,7 @@ const navItems = [
   { to: '/list', label: 'All tasks', icon: List, key: 'l' },
   { to: '/calendar', label: 'Calendar', icon: CalendarDays, key: 'c' },
   { to: '/docs', label: 'Docs', icon: FileText, key: 'd', members: true },
+  { to: '/files', label: 'Files', icon: Folder, key: 'f', members: true },
   { to: '/calls', label: 'Calls', icon: Phone, key: 'a', members: true },
   { to: '/goals', label: 'Goals', icon: Target, key: 'g', members: true },
   { to: '/insights', label: 'Insights', icon: BarChart3, key: 's' },

@@ -1,0 +1,33 @@
+import actors from './authzActors.js';
+import cipher from './cipher.js';
+import sealedBlob from './sealedBlob.js';
+import sharedFolder from './sharedFolder.js';
+
+const { MEMBERS } = actors;
+const CHUNK = { raw: 'x'.repeat(26), headers: { 'Content-Type': 'application/octet-stream' }, index: () => '0' };
+const folderVersion = async ({ world, t }) => (await world.people.member('GET', `/api/folders/${t.folder}`)).data.folder.version;
+
+// Rows of the authorization matrix for encrypted files: the sealed blob store and shared folders.
+// Both are for members holding a key to the doc or folder; guests are turned away before any of
+// it, and nobody without a key learns a thing exists. See authzRowsOpen.js for what a row says.
+export default {
+  'POST /api/blobs': { allow: MEMBERS, body: ({ t }) => sealedBlob.body({ kind: 'doc', id: t.doc }, 10) },
+  // an upload is the uploader's own; everyone else is answered as if it didn't exist
+  'PUT /api/blobs/:id/chunks/:index': { allow: MEMBERS, id: 'own.blob', ...CHUNK },
+  'POST /api/blobs/:id/finish': { allow: MEMBERS, id: 'own.filledBlob' },
+  'GET /api/blobs/:id': { allow: MEMBERS, id: 'blob' },
+  'GET /api/blobs/:id/chunks/:index': { allow: MEMBERS, id: 'blob', index: () => '0' },
+  // the member uploaded it; admins may delete any
+  'DELETE /api/blobs/:id': { allow: MEMBERS, id: 'fresh.blob' },
+  'GET /api/folders': { allow: MEMBERS },
+  'POST /api/folders': { allow: MEMBERS, body: ({ world }, who) => ({ id: sharedFolder.freshId(), audience: 'people', nameCt: cipher(120), grants: sharedFolder.grants([world.ids[who] ?? world.ids.member]) }) },
+  'GET /api/folders/:id': { allow: MEMBERS, id: 'folder' },
+  'PUT /api/folders/:id': { allow: MEMBERS, id: 'folder', body: async (ctx) => ({ baseVersion: await folderVersion(ctx), nameCt: cipher(120) }) },
+  'POST /api/folders/:id/grants': { allow: MEMBERS, id: 'folder', body: ({ world }) => ({ grants: sharedFolder.grants([world.ids.member]) }) },
+  // the member made it; admins manage every folder
+  'POST /api/folders/:id/rotate': { allow: MEMBERS, id: 'fresh.folder', body: ({ world }, who) => ({ baseVersion: 1, audience: 'team', nameCt: cipher(120), items: [], grants: sharedFolder.grants([world.ids[who] ?? world.ids.member]) }) },
+  'DELETE /api/folders/:id': { allow: MEMBERS, id: 'fresh.folder' },
+  'POST /api/folders/:id/items': { allow: MEMBERS, id: 'folder', body: () => sharedFolder.item({ keyRev: 1 }, { kind: 'folder' }) },
+  'PATCH /api/folders/:id/items/:itemId': { allow: MEMBERS, id: 'folder', itemId: 'folderItem', body: { parentId: null, metaCt: cipher(300) } },
+  'DELETE /api/folders/:id/items/:itemId': { allow: MEMBERS, id: 'folder', itemId: 'fresh.folderItem' },
+};

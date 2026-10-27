@@ -70,6 +70,9 @@ import chatEpochs from './chatEpochs.js';
 import chatMessages from './chatMessages.js';
 import chatFiles from './chatFiles.js';
 import calls from './calls.js';
+import sealedBlobs from './sealedBlobs.js';
+import folders from './folders.js';
+import folderItems from './folderItems.js';
 
 const api = express.Router();
 
@@ -94,7 +97,7 @@ api.use(requireAuth);
 api.use(storageGuard);
 
 // Guests stay inside the projects shared with them: workspace-wide features are for members.
-api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/encryption-keys', '/me/encryption-key', '/me/identity-wraps', '/me/recovery-kit', '/me/passkeys', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links', '/chat', '/calls'], requireMember);
+api.use(['/proposals', '/vote-power', '/me/semaphore', '/docs', '/blobs', '/folders', '/encryption-keys', '/me/encryption-key', '/me/identity-wraps', '/me/recovery-kit', '/me/passkeys', '/holder-gate', '/bounties/treasury', '/ai/brief', '/ai/extract', '/share-links', '/chat', '/calls'], requireMember);
 // The subscription unlocks opening votes, the holder door and every AI feature.
 api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? next() : requirePlan(req, res, next)));
 // Only opening a vote is gated. Any vote that exists was opened while the paid tools were
@@ -102,7 +105,7 @@ api.use(['/ai', '/holder-gate'], (req, res, next) => (req.method === 'GET' ? nex
 // that reveal its totals keep working: billing never leaves a vote stuck halfway.
 api.post('/proposals', requirePlan);
 api.use(['/projects', '/goals', '/labels', '/sharing'], (req, res, next) => (req.method === 'GET' ? next() : requireMember(req, res, next)));
-for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, docUpdates, docMentions, encryptionKeys, identityWraps, passkeyWraps, tokens, shareLinks, applications, planRoutes, stealth, pools, poolPayouts, poolAccount, votingKey, trustees, shareChecks, push, calendarFeedSettings, search, firstRun, signInResets, agentRoutes, aiCreditInfo, aiProviderRoutes, chat, chatEpochs, chatMessages, chatFiles, calls]) {
+for (const router of [bootstrap, me, credentials, proofs, privacy, workspace, users, invites, projects, labels, goals, taskArchive, tasks, comments, attachments, focus, notifications, activity, exportRoutes, ai, bounties, proposals, holderGate, time, reminders, docs, docUpdates, docMentions, encryptionKeys, identityWraps, passkeyWraps, tokens, shareLinks, applications, planRoutes, stealth, pools, poolPayouts, poolAccount, votingKey, trustees, shareChecks, push, calendarFeedSettings, search, firstRun, signInResets, agentRoutes, aiCreditInfo, aiProviderRoutes, chat, chatEpochs, chatMessages, chatFiles, calls, sealedBlobs, folders, folderItems]) {
   api.use(router);
 }
 

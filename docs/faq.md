@@ -32,7 +32,7 @@ No. Admins can't see private tasks in the app, and the words of a private task a
 
 ## What can the person running the server see?
 
-Everything that isn't encrypted in the browser: team tasks, comments, files, goals, time entries, reminders, the list of people and their wallet addresses. Docs, the words of private tasks and encrypted ballots stay unreadable. [Privacy model](privacy-model.md) has the full list.
+Everything that isn't encrypted in the browser: team tasks, comments, files, goals, time entries, reminders, the list of people and their wallet addresses. Docs, files in Files, the words of private tasks and encrypted ballots stay unreadable. [Privacy model](privacy-model.md) has the full list.
 
 ## Are files on a private task encrypted?
 

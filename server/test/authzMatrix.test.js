@@ -23,12 +23,13 @@ import rowsAgentApi from './helpers/authzRowsAgentApi.js';
 import rowsEdge from './helpers/authzRowsEdge.js';
 import rowsChat from './helpers/authzRowsChat.js';
 import rowsCalls from './helpers/authzRowsCalls.js';
+import rowsFiles from './helpers/authzRowsFiles.js';
 
 // The authorization matrix: every route the server answers, called as every kind of caller, with
 // what each one may and may not do written down per route. Routes are found by walking the
 // routers, so a route added without a row here fails the first test, and a row whose route is
 // gone fails it too.
-const API = { ...rowsOpen, ...rowsWork, ...rowsTeam, ...rowsPools, ...rowsChat, ...rowsCalls };
+const API = { ...rowsOpen, ...rowsWork, ...rowsTeam, ...rowsPools, ...rowsChat, ...rowsCalls, ...rowsFiles };
 const ROWS = { ...API, ...rowsAgentApi, ...rowsEdge };
 const PEOPLE = new Set(actors.PEOPLE);
 

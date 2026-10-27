@@ -34,11 +34,12 @@ async function request<T>(method: string, url: string, body?: unknown, extraHead
 }
 
 // A file's raw bytes, for the browser to decrypt or re-encrypt itself.
-async function bytes(url: string) {
+async function bytes(url: string, signal?: AbortSignal) {
   let res: Response;
   try {
-    res = await fetch(`/api${url}`, { credentials: 'same-origin', cache: 'no-store' });
-  } catch {
+    res = await fetch(`/api${url}`, { credentials: 'same-origin', cache: 'no-store', signal });
+  } catch (err) {
+    if (signal?.aborted) throw err;
     throw new ApiError(0, OFFLINE);
   }
   if (res.status === 401) onSessionEnded?.();

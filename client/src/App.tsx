@@ -37,6 +37,7 @@ const InsightsView = lazy(() => import('./views/InsightsView'));
 const SettingsView = lazy(() => import('./views/SettingsView'));
 const DocsView = lazy(() => import('./views/DocsView'));
 const ChatView = lazy(() => import('./views/ChatView'));
+const FilesView = lazy(() => import('./views/FilesView'));
 const TimeView = lazy(() => import('./views/TimeView'));
 const VotesView = lazy(() => import('./views/VotesView'));
 const BountiesView = lazy(() => import('./views/BountiesView'));
@@ -96,6 +97,8 @@ function Screen({ segments }: { segments: string[] }) {
       return <DocsView />;
     case 'chat':
       return <ChatView />;
+    case 'files':
+      return <FilesView folderId={second} />;
     case 'time':
       return <TimeView />;
     case 'votes':

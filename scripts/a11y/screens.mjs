@@ -38,6 +38,23 @@ const newConversation = async (page) => {
   await page.getByRole('button', { name: 'New conversation' }).click();
   await page.getByRole('dialog').waitFor();
 };
+// unlocks Files and opens a shared folder with a subfolder in it, making both the first time
+const openFiles = async (page) => {
+  await page.getByRole('button', { name: 'Unlock with your wallet' }).click();
+  const folder = page.locator('.files-folder-card a.files-open').first();
+  await Promise.race([folder.waitFor(), page.getByText('No shared folders yet').waitFor()]);
+  if (await folder.count()) await folder.click();
+  else {
+    await page.getByRole('button', { name: 'New folder' }).first().click();
+    await page.getByLabel('Name').fill('Contracts');
+    await page.getByRole('button', { name: 'Create folder' }).click();
+    await page.getByText('This folder is empty').waitFor();
+    await page.getByRole('button', { name: 'New folder' }).click();
+    await page.getByLabel('Name').fill('Signed');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+  }
+  await page.locator('.files-tile').first().waitFor();
+};
 
 // the network goes while the page is open, and the app is reloaded while it's gone
 const loseNetwork = async (page) => {
@@ -98,6 +115,8 @@ const signedIn = [
   { name: 'chat-new', path: '/chat', then: newConversation, after: closeDialog },
   // the calls page; with no relay here it says calls aren't set up, and scripts/calls checks the rest
   { name: 'calls', path: '/calls' },
+  { name: 'files', path: '/files' },
+  { name: 'files-open', path: '/files', then: openFiles },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },
