@@ -1,6 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import type * as Y from 'yjs';
-import type { Editor } from '@tiptap/react';
+import { useEditorState, type Editor } from '@tiptap/react';
 import { MessageSquare, X } from 'lucide-react';
 import useStore from '../../../state/useStore';
 import isAdminUser from '../../../lib/isAdmin';
@@ -25,7 +25,8 @@ export default function CommentsPanel({ editor, ydoc, active, onActive, onClose,
   const me = useStore((s) => s.me)!;
   const threads = useThreads(ydoc);
   const [showResolved, setShowResolved] = useState(false);
-  const order = useMemo(() => threadOrder(editor), [editor, threads, editor.state.doc]);
+  // where each thread's words are now, kept current as the text around them changes
+  const order = useEditorState({ editor, selector: ({ editor: e }) => threadOrder(e), equalityFn: (a, b) => JSON.stringify([...a]) === JSON.stringify([...(b ?? [])]) });
   const shown = threads.filter((t) => showResolved || !t.resolved).sort((a, b) => (order.get(a.id)?.from ?? Infinity) - (order.get(b.id)?.from ?? Infinity) || a.at - b.at);
   const resolvedCount = threads.filter((t) => t.resolved).length;
 
