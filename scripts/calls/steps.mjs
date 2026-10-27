@@ -160,7 +160,10 @@ export default async function steps({ app, relay, ada, ana, ben, tamper, check, 
   await ada.page.getByRole('button', { name: 'Share your screen' }).click();
   const shared = await until('Ada’s screen on Ben’s side', async () => (await ben.page.locator('figure[aria-label="Ada’s screen"]').count()) > 0, 10_000).catch(() => false);
   check('a shared screen reaches the others', Boolean(shared), shared ? '' : 'headless Chromium may not share a screen without a person choosing one');
-  if (shared) await shot(ben.page, 'call-screen-share-desktop');
+  if (shared) {
+    await ben.page.waitForTimeout(1500);
+    await shot(ben.page, 'call-screen-share-desktop');
+  }
 
   // minimized, the call keeps going in a dock
   await control(ana, 'Minimize the call');

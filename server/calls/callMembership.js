@@ -116,8 +116,13 @@ const callMembership = {
   // connected to each other and the tab is likely to reconnect.
   socketClosed(ws) {
     for (const call of callRegistry.withSocket(ws)) {
-      for (const [userId, member] of call.members) {
+      for (const [userId, member] of [...call.members]) {
         if (member.ws !== ws) continue;
+        // someone removed from the team is out at once, with no time to come back
+        if (!callable(userId)) {
+          callMembership.leave(call, userId);
+          continue;
+        }
         member.ws = null;
         member.dropTimer = setTimeout(() => callRegistry.get(call.id) === call && callMembership.leave(call, userId), seconds(config.calls.rejoinSeconds)).unref();
       }

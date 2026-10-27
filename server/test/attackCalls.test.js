@@ -163,3 +163,21 @@ test('relay passwords stop working at their time, and only this server’s secre
   assert.ok(!creds.username.includes(ids.ana));
   assert.notEqual(turnCredentials(ids.owner, issued).username, creds.username);
 });
+
+test('someone removed from the team mid-call is out of it at once', async () => {
+  const invite = await people.owner('POST', '/api/invites', { role: 'member' });
+  const zed = client(base);
+  people.zed = zed;
+  ids.zed = (await zed.wallet(wallet(), 'invite', { name: 'zed', inviteToken: invite.data.token })).data.user.id;
+  const owner = await tab('owner');
+  const z = await tab('zed');
+  const callId = (await people.owner('POST', '/api/calls', { with: [ids.zed] })).data.call.id;
+  for (const s of [owner, z]) {
+    s.send({ type: 'call.join', callId, session: session() });
+    await s.next('call.joined', (e) => e.call.id === callId);
+  }
+  assert.equal((await people.owner('PATCH', `/api/users/${ids.zed}`, { deactivated: true })).status, 200);
+  const update = await owner.next('call.update', (e) => e.call.id === callId && e.call.members.length === 1, { timeoutMs: 2000 });
+  assert.equal(update.call.members[0].userId, ids.owner);
+  owner.send({ type: 'call.leave', callId });
+});
