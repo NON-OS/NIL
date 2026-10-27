@@ -19,6 +19,7 @@ const chat = `
     created_at INTEGER NOT NULL,
     last_at INTEGER NOT NULL
   );
+  CREATE INDEX chat_channels_creator ON chat_channels(created_by) WHERE created_by IS NOT NULL;
 
   CREATE TABLE chat_members (
     channel_id TEXT NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
@@ -28,6 +29,7 @@ const chat = `
     PRIMARY KEY (channel_id, user_id)
   );
   CREATE INDEX chat_members_user ON chat_members(user_id);
+  CREATE INDEX chat_members_adder ON chat_members(added_by) WHERE added_by IS NOT NULL;
 
   CREATE TABLE chat_reads (
     channel_id TEXT NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
@@ -36,6 +38,7 @@ const chat = `
     notify TEXT NOT NULL DEFAULT 'default' CHECK (notify IN ('default', 'all', 'mentions', 'none')),
     PRIMARY KEY (channel_id, user_id)
   );
+  CREATE INDEX chat_reads_user ON chat_reads(user_id);
 
   CREATE TABLE chat_epochs (
     channel_id TEXT NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
@@ -45,18 +48,19 @@ const chat = `
     created_at INTEGER NOT NULL,
     PRIMARY KEY (channel_id, epoch)
   );
+  CREATE INDEX chat_epochs_creator ON chat_epochs(created_by) WHERE created_by IS NOT NULL;
 
   CREATE TABLE chat_epoch_keys (
-    channel_id TEXT NOT NULL,
+    channel_id TEXT NOT NULL REFERENCES chat_channels(id) ON DELETE CASCADE,
     epoch INTEGER NOT NULL,
     user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     wrapped_key TEXT NOT NULL,
     granted_by TEXT REFERENCES users(id) ON DELETE SET NULL,
     created_at INTEGER NOT NULL,
-    PRIMARY KEY (channel_id, epoch, user_id),
-    FOREIGN KEY (channel_id, epoch) REFERENCES chat_epochs(channel_id, epoch) ON DELETE CASCADE
+    PRIMARY KEY (channel_id, epoch, user_id)
   );
   CREATE INDEX chat_epoch_keys_user ON chat_epoch_keys(user_id);
+  CREATE INDEX chat_epoch_keys_granter ON chat_epoch_keys(granted_by) WHERE granted_by IS NOT NULL;
 
   CREATE TABLE chat_messages (
     id TEXT PRIMARY KEY,
@@ -78,6 +82,7 @@ const chat = `
     UNIQUE (channel_id, seq)
   );
   CREATE INDEX chat_messages_thread ON chat_messages(channel_id, thread_id, seq);
+  CREATE INDEX chat_messages_sender ON chat_messages(sender_id) WHERE sender_id IS NOT NULL;
   CREATE INDEX chat_messages_expiry ON chat_messages(expires_at) WHERE expires_at IS NOT NULL;
 
   CREATE TABLE chat_files (
@@ -89,7 +94,7 @@ const chat = `
     created_at INTEGER NOT NULL
   );
   CREATE INDEX chat_files_channel ON chat_files(channel_id);
-  CREATE INDEX chat_files_uploader ON chat_files(uploader_id);
+  CREATE INDEX chat_files_uploader ON chat_files(uploader_id) WHERE uploader_id IS NOT NULL;
   CREATE INDEX chat_files_message ON chat_files(message_id);
 `;
 

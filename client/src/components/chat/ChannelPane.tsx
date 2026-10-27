@@ -84,7 +84,13 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack }: P
               <Users /> {channel.members.length}
             </span>
           )}
-          <button type="button" className="icon-btn" onClick={onSettings} aria-label="Conversation settings" title="Settings">
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onSettings}
+            aria-label="Conversation settings"
+            title="Settings"
+          >
             <Settings2 />
           </button>
         </div>

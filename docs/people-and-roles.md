@@ -8,8 +8,8 @@ Everyone in a workspace has one of four roles. The first wallet to set up a new 
 |---|---|
 | Owner | Everything an admin can, plus make other people owners, manage admins and erase the whole workspace |
 | Admin | Invite and remove members and guests, change their roles, set and pay bounties, start votes, change workspace settings, delete projects, download encrypted capsules |
-| Member | Work on tasks, projects, goals and docs, vote, and invite people if admins allow it |
-| Guest | See and work on only the projects shared with them and the tasks assigned to them |
+| Member | Work on tasks, projects, goals and docs, chat, vote, and invite people if admins allow it |
+| Guest | See and work on only the projects shared with them and the tasks assigned to them. No docs or chat |
 
 Only an owner can make someone an owner, or change the role of, remove or delete another owner or admin. Admins can make a member an admin, but can't undo it. Nobody can change their own role or remove their own access, so a workspace should have at least two admins, ideally two owners.
 
