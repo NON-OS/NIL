@@ -28,6 +28,7 @@ import due from './config/due.js';
 import calendarFeeds from './config/calendarFeeds.js';
 import bountyBoard from './config/bountyBoard.js';
 import uploads from './config/uploads.js';
+import chat from './config/chat.js';
 import ai from './config/ai.js';
 import aiCredits from './config/aiCredits.js';
 import agents from './config/agents.js';
@@ -73,6 +74,7 @@ const config = Object.freeze({
   maxJsonDepth: envNumber('MAX_JSON_DEPTH', 64, { min: 8 }),
   maxUploadBytes: envNumber('MAX_UPLOAD_MB', 25, { min: 1 }) * MB,
   uploads,
+  chat,
   maxCapsuleBytes: envNumber('MAX_CAPSULE_MB', 4096, { min: 1 }) * MB,
   sessionDays: envNumber('SESSION_DAYS', 30, { min: 1 }),
   // messages one live connection may send a minute; the app sends a few, a flood gets cut off
