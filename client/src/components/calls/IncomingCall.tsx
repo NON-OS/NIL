@@ -10,6 +10,7 @@ import socket from '../../realtime/socket';
 import callSession from '../../actions/calls/callSession';
 import callRuntime from '../../actions/calls/callRuntime';
 import ringNotice from '../../actions/calls/ringNotice';
+import callApi from '../../actions/calls/callApi';
 
 // A call ringing this person: who's calling, and answer with sound only, with video, or decline.
 export default function IncomingCall({ callId }: { callId: string }) {
@@ -37,6 +38,11 @@ export default function IncomingCall({ callId }: { callId: string }) {
     }
   };
 
+  const block = () => {
+    decline();
+    void callApi.setBlocks({ block: view.startedBy }).then(() => toast.show(`${name} can’t ring you any more. Change that on the Calls page.`), toast.error);
+  };
+
   const decline = () => {
     socket.call({ type: 'call.decline', callId });
     ringNotice.stop(callId);
@@ -52,6 +58,9 @@ export default function IncomingCall({ callId }: { callId: string }) {
           {project ? `is calling from ${project.name}` : others > 1 ? `is calling you and ${others - 1} more` : 'is calling you'}
         </span>
       </div>
+      <button type="button" className="call-ring-block" onClick={block} disabled={busy !== null}>
+        Don’t let {name} ring me
+      </button>
       <div className="call-ring-actions">
         <button type="button" className="call-control small danger" onClick={decline} aria-label={`Decline the call from ${name}`} disabled={busy !== null}>
           <PhoneOff />

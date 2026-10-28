@@ -8,6 +8,10 @@ export default interface CallPeer {
   trust: 'confirmed' | 'new' | 'changed' | 'none' | 'unknown';
   // why the connection was refused, when it was
   refusal: string | null;
+  // this browser sends them nothing yet: their key isn't confirmed and this person hasn't said to go ahead
+  held: boolean;
+  // their browser sends this one nothing yet, for the same reason on their side
+  holding: boolean;
   mic: boolean;
   cam: boolean;
   screen: boolean;

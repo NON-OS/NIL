@@ -15,6 +15,7 @@ const REFUSED: Record<string, string> = {
   theirs: 'Their browser couldn’t verify this connection and refused it.',
   forged: 'The connection wasn’t signed with the key you hold for them, so Nil refused it.',
   tampered: 'The connection details were changed on the way, so Nil refused it.',
+  frames: 'Frames arrived in their name that they didn’t send, so Nil stopped showing them for this call.',
 };
 
 interface Props {
@@ -50,6 +51,24 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
           <span>{peer.link === 'connecting' ? 'Connecting…' : peer.link === 'lost' ? 'Connection lost. Still trying…' : 'Reconnecting…'}</span>
         </div>
       )}
+      {peer && peer.held && !screen && peer.link !== 'refused' && (
+        <div className="call-held" role="status">
+          <p>{compact ? 'Can’t hear you yet' : `${name} can’t see or hear you yet: you haven’t confirmed their key.`}</p>
+          {!compact && (
+            <div className="call-tile-actions">
+              {peer.trust !== 'none' && (
+                <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show([userId], 'this call')}>
+                  Check their keys
+                </button>
+              )}
+              <button type="button" className="btn btn-sm" onClick={() => callSession.allow(userId)}>
+                Talk anyway
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      {peer && !peer.held && peer.holding && !screen && <p className="call-held-them">Waiting for {name} to check your key</p>}
       {peer?.link === 'refused' && (
         <div className="call-tile-state refused" role="alert">
           <p>
@@ -62,9 +81,11 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
                 Check their keys
               </button>
             )}
-            <button type="button" className="btn btn-sm" onClick={() => callSession.retry(userId)}>
-              Try again
-            </button>
+            {peer.refusal !== 'frames' && (
+              <button type="button" className="btn btn-sm" onClick={() => callSession.retry(userId)}>
+                Try again
+              </button>
+            )}
           </div>
         </div>
       )}

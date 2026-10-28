@@ -13,6 +13,7 @@ import buildId from '../lib/buildId.js';
 import config from '../config.js';
 import chatTyping from '../chat/chatTyping.js';
 import callSocket from '../calls/callSocket.js';
+import callSweep from '../calls/callSweep.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -138,6 +139,9 @@ export default function attachRealtime(server) {
 
   // Drop sockets that stopped answering pings (sleeping laptops, dead proxies), and sockets
   // whose session ended some other way: it expired, or it was revoked from another device.
+  // calls kept in the database: rings running out, people who didn't come back, other processes
+  callSweep.start();
+
   const heartbeat = setInterval(
     guarded('heartbeat', () => {
       const now = Date.now();
@@ -166,6 +170,7 @@ export default function attachRealtime(server) {
     async close() {
       closing = true;
       clearInterval(heartbeat);
+      callSweep.stop();
       const sockets = [...hub.entries()].map(([ws]) => ws);
       const closed = sockets.map((ws) => (ws.readyState === ws.CLOSED ? null : new Promise((resolve) => ws.once('close', resolve))));
       for (const ws of sockets) ws.close(1001, 'Server restarting');

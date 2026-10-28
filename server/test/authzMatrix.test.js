@@ -67,7 +67,7 @@ async function runRow(key, row, { bearer = false } = {}) {
 
 before(async () => {
   // the world's wallets confirm their sessions once, and the matrix takes longer than the default few minutes
-  srv = await startServer({ env: { TRUST_PROXY: 'loopback', SIGNIN_CONFIRM_MINUTES: '60' } });
+  srv = await startServer({ env: { TRUST_PROXY: 'loopback', SIGNIN_CONFIRM_MINUTES: '60', TURN_URLS: 'turn:turn.example.org:3478', TURN_SECRET: 'm'.repeat(40), CALL_STARTS_PER_MINUTE: '1000', CALL_RING_SECONDS: '300', CALL_RINGS_PER_PERSON: '1000' } });
   const world = await authzWorld(() => srv.base);
   ctx = { world, t: await authzTargets(world) };
   tools = (await import('../mcp/tools.js')).default;

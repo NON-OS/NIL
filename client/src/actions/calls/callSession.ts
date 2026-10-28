@@ -12,9 +12,12 @@ import callRuntime from './callRuntime';
 import callMedia from './callMedia';
 import localMedia from './localMedia';
 import audioLevels from './audioLevels';
+import callPeers from './callPeers';
+import callSfu from './callSfu';
+import callLifecycle from './callLifecycle';
+import callSignals from './callSignals';
 import ringNotice from './ringNotice';
 import type CallView from '../../types/CallView';
-import type CallPeer from '../../types/CallPeer';
 
 const rt = callRuntime;
 const REFUSALS: Record<string, string> = {
@@ -25,7 +28,6 @@ let declined: string | null = null;
 
 const place = (callId: string) => ({ callId, workspaceKey: store.get().workspaceKey, origin: store.get().origin });
 
-const blank = (userId: string, session: string): CallPeer => ({ userId, session, link: 'connecting', trust: 'unknown', refusal: null, mic: true, cam: false, screen: false, quality: null, speaking: false, media: null, screenMedia: null });
 
 function connect(callId: string, userId: string, session: string) {
   const link = peerLink({
@@ -37,9 +39,10 @@ function connect(callId: string, userId: string, session: string) {
     offerer: rt.me() < userId,
     config: iceConfig.current,
     tracks: () => rt.tracks,
+    allowed: () => !rt.active()?.peers[userId]?.held,
     state: () => ({ mic: Boolean(rt.active()?.mic), cam: Boolean(rt.active()?.cam), screen: Boolean(rt.active()?.screen) }),
     others: () => rt.links.size,
-    send: (message) => socket.call({ type: 'call.signal', callId, to: userId, blob: JSON.stringify(message) }),
+    send: (message) => callSignals.send(callId, userId, message),
     update(patch) {
       if (patch.media) audioLevels.watch(`peer:${userId}`, patch.media, (speaking) => rt.patchPeer(userId, { speaking }, session));
       // someone starts sharing their screen: show it large
@@ -53,8 +56,7 @@ function connect(callId: string, userId: string, session: string) {
     },
   });
   rt.links.set(userId, link);
-  rt.patch((a) => ({ peers: { ...a.peers, [userId]: blank(userId, session) } }));
-  void keyDirectory.load().then((keys) => rt.patchPeer(userId, { trust: keys.get(userId)?.state ?? 'none' }, session));
+  callPeers.add(userId, session);
   link.start();
   window.setTimeout(() => link.nudge(), 5000);
   rt.links.forEach((l) => l.tune());
@@ -67,7 +69,10 @@ function drop(userId: string) {
 }
 
 function teardown() {
+  callLifecycle.stop();
+  callSignals.clear();
   for (const userId of [...rt.links.keys()]) drop(userId);
+  void callSfu.close();
   callMedia.stopAll();
   audioLevels.stopAll();
   iceConfig.clear();
@@ -86,13 +91,17 @@ function reconcile(view: CallView) {
     if (member?.session === link.peerSession) continue;
     drop(userId);
     if (!member) {
-      rt.patch((x) => ({ peers: Object.fromEntries(Object.entries(x.peers).filter(([id]) => id !== userId)) }));
+      callPeers.remove(userId);
       rt.say(`${rt.name(userId)} left the call.`);
     }
   }
   rt.patch(() => ({ view }));
   if (a.phase !== 'live') return;
-  for (const m of others) {
+  if (view.mode === 'sfu') {
+    for (const userId of [...rt.links.keys()]) drop(userId);
+    callSfu.reconcile(view, others);
+  }
+  for (const m of view.mode === 'sfu' ? [] : others) {
     if (rt.links.has(m.userId)) continue;
     if (!a.peers[m.userId]) rt.say(`${rt.name(m.userId)} joined the call.`);
     connect(view.id, m.userId, m.session);
@@ -104,9 +113,33 @@ function reconcile(view: CallView) {
   }
 }
 
+// back into a call this tab dropped out of, if it's still going
+async function rejoinCall(callId: string) {
+  const view = (await callApi.list().catch(() => [])).find((c) => c.id === callId);
+  if (!view) return void toast.show('That call has ended.');
+  await callSession.enter(view).catch(toast.error);
+}
+
 // Unlocks this person's keys if they aren't yet: every connection is signed with them.
 async function ready() {
   if (!vault.unlocked()) await vault.unlock({ passkey: store.get().passkeys.length > 0 });
+}
+
+// What one person in the call said to this one, once opened: on the SFU only frame keys, on
+// the mesh the handshake for the connection between the two.
+function heard(callId: string, from: string, message: { type?: unknown }) {
+  if (message.type === 'media-key') return void callSfu.key(from, message);
+  if (rt.active()!.view.mode === 'sfu') return;
+  // a connection their browser refused comes back when they try again; one this browser
+  // refused waits for this person to say so
+  const current = rt.links.get(from);
+  if (current?.closed() && rt.active()!.peers[from]?.refusal === 'theirs') drop(from);
+  if (!rt.links.has(from)) {
+    const member = rt.active()!.view.members.find((m) => m.userId === from);
+    if (!member || member.userId === rt.me()) return;
+    connect(callId, from, member.session);
+  }
+  rt.links.get(from)!.handle(message);
 }
 
 const callSession = {
@@ -129,7 +162,7 @@ const callSession = {
     ringNotice.stop(view.id);
     callStore.set((s) => ({
       ringing: s.ringing.filter((id) => id !== view.id),
-      active: { id: view.id, view, phase: 'joining', mic: true, cam: false, screen: false, micBlocked: false, camBlocked: false, speaking: false, local: null, localScreen: null, peers: {}, layout: 'grid', minimized: false, pinned: null, everConnected: false, speaker: localMedia.prefs().speaker },
+      active: { id: view.id, view, phase: 'joining', mic: true, cam: false, screen: false, micBlocked: false, camBlocked: false, speaking: false, local: null, localScreen: null, peers: {}, layout: 'grid', minimized: false, pinned: null, everConnected: false, interrupted: null, speaker: localMedia.prefs().speaker },
     }));
     try {
       await callMedia.open({ video });
@@ -138,12 +171,13 @@ const callSession = {
       teardown();
       throw err;
     }
+    callLifecycle.start();
     callSession.rejoin();
   },
 
   rejoin() {
     const a = rt.active();
-    if (a) socket.call({ type: 'call.join', callId: a.id, session: rt.session(), resume: a.phase === 'live', ...(a.view.projectId ? { projectId: a.view.projectId } : {}) });
+    if (a) socket.call({ type: 'call.join', callId: a.id, session: rt.session() });
   },
 
   joined(view: CallView) {
@@ -154,24 +188,12 @@ const callSession = {
 
   update: reconcile,
 
+  // a message from someone in the call, sealed to this person (callSignals)
   signal(callId: string, from: string, blob: unknown) {
     if (rt.active()?.id !== callId || typeof blob !== 'string' || blob.length > 64_000) return;
-    let message: unknown;
-    try {
-      message = JSON.parse(blob);
-    } catch {
-      return;
-    }
-    // a connection their browser refused comes back when they try again; one this browser
-    // refused waits for this person to say so
-    const current = rt.links.get(from);
-    if (current?.closed() && rt.active()!.peers[from]?.refusal === 'theirs') drop(from);
-    if (!rt.links.has(from)) {
-      const member = rt.active()!.view.members.find((m) => m.userId === from);
-      if (!member || member.userId === rt.me()) return;
-      connect(callId, from, member.session);
-    }
-    rt.links.get(from)!.handle(message as { type?: unknown });
+    callSignals.receive(from, blob, (message) => {
+      if (rt.active()?.id === callId) heard(callId, from, message);
+    });
   },
 
   declined(callId: string, userId: string) {
@@ -179,9 +201,14 @@ const callSession = {
   },
 
   refused(callId: string, reason: string) {
-    if (rt.active()?.id !== callId) return;
+    const a = rt.active();
+    if (a?.id !== callId) return;
+    const wasIn = a.phase === 'live';
     teardown();
-    toast.show(reason === 'full' ? 'This call is full.' : 'That call has ended.', { tone: 'error' });
+    if (reason === 'full') return void toast.show('This call is full.', { tone: 'error' });
+    if (!wasIn) return void toast.show('That call has ended.', { tone: 'error' });
+    // away longer than the call waits for anyone, as when a phone slept: the way back in
+    toast.show('You were away from the call for too long, so you left it.', { tone: 'error', action: { label: 'Rejoin', run: () => void rejoinCall(callId) } });
   },
 
   // the same person joined from another tab, which now has the call
@@ -211,8 +238,17 @@ const callSession = {
   refreshTrust() {
     if (!rt.active()) return;
     void keyDirectory.load().then((keys) => {
-      for (const p of Object.values(rt.active()?.peers ?? {})) rt.patchPeer(p.userId, { trust: keys.get(p.userId)?.state ?? 'none' }, p.session);
+      for (const p of Object.values(rt.active()?.peers ?? {})) callPeers.trusted(p.userId, keys.get(p.userId)?.state ?? 'none', p.session);
     });
+  },
+
+  // this person chose to talk to someone whose key they haven't confirmed, for this call only
+  allow(userId: string) {
+    const peer = rt.active()?.peers[userId];
+    if (!peer?.held) return;
+    rt.patchPeer(userId, { held: false }, peer.session);
+    callPeers.released(userId);
+    rt.say(`${rt.name(userId)} can hear you now.`);
   },
 
   // tries a refused connection again, once this person has checked the key

@@ -9,7 +9,7 @@ import callSocket from './helpers/callSocket.js';
 // Calls: starting one, ringing, joining, the handshake passed between two browsers, leaving and
 // the call being forgotten, project calls, rejoining after a dropped socket, and relay passwords.
 const SECRET = crypto.randomBytes(32).toString('hex');
-const ENV = { TURN_URLS: 'turns:turn.example.org:5349?transport=tcp,turn:turn.example.org:3478', TURN_SECRET: SECRET, TURN_TTL_SECONDS: '600', CALL_MAX_PEERS: '3', CALL_RING_SECONDS: '3', CALL_REJOIN_SECONDS: '2', CALL_STARTS_PER_MINUTE: '60' };
+const ENV = { TURN_URLS: 'turns:turn.example.org:5349?transport=tcp,turn:turn.example.org:3478', TURN_SECRET: SECRET, TURN_TTL_SECONDS: '600', CALL_MAX_PEERS: '3', CALL_RING_SECONDS: '3', CALL_REJOIN_SECONDS: '2', CALL_STARTS_PER_MINUTE: '60', CALL_RINGS_PER_PERSON: '5' };
 
 let srv;
 const base = () => srv.base;
@@ -47,7 +47,7 @@ after(() => {
 test('members see whether calls work here; only admins allow direct connections', async () => {
   const status = await people.ana('GET', '/api/calls/settings');
   assert.equal(status.status, 200);
-  assert.deepEqual(status.data, { available: true, reason: null, relay: true, direct: false, maxPeers: 3, ringSeconds: 3 });
+  assert.deepEqual(status.data, { available: true, reason: null, relay: true, direct: false, maxPeers: 3, sfu: false, meshMaxPeers: 4, ringSeconds: 3 });
   assert.equal((await people.guest('GET', '/api/calls/settings')).status, 403);
   assert.equal((await people.ana('PUT', '/api/calls/settings', { direct: true })).status, 403);
   assert.equal((await people.owner('PUT', '/api/calls/settings', { direct: 'yes' })).status, 400);
@@ -183,4 +183,30 @@ test('relay passwords are the coturn kind: HMAC of an expiring username, naming 
   const second = (await people.owner('POST', `/api/calls/${callId}/turn`)).data.iceServers[0].username;
   assert.equal(second.split(':')[1], name);
   owner.send({ type: 'call.leave', callId });
+});
+
+test('someone can block a teammate or stop taking calls, and nobody can ring another too often', async () => {
+  const cy = await tab('cy');
+  const rang = async (by, to) => {
+    const before = cy.events.length;
+    const call = (await people[by]('POST', '/api/calls', { with: [to] })).data.call;
+    await new Promise((r) => setTimeout(r, 150));
+    return { call, rang: cy.events.slice(before).some((e) => e.type === 'call.ring' && e.call.id === call.id) };
+  };
+  assert.equal((await people.cy('PUT', '/api/calls/blocks', { block: ids.ben })).data.blocked[0], ids.ben);
+  // the caller hears no answer and isn't told why; the call is still there for Cy to join
+  const blocked = await rang('ben', ids.cy);
+  assert.equal(blocked.rang, false);
+  assert.deepEqual(blocked.call.ringing, []);
+  assert.equal((await people.cy('GET', '/api/calls')).data.calls.some((c) => c.id === blocked.call.id), true);
+  await people.cy('PUT', '/api/calls/blocks', { unblock: ids.ben });
+  assert.equal((await rang('ben', ids.cy)).rang, true);
+  await people.cy('PUT', '/api/calls/blocks', { dnd: true });
+  assert.equal((await rang('ana', ids.cy)).rang, false);
+  assert.deepEqual((await people.cy('PUT', '/api/calls/blocks', { dnd: false })).data, { dnd: false, blocked: [] });
+  // five rings from one person in ten minutes; the sixth goes unheard
+  const tries = [];
+  for (let i = 0; i < 5; i++) tries.push((await rang('ben', ids.cy)).rang);
+  assert.deepEqual(tries, [true, true, true, true, false]);
+  for (const body of [{ block: ids.cy }, { block: 'nobody-here' }, { dnd: 'yes' }, { unblock: ['x'] }]) assert.equal((await people.cy('PUT', '/api/calls/blocks', body)).status, 400, JSON.stringify(body));
 });

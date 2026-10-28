@@ -132,6 +132,11 @@ const hub = {
     }
   },
 
+  // one tab, already encoded: call signalling, addressed to the tab in the call
+  toSocket(ws, data) {
+    if (ws) send(ws, data);
+  },
+
   setAdmin(userId, isAdmin) {
     for (const c of clients.values()) if (c.userId === userId) c.isAdmin = isAdmin;
   },

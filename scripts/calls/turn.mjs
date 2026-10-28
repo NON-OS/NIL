@@ -18,7 +18,8 @@ export default function turn({ port = 34780 } = {}) {
   const secret = crypto.randomBytes(32).toString('hex');
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'nil-turn-'));
   const conf = path.join(dir, 'turnserver.conf');
-  const local = ['realm=nil.test', `listening-ip=${ip}`, `relay-ip=${ip}`, `listening-port=${port}`, `allowed-peer-ip=${ip}`, 'no-tls', 'no-stdout-log', `log-file=${path.join(dir, 'turn.log')}`];
+  // verbose, so the long check can count the relay passwords a call went through
+  const local = ['realm=nil.test', `listening-ip=${ip}`, `relay-ip=${ip}`, `listening-port=${port}`, `allowed-peer-ip=${ip}`, 'no-tls', 'no-stdout-log', 'verbose', `log-file=${path.join(dir, 'turn.log')}`];
   fs.writeFileSync(conf, `${fs.readFileSync(path.join(ROOT, 'deploy/coturn/turnserver.conf'), 'utf8')}\nstatic-auth-secret=${secret}\n${local.join('\n')}\n`, { mode: 0o600 });
   let child = null;
   const relay = {

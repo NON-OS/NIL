@@ -5,6 +5,7 @@ import EmptyState from '../components/ui/EmptyState';
 import AvatarStack from '../components/ui/AvatarStack';
 import CallPeopleList from '../components/calls/CallPeopleList';
 import CallSettingsCard from '../components/calls/CallSettingsCard';
+import CallPrefsCard from '../components/calls/CallPrefsCard';
 import useStore from '../state/useStore';
 import useCallStore from '../state/useCallStore';
 import callStore from '../state/callStore';
@@ -105,6 +106,7 @@ export default function CallsView() {
                 <CallPeopleList busy={active !== null || !settings} />
               </div>
             </section>
+            <CallPrefsCard />
             {isAdmin(me) && <CallSettingsCard />}
           </>
         )}

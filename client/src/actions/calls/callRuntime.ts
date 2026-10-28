@@ -37,6 +37,16 @@ const callRuntime = {
     });
   },
 
+  // calls `fn` with the call each time it changes, until the returned function is called
+  subscribeActive(fn: (a: ActiveCall) => void) {
+    let last: ActiveCall | null = null;
+    return callStore.subscribe(() => {
+      const a = callStore.get().active;
+      if (a && a !== last) fn(a);
+      last = a;
+    });
+  },
+
   // A line for screen readers, read out once.
   say(text: string) {
     callStore.set((s) => ({ notice: { id: (s.notice?.id ?? 0) + 1, text } }));

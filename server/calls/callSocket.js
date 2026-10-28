@@ -1,7 +1,9 @@
 import config from '../config.js';
 import callRegistry from './callRegistry.js';
 import callMembership from './callMembership.js';
+import callSockets from './callSockets.js';
 import callAnnounce from './callAnnounce.js';
+import logLimited from '../lib/logLimited.js';
 
 const ID = /^[A-Za-z0-9_-]{1,32}$/;
 // a random name each tab gives itself for a call, so the others can tell a reload from a rejoin
@@ -18,14 +20,14 @@ export default function callSocket(ws, client, msg) {
   const userId = client.userId;
   if (msg.type === 'call.join') {
     if (!valid(msg.session, SESSION)) return;
-    const { call, error } = callMembership.join({ callId: msg.callId, userId, ws, session: msg.session, resume: msg.resume === true, projectId: msg.projectId });
+    const { call, error } = callMembership.join({ callId: msg.callId, userId, ws, session: msg.session });
     if (error) return callAnnounce.send(ws, { type: 'call.refused', callId: msg.callId, reason: error });
     return callAnnounce.send(ws, { type: 'call.joined', call: callRegistry.view(call) });
   }
   const call = callRegistry.get(msg.callId);
   if (!call) return;
   if (msg.type === 'call.leave') {
-    if (call.members.get(userId)?.ws === ws) callMembership.leave(call, userId);
+    if (callSockets.get(call.id, userId)?.ws === ws) callMembership.leave(call, userId);
   } else if (msg.type === 'call.decline') {
     callMembership.decline(call, userId);
   } else if (msg.type === 'call.signal') {
@@ -34,4 +36,11 @@ export default function callSocket(ws, client, msg) {
   }
 }
 
-callSocket.closed = (ws) => callMembership.socketClosed(ws);
+// runs outside any request, so an error here is logged instead of stopping the server
+callSocket.closed = (ws) => {
+  try {
+    callMembership.socketClosed(ws);
+  } catch (err) {
+    logLimited('calls:closed', 'error', 'calls', 'Letting go of a closed connection’s calls failed.', err);
+  }
+};

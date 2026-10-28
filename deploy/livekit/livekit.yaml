@@ -1,0 +1,31 @@
+# LiveKit for Nil's bigger calls: an SFU that forwards each person's encrypted frames to the
+# others. Frames are encrypted in the browsers under keys the SFU never holds, so it forwards
+# what it can't read. People reach it only through the TURN relay, never directly.
+#
+# The API key and secret come from SFU_API_KEY and SFU_API_SECRET in .env (LIVEKIT_KEYS in
+# docker-compose.yml), the same pair Nil signs room tokens with.
+
+# Room tokens and room changes arrive on this port, behind Caddy at SFU_URL (docs/calls.md).
+port: 7880
+bind_addresses:
+  - 127.0.0.1
+
+rtc:
+  tcp_port: 7881
+  port_range_start: 50000
+  port_range_end: 50200
+  use_external_ip: true
+
+# the relay is coturn's job (deploy/coturn); LiveKit's own stays off
+turn:
+  enabled: false
+
+room:
+  # rooms exist only while a call is on them; Nil deletes a room when its call ends
+  auto_create: true
+  empty_timeout: 60
+  departure_timeout: 20
+  max_participants: 50
+
+logging:
+  level: warn

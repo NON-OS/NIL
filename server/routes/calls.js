@@ -9,6 +9,9 @@ import callRegistry from '../calls/callRegistry.js';
 import callMembership from '../calls/callMembership.js';
 import callSettings from '../calls/callSettings.js';
 import callable from '../calls/callable.js';
+import callLimits from '../calls/callLimits.js';
+import callBlocks from '../calls/callBlocks.js';
+import sfuToken from '../calls/sfuToken.js';
 import turnCredentials from '../calls/turnCredentials.js';
 
 const router = express.Router();
@@ -29,7 +32,7 @@ function callFor(req) {
 }
 
 function userIds(value) {
-  if (!Array.isArray(value) || !value.length || value.length > config.calls.maxPeers || !value.every((id) => typeof id === 'string' && ID.test(id))) throw HttpError.badRequest('Pick who to call.');
+  if (!Array.isArray(value) || !value.length || value.length > callLimits.max() || !value.every((id) => typeof id === 'string' && ID.test(id))) throw HttpError.badRequest('Pick who to call.');
   return value;
 }
 
@@ -45,6 +48,26 @@ router.put(
     if (typeof req.body?.direct !== 'boolean') throw HttpError.badRequest('Say whether direct connections are allowed.');
     callSettings.setDirect(req.body.direct, req.user.id);
     return callSettings.status();
+  }),
+);
+
+// Who may ring this person: blocked teammates, and whether they're taking calls at all.
+router.get(
+  '/calls/blocks',
+  route((req) => callBlocks.of(req.user.id)),
+);
+
+router.put(
+  '/calls/blocks',
+  route((req) => {
+    const { dnd, block, unblock } = req.body ?? {};
+    if (dnd !== undefined && typeof dnd !== 'boolean') throw HttpError.badRequest('Say whether you take calls.');
+    for (const id of [block, unblock]) if (id !== undefined && (typeof id !== 'string' || !ID.test(id) || id === req.user.id)) throw HttpError.badRequest('Pick someone on the team.');
+    if (dnd !== undefined) callBlocks.set(req.user.id, callBlocks.everyone, dnd);
+    if (block !== undefined && !sql.get('SELECT 1 FROM users WHERE id = ?', block)) throw HttpError.badRequest('Pick someone on the team.');
+    if (block !== undefined) callBlocks.set(req.user.id, block, true);
+    if (unblock !== undefined) callBlocks.set(req.user.id, unblock, false);
+    return callBlocks.of(req.user.id);
   }),
 );
 
@@ -80,11 +103,11 @@ router.post(
   byPerson(config.calls.startsPerMinute * 4),
   route((req) => {
     const call = callFor(req);
-    if (!call.members.has(req.user.id)) throw new HttpError(409, 'Join the call before asking anyone in.');
+    if (!callRegistry.member(call, req.user.id)) throw new HttpError(409, 'Join the call before asking anyone in.');
     const people = userIds(req.body?.userIds);
     if (!people.every(callable)) throw HttpError.badRequest('You can call active members of the team.');
     const rung = callMembership.invite(call, req.user.id, people);
-    return { rung, call: callRegistry.view(call) };
+    return { rung, call: callRegistry.view(callRegistry.get(call.id)) };
   }),
 );
 
@@ -95,16 +118,34 @@ router.post(
   route((req) => {
     available();
     const call = callFor(req);
-    if (!callRegistry.mayJoin(call, req.user.id) && !call.members.has(req.user.id)) throw HttpError.notFound('That call');
+    if (!callRegistry.mayJoin(call, req.user.id)) throw HttpError.notFound('That call');
     const direct = callSettings.direct();
     const { turn } = config.calls;
-    const relay = turn.configured ? turnCredentials(req.user.id) : null;
+    const relay = turn.configured ? turnCredentials(req.user.id, call.id) : null;
+    // with direct connections allowed, browsers also need to learn their own public address,
+    // from the relay's STUN side or STUN_URLS, or they could only ever connect on one network
+    const stun = direct ? [...new Set([...config.calls.stunUrls, ...turn.urls.filter((u) => u.startsWith('turn:')).map((u) => u.replace(/^turn:/, 'stun:').replace(/\?.*$/, ''))])] : [];
     return {
-      iceServers: relay ? [{ urls: relay.urls, username: relay.username, credential: relay.credential }] : [],
+      iceServers: [...(relay ? [{ urls: relay.urls, username: relay.username, credential: relay.credential }] : []), ...(stun.length ? [{ urls: stun }] : [])],
       policy: direct ? 'all' : 'relay',
       expiresAt: relay?.expiresAt ?? null,
       ttlSeconds: config.calls.turnTtlSeconds,
     };
+  }),
+);
+
+// A room token for the SFU, for someone in a call that moved there, for the tab they joined from.
+router.post(
+  '/calls/:id/sfu',
+  byPerson(30),
+  route((req) => {
+    available();
+    const call = callFor(req);
+    const person = callRegistry.member(call, req.user.id);
+    if (!person) throw new HttpError(409, 'Join the call first.');
+    if (call.mode !== 'sfu' || !config.calls.sfu) throw new HttpError(409, 'This call goes browser to browser.');
+    const { url, token, identity } = sfuToken({ callId: call.id, userId: req.user.id, session: person.session });
+    return { url, token, identity };
   }),
 );
 

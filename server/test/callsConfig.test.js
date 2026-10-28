@@ -24,7 +24,7 @@ test('calls need a relay and a long enough secret, and have sensible defaults', 
   const plain = load({});
   assert.equal(plain.calls.enabled, true);
   assert.equal(plain.calls.turn.configured, false);
-  assert.deepEqual([plain.calls.maxPeers, plain.calls.turnTtlSeconds, plain.calls.ringSeconds], [6, 3600, 45]);
+  assert.deepEqual([plain.calls.maxPeers, plain.calls.turnTtlSeconds, plain.calls.ringSeconds], [6, 600, 45]);
   const set = load({ TURN_URLS: 'turns:turn.example.com:5349?transport=tcp, turn:turn.example.com:3478?transport=udp', TURN_SECRET: SECRET });
   assert.equal(set.calls.turn.configured, true);
   assert.deepEqual(set.calls.turn.urls, ['turns:turn.example.com:5349?transport=tcp', 'turn:turn.example.com:3478?transport=udp']);
@@ -37,7 +37,7 @@ test('calls need a relay and a long enough secret, and have sensible defaults', 
   assert.deepEqual(odd.calls.turn.urls, ['turn:ok.example.com']);
   assert.match(odd.warnings, /TURN_URLS has entries/);
   const capped = load({ CALL_MAX_PEERS: '50', TURN_TTL_SECONDS: '5' });
-  assert.deepEqual([capped.calls.maxPeers, capped.calls.turnTtlSeconds], [6, 3600]);
+  assert.deepEqual([capped.calls.maxPeers, capped.calls.turnTtlSeconds], [6, 600]);
 });
 
 test('calls are off with CALLS=off and always on an onion address, and so are camera and microphone', () => {

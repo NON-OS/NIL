@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from 'react';
-import { Lock, WifiOff } from 'lucide-react';
+import { Lock, MicOff, WifiOff } from 'lucide-react';
 import CallStage from './CallStage';
 import CallControls from './CallControls';
 import CallDock from './CallDock';
@@ -10,6 +10,7 @@ import useOnline from '../../hooks/useOnline';
 import useFocusTrap from '../../hooks/useFocusTrap';
 import useCallKeys from '../../hooks/useCallKeys';
 import iceConfig from '../../actions/calls/iceConfig';
+import callLifecycle from '../../actions/calls/callLifecycle';
 import callClock from '../../lib/calls/callClock';
 import callTitle from '../../lib/calls/callTitle';
 import type ActiveCall from '../../types/ActiveCall';
@@ -58,6 +59,15 @@ export default function CallScreen({ call }: { call: ActiveCall }) {
         <p className="call-banner" role="status">
           <WifiOff aria-hidden="true" />
           {online ? 'Reconnecting to Nil. The call carries on, and new people can join once it’s back.' : 'You’re offline. The call comes back when your network does.'}
+        </p>
+      )}
+      {call.interrupted && (
+        <p className="call-banner" role="alert">
+          <MicOff aria-hidden="true" />
+          {call.interrupted.mic && call.interrupted.cam ? 'Your microphone and camera stopped' : call.interrupted.mic ? 'Your microphone stopped' : 'Your camera stopped'} while Nil was in the background.
+          <button type="button" className="btn btn-sm" onClick={() => void callLifecycle.resume()}>
+            Turn {call.interrupted.mic && call.interrupted.cam ? 'them' : 'it'} back on
+          </button>
         </p>
       )}
       {call.phase === 'joining' ? (
