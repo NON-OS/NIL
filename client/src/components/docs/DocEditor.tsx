@@ -114,8 +114,8 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
         <DocStatusBadge status={status} />
         <DocPresence awareness={live.awareness} />
         {aiOn && !readOnly && (
-          <button type="button" className="btn btn-sm" onClick={() => setModal('draft')}>
-            <Sparkles /> Draft
+          <button type="button" className="btn btn-sm" onClick={() => setModal('draft')} aria-label="Draft with AI">
+            <Sparkles /> <span className="doc-tool-label">Draft</span>
           </button>
         )}
         <button type="button" className="btn btn-sm" onClick={() => toggle('comments')} aria-pressed={panel === 'comments'} aria-label="Comments">
@@ -125,7 +125,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
           <ListTree />
         </button>
         <button type="button" className="btn btn-sm" onClick={() => setModal('share')} aria-label={`Share, ${audience}`}>
-          <Users /> {audience}
+          <Users /> <span className="doc-tool-label">{audience}</span>
         </button>
         <DocMoreMenu onHistory={() => setModal('history')} onWord={() => exportAs('docx')} onMarkdown={() => exportAs('md')} onPrint={() => window.print()} onImport={readOnly ? undefined : () => importInput.current?.click()} onDelete={canManage ? remove : undefined} />
       </div>

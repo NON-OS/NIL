@@ -116,4 +116,9 @@
   .mywork-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* an odd one out takes the whole row rather than leave a hole beside it */
+  .mywork-stats > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 }

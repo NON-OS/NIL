@@ -5,7 +5,7 @@ import Arc from '../brand/Arc';
 
 // What Nil does in plain words, each line something a careful reader could go and check.
 const FACTS = [
-  ['Encrypted in your browser', 'Private tasks and docs are locked with keys from your wallet. The server only ever stores scrambled text.'],
+  ['Encrypted in your browser', 'Private tasks, docs, chat, files and calls are encrypted end to end, with keys that come from your wallet. The server only ever stores and passes on scrambled bytes.'],
   ['Sign in with your wallet', 'No email, no password, no phone number. Signing in is free.'],
   ['Pay anyone for a task', 'Send a reward in NOX or USDC straight from your wallet to theirs. Nil checks it arrived and never holds the money.'],
   ['Decide together', 'Vote without anyone seeing how you voted. Only the totals come out.'],
@@ -22,7 +22,7 @@ export default function AuthPitch() {
         </span>
       </div>
       <div className="auth-pitch">
-        <span className="eyebrow">Tasks · Docs · Payments · Votes</span>
+        <span className="eyebrow">Tasks · Docs · Chat · Files · Calls · Votes</span>
         <h2>
           <Resolve text="The private task app for you and your team." />
         </h2>

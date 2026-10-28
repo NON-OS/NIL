@@ -52,11 +52,29 @@
   padding-right: 0;
 }
 
+/* stays in view while a long folder scrolls under it */
 .files-selection {
+  position: sticky;
+  top: 0;
+  z-index: 5;
   min-height: 30px;
+  padding: 6px 0;
+  background: var(--bg);
 }
 
 .files-selection-count {
   margin-right: 4px;
   font-weight: 600;
+}
+
+/* on a phone: the count on its own line, the three actions sharing the next */
+@media (max-width: 560px) {
+  .files-selection-count {
+    flex: 1 1 calc(100% - 48px);
+  }
+
+  .files-selection .btn {
+    flex: 1 1 0;
+    min-width: 0;
+  }
 }
