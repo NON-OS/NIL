@@ -1,6 +1,7 @@
 import '../Files.css';
 import { useEffect, useState } from 'react';
 import Spinner from '../../ui/Spinner';
+import zipCheck from '../../../lib/zipCheck';
 
 // The frame allows nothing: no scripts, no forms, no plugins, no navigation out, no requests at
 // all. Images inside the document arrive as data: URLs and are the only thing it loads.
@@ -17,6 +18,10 @@ const PURIFY = {
 
 const page = (body: string) => `<!doctype html><html><head><meta charset="utf-8"><meta http-equiv="Content-Security-Policy" content="${FRAME_POLICY}"><meta name="referrer" content="no-referrer"><style>${STYLE}</style></head><body>${body}</body></html>`;
 
+// what a previewed Word file may weigh, and what it may unpack to (see zipCheck)
+const MAX_BYTES = 40 * 1024 * 1024;
+const MAX_UNPACKED = 200 * 1024 * 1024;
+
 // A Word file turned into HTML with mammoth, cleaned with DOMPurify, and shown in a sandboxed
 // frame that can't run anything even if something slipped through. Both libraries load the first
 // time a Word file is opened. Layout is approximate: mammoth keeps headings, lists, tables, links'
@@ -28,8 +33,11 @@ export default function DocxPreview({ blob }: { blob: Blob }) {
   useEffect(() => {
     let live = true;
     (async () => {
+      if (blob.size > MAX_BYTES) throw new Error('too large');
+      const data = await blob.arrayBuffer();
+      await zipCheck(new Uint8Array(data), { maxEntries: 5000, maxBytes: MAX_UNPACKED, message: 'too large' });
       const [{ default: mammoth }, { default: DOMPurify }] = await Promise.all([import('mammoth'), import('dompurify')]);
-      const { value } = await mammoth.convertToHtml({ arrayBuffer: await blob.arrayBuffer() });
+      const { value } = await mammoth.convertToHtml({ arrayBuffer: data });
       if (live) setHtml(page(DOMPurify.sanitize(value, PURIFY)));
     })().catch(() => live && setError('This Word file couldn’t be shown here. Download it to open it in another app.'));
     return () => {

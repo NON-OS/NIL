@@ -81,6 +81,14 @@ test('a teammate’s change checks out; one from outside the readers, or with a 
   await assert.rejects(docUpdateSeal.open(doc.id, key, bad, ['v', 'w']));
 });
 
+test('a change signed far from when the server took it, or by someone switched off, isn’t taken', async () => {
+  const doc = await docs.create({ title: 'Plan', audience: 'people', people: ['w'] });
+  const key = keyring.docKey(doc.id).slice();
+  const { ct } = await asWen(doc.id, key, new Uint8Array([7]));
+  assert.equal((await docUpdateSeal.open(doc.id, key, ct, ['v', 'w'], Date.now())).verified, true);
+  assert.equal((await docUpdateSeal.open(doc.id, key, ct, ['v', 'w'], Date.now() + 3_600_000)).verified, false);
+});
+
 test('Markdown from before Docs v2 converts the same in every tab, so it never shows twice', () => {
   const a = markdownToState('doc1', 3, 'Runbook', '# Restart\n\n- stop the node\n- start it');
   const b = markdownToState('doc1', 3, 'Runbook', '# Restart\n\n- stop the node\n- start it');
@@ -127,7 +135,7 @@ test('the open doc applies changes in order, fetches what it missed, leaves out 
   const first = await asWen(created.id, key, paragraph(base, 'first from Wen'));
   const second = await asWen(created.id, key, paragraph(base, 'second from Wen'));
   updates = [];
-  route('GET', new RegExp(`^/api/docs/${created.id}/updates\\?after=0$`), () => ({ updates: [{ seq: 1, updateCt: first.ct, by: 'w', at: 1 }, { seq: 2, updateCt: second.ct, by: 'w', at: 2 }], version: 1 }));
+  route('GET', new RegExp(`^/api/docs/${created.id}/updates\\?after=0$`), () => ({ updates: [{ seq: 1, updateCt: first.ct, by: 'w', at: Date.now() }, { seq: 2, updateCt: second.ct, by: 'w', at: Date.now() }], version: 1 }));
   route('POST', `/api/docs/${created.id}/updates`, () => ({ seq: 3 }));
   route('PUT', `/api/docs/${created.id}`, (url, b) => {
     stored = { ...stored, version: 2, titleCt: b.titleCt, bodyCt: b.bodyCt };
@@ -136,7 +144,7 @@ test('the open doc applies changes in order, fetches what it missed, leaves out 
 
   const live = await createLiveDoc(await docs.open(created.id), 'v', () => {});
   // the second change arrives first: the tab fetches the first instead of skipping it
-  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 2, updateCt: second.ct, by: 'w', at: 2 });
+  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 2, updateCt: second.ct, by: 'w', at: Date.now() });
   await new Promise((r) => setTimeout(r, 50));
   assert.match(words(live.ydoc), /first from Wen/);
   assert.match(words(live.ydoc), /second from Wen/);
@@ -144,7 +152,7 @@ test('the open doc applies changes in order, fetches what it missed, leaves out 
 
   // a change the server made up, sealed with a key it doesn't hold, is counted and left out
   const fake = await docLiveCipher.seal(crypto.getRandomValues(new Uint8Array(32)), created.id, 'update', docLiveCipher.newId(), new Uint8Array([1]));
-  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 3, updateCt: fake, by: 'w', at: 3 });
+  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 3, updateCt: fake, by: 'w', at: Date.now() });
   await new Promise((r) => setTimeout(r, 50));
   assert.equal(live.status().refused, 1);
 

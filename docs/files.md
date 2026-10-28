@@ -121,7 +121,7 @@ A shared folder's name is signed too, together with who the folder is for and wh
 
 ## Your file space
 
-The bar under your folders shows how much of your file space you use. It counts the files you uploaded to Files and to docs, and the files you attached to tasks, as the server stores them. Whoever runs the server sets how much each person gets, 2 GB for a member unless they changed it, and how much the whole workspace can keep.
+The bar under your folders shows how much of your file space you use. It counts the files you uploaded to Files and to docs, the files you sent in chat, and the files you attached to tasks, as the server stores them. Whoever runs the server sets how much each person gets, 2 GB for a member unless they changed it, and how much the whole workspace can keep.
 
 ## What the server can see
 

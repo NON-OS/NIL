@@ -1,5 +1,6 @@
 import type { JSONContent } from '@tiptap/core';
 import docxStyleMap from './docxStyleMap';
+import zipCheck from '../zipCheck';
 import tagDocxStyles from './tagDocxStyles';
 import type SealedImageAttrs from './SealedImageAttrs';
 
@@ -7,6 +8,9 @@ type OnImage = (bytes: Uint8Array, mime: string, alt: string) => Promise<SealedI
 
 // Larger Word files are refused before anything unpacks them.
 const MAX_BYTES = 40 * 1024 * 1024;
+// what it may unpack to, measured by unpacking it first, so a zip bomb can't fill the tab's memory
+const MAX_UNPACKED = 200 * 1024 * 1024;
+const MAX_ENTRIES = 5000;
 // and images past this many are left out rather than uploaded one by one
 const MAX_IMAGES = 300;
 // The image types a doc shows. Word's own EMF and WMF drawings, TIFF and SVG are left out.
@@ -19,6 +23,7 @@ export default async function importDocx(file: Blob, opts: { onImage: OnImage })
   if (file.size > MAX_BYTES) throw new Error('This Word file is too large to import.');
   const [{ default: mammoth }, { default: parseDocxHtml }] = await Promise.all([import('mammoth'), import('./parseDocxHtml')]);
   const data = await file.arrayBuffer();
+  await zipCheck(new Uint8Array(data), { maxEntries: MAX_ENTRIES, maxBytes: MAX_UNPACKED, message: 'This Word file unpacks to more than Nil will open.' });
   const images: SealedImageAttrs[] = [];
   let seen = 0;
   const convertImage = mammoth.images.imgElement(async (image) => {

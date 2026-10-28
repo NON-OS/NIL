@@ -21,4 +21,8 @@ export default interface LiveContext {
   saveNow(): Promise<void>;
   // fetch the newest version and lay it on top
   reload(): Promise<void>;
+  // whether a teammate's change or version may be laid in (see createStateGuard)
+  accepts(update: Uint8Array): boolean;
+  // close the doc and open it afresh from the server, for when the editor fell out of step
+  reopen(): void;
 }

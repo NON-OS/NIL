@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { NodeViewWrapper, type ReactNodeViewProps } from '@tiptap/react';
 import { ImageOff } from 'lucide-react';
 import docBlobs from '../../../actions/docBlobs';
+import sealedAttrs from '../../../lib/docState/sealedAttrs';
 
 // An image in a doc, decrypted in this tab while it's on screen. Its address is a blob: URL that
 // lives only as long as the image is shown.
 export default function SealedImageView({ node, selected, editor, updateAttributes }: ReactNodeViewProps) {
-  const { blob, key, mime, alt, name, width, height } = node.attrs;
+  const { blob, key, mime, alt, name, width, height } = sealedAttrs(node.attrs);
   const [url, setUrl] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 

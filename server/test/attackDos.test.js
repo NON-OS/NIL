@@ -142,16 +142,25 @@ test('a socket that floods the live connection is cut off, and the server stays 
   assert.doesNotMatch(srv.stderr(), /live message handler failed/);
 });
 
-test('hundreds of connections from one account stay cheap', async (t) => {
+test('one account holds only its share of connections, and churning them stays cheap', async (t) => {
   const sockets = [];
-  for (let i = 0; i < 300; i++) sockets.push(await openSocket());
+  for (let i = 0; i < 20; i++) sockets.push(await openSocket());
+  // one more than REALTIME_SOCKETS_PER_USER (20) is refused before it costs anything
+  await assert.rejects(openSocket(), /429/);
   // every join and leave makes the server tell every socket who's online
   const start = performance.now();
-  for (const ws of sockets.splice(0, 150)) ws.close();
-  for (let i = 0; i < 150; i++) sockets.push(await openSocket());
+  for (let round = 0; round < 15; round++) {
+    const ws = sockets.shift();
+    ws.close();
+    await once(ws, 'close');
+    let fresh = null;
+    for (let tries = 0; !fresh && tries < 20; tries++) fresh = await openSocket().catch(() => new Promise((r) => setTimeout(() => r(null), 25)));
+    assert.ok(fresh, 'a slot freed by a closed tab is free again');
+    sockets.push(fresh);
+  }
   const churn = performance.now() - start;
   const latency = await healthLatency(10);
-  t.diagnostic(`300 sockets with 150 reconnects: ${churn.toFixed(0)} ms, health check worst case ${latency.toFixed(0)} ms`);
+  t.diagnostic(`20 sockets with 15 reconnects: ${churn.toFixed(0)} ms, health check worst case ${latency.toFixed(0)} ms`);
   assert.ok(latency < 2000, `a health check took ${latency.toFixed(0)} ms`);
   for (const ws of sockets) ws.close();
 });

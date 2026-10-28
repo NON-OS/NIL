@@ -90,10 +90,28 @@ test('re-keying a doc drops every change sealed under the old key', async () => 
   const doc = (await owner('GET', `/api/docs/${ids.doc}`)).data.doc;
   assert.ok(doc.updates.length > 0);
   const grants = [ids.owner, ids.ana].map((userId) => ({ userId, wrappedKey: wrapped() }));
-  await owner('POST', `/api/docs/${ids.doc}/rotate`, { baseVersion: doc.version, titleCt: blob(40), bodyCt: blob(300), grants });
+  const last = doc.updates.at(-1).seq;
+  // a version that doesn't hold every live change so far would lose the rest
+  const behind = await owner('POST', `/api/docs/${ids.doc}/rotate`, { baseVersion: doc.version, through: last - 1, titleCt: blob(40), bodyCt: blob(300), grants });
+  assert.equal(behind.status, 409);
+  await owner('POST', `/api/docs/${ids.doc}/rotate`, { baseVersion: doc.version, through: last, titleCt: blob(40), bodyCt: blob(300), grants });
   const fresh = (await ana('GET', `/api/docs/${ids.doc}`)).data.doc;
   assert.deepEqual(fresh.updates, []);
-  assert.equal(fresh.updatesThrough, doc.updates.at(-1).seq);
+  assert.equal(fresh.updatesThrough, last);
+  assert.equal(fresh.keyEpoch, doc.keyEpoch + 1);
+  // a change sealed under the old key is turned away; one under the new key goes through
+  assert.equal((await ana('POST', `/api/docs/${ids.doc}/updates`, { updateCt: blob(80), keyEpoch: doc.keyEpoch })).status, 409);
+  assert.equal((await ana('POST', `/api/docs/${ids.doc}/updates`, { updateCt: blob(80), keyEpoch: fresh.keyEpoch })).status, 200);
+});
+
+test('someone handed a key that opens nothing can drop it, but never the last key to a doc', async () => {
+  const id = blob(16);
+  const grants = [ids.owner, ids.ana].map((userId) => ({ userId, wrappedKey: wrapped() }));
+  await owner('POST', '/api/docs', { id, titleCt: blob(40), bodyCt: blob(100), audience: 'people', grants });
+  assert.equal((await ana('DELETE', `/api/docs/${id}/grants/me`)).status, 200);
+  assert.equal((await ana('GET', `/api/docs/${id}`)).status, 404);
+  assert.equal((await owner('DELETE', `/api/docs/${id}/grants/me`)).status, 409);
+  assert.equal((await owner('GET', `/api/docs/${id}`)).status, 200);
 });
 
 test('cursors pass only between tabs that hold the key and have the doc open', async () => {
@@ -128,10 +146,22 @@ test('mentioning someone tells only people holding the doc’s key, once in a wh
   assert.equal((await owner('POST', `/api/docs/${doc}/mentions`, { userIds: 'ana' })).status, 400);
 });
 
-test('history keeps recent versions close together and older ones spread out', () => {
+test('history keeps the newest version in each slot: a minute, then a quarter hour, then a day', () => {
   const now = 100 * 24 * 3_600_000;
   const row = (version, agoMs) => ({ version, created_at: now - agoMs });
-  const rows = [row(9, 1000), row(8, 20_000), row(7, 90_000), row(6, 100_000), row(5, 2 * 3_600_000), row(4, 2 * 3_600_000 + 60_000), row(3, 3 * 86_400_000), row(2, 3 * 86_400_000 + 3_600_000), row(1, 9 * 86_400_000)];
+  // 9 and 8 share the last minute; 7 and 6 the one before; 5 and 4 a quarter hour two hours ago;
+  // 3 and 2 a day three days ago; 1 a day of its own
+  const rows = [row(9, 1000), row(8, 20_000), row(7, 90_000), row(6, 100_000), row(5, 2 * 3_600_000 + 60_000), row(4, 2 * 3_600_000 + 120_000), row(3, 3 * 86_400_000 - 3_600_000), row(2, 3 * 86_400_000 - 7_200_000), row(1, 9 * 86_400_000)];
   assert.deepEqual(revisionsToDrop(rows, now, 100), [8, 6, 4, 2]);
   assert.deepEqual(revisionsToDrop(rows, now, 2), [8, 6, 5, 4, 3, 2, 1]);
+
+  // an hour of saves every fifteen seconds, each followed by thinning, keeps one a minute
+  let kept = [];
+  for (let i = 0; i < 240; i++) {
+    const at = now - 3_600_000 + i * 15_000;
+    kept = [{ version: i + 1, created_at: at }, ...kept];
+    const drop = new Set(revisionsToDrop(kept, at, 100));
+    kept = kept.filter((r) => !drop.has(r.version));
+  }
+  assert.ok(kept.length >= 59 && kept.length <= 61, `kept ${kept.length}`);
 });

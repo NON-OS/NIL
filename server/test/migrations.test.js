@@ -97,6 +97,29 @@ test('only the three newest snapshots are kept, and erasing removes them all', a
   }
 });
 
+test('the upgrade checkpoint and backup copies go with erasing, and with the shortest policy', async () => {
+  const { dir, db } = fixtureCopy('folders');
+  try {
+    const { default: snapshots } = await import('../db/snapshots.js');
+    const make = () => {
+      for (const name of ['.nil-checkpoint', '.nil-snapshot']) {
+        fs.mkdirSync(path.join(dir, name), { recursive: true });
+        fs.writeFileSync(path.join(dir, name, 'nonos.db'), 'plaintext copy');
+      }
+    };
+    make();
+    snapshots.prune(dir, Date.now() - 60_000);
+    assert.ok(fs.existsSync(path.join(dir, '.nil-checkpoint')), 'newer than the cutoff');
+    snapshots.prune(dir, Date.now() + 60_000);
+    assert.ok(!fs.existsSync(path.join(dir, '.nil-checkpoint')) && !fs.existsSync(path.join(dir, '.nil-snapshot')));
+    make();
+    snapshots.eraseAll(dir);
+    assert.ok(!fs.existsSync(path.join(dir, '.nil-checkpoint')) && !fs.existsSync(path.join(dir, '.nil-snapshot')));
+  } finally {
+    db.close();
+  }
+});
+
 test('a database from a newer release is refused, untouched', () => {
   const { dir, db } = fixtureCopy('newer');
   try {

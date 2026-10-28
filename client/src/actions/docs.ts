@@ -64,7 +64,15 @@ function writable(doc: DocItem, what: string) {
 const docs = {
   async list() {
     const res = await http.get<{ docs: EncryptedDoc[]; waiting: { id: string; createdBy: string | null; updatedAt: number }[] }>('/docs');
-    const items = await Promise.all(res.docs.map((d) => readDoc.decrypt(d).catch(() => null)));
+    const items = await Promise.all(
+      res.docs.map((d) =>
+        readDoc.decrypt(d).catch((err) => {
+          // a planted key that opens nothing is dropped, so a teammate can hand over a real one
+          if (err?.unopenable) http.del(`/docs/${d.id}/grants/me`).catch(() => {});
+          return null;
+        }),
+      ),
+    );
     return { docs: items.filter((d): d is DocItem => d !== null), waiting: res.waiting };
   },
 
@@ -76,8 +84,8 @@ const docs = {
     const me = store.get().me!;
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const docKey = crypto.getRandomValues(new Uint8Array(32));
-    // agents never read docs: they hold no key
-    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id) : people;
+    // agents never read docs: they hold no key, and guests don't get team docs
+    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent' && u.role !== 'guest').map((u) => u.id) : people;
     const grants = await sealFor(docKey, [me.id, ...everyone]);
     const readers = grants.map((g) => g.userId);
     // a new doc starts as shared editing state, with its title in it
@@ -107,14 +115,17 @@ const docs = {
 
   // Taking someone out means a new key for the doc, so a copy of the old one is worthless. It
   // also re-signs the text as yours, which is how a doc that failed its check gets a clean key.
-  async restrict(doc: DocItem, keep: string[], audience: Audience) {
+  // `now` is the doc as it stands in the open editor, with every live change in it; without it
+  // the newest saved version is re-keyed, and the server refuses if live changes came after it.
+  async restrict(doc: DocItem, keep: string[], audience: Audience, now?: { title: string; body: string; through: number }) {
     const me = store.get().me!;
     await confirmKeys.ask(keep, 'this doc');
     const fresh = crypto.getRandomValues(new Uint8Array(32));
     const grants = await sealFor(fresh, [me.id, ...keep]);
-    const words = { title: doc.title, body: doc.body ?? '' };
+    const words = now ? { title: now.title, body: now.body } : { title: doc.title, body: doc.body ?? '' };
+    const through = now?.through ?? doc.live.through;
     const to = { audience, readers: grants.map((g) => g.userId) };
-    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
+    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, through, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
     keyring.rememberDocKey(doc.id, fresh);
     return res.readers;
   },
@@ -123,7 +134,7 @@ const docs = {
   // person has confirmed their keys. Only a version signed as the team's counts, whatever the
   // server lists; never asks, never shares a doc that failed its check or can't say who it's for.
   async shareWithTeam(items: DocItem[]) {
-    const people = Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id);
+    const people = Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent' && u.role !== 'guest').map((u) => u.id);
     const ready = new Set((await keyDirectory.sharable(people)).keys());
     for (const doc of items.filter((d) => d.audience === 'team' && !d.warning && !d.olderFormat)) {
       const missing = people.filter((u) => ready.has(u) && !doc.readers.includes(u));
@@ -138,7 +149,9 @@ const docs = {
     const key = readDoc.keyOf(doc);
     if (!key) return [];
     const rows = await http.get<{ version: number; titleCt: string; bodyCt: string; updatedBy: string | null; createdAt: number }[]>(`/docs/${doc.id}/revisions`);
-    return Promise.all(rows.map((r) => readDoc.revision(doc, key, r)));
+    // a version that can't be read is left out of the list instead of emptying it
+    const read = await Promise.all(rows.map((r) => readDoc.revision(doc, key, r).catch(() => null)));
+    return read.filter((r) => r !== null);
   },
 
   async remove(doc: DocItem) {

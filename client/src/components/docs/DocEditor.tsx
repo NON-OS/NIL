@@ -149,7 +149,7 @@ export default function DocEditor({ doc, onDeleted, onBack, onReload, onTitle }:
         {editor && panel === 'outline' && <OutlinePanel editor={editor} onClose={() => setPanel(null)} />}
       </div>
       {modal === 'link' && editor && <LinkEditor editor={editor} onClose={() => setModal(null)} />}
-      {modal === 'share' && <ShareDocModal doc={live.current()} canManage={canManage} onClose={() => setModal(null)} onDone={onReload} />}
+      {modal === 'share' && <ShareDocModal doc={live.current()} snapshot={live.snapshot} canManage={canManage} onClose={() => setModal(null)} onDone={onReload} />}
       {modal === 'draft' && editor && <DraftModal title={title} body={editorMarkdown(editor)} onClose={() => setModal(null)} onDraft={(text) => editor.chain().focus('end').insertContent(importMarkdown(text).content ?? []).run()} />}
       {modal === 'history' && editor && <DocHistory doc={live.current()} onClose={() => setModal(null)} onRestore={(t, b) => restoreVersion(editor, setTitle, t, b)} />}
     </section>

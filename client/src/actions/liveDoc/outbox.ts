@@ -30,7 +30,7 @@ export default function createOutbox(ctx: LiveContext) {
     const { id, ct } = await docUpdateSeal.seal(ctx.docId, ctx.key, update);
     ctx.sent.add(id);
     try {
-      await http.post(`/docs/${ctx.docId}/updates`, { updateCt: ct });
+      await http.post(`/docs/${ctx.docId}/updates`, { updateCt: ct, keyEpoch: ctx.doc.keyEpoch });
     } catch (err) {
       ctx.sent.delete(id);
       throw err;
@@ -49,8 +49,8 @@ export default function createOutbox(ctx: LiveContext) {
       if (!queue.length) ctx.settled();
     } catch (err: any) {
       queue.unshift(update);
-      if (err?.status === 409 || err?.status === 400) {
-        // the doc wants a new version first, or the change is too big to go live: a version carries it
+      if (err?.status === 409 || err?.status === 400 || err?.status === 429) {
+        // the doc wants a new version first, or the change is too big or too much to go live: a version carries it
         await ctx.saveNow().then(
           () => {
             queue = [];
@@ -59,7 +59,8 @@ export default function createOutbox(ctx: LiveContext) {
           () => ctx.setStatus({ state: 'offline' }),
         );
       } else {
-        ctx.setStatus({ state: 'offline' });
+        // no answer at all is offline; an answer that refused is a problem worth naming
+        ctx.setStatus(err?.status ? { state: 'unsaved', problem: err.message } : { state: 'offline' });
         retry = Math.min(retry * 2, MAX_RETRY_MS);
       }
     } finally {

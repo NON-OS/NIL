@@ -23,10 +23,15 @@ export default interface DocItem {
   warning: 'unverified' | 'rollback' | null;
   // saved in the older format, which can't show who the doc is for
   olderFormat: boolean;
+  // from before signed audiences, and the server says it's for the whole team; only its creator
+  // or an admin can confirm that
+  teamClaim?: boolean;
   // the fingerprint of an earlier key of the writer's, when that's the key that signed this version
   oldKey: string | null;
   // the hash of the doc key this version was opened with, so nothing is written under another one
   keyHash: string;
+  // how many times the doc moved to a new key, as the server counts it
+  keyEpoch: number;
   // the live changes made since this version, still to be checked and laid on top
-  live: { through: number; updates: EncryptedUpdate[] };
+  live: { through: number; updates: EncryptedUpdate[]; more?: boolean };
 }

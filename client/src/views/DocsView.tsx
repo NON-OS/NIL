@@ -16,13 +16,16 @@ import cx from '../lib/cx';
 import type DocItem from '../types/DocItem';
 import type { DocTemplate } from '../lib/docState/docTemplates';
 import pendingImport from '../state/pendingImport';
+import DocErrorBoundary from '../components/docs/DocErrorBoundary';
 
 // the editor is the heavy part, so the list shows while it loads
 const DocEditor = lazy(() => import('../components/docs/DocEditor'));
+const LIST_PAUSE_MS = 1500;
 
 export default function DocsView() {
   const unlocked = useStore((s) => s.docsUnlocked);
   const revision = useStore((s) => s.docsRev);
+  const changed = useStore((s) => s.docsChanged);
   // a newly confirmed key is a chance to hand team docs over
   const keysRevision = useStore((s) => s.keysRev);
   const { segments } = useRoute();
@@ -37,8 +40,11 @@ export default function DocsView() {
     docs.shareWithTeam(next.docs).catch(() => {});
   }, []);
 
+  // saves come every few seconds while people type, so changes in a burst refresh the list once
   useEffect(() => {
-    if (unlocked) refresh().catch(toast.error);
+    if (!unlocked) return;
+    const timer = setTimeout(() => refresh().catch(toast.error), revision ? LIST_PAUSE_MS : 0);
+    return () => clearTimeout(timer);
   }, [unlocked, revision, keysRevision, refresh]);
 
   const load = useCallback(() => {
@@ -50,9 +56,11 @@ export default function DocsView() {
   }, [unlocked, currentId]);
   useEffect(load, [load]);
 
-  // someone saved a newer version: the open editor lays it on top of what's on screen
+  // someone saved a newer version of the open doc, or shared it with more people: the open
+  // editor lays it on top of what's on screen. Changes to other docs leave it alone.
   useEffect(() => {
-    if (revision && open) docs.open(open.id).then((fresh) => fresh.version !== open.version && setOpen(fresh)).catch(() => {});
+    if (!revision || !open || (changed !== null && changed !== open.id)) return;
+    docs.open(open.id).then((fresh) => (fresh.version !== open.version || fresh.readers.join() !== open.readers.join()) && setOpen(fresh)).catch(() => {});
   }, [revision]);
 
   useEffect(() => {
@@ -104,20 +112,22 @@ export default function DocsView() {
                   </div>
                 }
               >
-                <DocEditor
-                  key={open.id}
-                  doc={open}
-                  onTitle={(title) => setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === open.id && d.title !== (title || 'Untitled') ? { ...d, title: title || 'Untitled' } : d)) })}
-                  onDeleted={() => {
-                    router.navigate('/docs');
-                    refresh();
-                  }}
-                  onBack={() => router.navigate('/docs')}
-                  onReload={() => {
-                    load();
-                    refresh();
-                  }}
-                />
+                <DocErrorBoundary key={open.id} onReload={load} onBack={() => router.navigate('/docs')}>
+                  <DocEditor
+                    key={open.id}
+                    doc={open}
+                    onTitle={(title) => setList((l) => l && { ...l, docs: l.docs.map((d) => (d.id === open.id && d.title !== (title || 'Untitled') ? { ...d, title: title || 'Untitled' } : d)) })}
+                    onDeleted={() => {
+                      router.navigate('/docs');
+                      refresh();
+                    }}
+                    onBack={() => router.navigate('/docs')}
+                    onReload={() => {
+                      load();
+                      refresh();
+                    }}
+                  />
+                </DocErrorBoundary>
               </Suspense>
             ) : (
               <div className="docs-locked">

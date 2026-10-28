@@ -5,6 +5,8 @@ import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
 import dropBlobs from './dropBlobs.js';
 import unusedDocBlobs from './unusedDocBlobs.js';
+import dropOrphans from './dropOrphans.js';
+import sweepUploadFiles from './sweepUploadFiles.js';
 
 // a chunk that arrived under its own name and was never moved into place
 const INCOMING = /^[\w-]+_\d+\.[\w-]+\.in$/;
@@ -12,8 +14,10 @@ const INCOMING = /^[\w-]+_\d+\.[\w-]+\.in$/;
 // Throws away sealed blobs nobody will finish or use: uploads untouched for
 // SEALED_UPLOAD_IDLE_MINUTES, finished files a folder never took in within
 // SEALED_UPLOAD_STALE_MINUTES (the browser stopped between the upload and adding the file, or
-// between encrypting a file again and swapping it in), anything whose doc or folder is gone, and
-// pictures and files taken out of a doc that none of its kept versions uses (see unusedDocBlobs).
+// between encrypting a file again and swapping it in), anything whose doc or folder is gone,
+// pictures and files taken out of a doc that none of its kept versions uses (see
+// unusedDocBlobs), docs and folders nobody holds a key to (see dropOrphans), and stored files no
+// row points at (see sweepUploadFiles).
 export default async function sweepBlobs({ now = Date.now() } = {}) {
   const cutoff = now - config.sealedBlobs.staleMs;
   const ids = [
@@ -31,11 +35,13 @@ export default async function sweepBlobs({ now = Date.now() } = {}) {
   ].map((r) => r.id);
   ids.push(...unusedDocBlobs(now));
   const dropped = await dropBlobs(ids);
+  await dropOrphans();
   for (const name of fs.readdirSync(uploadDir)) {
     if (!INCOMING.test(name)) continue;
     const file = path.join(uploadDir, name);
     const stat = fs.statSync(file, { throwIfNoEntry: false });
     if (stat && now - stat.mtimeMs > config.sealedBlobs.staleMs) fs.rmSync(file, { force: true });
   }
+  await sweepUploadFiles({ olderThan: config.sealedBlobs.staleMs, now });
   return dropped;
 }

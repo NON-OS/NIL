@@ -12,6 +12,7 @@ import SealedImageView from './SealedImageView';
 import SealedFileView from './SealedFileView';
 import SlashCommands from './SlashCommands';
 import mentionSuggestion from './mentionSuggestion';
+import mentionHtml from './mentionHtml';
 import caretRender from './caretRender';
 import MentionNotices from './MentionNotices';
 import http from '../../../api/http';
@@ -39,7 +40,7 @@ export default function editorExtensions({ docId, ydoc, awareness, me, pick, com
   });
   return [
     // images and files show decrypted in the editor; elsewhere they're plain nodes
-    ...docNodes({ undo: false, mention: { suggestion: mentionSuggestion } }).filter((e) => e.name !== 'sealedImage' && e.name !== 'sealedFile'),
+    ...docNodes({ undo: false, mention: { suggestion: mentionSuggestion, renderHTML: mentionHtml } }).filter((e) => e.name !== 'sealedImage' && e.name !== 'sealedFile'),
     SealedImage.extend({ addNodeView: () => ReactNodeViewRenderer(SealedImageView) }),
     SealedFile.extend({ addNodeView: () => ReactNodeViewRenderer(SealedFileView) }),
     Collaboration.configure({ document: ydoc, field: 'body' }),

@@ -11,13 +11,15 @@ import type DocItem from '../../types/DocItem';
 
 interface Props {
   doc: DocItem;
+  // the doc as it stands in the open editor, so re-keying keeps what was typed since the last save
+  snapshot?: () => { title: string; body: string; through: number };
   canManage: boolean;
   onClose: () => void;
   onDone: () => void;
 }
 
 // Adding people seals the doc key for them. Removing people re-keys the whole doc.
-export default function ShareDocModal({ doc, canManage, onClose, onDone }: Props) {
+export default function ShareDocModal({ doc, snapshot, canManage, onClose, onDone }: Props) {
   const me = useStore((s) => s.me)!;
   const userMap = useStore((s) => s.users);
   // docs are encrypted for people; an agent holds no key and could never open one
@@ -39,7 +41,7 @@ export default function ShareDocModal({ doc, canManage, onClose, onDone }: Props
       const removing = doc.warning === 'unverified' || doc.readers.some((id) => id !== me.id && !target.includes(id)) || audience !== doc.audience;
       if (removing) {
         if (!canManage) throw new Error('Only the doc’s creator or an admin can remove people.');
-        await docs.restrict(doc, target, audience);
+        await docs.restrict(doc, target, audience, snapshot?.());
         toast.show('Done. The doc has a new key, so removed people can’t read new versions.', { tone: 'success' });
       } else {
         await docs.share(doc, target);

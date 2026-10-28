@@ -20,7 +20,7 @@ const docFacts = {
 
   parse(list: unknown[]): DocFacts {
     const [audience, readers, key, at] = list;
-    const people = Array.isArray(readers) && readers.length <= 500 && readers.every(factChecks.person) && readers.every((id, i) => i === 0 || readers[i - 1] < id);
+    const people = Array.isArray(readers) && readers.length <= 5000 && readers.every(factChecks.person) && readers.every((id, i) => i === 0 || readers[i - 1] < id);
     if (list.length !== 4 || (audience !== 'team' && audience !== 'people') || !people || !factChecks.hash(key) || !factChecks.time(at)) throw new Error('This doc carries details Nil doesn’t accept.');
     return { audience, readers: readers as string[], key: key as string, at: at as number };
   },

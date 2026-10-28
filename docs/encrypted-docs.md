@@ -18,7 +18,7 @@ If you've added a passkey to your keys, **Unlock with a passkey** sits next to *
 
 ## Write a doc
 
-Click the plus button above the list. A new doc opens, shared with the whole team. The button beside it starts a doc from a template instead: meeting notes, a project brief, a runbook or a decision record, each a few headings and prompts to replace. Give it a title and start typing. Every change is signed and encrypted in your browser before it leaves, and reaches everyone else who has the doc open within a moment. The status at the top says **Encrypted · saved**, **Encrypting…**, **Offline · kept here** or **Not verified**.
+Click the plus button above the list. A new doc opens, shared with the whole team. The button beside it starts a doc from a template instead: meeting notes, a project brief, a runbook or a decision record, each a few headings and prompts to replace. Give it a title and start typing. Every change is signed and encrypted in your browser before it leaves, and reaches everyone else who has the doc open within a moment. The status at the top says **Encrypted · saved**, **Encrypting…**, **Offline · kept here**, **Not saved** (the server answered but refused; point at it to see why) or **Not verified**.
 
 The bar above the text has the usual formatting: headings, bold, italic, underline, strikethrough, inline code, highlight, links, bulleted, numbered and to-do lists, quotes, code blocks, alignment and tables. You rarely need it:
 

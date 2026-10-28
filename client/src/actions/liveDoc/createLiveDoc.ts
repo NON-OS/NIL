@@ -3,7 +3,11 @@ import docs from '../docs';
 import readDoc from '../readDoc';
 import liveDocs from './liveDocs';
 import loadState from './loadState';
+import versionState from './versionState';
+import docBody from '../../lib/docState/docBody';
+import createStateGuard from '../../lib/docState/createStateGuard';
 import createInbox from './inbox';
+import REMOTE from './remote';
 import createOutbox from './outbox';
 import createSaver from './saver';
 import createPresence from './presence';
@@ -40,6 +44,8 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     settled: () => void unsent.settled(),
     saveNow: () => saver.saveNow(),
     reload: async () => rebase(await docs.open(ctx.docId)),
+    accepts: (update) => guard.accepts(update),
+    reopen: () => onRekey(ctx.doc),
   };
 
   const adopt = (saved: DocItem) => {
@@ -52,22 +58,29 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     if (fresh.version < ctx.doc.version) return;
     if (fresh.keyHash !== ctx.doc.keyHash) return onRekey(fresh);
     if (fresh.warning === 'unverified') return ctx.setStatus({ state: 'readonly' });
-    loadState(ydoc, fresh);
+    const state = versionState.of(fresh);
+    if (!guard.accepts(state)) {
+      ctx.setStatus({ state: 'readonly', refused: ctx.status.refused + 1, problem: versionState.unsafe });
+      return;
+    }
+    Y.applyUpdate(ydoc, state, REMOTE);
     adopt(fresh);
-    await inbox.receive(fresh.live.updates);
+    // not awaited: a rebase can come from inside the inbox, which would then wait on itself
+    void inbox.receive(fresh.live.updates, { more: fresh.live.more });
   }
 
   loadState(ydoc, start);
+  const guard = createStateGuard(ydoc);
   const inbox = createInbox(ctx);
   const saver = createSaver(ctx, adopt);
-  await inbox.receive(start.live.updates);
+  await inbox.receive(start.live.updates, { more: start.live.more });
   const outbox = createOutbox(ctx);
   const unsent = createUnsent(ctx);
   const presence = createPresence(ctx, me);
   if (ctx.status.state !== 'readonly' && (await unsent.recover())) toast.show('Changes you made here earlier that hadn’t reached the server are back in the doc and on their way.');
   const unregister = liveDocs.register(start.id, (event) => {
     if (event.type === 'doc-update') void inbox.receive([event as unknown as EncryptedUpdate]);
-    else if (event.type === 'doc-aware' && typeof event.ct === 'string') void presence.receive(event.ct);
+    else if (event.type === 'doc-aware' && typeof event.ct === 'string' && typeof event.from === 'string') void presence.receive(event.ct, event.from);
   });
 
   return {
@@ -81,7 +94,11 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     },
     rebase,
     pending: () => outbox.pending() || saver.dirty(),
-    reconnected: () => outbox.retryNow(),
+    snapshot: () => ({ title: ydoc.getText('title').toString().trim().slice(0, 200) || 'Untitled', body: docBody.encode(Y.encodeStateAsUpdate(ydoc)), through: ctx.through }),
+    reconnected() {
+      outbox.retryNow();
+      void inbox.catchUp();
+    },
     async close() {
       unregister();
       presence.stop();
@@ -91,6 +108,7 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
       await saver.flush().catch(() => {});
       saver.stop();
       await unsent.stop();
+      guard.stop();
       ydoc.destroy();
     },
   };

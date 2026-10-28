@@ -7,13 +7,14 @@ import saveBlob from '../../../lib/saveBlob';
 import fileSize from '../../../lib/fileSize';
 import previewKind from '../../../lib/previewKind';
 import toast from '../../../state/toast';
+import sealedAttrs from '../../../lib/docState/sealedAttrs';
 
 const DocFilePreview = lazy(() => import('./DocFilePreview'));
 
 // A file attached in a doc: its name and size, a preview for what the browser can show, and a
 // download, all decrypted in this tab.
 export default function SealedFileView({ node, selected }: ReactNodeViewProps) {
-  const { blob, key, mime, name, size } = node.attrs;
+  const { blob, key, mime, name, size } = sealedAttrs(node.attrs);
   const [previewing, setPreviewing] = useState(false);
   const [busy, setBusy] = useState(false);
   const canPreview = previewKind(mime ?? '', name ?? '') !== 'none';

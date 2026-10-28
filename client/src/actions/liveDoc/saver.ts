@@ -7,6 +7,8 @@ import type DocItem from '../../types/DocItem';
 // a new version once typing pauses this long, and at least this often while it doesn't
 const IDLE_MS = 4000;
 const MAX_WAIT_MS = 20_000;
+// the longest wait between tries while the server keeps refusing a version
+const MAX_BACKOFF_MS = 5 * 60_000;
 
 // Folds the live changes into a new signed version every so often, so the server can let them
 // go and the doc's history has something to show. Only a tab with changes of its own saves. If
@@ -17,16 +19,18 @@ export default function createSaver(ctx: LiveContext, adopt: (saved: DocItem) =>
   let since = 0;
   let timer: ReturnType<typeof setTimeout> | undefined;
   let saving: Promise<void> | null = null;
+  // saves the server refused in a row
+  let failures = 0;
 
-  const schedule = () => {
+  const schedule = (delay = Math.max(0, Math.min(IDLE_MS, since + MAX_WAIT_MS - Date.now()))) => {
     clearTimeout(timer);
-    timer = setTimeout(() => void save().catch(() => {}), Math.max(0, Math.min(IDLE_MS, since + MAX_WAIT_MS - Date.now())));
+    timer = setTimeout(() => void save().catch(() => {}), delay);
   };
 
   async function attempt() {
     for (let tries = 0; tries < 3; tries++) {
       const body = docBody.encode(Y.encodeStateAsUpdate(ctx.ydoc));
-      const title = ctx.ydoc.getText('title').toString().trim() || 'Untitled';
+      const title = ctx.ydoc.getText('title').toString().trim().slice(0, 200) || 'Untitled';
       try {
         adopt(await docs.save(ctx.doc, title, body, { through: ctx.through }));
         return;
@@ -43,9 +47,16 @@ export default function createSaver(ctx: LiveContext, adopt: (saved: DocItem) =>
     if (!dirty || ctx.status.state === 'readonly') return Promise.resolve();
     dirty = false;
     saving = attempt()
+      .then(() => {
+        failures = 0;
+        if (ctx.status.state === 'unsaved') ctx.setStatus({ state: 'saved', problem: undefined });
+      })
       .catch((err) => {
         dirty = true;
-        schedule();
+        failures++;
+        // the server answered and said no: say so, and try less often while it keeps saying it
+        if (err?.status) ctx.setStatus({ state: 'unsaved', problem: err.message });
+        schedule(Math.min(IDLE_MS * 2 ** failures, MAX_BACKOFF_MS));
         throw err;
       })
       .finally(() => (saving = null));
