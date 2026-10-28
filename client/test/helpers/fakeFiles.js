@@ -1,4 +1,4 @@
-import { route } from './fakeBrowser.js';
+import { route, store } from './fakeBrowser.js';
 
 // The blob store and shared folders as a server keeps them, in memory, behind the fake browser's
 // routes. Tests reach into `state` to play a dishonest server: swap keys, details, chunks.
@@ -6,11 +6,14 @@ export const state = { blobs: new Map(), folders: new Map(), items: new Map(), k
 
 const id = () => `b${String(++state.next).padStart(11, '0')}`;
 const info = (b) => ({ id: b.id, chunks: b.chunks, size: b.size, header: b.header });
-const listItem = (i) => ({ ...i, blob: i.blobId ? info(state.blobs.get(i.blobId)) : null, thumb: i.thumbId ? info(state.blobs.get(i.thumbId)) : null });
-const folderFor = (f, me) => ({ ...f, wrappedKey: state.keys.get(f.id)?.get(me), readers: [...(state.keys.get(f.id)?.keys() ?? [])] });
+const blobOf = (id) => (id && state.blobs.get(id) ? info(state.blobs.get(id)) : null);
+const listItem = (i) => ({ keyRev: 1, deletedAt: null, deletedBy: null, trashRoot: null, ...i, blob: blobOf(i.blobId), thumb: blobOf(i.thumbId), hashes: blobOf(i.hashesId) });
+const folderFor = (f, me) => ({ resealRev: 0, ...f, wrappedKey: state.keys.get(f.id)?.get(me), readers: [...(state.keys.get(f.id)?.keys() ?? [])] });
 
 // Serves the routes as user `me` (a function, so a test can switch who's asking).
 export function serveFiles(me) {
+  // the Files limits a server sends with the bootstrap
+  store.set({ files: { maxFileBytes: 1e9, previewMaxBytes: 1e8, textPreviewMaxBytes: 1e6, cleanMaxBytes: 1e8, inflateMaxBytes: 1e8, imageMaxPixels: 4e7, thumbMaxBytes: 512 * 1024, zipMemoryMaxBytes: 1e8, depthMax: 32, folderItemsMax: 5000, uploadIdleMs: 1800000, trashMs: 30 * 86400000 } });
   state.blobs.clear();
   state.folders.clear();
   state.items.clear();
@@ -58,19 +61,49 @@ export function serveFiles(me) {
   });
   route('POST', /^\/api\/folders\/[^/]+\/rotate$/, (url, body) => {
     const folder = state.folders.get(url.split('/')[3]);
+    const before = [...state.keys.get(folder.id).keys()];
     Object.assign(folder, { nameCt: body.nameCt, audience: body.audience, version: folder.version + 1, keyRev: folder.keyRev + 1, updatedBy: me() });
-    for (const { id: itemId, keyWrap } of body.items) state.items.get(itemId).keyWrap = keyWrap;
+    // someone taken out: everything waits to be encrypted again
+    if (before.some((u) => !body.grants.some((g) => g.userId === u))) folder.resealRev = folder.keyRev;
+    for (const itemId of body.drop ?? []) state.items.delete(itemId);
+    for (const { id: itemId, keyWrap, metaCt } of body.items) Object.assign(state.items.get(itemId), { keyWrap, metaCt });
     state.keys.set(folder.id, new Map(body.grants.map((g) => [g.userId, g.wrappedKey])));
     return { readers: [...state.keys.get(folder.id).keys()] };
   });
   route('POST', /^\/api\/folders\/[^/]+\/items$/, (url, body) => {
-    const item = { id: body.id, folderId: url.split('/')[3], parentId: body.parentId ?? null, kind: body.kind, keyWrap: body.keyWrap, metaCt: body.metaCt, blobId: body.blobId ?? null, thumbId: body.thumbId ?? null, createdBy: me(), updatedBy: me(), createdAt: 1, updatedAt: 1 };
+    const folder = state.folders.get(url.split('/')[3]);
+    if (body.keyRev !== folder.keyRev) throw Object.assign(new Error('new key'), { status: 409 });
+    const item = { id: body.id, folderId: folder.id, parentId: body.parentId ?? null, kind: body.kind, keyRev: folder.keyRev, keyWrap: body.keyWrap, metaCt: body.metaCt, blobId: body.blobId ?? null, thumbId: body.thumbId ?? null, hashesId: body.hashesId ?? null, createdBy: me(), updatedBy: me(), createdAt: 1, updatedAt: 1 };
     state.items.set(item.id, item);
     return { item: listItem(item) };
   });
   route('PATCH', /^\/api\/folders\/[^/]+\/items\/[^/]+$/, (url, body) => {
     const item = state.items.get(url.split('/')[5]);
     Object.assign(item, { parentId: body.parentId ?? null, metaCt: body.metaCt, updatedBy: me() });
+    return { item: listItem(item) };
+  });
+  // the trash: deleting marks, restoring unmarks
+  route('DELETE', /^\/api\/folders\/[^/]+\/items\/[^/]+$/, (url) => {
+    const item = state.items.get(url.split('/')[5]);
+    Object.assign(item, { deletedAt: Date.now(), deletedBy: me(), trashRoot: item.id });
+    return { ok: true };
+  });
+  route('POST', /^\/api\/folders\/[^/]+\/items\/[^/]+\/restore$/, (url, body) => {
+    const item = state.items.get(url.split('/')[5]);
+    Object.assign(item, { deletedAt: null, deletedBy: null, trashRoot: null, ...(body.metaCt ? { metaCt: body.metaCt, parentId: body.parentId ?? null } : {}) });
+    return { item: listItem(item) };
+  });
+  // re-sealing after someone's taken out: waiting items, claimed and swapped one by one
+  route('POST', /^\/api\/folders\/[^/]+\/reseal\/claim$/, (url) => {
+    const folder = state.folders.get(url.split('/')[3]);
+    const waiting = [...state.items.values()].filter((i) => i.folderId === folder.id && i.keyRev < (folder.resealRev ?? 0));
+    return { items: waiting.map((i) => i.id), left: waiting.length };
+  });
+  route('POST', /^\/api\/folders\/[^/]+\/items\/[^/]+\/reseal$/, (url, body) => {
+    const folder = state.folders.get(url.split('/')[3]);
+    const item = state.items.get(url.split('/')[5]);
+    for (const old of [item.blobId, item.thumbId, item.hashesId]) if (old) state.blobs.delete(old);
+    Object.assign(item, { keyWrap: body.keyWrap, metaCt: body.metaCt, keyRev: folder.keyRev, blobId: body.blobId ?? null, thumbId: body.thumbId ?? null, hashesId: body.hashesId ?? null, updatedBy: me() });
     return { item: listItem(item) };
   });
 }

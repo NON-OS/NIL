@@ -32,8 +32,11 @@ export default function ShareFolderModal({ folder, canManage, onClose, onDone }:
       const removing = folder.warning === 'unverified' || folder.readers.some((id) => id !== me.id && !target.includes(id)) || audience !== folder.audience;
       if (removing) {
         if (!canManage) throw new Error('Only the folder’s creator or an admin can take people out.');
-        await folders.restrict(folder, target, audience);
-        toast.show('Done. The folder has a new key, so people taken out can’t open files added from now on.', { tone: 'success' });
+        const { dropped } = await folders.restrict(folder, target, audience);
+        toast.show(
+          `Done. The folder has a new key, and its files are now being encrypted again under fresh keys, so people taken out can’t open them from the server.${dropped ? ` ${dropped} ${dropped === 1 ? 'thing nobody could open here was' : 'things nobody could open here were'} removed.` : ''}`,
+          { tone: 'success' },
+        );
       } else {
         await folders.share(folder, target);
         toast.show('Shared. Their browsers can now open this folder.', { tone: 'success' });

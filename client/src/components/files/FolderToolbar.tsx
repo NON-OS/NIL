@@ -1,6 +1,6 @@
 import '../ui/Menu.css';
 import { useRef, useState } from 'react';
-import { FolderPlus, LayoutGrid, List, Lock, MoreHorizontal, Pencil, Trash2, Upload, Users } from 'lucide-react';
+import { Archive, FolderPlus, LayoutGrid, List, Lock, MoreHorizontal, Pencil, Trash2, Upload, Users } from 'lucide-react';
 import Popover from '../ui/Popover';
 import type SharedFolder from '../../types/SharedFolder';
 import type ItemSort from '../../types/ItemSort';
@@ -31,11 +31,14 @@ interface Props {
   onShare: () => void;
   onRename: () => void;
   onDelete: () => void;
+  // how many deleted things wait in the trash
+  trashCount: number;
+  onTrash: () => void;
 }
 
 // Upload, new folder, who can open it, search over the decrypted names, the order, and grid or
 // list.
-export default function FolderToolbar({ folder, query, onQuery, mode, onMode, sort, onSort, canWrite, canManage, onUpload, onNewFolder, onShare, onRename, onDelete }: Props) {
+export default function FolderToolbar({ folder, query, onQuery, mode, onMode, sort, onSort, canWrite, canManage, onUpload, onNewFolder, onShare, onRename, onDelete, trashCount, onTrash }: Props) {
   const input = useRef<HTMLInputElement>(null);
   const more = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
@@ -87,7 +90,10 @@ export default function FolderToolbar({ folder, query, onQuery, mode, onMode, so
         </button>
         <Popover anchor={more} open={open} onClose={() => setOpen(false)} width={220} align="end">
           <div className="menu-list">
-            <button type="button" className="menu-item" onClick={run(onRename)} disabled={!canWrite}>
+            <button type="button" className="menu-item" onClick={run(onTrash)}>
+              <Archive size={15} /> Trash{trashCount ? ` (${trashCount})` : ''}
+            </button>
+            <button type="button" className="menu-item" onClick={run(onRename)} disabled={!canManage}>
               <Pencil size={15} /> Rename shared folder
             </button>
             {canManage && (

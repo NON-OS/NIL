@@ -5,7 +5,7 @@ import useStore from '../state/useStore';
 import type FolderItem from '../types/FolderItem';
 import type SharedFolder from '../types/SharedFolder';
 
-type Listing = { folder: SharedFolder; items: FolderItem[] };
+type Listing = { folder: SharedFolder; items: FolderItem[]; trash: FolderItem[] };
 
 const SETTLE = 400;
 
@@ -48,6 +48,7 @@ export default function useFolderListing(folderId: string) {
 
   // shows a change made in this tab straight away, before the server's announcement brings it
   const put = useCallback((item: FolderItem) => setListing((l) => l && { ...l, items: [...l.items.filter((i) => i.id !== item.id), item] }), []);
+  // something deleted here leaves the list at once; the trash fills in when the server announces it
   const drop = useCallback((id: string) => setListing((l) => l && { ...l, items: l.items.filter((i) => i.id !== id && i.parentId !== id) }), []);
   const setFolder = useCallback((folder: SharedFolder) => setListing((l) => l && { ...l, folder }), []);
 

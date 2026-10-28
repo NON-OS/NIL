@@ -4,6 +4,7 @@ import DeleteModal from './DeleteModal';
 import ShareFolderModal from './ShareFolderModal';
 import useStore from '../../state/useStore';
 import folders from '../../actions/folders';
+import filesLimits from '../../lib/filesLimits';
 import folderFiles from '../../actions/folderFiles';
 import router from '../../lib/router';
 import isAdmin from '../../lib/isAdmin';
@@ -39,6 +40,7 @@ export default function FolderDialogs({ dialog, folder, items, parent, onClose, 
         <DeleteModal
           name={dialog.item.locked ? 'Locked file' : dialog.item.name}
           folder={dialog.item.kind === 'folder'}
+          trashDays={Math.round(filesLimits().trashMs / 86_400_000)}
           onDelete={async () => {
             await folderFiles.remove(folder, dialog.item);
             drop(dialog.item.id);

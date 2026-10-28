@@ -105,19 +105,25 @@ The button showing **Team** or a number of people opens **Who can open this fold
 
 - Anyone who can open a team folder can hand it to teammates whose key they've confirmed. Only the folder's creator or an admin can switch a folder between the two choices, add people to a folder for specific people, or take people out.
 - Before a folder's key is sealed to someone new, Nil asks you to check their key, the same check as for docs. [Check your teammates' keys](encrypted-docs.md#check-your-teammates-keys) explains how.
-- Taking someone out gives the folder a new key, and every file's own key is wrapped again under it. They can't open files added after that.
+- Taking someone out gives the folder a new key, every file's own key is wrapped again under it, and every file's details are encrypted again under it. Then every file in the folder is encrypted again under a fresh key of its own, by the browsers of the people who stay, a few at a time in the background. The folder says how many are left while that runs, and anything still waiting can't be moved or renamed until it's done.
 
-People you take out keep whatever they downloaded or previewed before. Each file keeps its own key when the folder gets a new one, so someone who opened a file before can still read that same file, and its later name, if they kept its key and the server hands them its encrypted copy. Taking someone out stops them fetching it from Nil, and it keeps everything added afterwards from them.
+Once a file has been encrypted again, the copy the server keeps opens only with its new key, so a key the person kept opens nothing the server still holds. People you take out keep whatever they downloaded or previewed before, and that can't be taken back.
+
+## Trash
+
+Deleting a file or folder moves it, with everything in it, to the shared folder's trash for everyone. It stays there for 30 days (the server's `FILES_TRASH_DAYS`), then it's deleted for good. Open **Trash** from the folder's ⋯ menu to bring something back where it was, or to delete it for good now. If the folder it was in is in the trash too, it comes back at the top of the shared folder.
+
+Only whoever added something, the folder's creator or an admin can rename, move or delete it, and only they, or whoever deleted it, can restore it or delete it for good. Deleting a folder that holds other people's files takes the folder's creator or an admin.
 
 ## Signed files
 
-Whoever adds a file signs its name, type, size, place and a fingerprint of its contents, with the same signing key that signs their docs. Renaming or moving a file signs its details again, as the person who changed them. Your browser checks every signature against the keys you can see for your teammates:
+Whoever adds a file signs its name, type, size, place, a fingerprint of its contents, a fingerprint of each 1 MiB piece of it, and a fingerprint of its thumbnail, with the same signing key that signs their docs. A preview or download checks each piece as it arrives, and a thumbnail that isn't the one its uploader signed is never shown. Renaming or moving a file signs its details again, as the person who changed them. Your browser checks every signature against the keys you can see for your teammates:
 
 - A file or folder whose details don't check out shows as **Locked file** and can't be opened. Its creator or an admin can delete it.
 - A file whose contents don't match the fingerprint its uploader signed won't preview or download. The server may have changed it.
 - A warning sign on a file means the server sent older details than this browser has already seen for it.
 
-A shared folder's name is signed too, together with who the folder is for and which key protects it. If it doesn't check out, the folder says "Nil can't confirm a teammate named this folder". Files in it that do check out still open, but nothing new is added or shared under its key until its creator or an admin gives it a new one under **Who can open this folder**.
+A shared folder's name is signed too, by its creator or an admin, together with who the folder is for, which key protects it and which of the folder's keys that is. A name anyone else signed doesn't count, so no other reader can make a folder a team folder. If the name doesn't check out, the folder says "Nil can't confirm the folder's creator or an admin named this folder". If the server shows an older key than this browser has already seen, the folder says it's an older version, and nothing is added to it. Files in it that do check out still open, but nothing new is added or shared under its key until its creator or an admin gives it a new one under **Who can open this folder**.
 
 ## Your file space
 

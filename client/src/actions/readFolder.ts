@@ -1,3 +1,4 @@
+import store from '../state/store';
 import keyring from '../state/keyring';
 import folderKeys from '../state/folderKeys';
 import folderVersions from '../state/folderVersions';
@@ -13,6 +14,7 @@ import keyHash from '../lib/crypto/keyHash';
 import fileMeta from '../lib/fileMeta';
 import folderLabel from '../lib/folderLabel';
 import stripBidi from '../lib/stripBidi';
+import isAdmin from '../lib/isAdmin';
 import keyDirectory from './keyDirectory';
 import type EncryptedFolder from '../types/EncryptedFolder';
 import type EncryptedItem from '../types/EncryptedItem';
@@ -27,31 +29,37 @@ function unwrap(folder: EncryptedFolder) {
 
 // A folder's name checks out like a doc version: its signer is one of the readers it names, the
 // key it opened with is the one signed, and the signature verifies against a key this person can
-// see for the signer.
+// see for the signer. On top, only its creator or an admin can sign who it's for and which of its
+// keys this is, so another reader can't widen it to the team or pass an old key off as the newest.
 async function openName(key: Uint8Array, folder: EncryptedFolder) {
   const { signed, facts } = signedFacts.open(await folderName.open(key, folder.id, folder.version, folder.nameCt));
   if (!facts) return { name: signed.text, by: signed.by, facts: null, author: null };
   const f = folderFacts.parse(facts);
-  const statement = { kind: folderFacts.kind, place: folderFacts.place(folder.id, folder.version), facts: folderFacts.list(f) };
-  const fits = f.readers.includes(signed.by) && f.key === keyHash(key);
-  const author = fits ? await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)) : null;
+  const manager = signed.by === folder.createdBy || isAdmin(store.get().users[signed.by]);
+  const sameKey = f.version === 1 || f.keyRev === folder.keyRev;
+  const fits = f.readers.includes(signed.by) && f.key === keyHash(key) && manager && sameKey;
+  const author = fits ? await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, folderFacts.statement(folder.id, folder.version, f), k)) : null;
   return { name: signed.text, by: signed.by, facts: f, author };
 }
 
-// A file's or subfolder's details check out when they open under its own key, name that key, its
-// kind, the place the server shows it in and the blob it points at, and carry the signature of a
-// teammate whose key this person can see. Anything else stays locked, nameless.
-async function openItem(folderKey: Uint8Array, item: EncryptedItem) {
+// A file's or subfolder's details check out when they open under its own key (and the folder key,
+// in a folder whose details are bound to it), name that key, its kind, the place the server shows
+// it in and the blobs it points at, and carry the signature of a teammate whose key this person
+// can see. Details not bound to the folder key must also come from one of the folder's signed
+// readers. Anything else stays locked, nameless.
+async function openItem(folderKey: Uint8Array, folder: SharedFolder, item: EncryptedItem) {
   const key = await itemKeyWrap.unwrap(folderKey, item.folderId, item.id, item.keyWrap);
   try {
-    const { signed, facts } = signedFacts.open(await itemMeta.open(key, item.folderId, item.id, item.metaCt));
+    const { payload, bound } = await itemMeta.open(key, folderKey, item.folderId, item.id, item.metaCt, { older: !folder.bound });
+    const { signed, facts } = signedFacts.open(payload);
     const f = itemFacts.parse(facts ?? []);
     const sized = item.kind === 'folder' || item.blob?.size === blobCipher.sealedSize(f.size);
-    const fits = sized && f.key === keyHash(key) && f.kind === item.kind && f.parent === item.parentId && f.blob === (item.blob?.id ?? null) && f.thumb === (item.thumb?.id ?? null);
-    const statement = { kind: itemFacts.kind, place: itemFacts.place(item.folderId, item.id), facts: itemFacts.list(f) };
-    const author = fits ? await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)) : null;
+    const parts = f.blob === (item.blob?.id ?? null) && f.thumb === (item.thumb?.id ?? null) && f.hashes === (item.hashes?.id ?? null);
+    const signer = bound || folder.signedReaders.includes(signed.by);
+    const fits = sized && parts && signer && f.key === keyHash(key) && f.kind === item.kind && f.parent === item.parentId;
+    const author = fits ? await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, itemFacts.statement(item.folderId, item.id, f), k)) : null;
     if (!author) throw new Error('unverified');
-    return { signed, f, author };
+    return { signed, f, author, bound };
   } finally {
     key.fill(0);
   }
@@ -74,6 +82,8 @@ const readFolder = {
     }
     folderKeys.remember(folder.id, key);
     const verified = Boolean(v.author && v.facts);
+    const keyRev = v.facts?.version === 2 ? v.facts.keyRev! : null;
+    const rolledBack = verified && (folderVersions.folder(folder.id, folder.version) === 'rollback' || (keyRev !== null && folderVersions.key(folder.id, keyRev) === 'rollback'));
     return {
       key,
       folder: {
@@ -81,15 +91,19 @@ const readFolder = {
         name: folderLabel(v.name),
         version: folder.version,
         keyRev: folder.keyRev,
-        audience: verified ? v.facts!.audience : folder.audience,
+        resealRev: folder.resealRev,
+        // the server's word alone never widens a folder to the team
+        audience: verified ? v.facts!.audience : 'people',
         readers: folder.readers,
+        signedReaders: verified ? v.facts!.readers : [],
         createdBy: folder.createdBy,
         updatedBy: verified ? v.by : folder.updatedBy,
         createdAt: folder.createdAt,
         updatedAt: folder.updatedAt,
-        warning: !verified ? 'unverified' : folderVersions.folder(folder.id, folder.version) === 'rollback' ? 'rollback' : null,
+        warning: !verified ? 'unverified' : rolledBack ? 'rollback' : null,
         oldKey: v.author?.old ?? null,
         keyHash: keyHash(key),
+        bound: verified && Boolean(v.facts!.bound),
       },
     };
   },
@@ -102,15 +116,31 @@ const readFolder = {
     return key && keyHash(key) === folder.keyHash ? key : null;
   },
 
-  async item(folderKey: Uint8Array, item: EncryptedItem): Promise<FolderItem> {
-    const base = { id: item.id, folderId: item.folderId, parentId: item.parentId, kind: item.kind, keyWrap: item.keyWrap, blob: item.blob, thumb: item.thumb, createdBy: item.createdBy, createdAt: item.createdAt, updatedAt: item.updatedAt };
+  async item(folderKey: Uint8Array, folder: SharedFolder, item: EncryptedItem): Promise<FolderItem> {
+    const base = {
+      id: item.id,
+      folderId: item.folderId,
+      parentId: item.parentId,
+      kind: item.kind,
+      keyWrap: item.keyWrap,
+      blob: item.blob,
+      hashes: item.hashes,
+      thumb: item.thumb,
+      createdBy: item.createdBy,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt,
+      waiting: item.keyRev < folder.resealRev,
+      deletedAt: item.deletedAt,
+      deletedBy: item.deletedBy,
+      trashRoot: item.trashRoot,
+    };
     try {
-      const { signed, f, author } = await openItem(folderKey, item);
+      const { signed, f, author, bound } = await openItem(folderKey, folder, item);
       const shown = item.kind === 'file' ? fileMeta(stripBidi(signed.text), f.type) : { name: folderLabel(signed.text), type: '' };
       const rollback = folderVersions.item(item.id, f.edit) === 'rollback';
-      return { ...base, ...shown, size: f.size, width: f.width, height: f.height, hash: f.hash, edit: f.edit, by: signed.by, locked: false, rollback, oldKey: author.old };
+      return { ...base, ...shown, size: f.size, width: f.width, height: f.height, hash: f.hash, thumbHash: f.thumbHash, thumbSize: f.thumbSize, edit: f.edit, by: signed.by, locked: false, rollback, olderFormat: f.version === 1 || !bound, oldKey: author.old };
     } catch {
-      return { ...base, name: '', type: '', size: 0, width: null, height: null, hash: null, edit: 0, by: null, locked: true, rollback: false, oldKey: null };
+      return { ...base, name: '', type: '', size: 0, width: null, height: null, hash: null, thumbHash: null, thumbSize: null, edit: 0, by: null, locked: true, rollback: false, olderFormat: false, oldKey: null };
     }
   },
 };

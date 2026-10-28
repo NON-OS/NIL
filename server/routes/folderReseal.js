@@ -62,7 +62,9 @@ router.post(
     if (item.kind === 'file') {
       blob = itemBlobs.copy(folder, req.user, b.blobId, item.blob_id);
       if (given(b.thumbId)) thumb = item.thumb_id ? itemBlobs.copy(folder, req.user, b.thumbId, item.thumb_id) : null;
-      if (given(b.hashesId)) hashes = item.hashes_id ? itemBlobs.copy(folder, req.user, b.hashesId, item.hashes_id) : itemBlobs.hashes(folder, req.user, b.hashesId, blob);
+      // a chunk list comes as a copy of the old one, or made afresh from the file as it was read
+      const copyOf = given(b.hashesId) ? sql.get('SELECT replaces FROM sealed_blobs WHERE id = ?', String(b.hashesId))?.replaces : null;
+      if (given(b.hashesId)) hashes = item.hashes_id && copyOf === item.hashes_id ? itemBlobs.copy(folder, req.user, b.hashesId, item.hashes_id) : itemBlobs.hashes(folder, req.user, b.hashesId, blob);
       if (given(b.thumbId) && !thumb) throw HttpError.badRequest('This file has no thumbnail to replace.');
     } else if (given(b.blobId) || given(b.thumbId) || given(b.hashesId)) throw HttpError.badRequest('A folder holds no file of its own.');
     const old = [item.blob_id, item.thumb_id, item.hashes_id].filter(Boolean);

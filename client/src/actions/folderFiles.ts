@@ -1,20 +1,20 @@
 import http from '../api/http';
 import ApiError from '../api/ApiError';
-import store from '../state/store';
-import keyring from '../state/keyring';
-import itemFacts, { type ItemFacts } from '../lib/crypto/itemFacts';
 import itemKeyWrap from '../lib/crypto/itemKeyWrap';
-import itemMeta from '../lib/crypto/itemMeta';
 import itemSubkey from '../lib/crypto/itemSubkey';
-import signedFacts from '../lib/crypto/signedFacts';
 import blobHash from '../lib/crypto/blobHash';
+import blobCipher from '../lib/crypto/blobCipher';
+import chunkHashes from '../lib/crypto/chunkHashes';
 import keyHash from '../lib/crypto/keyHash';
 import b64u from '../lib/crypto/b64u';
 import cleanFile from '../lib/cleanFile';
 import imageCanvas from '../lib/imageCanvas';
+import imageHeaderSize from '../lib/imageHeaderSize';
+import filesLimits from '../lib/filesLimits';
 import blobTransfer from './blobTransfer';
 import folders from './folders';
 import readFolder from './readFolder';
+import folderItemSeal from './folderItemSeal';
 import type BlobProgress from '../types/BlobProgress';
 import type EncryptedItem from '../types/EncryptedItem';
 import type FolderItem from '../types/FolderItem';
@@ -27,23 +27,16 @@ const FILE_SHARE = 0.95;
 
 const freshId = () => b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
 
-// The signed, encrypted details of an item, under its own key.
-function sealMeta(item: { id: string; folderId: string }, key: Uint8Array, name: string, facts: ItemFacts) {
-  const id = keyring.identity();
-  if (!id) throw new Error('Unlock your keys first.');
-  const payload = signedFacts.seal(name, { kind: itemFacts.kind, place: itemFacts.place(item.folderId, item.id), facts: itemFacts.list(facts), by: store.get().me!.id, signingPrivate: id.signingPrivate });
-  return itemMeta.seal(key, item.folderId, item.id, payload);
-}
-
-// Adds a new item, wrapping its key under the folder key as it stands, and returns it opened. If
-// the folder got a new key meanwhile, it's opened again and the key wrapped under the new one.
-async function add(folder: SharedFolder, body: Record<string, unknown> & { id: string }, key: Uint8Array) {
+// Adds a new item, wrapping its key and sealing its details under the folder key as it stands,
+// and returns it opened. If the folder got a new key meanwhile, it's opened again and both are
+// done under the new one.
+async function add(folder: SharedFolder, body: Record<string, unknown> & { id: string }, key: Uint8Array, meta: (folderKey: Uint8Array) => Promise<string>) {
   for (let attempt = 0; ; attempt++) {
     const folderKey = folders.writable(folder, 'add files');
     const keyWrap = await itemKeyWrap.wrap(folderKey, folder.id, body.id, key);
     try {
-      const { item } = await http.post<{ item: EncryptedItem }>(`/folders/${folder.id}/items`, { ...body, keyRev: folder.keyRev, keyWrap });
-      return readFolder.item(folderKey, item);
+      const { item } = await http.post<{ item: EncryptedItem }>(`/folders/${folder.id}/items`, { ...body, keyRev: folder.keyRev, keyWrap, metaCt: await meta(folderKey) });
+      return readFolder.item(folderKey, folder, item);
     } catch (err) {
       if (!(err instanceof ApiError && err.status === 409) || attempt) throw err;
       folder = (await folders.open(folder.id)).folder;
@@ -64,21 +57,31 @@ async function withItemKey<T>(folder: SharedFolder, item: FolderItem, use: (key:
 }
 
 // Changes an item's name or place: its details signed again, by whoever changed them, with one
-// more edit, under its own key. The file itself doesn't change.
+// more edit. The file itself doesn't change.
 async function update(folder: SharedFolder, item: FolderItem, change: { name?: string; parentId?: string | null }) {
   const folderKey = folders.writable(folder, 'change it');
   const parentId = change.parentId === undefined ? item.parentId : change.parentId;
   const res = await withItemKey(folder, item, async (key) => {
-    const facts: ItemFacts = { kind: item.kind, parent: parentId, type: item.type, size: item.size, hash: item.hash, blob: item.blob?.id ?? null, thumb: item.thumb?.id ?? null, width: item.width, height: item.height, key: keyHash(key), edit: item.edit + 1, at: Date.now() };
-    const metaCt = await sealMeta(item, key, change.name ?? item.name, facts);
-    return http.patch<{ item: EncryptedItem }>(`/folders/${folder.id}/items/${item.id}`, { parentId, metaCt });
+    const metaCt = await folderItemSeal.seal(folderKey, item, key, change.name ?? item.name, folderItemSeal.facts(item, key, { parent: parentId }));
+    return http.patch<{ item: EncryptedItem }>(`/folders/${folder.id}/items/${item.id}`, { parentId, metaCt, keyRev: folder.keyRev });
   });
-  return readFolder.item(folderKey, res.item);
+  return readFolder.item(folderKey, folder, res.item);
+}
+
+// A file's chunk list, opened and checked against the hash its uploader signed, or null for a
+// file of one chunk, whose hash checks it whole.
+async function chunkList(item: FolderItem, key: Uint8Array, signal?: AbortSignal) {
+  if (!item.hashes) return null;
+  const parts: Uint8Array[] = [];
+  await blobTransfer.each(item.hashes, itemSubkey(key, 'hashes'), (plain) => void parts.push(plain), { signal });
+  const list = new Uint8Array(parts.reduce((n, p) => n + p.length, 0));
+  parts.reduce((at, p) => (list.set(p, at), at + p.length), 0);
+  return chunkHashes.check(list, item.blob!.chunks, item.hash!);
 }
 
 // Files and subfolders inside shared folders. Each file is encrypted under a fresh key of its own,
-// which is also its blob's key; its details are signed by whoever adds it and encrypted under a
-// key derived from it; and only that key is wrapped under the folder's key.
+// which is also its blob's key; its details, its thumbnail's hash and its chunks' hashes are signed
+// by whoever adds it; and only its key is wrapped under the folder's key.
 const folderFiles = {
   async upload(folder: SharedFolder, parentId: string | null, file: File, { onProgress, signal }: BlobProgress = {}): Promise<FolderItem> {
     folders.writable(folder, 'add files');
@@ -90,14 +93,16 @@ const folderFiles = {
     try {
       const blob = await blobTransfer.put(clean.body, key, scope, { signal, onPlain: hash.add, onProgress: (p) => onProgress?.(p * FILE_SHARE) });
       uploaded.push(blob);
+      const hashes = blobCipher.chunks(clean.body.size) > 1 ? await blobTransfer.put(new Blob([hash.list()]), itemSubkey(key, 'hashes'), scope, { signal, part: 'hashes' }) : null;
+      if (hashes) uploaded.push(hashes);
       const small = imageCanvas.thumbnails(clean.mime) ? await imageCanvas.thumbnail(clean.body, THUMB_SIDE) : null;
-      const thumb = small ? await blobTransfer.put(small, itemSubkey(key, 'thumb'), scope, { signal }) : null;
+      const thumbHash = blobHash();
+      const thumb = small ? await blobTransfer.put(small, itemSubkey(key, 'thumb'), scope, { signal, part: 'thumb', onPlain: thumbHash.add }) : null;
       if (thumb) uploaded.push(thumb);
       const id = freshId();
-      const facts: ItemFacts = { kind: 'file', parent: parentId, type: clean.mime, size: clean.body.size, hash: hash.done(), blob, thumb, width: clean.width, height: clean.height, key: keyHash(key), edit: 0, at: Date.now() };
-      const metaCt = await sealMeta({ id, folderId: folder.id }, key, clean.name, facts);
+      const facts = { kind: 'file' as const, parent: parentId, type: clean.mime, size: clean.body.size, hash: hash.done(), blob, hashes, thumb, thumbHash: thumb ? thumbHash.done() : null, thumbSize: thumb ? small!.size : null, width: clean.width, height: clean.height, key: keyHash(key), edit: 0, at: Date.now() };
       signal?.throwIfAborted();
-      const item = await add(folder, { id, kind: 'file', parentId, metaCt, blobId: blob, thumbId: thumb }, key);
+      const item = await add(folder, { id, kind: 'file', parentId, blobId: blob, thumbId: thumb, hashesId: hashes }, key, (folderKey) => folderItemSeal.seal(folderKey, { id, folderId: folder.id }, key, clean.name, facts));
       onProgress?.(1);
       return item;
     } catch (err) {
@@ -112,9 +117,8 @@ const folderFiles = {
     const key = crypto.getRandomValues(new Uint8Array(32));
     try {
       const id = freshId();
-      const facts: ItemFacts = { kind: 'folder', parent: parentId, type: '', size: 0, hash: null, blob: null, thumb: null, width: null, height: null, key: keyHash(key), edit: 0, at: Date.now() };
-      const metaCt = await sealMeta({ id, folderId: folder.id }, key, name, facts);
-      return await add(folder, { id, kind: 'folder', parentId, metaCt }, key);
+      const facts = { kind: 'folder' as const, parent: parentId, type: '', size: 0, hash: null, blob: null, hashes: null, thumb: null, thumbHash: null, thumbSize: null, width: null, height: null, key: keyHash(key), edit: 0, at: Date.now() };
+      return await add(folder, { id, kind: 'folder', parentId }, key, (folderKey) => folderItemSeal.seal(folderKey, { id, folderId: folder.id }, key, name, facts));
     } finally {
       key.fill(0);
     }
@@ -123,33 +127,49 @@ const folderFiles = {
   rename: (folder: SharedFolder, item: FolderItem, name: string) => update(folder, item, { name }),
   move: (folder: SharedFolder, item: FolderItem, parentId: string | null) => update(folder, item, { parentId }),
 
+  // into the folder's trash, with everything inside it
   async remove(folder: SharedFolder, item: FolderItem) {
     await http.del(`/folders/${folder.id}/items/${item.id}`);
   },
 
-  // Decrypts a file chunk by chunk, handing each chunk on, and checks the whole against the size
-  // and hash its uploader signed. A file that doesn't match throws at the end.
+  // Decrypts a file chunk by chunk, handing each chunk on. With a chunk list, each chunk is checked
+  // against its signed hash before it's handed on; without, the whole is checked against the size
+  // and hash its uploader signed at the end. A file that doesn't match throws.
   each(folder: SharedFolder, item: FolderItem, sink: (plain: Uint8Array) => void | Promise<void>, opts: BlobProgress = {}) {
     return withItemKey(folder, item, async (key) => {
       if (!item.blob || !item.hash) throw new Error('This isn’t a file.');
+      const list = await chunkList(item, key, opts.signal);
       const hash = blobHash();
       let size = 0;
+      let index = 0;
       await blobTransfer.each(item.blob, key, async (plain) => {
         size += plain.length;
-        await hash.add(plain);
+        const digest = await hash.add(plain);
+        if (list && !list.fits(index++, digest)) throw new Error('Part of this file isn’t what its uploader signed. It may have been changed on the server.');
         await sink(plain);
       }, opts);
       if (size !== item.size || hash.done() !== item.hash) throw new Error('This file isn’t the one its uploader signed. It may have been changed on the server.');
     });
   },
 
-  // The small copy shown in the grid, or null for a file without one.
+  // The small copy shown in the grid, or null for a file without one. Only a thumbnail whose
+  // hash and length its uploader signed is shown, and only after both check out, within the size
+  // and pixel limits, so nobody can show another picture or a decoding bomb in its place.
   thumbnail(folder: SharedFolder, item: FolderItem, signal?: AbortSignal) {
     const thumb = item.thumb;
-    if (!thumb) return Promise.resolve(null);
+    const { thumbMaxBytes, imageMaxPixels } = filesLimits();
+    if (!thumb || !item.thumbHash || item.thumbSize === null || thumb.size > blobCipher.sealedSize(thumbMaxBytes)) return Promise.resolve(null);
     return withItemKey(folder, item, async (key) => {
       const parts: Uint8Array[] = [];
-      await blobTransfer.each(thumb, itemSubkey(key, 'thumb'), (plain) => void parts.push(plain), { signal });
+      const hash = blobHash();
+      await blobTransfer.each(thumb, itemSubkey(key, 'thumb'), async (plain) => {
+        parts.push(plain);
+        await hash.add(plain);
+      }, { signal });
+      const size = parts.reduce((n, p) => n + p.length, 0);
+      if (size !== item.thumbSize || hash.done() !== item.thumbHash) return null;
+      const pixels = imageHeaderSize(parts[0] ?? new Uint8Array());
+      if (!pixels || pixels.width * pixels.height > imageMaxPixels) return null;
       const webp = new TextDecoder().decode(parts[0]?.subarray(8, 12)) === 'WEBP';
       return new Blob(parts, { type: webp ? 'image/webp' : 'image/png' });
     });

@@ -13,6 +13,8 @@ import useStore from '../../state/useStore';
 import useFolderListing from '../../hooks/useFolderListing';
 import useFileDrop from '../../hooks/useFileDrop';
 import useFilesPrefs from '../../hooks/useFilesPrefs';
+import useFolderReseal from '../../hooks/useFolderReseal';
+import TrashModal from './TrashModal';
 import toast from '../../state/toast';
 import folderFiles from '../../actions/folderFiles';
 import fileDownload from '../../actions/fileDownload';
@@ -43,8 +45,12 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
   const [target, setTarget] = useState<string | null>(null);
   const folder = listing?.folder;
   const items = listing?.items ?? [];
-  const canWrite = Boolean(folder) && folder!.warning !== 'unverified';
+  const trash = listing?.trash ?? [];
+  // a folder whose name didn't check out, or that's older than one seen here, takes nothing new
+  const canWrite = Boolean(folder) && folder!.warning === null;
   const canManage = Boolean(folder) && (folder!.createdBy === me.id || isAdmin(me));
+  const reseal = useFolderReseal(folder, items, trash);
+  const [trashOpen, setTrashOpen] = useState(false);
 
   // another folder starts with a clean search and nothing open over it
   useEffect(() => {
@@ -129,7 +135,7 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
 
   const onKey = (item: FolderItem, e: KeyboardEvent) => {
     if (e.key === 'F2' && canWrite && !item.locked) setDialog({ kind: 'rename', item });
-    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && (item.createdBy === me.id || isAdmin(me))) setDialog({ kind: 'delete', item });
+    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && (item.createdBy === me.id || canManage)) setDialog({ kind: 'delete', item });
     else if (e.key === 'Backspace' && !e.metaKey && listing) router.navigate(path.length ? `/files/${path.length > 1 ? path[path.length - 2].id : listing.folder.id}` : '/files');
     else return false;
     return true;
@@ -157,7 +163,7 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
     <div className="files-page" {...zone}>
       <KeyNotice reason="shared folders" />
       <Breadcrumbs folder={folder} path={path} dropTarget={target} drop={dropOn} />
-      <FolderNotices folder={folder} missing={missing} />
+      <FolderNotices folder={folder} missing={missing} waiting={reseal.waiting} problem={reseal.problem} />
       <FolderToolbar
         folder={folder}
         query={query}
@@ -173,6 +179,8 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
         onShare={() => setDialog({ kind: 'share' })}
         onRename={() => setDialog({ kind: 'renameFolder' })}
         onDelete={() => setDialog({ kind: 'deleteFolder' })}
+        trashCount={trash.filter((i) => i.trashRoot === i.id).length}
+        onTrash={() => setTrashOpen(true)}
       />
       {shown.length ? (
         <ItemsView
@@ -186,7 +194,7 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
           label={query ? 'Search results' : `Contents of ${path.at(-1)?.name ?? folder.name}`}
           handlers={{
             canWrite,
-            canDelete: (i) => i.createdBy === me.id || isAdmin(me),
+            canDelete: (i) => i.createdBy === me.id || canManage,
             dropTarget: target,
             onAction: act,
             onClick: (i) => act(i, 'open'),
@@ -218,6 +226,7 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
         </div>
       )}
       <FolderDialogs dialog={dialog} folder={folder} items={items} parent={parent} onClose={() => setDialog(null)} put={put} drop={drop} setFolder={setFolder} reload={reload} />
+      {trashOpen && <TrashModal folder={folder} trash={trash} canManage={canManage} onChanged={() => void reload()} onClose={() => setTrashOpen(false)} />}
       {preview && (
         <Suspense fallback={null}>
           <PreviewModal folder={folder} item={preview} files={files} onShow={setPreview} onDownload={download} onClose={() => setPreview(null)} />

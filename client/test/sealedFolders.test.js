@@ -143,8 +143,8 @@ test('a folder whose name no teammate signed opens read-only, and nothing is wri
   // the server makes a key of its own, seals it to Wen and signs a name with a key of its own
   const fake = crypto.getRandomValues(new Uint8Array(32));
   const signingPrivate = ed25519.utils.randomPrivateKey();
-  const facts = folderFacts.list({ audience: 'people', readers: ['v', 'w'], key: keyHash(fake), at: Date.now() });
   const f = state.folders.get(folder.id);
+  const facts = folderFacts.list({ audience: 'people', readers: ['v', 'w'], key: keyHash(fake), at: Date.now(), keyRev: f.keyRev, bound: true });
   f.nameCt = await folderName.seal(fake, folder.id, f.version, signedFacts.seal('Send keys here', { kind: folderFacts.kind, place: folderFacts.place(folder.id, f.version), facts, by: 'v', signingPrivate }));
   state.keys.get(folder.id).set('w', await folderKeySeal.seal(fake, ids.w.publicKey));
 
@@ -152,7 +152,7 @@ test('a folder whose name no teammate signed opens read-only, and nothing is wri
   const opened = await folders.open(folder.id);
   assert.equal(opened.folder.warning, 'unverified');
   assert.ok(opened.items.every((i) => i.locked), 'files under the real key don’t open under the fake one');
-  await assert.rejects(folderFiles.upload(opened.folder, null, pdf('secret.pdf', 'secret')), /can’t confirm a teammate named this folder/);
-  await assert.rejects(folders.share(opened.folder, ['x']), /can’t confirm a teammate named this folder/);
+  await assert.rejects(folderFiles.upload(opened.folder, null, pdf('secret.pdf', 'secret')), /can’t confirm the folder’s creator or an admin named this folder/);
+  await assert.rejects(folders.share(opened.folder, ['x']), /can’t confirm the folder’s creator or an admin named this folder/);
   assert.equal(state.items.size, 1);
 });

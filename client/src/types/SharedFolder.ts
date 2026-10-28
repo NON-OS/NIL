@@ -25,4 +25,6 @@ export default interface SharedFolder {
   keyHash: string;
   // the signed name says every item's details are bound to this folder key
   bound: boolean;
+  // the readers the name was signed for, which unbound details must come from
+  signedReaders: string[];
 }

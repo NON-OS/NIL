@@ -12,4 +12,5 @@ export default interface FilesLimits {
   depthMax: number;
   folderItemsMax: number;
   uploadIdleMs: number;
+  trashMs: number;
 }

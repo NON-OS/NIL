@@ -28,15 +28,16 @@ function checkInfo(info: BlobInfo, id: string) {
 const blobTransfer = {
   // Encrypts `file` under `key` and uploads it into `scope`. Returns the new blob's id. A stopped
   // or failed upload is deleted on the server rather than left for the sweep. `onPlain` sees each
-  // chunk before it's encrypted, for a content hash made in the same pass.
-  async put(file: Blob, key: Uint8Array, scope: BlobScope, { onProgress, signal, onPlain }: BlobProgress & { onPlain?: (plain: Uint8Array) => Promise<void> } = {}) {
+  // chunk before it's encrypted, for a content hash made in the same pass. `part` marks a file's
+  // thumbnail or chunk list, and `replaces` names the blob a fresh copy stands in for.
+  async put(file: Blob, key: Uint8Array, scope: BlobScope, { onProgress, signal, onPlain, part, replaces }: BlobProgress & { onPlain?: (plain: Uint8Array) => Promise<unknown>; part?: 'thumb' | 'hashes'; replaces?: string } = {}) {
     const count = blobCipher.chunks(file.size);
     const total = blobCipher.sealedSize(file.size);
     const header = blobCipher.header();
     const prefix = blobCipher.prefix(header);
     const aes = await blobCipher.key(key, 'encrypt');
     signal?.throwIfAborted();
-    const { blob } = await http.post<{ blob: string }>('/blobs', { scope, size: total, chunks: count, header: b64u.encode(header) });
+    const { blob } = await http.post<{ blob: string }>('/blobs', { scope, size: total, chunks: count, header: b64u.encode(header), ...(part ? { part } : {}), ...(replaces ? { replaces } : {}) });
     try {
       let done = 0;
       onProgress?.(0);
@@ -57,6 +58,37 @@ const blobTransfer = {
       throw err;
     }
   },
+
+  // Encrypts a blob again under a fresh key without it ever being whole in memory: each chunk is
+  // fetched, opened under `from`, handed to `onPlain` (to check it), sealed under `to` and sent,
+  // one at a time. The copy names the blob it `replaces`. Returns the copy's id.
+  async copy(info: BlobInfo, from: Uint8Array, to: Uint8Array, scope: BlobScope, { replaces, signal, onPlain }: { replaces: string; signal?: AbortSignal; onPlain?: (plain: Uint8Array, index: number) => Promise<unknown> }) {
+    const oldPrefix = checkInfo(info, info.id);
+    const opener = await blobCipher.key(from, 'decrypt');
+    const header = blobCipher.header();
+    const prefix = blobCipher.prefix(header);
+    const sealer = await blobCipher.key(to, 'encrypt');
+    const { blob } = await http.post<{ blob: string }>('/blobs', { scope, size: info.size, chunks: info.chunks, header: b64u.encode(header), replaces });
+    try {
+      for (let i = 0; i < info.chunks; i++) {
+        signal?.throwIfAborted();
+        const sealed = await http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${i}`, signal);
+        if (sealed.length !== blobCipher.chunkSize(i, info.chunks, info.size)) throw new Error(CHANGED);
+        const plain = await blobCipher.open(opener, oldPrefix, info.id, i, info.chunks, sealed).catch(() => {
+          throw new Error(CHANGED);
+        });
+        await onPlain?.(plain, i);
+        await putChunk(`/blobs/${blob}/chunks/${i}`, await blobCipher.seal(sealer, prefix, blob, i, info.chunks, plain), { signal });
+      }
+      return blob;
+    } catch (err) {
+      http.del(`/blobs/${blob}`).catch(() => {});
+      throw err;
+    }
+  },
+
+  // Seals a copy started with `copy` once its content has checked out.
+  finish: (blob: string) => http.post(`/blobs/${blob}/finish`),
 
   async info(id: string, signal?: AbortSignal) {
     const info = await http.get<BlobInfo>(`/blobs/${encodeURIComponent(id)}`);
