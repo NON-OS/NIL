@@ -19,7 +19,8 @@ function state(s: unknown, from: string) {
   if (s === null) return true;
   if (typeof s !== 'object' || Array.isArray(s) || !exactly(s, ['user', 'cursor'])) return false;
   const { user, cursor } = s as Record<string, any>;
-  if (typeof user !== 'object' || user === null || !exactly(user, ['id', 'color']) || user.id !== from || !COLOR.test(user.color)) return false;
+  // the caret extension always adds an empty name; a name with anything in it is refused
+  if (typeof user !== 'object' || user === null || !exactly(user, ['id', 'color', 'name']) || user.name != null || user.id !== from || !COLOR.test(user.color)) return false;
   return cursor == null || (typeof cursor === 'object' && exactly(cursor, ['anchor', 'head']) && position(cursor.anchor) && position(cursor.head));
 }
 

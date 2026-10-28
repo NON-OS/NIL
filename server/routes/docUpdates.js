@@ -12,6 +12,7 @@ import config from '../config.js';
 import units from '../config/units.js';
 import byteBudget from '../services/byteBudget.js';
 import docLiveReaders from '../services/docLiveReaders.js';
+import uploadQuota from '../services/uploadQuota.js';
 
 const router = express.Router();
 const sent = byteBudget(units.MINUTE);
@@ -29,6 +30,8 @@ router.post(
     if (req.body?.keyEpoch !== undefined && req.body.keyEpoch !== doc.key_epoch) throw new HttpError(409, 'This doc moved to a new key. Reopen it.');
     const size = updateCt.length;
     if (!sent.take(req.user.id, size, config.docs.updateBytesPerMinute)) throw new HttpError(429, 'You’ve sent a lot of changes in the last minute. They’ll be saved as a new version instead.');
+    // waiting changes count against the sender's file space until a version folds them in
+    uploadQuota(req.user, size)();
     const at = Date.now();
     const seq = sql.tx(() => {
       const { n } = sql.get('SELECT COUNT(*) AS n FROM doc_updates WHERE doc_id = ?', doc.id);

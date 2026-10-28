@@ -29,6 +29,8 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Draft with AI sends the doc's title only when it sends the doc's text, as the dialog says. Mentions show the name the browser knows for the account, not a label stored in the doc.
 - Changes that haven't reached the server are kept in the browser, encrypted under a key derived from the unlocked identity, and sent the next time the doc opens there, so closing the tab or losing power while offline loses nothing.
 - Pictures and files taken out of a doc are deleted once no version in its history uses them, after a grace period. Each version tells the server which blobs it uses (migration 044).
+- Live changes nobody has saved into a version yet count against their sender's file space, so one member can't fill the disk a doc at a time; past it, the browser saves a version instead, which frees the space (migration 051).
+- Teammates' cursors and the avatars of who else has a doc open show again. The check on incoming cursors refused the empty name field the editor adds to each one.
 - New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE`, `DOC_REVISIONS`, `DOC_BLOB_GRACE_DAYS`, `DOC_BLOB_REFS_MAX`, `DOC_TITLE_MAX_KB` and `DOC_BODY_MAX_MB`.
 
 ### Chat

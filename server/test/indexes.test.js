@@ -69,6 +69,7 @@ const HOT = {
   'jobs/pruneAgentData.js: replies': 'SELECT rowid FROM agent_idempotency WHERE created_at < ? LIMIT ?',
   'services/keptBytes.js: attachments': 'SELECT COALESCE(SUM(size), 0) AS n FROM attachments WHERE uploader_id = ?',
   'services/keptBytes.js: sealed files': 'SELECT COALESCE(SUM(size), 0) AS n FROM sealed_blobs WHERE uploader_id = ?',
+  'services/keptBytes.js: live doc changes': 'SELECT COALESCE(SUM(size), 0) AS n FROM doc_updates WHERE created_by = ?',
   'services/blobScope.js: folder': 'SELECT f.created_by FROM folders f JOIN folder_keys k ON k.folder_id = f.id AND k.user_id = ? WHERE f.id = ?',
   'services/sweepBlobs.js: unfinished': 'SELECT id FROM sealed_blobs WHERE finished_at IS NULL AND updated_at < ?',
   'routes/folders.js: items': 'SELECT * FROM folder_items WHERE folder_id = ? ORDER BY created_at',

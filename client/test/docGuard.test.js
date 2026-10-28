@@ -2,6 +2,7 @@ import { test, beforeEach } from 'node:test';
 import assert from 'node:assert/strict';
 import * as Y from 'yjs';
 import * as encoding from 'lib0/encoding';
+import { Awareness, encodeAwarenessUpdate } from 'y-protocols/awareness';
 import { store, keyring, entry, person, signIn, route, reset, confirm, sent } from './helpers/fakeBrowser.js';
 
 // What a hostile reader can send into a doc, and what each tab does with it: crafted changes and
@@ -119,6 +120,22 @@ test('a cursor is only taken for the account that sent it, in the shape the edit
   assert.equal(awarenessCheck(cursor([[7, { ...good, name: 'CFO' }]]), 'w'), null, 'fields Nil never sends');
   assert.equal(awarenessCheck(cursor([[7, { user: { id: 'w', color: 'red;background:url(x)' } }]]), 'w'), null);
   assert.equal(awarenessCheck(new Uint8Array([1, 2]), 'w'), null);
+  assert.equal(awarenessCheck(cursor([[7, { ...good, user: { ...good.user, name: 'CFO' } }]]), 'w'), null, 'a name of its own');
+});
+
+test('a cursor as the editor really sends it gets through', () => {
+  const doc = new Y.Doc();
+  const para = new Y.XmlElement('paragraph');
+  doc.getXmlFragment('default').insert(0, [para]);
+  para.insert(0, [new Y.XmlText('hello')]);
+  const awareness = new Awareness(doc);
+  // what the caret extension sets: its own empty name beside Nil's id and colour
+  awareness.setLocalStateField('user', { name: null, color: '#007C85', id: 'w' });
+  const at = Y.createRelativePositionFromTypeIndex(para.get(0), 2, -1);
+  awareness.setLocalStateField('cursor', { anchor: at, head: at });
+  const update = encodeAwarenessUpdate(awareness, [awareness.clientID]);
+  awareness.destroy();
+  assert.equal(awarenessCheck(update, 'w'), awareness.clientID);
 });
 
 beforeEach(() => reset());

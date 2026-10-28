@@ -35,13 +35,12 @@ Dropping a whole folder from your computer isn't supported yet. Open it and drop
 
 ### Photos
 
-Photos carry details you can't see: the camera, the time, and often the place they were taken. Before a JPEG, PNG or WebP image is encrypted, your browser draws it again with nothing but its pixels, turned the right way up, so none of those details are uploaded. Some things to know:
+Photos carry details you can't see: the camera, the time, and often the place they were taken. Before a JPEG, PNG, WebP or GIF is encrypted, your browser takes those details out of the file itself: the Exif and GPS data, XMP, IPTC, comments, and the extra pictures some phones tuck in after the photo. The picture is left exactly as it was, so its quality, its colours and any animation stay. A JPEG keeps one note, which way up it goes.
 
-- A photo larger than about 16.7 megapixels is scaled down to that size first, since some browsers can't redraw anything larger.
-- An animated WebP or PNG keeps only its first frame.
-- If your browser can't save WebP, the photo becomes a PNG, and its name says so.
-- If a photo can't be read at all, Nil doesn't upload it rather than send it with its details. Save it again in another app and try once more.
-- Other formats, such as GIF, HEIC, AVIF and TIFF, are uploaded as they are, with whatever details they hold.
+- A picture too damaged to clean that way is drawn again with nothing but its pixels, which keeps only the first frame of an animation and scales anything over about 16.7 megapixels down. If even that fails, Nil doesn't upload it rather than send it with its details. Save it again in another app and try once more.
+- HEIC, AVIF, TIFF, camera RAW files and other formats Nil can't clean are uploaded as they are, with whatever details they hold, so originals stay untouched. Export a JPEG first if those details matter.
+
+Word, Excel and PowerPoint files lose who wrote them, who last saved them and when, and the company, template and custom fields they carry. Everything else in them is copied as it is, so they open exactly as before. PDFs and every other kind of file are uploaded as they are, with whatever their author put in them.
 
 Images also get a small thumbnail, made in your browser and encrypted like the image itself, so the grid shows a picture without fetching the whole file.
 
@@ -59,9 +58,9 @@ Each file and folder has a menu, the three dots, with everything you can do to i
 | Download | Saves the file on your device, decrypted |
 | Rename | Gives it a new name |
 | Move to… | Moves it into another folder in the same shared folder |
-| Delete | Deletes it for everyone, and a folder with everything in it |
+| Delete | Moves it to the trash for everyone, a folder with everything in it |
 
-You can also move a file or folder by dragging it onto a folder in the grid or list, or onto a folder in the path at the top. Only whoever added something, or an admin, can delete it. Deleting can't be undone.
+You can also move a file or folder by dragging it onto a folder in the grid or list, or onto a folder in the path at the top. Only whoever added something, the folder's creator or an admin can delete it, and [Trash](#trash) brings it back.
 
 The menu at the right of the toolbar renames the shared folder, and, for its creator or an admin, deletes it with everything in it.
 
@@ -127,7 +126,7 @@ A shared folder's name is signed too, by its creator or an admin, together with 
 
 ## Your file space
 
-The bar under your folders shows how much of your file space you use. It counts the files you uploaded to Files and to docs, the files you sent in chat, and the files you attached to tasks, as the server stores them. Whoever runs the server sets how much each person gets, 2 GB for a member unless they changed it, and how much the whole workspace can keep.
+The bar under your folders shows how much of your file space you use. It counts the files you uploaded to Files and to docs, the files you sent in chat, and the files you attached to tasks, as the server stores them, along with changes you typed into docs that no saved version holds yet. When those fill your space, your browser saves the doc as a new version instead of sending each change live, which gives the space back. Whoever runs the server sets how much each person gets, 2 GB for a member unless they changed it, and how much the whole workspace can keep.
 
 ## What the server can see
 
