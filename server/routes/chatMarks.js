@@ -13,7 +13,8 @@ import chatBudget from '../chat/chatBudget.js';
 
 const router = express.Router();
 const STREAM = /^[A-Za-z0-9_-]{16}$/;
-const MARK_CHARS = 16 * 1024;
+// marks are padded too, to a power of two from 1 KiB; this fits up to 16 KiB of one
+const MARK_CHARS = 24 * 1024;
 // a person's sending tabs kept per conversation; a new one past this lets go of their oldest, so
 // nobody can crowd out anyone else's
 const STREAMS_PER_PERSON = 20;

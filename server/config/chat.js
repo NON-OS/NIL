@@ -12,7 +12,9 @@ export default Object.freeze({
   // marks of tabs that have sent nothing in this long are dropped
   markDays: envNumber('CHAT_MARK_DAYS', 90, { min: 1 }),
   // one encrypted message, signature and file keys included
-  messageChars: envNumber('CHAT_MESSAGE_KB', 64, { min: 4, max: 1024 }) * 1024,
+  // (messages are padded to 1, 2, 4… 64 KiB, then steps of 32, before they're encrypted; this has
+  // room for the 96 KiB a longest message can come to, written out)
+  messageChars: envNumber('CHAT_MESSAGE_KB', 160, { min: 4, max: 1024 }) * 1024,
   // the encrypted messages one person may keep on the server
   memberBytes: envNumber('CHAT_MEMBER_MB', 1024, { min: 1 }) * units.MB,
   messagesPerMinute: envNumber('CHAT_MESSAGES_PER_MINUTE', 120, { min: 1 }),

@@ -1,74 +1,82 @@
-// What chat keeps on this device between visits, in IndexedDB: messages already signed and
-// encrypted, waiting to be sent, with their encrypted files; the search index, encrypted under
-// a key derived from the unlocked identity; and the member lists this browser already checked,
-// with its own sealed copies of each key, so a visit picks up where the last one left off. Nothing here is readable without the person's keys,
-// and nothing in it is a key. Where IndexedDB can't be used (a private window, a test) it lives in
-// memory for the tab instead. Every entry is filed under the workspace key and account it's for.
+import { hmac } from '@noble/hashes/hmac';
+import { sha256 } from '@noble/hashes/sha256';
+import { utf8ToBytes } from '@noble/hashes/utils';
+import store from '../state/store';
+import keyring from '../state/keyring';
+import b64u from './crypto/b64u';
+import localKey from './sealedLocal/localKey';
+import sealedLocal from './sealedLocal/sealedLocal';
+
+// What chat keeps on this device between visits: messages already signed and encrypted, waiting
+// to be sent, with their encrypted files; the search index, encrypted under a key of its own;
+// and the member lists this browser already checked, with its own sealed copies of each key, so
+// a visit picks up where the last one left off. All of it goes through sealedLocal, so even what
+// a queued message is, where it goes and who it mentions is ciphertext on the disk, readable only
+// with this member's keys unlocked here. Locked, nothing is read or written.
 export type Shelf = 'queue' | 'files' | 'search' | 'rosters';
 
-const NAME = 'nil-chat';
+const use = (shelf: Shelf) => `chat-${shelf}`;
+
+// What a record is filed under on the disk: a keyed hash of its name, so not even which
+// conversation it's about shows. The name itself goes inside, encrypted with the rest.
+function filed(shelf: Shelf, key: string) {
+  const identity = keyring.identity();
+  const { origin, workspaceKey, me } = store.get();
+  if (!identity || !me) return null;
+  const secret = localKey.key(identity, { origin, workspaceKey, userId: me.id }, 'chat-names');
+  try {
+    return b64u.encode(hmac(sha256, secret, utf8ToBytes(`${shelf}:${key}`)));
+  } finally {
+    secret.fill(0);
+  }
+}
+
 const SHELVES: Shelf[] = ['queue', 'files', 'search', 'rosters'];
-const memory = new Map<string, unknown>();
-let opening: Promise<IDBDatabase | null> | null = null;
+const encode = (value: unknown) => new TextEncoder().encode(JSON.stringify(value));
 
-function db() {
-  opening ??= new Promise((resolve) => {
-    try {
-      if (typeof indexedDB === 'undefined') return resolve(null);
-      const req = indexedDB.open(NAME, 2);
-      req.onupgradeneeded = () => SHELVES.forEach((s) => req.result.objectStoreNames.contains(s) || req.result.createObjectStore(s));
-      req.onsuccess = () => resolve(req.result);
-      req.onerror = () => resolve(null);
-      req.onblocked = () => resolve(null);
-    } catch {
-      resolve(null);
-    }
-  });
-  return opening;
+// a value put in as bytes comes back as bytes
+const unwrap = (v: unknown) => (v && typeof v === 'object' && 'bytes' in v && Object.keys(v).length === 1 ? b64u.decode((v as { bytes: string }).bytes) : v);
+
+function decode<T>(bytes: Uint8Array | null): T | null {
+  try {
+    return bytes?.length ? (JSON.parse(new TextDecoder().decode(bytes)) as T) : null;
+  } catch {
+    return null;
+  }
 }
-
-function run<T>(shelf: Shelf, mode: IDBTransactionMode, fn: (store: IDBObjectStore) => IDBRequest<T>) {
-  return db().then(
-    (d) =>
-      d &&
-      new Promise<T | null>((resolve) => {
-        try {
-          const req = fn(d.transaction(shelf, mode).objectStore(shelf));
-          req.onsuccess = () => resolve(req.result);
-          req.onerror = () => resolve(null);
-        } catch {
-          resolve(null);
-        }
-      }),
-  );
-}
-
-const range = (prefix: string) => IDBKeyRange.bound(prefix, `${prefix}￿`);
 
 const chatDisk = {
   async get<T>(shelf: Shelf, key: string): Promise<T | null> {
-    if (!(await db())) return (memory.get(`${shelf}/${key}`) as T) ?? null;
-    return ((await run(shelf, 'readonly', (s) => s.get(key))) as T) ?? null;
+    const name = filed(shelf, key);
+    const held = name ? decode<[string, T]>(await sealedLocal.get(use(shelf), name)) : null;
+    return held && held[0] === key ? (unwrap(held[1]) as T) : null;
   },
 
   async put(shelf: Shelf, key: string, value: unknown) {
-    if (!(await db())) return void memory.set(`${shelf}/${key}`, value);
-    await run(shelf, 'readwrite', (s) => s.put(value, key));
+    const name = filed(shelf, key);
+    // bytes ride inside the JSON as base64url, so the name can go with them
+    if (name) await sealedLocal.put(use(shelf), name, encode([key, value instanceof Uint8Array ? { bytes: b64u.encode(value) } : value]));
   },
 
   async drop(shelf: Shelf, key: string) {
-    if (!(await db())) return void memory.delete(`${shelf}/${key}`);
-    await run(shelf, 'readwrite', (s) => s.delete(key));
+    const name = filed(shelf, key);
+    if (name) await sealedLocal.remove(use(shelf), name);
   },
 
-  // every entry whose key starts with `prefix`, as [key, value]
+  // every entry whose name starts with `prefix`, as [name, value]; the names are inside, so
+  // this opens each one kept for the shelf
   async list<T>(shelf: Shelf, prefix: string): Promise<[string, T][]> {
-    if (!(await db())) return [...memory].filter(([k]) => k.startsWith(`${shelf}/${prefix}`)).map(([k, v]) => [k.slice(shelf.length + 1), v as T]);
-    const [keys, values] = await Promise.all([run(shelf, 'readonly', (s) => s.getAllKeys(range(prefix))), run(shelf, 'readonly', (s) => s.getAll(range(prefix)))]);
-    return ((keys ?? []) as string[]).map((k, i) => [k, (values ?? [])[i] as T]);
+    const out: [string, T][] = [];
+    for (const name of await sealedLocal.names(use(shelf))) {
+      const held = decode<[string, T]>(await sealedLocal.get(use(shelf), name));
+      if (held && held[0].startsWith(prefix)) out.push([held[0], unwrap(held[1]) as T]);
+    }
+    return out;
   },
 
+  // with no prefix, everything chat kept for this account, keys locked or not, as at sign-out
   async clear(prefix: string) {
+    if (!prefix) return void (await Promise.all(SHELVES.map((s) => sealedLocal.forget(use(s)))));
     for (const shelf of SHELVES) for (const [key] of await chatDisk.list(shelf, prefix)) await chatDisk.drop(shelf, key);
   },
 };

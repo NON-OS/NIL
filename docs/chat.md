@@ -141,14 +141,14 @@ Compare key fingerprints with your teammates, face to face or on a call. Until y
 The server can't read messages, reactions, file names, files, or channel names and topics. It can see:
 
 - who is in which conversation, who started it, and whether it's a channel for the team, for some people, a direct or a group message,
-- when each message, reaction, edit and deletion was sent, by whom, into which conversation and which thread, and its size to within a few bytes,
+- when each message, reaction, edit and deletion was sent, by whom, into which conversation and which thread, and its size bucket: before anything is encrypted it's padded to 1 KiB, or the next power of two above that, so the server can't tell a short message from a longer one of the same bucket,
 - that something is a reaction rather than a message, and which message it's on, but not the emoji,
 - the size of every file and which message it belongs to,
 - who each sender mentioned, when they mention someone,
 - how far each person has read, and their notification choice,
 - each conversation's disappearing and forward-secrecy settings, and each epoch's signed list of who holds its key,
 - the signed statements that someone left a conversation or the team,
-- when each tab last published its mark, and its size,
+- when each tab last published its mark, and its size bucket,
 - who is typing, and in which thread, while they type.
 
 [Encryption and trust](encryption.md#chat) has the details of the scheme, and [Privacy model](privacy-model.md) the full list for the whole app.
@@ -167,5 +167,6 @@ Each person may keep up to `CHAT_MEMBER_MB` (1024 by default) on the server acro
 - In a channel whose managers have all left, everyone manages it, so any one member can sign a list naming only themselves as manager and take the others out. The timeline shows it.
 - Someone taken out of a conversation still has its old keys. A message they write under one, dated before they were out, can't be told from one they really sent then; the server only takes messages under a conversation's current key, so this needs the server's help.
 - The very first list of who is in a conversation is taken on its signer's word: a newcomer can't tell a conversation the server forked from its start from the real one, though browsers that saw the real one notice.
-- Mentions tell the server who was mentioned, so push notifications can reach them, and queued messages keep that list on this device until they're sent.
+- Mentions tell the server who was mentioned, so push notifications can reach them.
+- Files aren't padded: the server sees each file's size.
 - Like the rest of Nil, chat trusts the app your server sends. [Check what a server sends](verify-a-server.md) explains how to compare it with a release.

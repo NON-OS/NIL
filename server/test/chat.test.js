@@ -88,7 +88,7 @@ test('messages: under the current key, from someone holding it, at the right tim
   assert.equal((await member('POST', url, chat.message(2))).status, 409, 'an epoch that isn’t current');
   assert.equal((await member('POST', url, chat.message(1, { sentAt: Date.now() - 3_600_000 }))).status, 400, 'a time far from now');
   assert.equal((await member('POST', url, chat.message(1, { ttl: 60 }))).status, 409, 'a disappearing setting the channel doesn’t have');
-  assert.equal((await member('POST', url, chat.message(1, { bodyCt: 'A'.repeat(70 * 1024) }))).status, 400, 'over CHAT_MESSAGE_KB');
+  assert.equal((await member('POST', url, chat.message(1, { bodyCt: 'A'.repeat(170 * 1024) }))).status, 400, 'over CHAT_MESSAGE_KB');
   assert.equal((await member('POST', url, chat.message(1, { id: '../../etc/passwd' }))).status, 400);
   assert.equal((await member('POST', url, chat.message(1, { id: sent.data.message.id }))).status, 409, 'an id used before');
   assert.equal((await member('POST', url, chat.message(1, { threadId: chat.chatId() }))).status, 400, 'a thread that doesn’t exist');

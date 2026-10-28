@@ -71,6 +71,13 @@ const sealedLocal = {
     return (await idbStore.keys(head).catch(() => [] as string[])).map((k) => k.slice(cut));
   },
 
+  // everything this account kept for one use, locked or not: for what goes with the session
+  async forget(use: string) {
+    const at = scope();
+    if (!at) return;
+    for (const k of await idbStore.keys(where(at.prefix, use, '')).catch(() => [] as string[])) await idbStore.remove(k).catch(() => {});
+  },
+
   // everything this account kept in this browser, locked or not, for when its keys are revoked
   async wipe() {
     const at = scope();

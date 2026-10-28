@@ -22,6 +22,7 @@ import eraseChannel from '../chat/eraseChannel.js';
 import hub from '../realtime/hub.js';
 
 const router = express.Router();
+// a name and topic, padded to 1 or 2 KiB before they're encrypted
 const META_CHARS = 8000;
 
 const channelsPerHour = rateLimit({ windowMs: units.HOUR, max: config.chat.channelsPerHour, key: (req) => req.user.id, message: 'You’ve started a lot of conversations in the last hour. Wait a while and try again.' });

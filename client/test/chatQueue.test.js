@@ -11,7 +11,7 @@ const chatIndex = await load('actions/chat/chatIndex');
 const chatRosters = await load('actions/chat/chatRosters');
 const openMessage = await load('actions/chat/openMessage');
 const chatStreams = await load('actions/chat/chatStreams');
-const chatDisk = await load('lib/chatDisk');
+const idbStore = await load('lib/sealedLocal/idbStore');
 const chatKeyring = await load('state/chatKeyring');
 
 const id = () => b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
@@ -38,7 +38,8 @@ async function epoch(n, prev) {
 }
 const channel = (n) => ({ ...shape, epoch: n, members: ['v', 'w'], keyHolders: ['v', 'w'], wrappedKeys: [], metaKeys: [], departures: [], forwardDays: null, purgedEpoch: 0, metaCt: null, metaEpoch: null, disappearSeconds: null, createdBy: 'v', rotateAt: null });
 const asRow = (q) => ({ id: q.id, channelId: q.channelId, seq: 1, threadId: q.threadId, kind: q.type === 'reaction' ? 'reaction' : 'message', senderId: 'v', epoch: q.epoch, sentAt: q.sentAt, bodyCt: q.bodyCt, edits: 0, deleted: q.type === 'deleted', replies: 0, lastReplyAt: null, createdAt: 1, updatedAt: 1, expiresAt: null });
-const everything = async () => JSON.stringify([...(await chatDisk.list('queue', '')), ...(await chatDisk.list('files', '')), ...(await chatDisk.list('search', ''))].map(([k, v]) => [k, v instanceof Uint8Array ? Buffer.from(v).toString('latin1') : v]));
+// every byte on the device as it's stored, names included
+const everything = async () => JSON.stringify(await Promise.all((await idbStore.keys('')).map(async (k) => [k, Buffer.from(await idbStore.get(k)).toString('latin1')])));
 
 test('a queued message is kept only as ciphertext, and opens as its sender wrote it', async () => {
   await epoch(1, null);
@@ -135,4 +136,23 @@ test('a later visit checks only the lists that are new, and they still have to f
   rows.push({ epoch: 3, roster: stray.raw, proofs: [], wrappedKeys: [] });
   assert.equal((await chatRosters.load(channel(3))).broken, 3);
   assert.ok(first.key.length === 32);
+});
+
+test('what a waiting message is, where it goes and who it mentions is ciphertext on the device too', async () => {
+  const draft = { id: id(), channelId: shape.id, threadId: null, type: 'message', stream: 'eeeeeeeeeeeeeeee', n: 1, files: [], sent: [], ping: ['mentioned-person'], failed: null, at: Date.now() };
+  await epoch(1, null);
+  await chatQueue.save(await chatQueue.seal(channel(1), draft, { text: 'hi' }));
+  const raw = await everything();
+  for (const secret of ['mentioned-person', shape.id, 'eeeeeeeeeeeeeeee']) assert.ok(!raw.includes(secret), secret);
+  assert.equal((await chatQueue.list()).length, 1, 'and opens again with the keys');
+});
+
+test('a message’s size on the server is a bucket, not its length', async () => {
+  const chatText = await load('lib/crypto/chatText');
+  const key = crypto.getRandomValues(new Uint8Array(32));
+  const at = { workspaceKey: 'w', channelId: 'c', epoch: 1, message: { id: 'm', senderId: 'v', sentAt: 1 } };
+  const short = await chatText.seal(key, at, 'ok');
+  const longer = await chatText.seal(key, at, 'a much longer message, with many more words in it than the first one has');
+  assert.equal(short.length, longer.length);
+  assert.equal(await chatText.open(key, at, longer), 'a much longer message, with many more words in it than the first one has');
 });
