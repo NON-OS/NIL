@@ -73,7 +73,7 @@ router.post(
       );
       if (audience === 'people') for (const userId of members) sql.run('INSERT INTO chat_members (channel_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)', id, userId, me, now);
       sql.run('INSERT INTO chat_epochs (channel_id, epoch, roster, created_by, created_at) VALUES (?, 1, ?, ?, ?)', id, b.roster, me, now);
-      takeGrants(id, 1, b.grants, me, { exactly: roster.members });
+      takeGrants(id, 1, b.grants, me, { within: roster.members });
       announceChat(channel, { kind: 'channel' });
     });
     return { channel: toChannel(sql.get('SELECT * FROM chat_channels WHERE id = ?', id), req.user) };

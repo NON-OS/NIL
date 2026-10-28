@@ -124,3 +124,36 @@ test('something signed under one member’s name with another’s key is refused
   await assert.rejects(checkRoster(forgedList.raw, { workspaceKey, channelId: shape.id, epoch: 2, wrappedKeys: [] }, [first]), /confirm who started/);
   assert.equal(await departures.check(forgedLeave, shape.id, 'w'), null);
 });
+
+test('a scheduled key moves on even when the one starting it hasn’t confirmed everyone; the rest get it handed over', async () => {
+  const chatMaintain = await load('actions/chat/chatMaintain');
+  const { shape, made } = await group();
+  // Vic has confirmed Wen only; the group's key is due
+  const rows = [{ epoch: 1, roster: made.raw, proofs: [], wrappedKeys: [made.grants.find((g) => g.userId === 'v').wrappedKey] }];
+  route('GET', new RegExp(`/api/chat/channels/${shape.id}/epochs`), (url) => ({ epochs: rows.filter((r) => r.epoch >= Number(new URL(url, 'https://x').searchParams.get('from') ?? 1)) }));
+  let posted = null;
+  route('POST', new RegExp(`/api/chat/channels/${shape.id}/epochs`), (url, body) => {
+    posted = body;
+    return { epoch: body.epoch };
+  });
+  const row = { ...shape, epoch: 1, members: ['e', 'v', 'w'], keyHolders: ['e', 'v', 'w'], wrappedKeys: rows[0].wrappedKeys, metaKeys: [], metaEpoch: null, purgedEpoch: 0, departures: [], epochAt: 0, rotateAt: 1, createdBy: 'w' };
+  chatRosters.clear();
+  assert.equal(await chatMaintain(row), true, 'the key moved on');
+  assert.deepEqual(JSON.parse(posted.roster).facts[2], ['e', 'v', 'w'], 'Eve stays on the list');
+  assert.deepEqual(posted.grants.map((g) => g.userId).sort(), ['v', 'w'], 'sealed only to keys Vic confirmed');
+  // Wen, who confirmed Eve, hands her the new key when she next opens chat
+  rows.push({ epoch: 2, roster: posted.roster, proofs: [], wrappedKeys: [] });
+  signIn('w', W, USERS);
+  await confirm(['v', 'e']);
+  rows[1].wrappedKeys = [posted.grants.find((g) => g.userId === 'w').wrappedKey];
+  rows[0].wrappedKeys = [made.grants.find((g) => g.userId === 'w').wrappedKey];
+  let handed = null;
+  route('POST', new RegExp(`/api/chat/channels/${shape.id}/grants`), (url, body) => {
+    handed = body;
+    return { ok: true };
+  });
+  chatRosters.clear();
+  chatKeyring.wipe();
+  assert.equal(await chatMaintain({ ...row, epoch: 2, keyHolders: ['v', 'w'], wrappedKeys: rows[1].wrappedKeys, epochAt: Date.now(), rotateAt: Date.now() + 86_400_000 }), true);
+  assert.deepEqual([handed.epoch, handed.grants.map((g) => g.userId)], [2, ['e']]);
+});

@@ -178,3 +178,28 @@ test('someone made a guest is in no conversation, and isn’t brought back into 
   assert.equal((await owner('PATCH', `/api/users/${fayId}`, { role: 'member' })).status, 200);
   assert.deepEqual((await ann('GET', `/api/chat/channels/${ch.id}`)).data.channel.members, [ids.ann]);
 });
+
+test('a scheduled key goes to whoever the signer confirmed; the others on the list get it handed over later', async () => {
+  const join = async (name) => {
+    const c = client(base);
+    const w = wallet();
+    const inv = await owner('POST', '/api/invites', { role: 'member' });
+    c.id = (await c.wallet(w, 'invite', { name, inviteToken: inv.data.token })).data.user.id;
+    await publishKey(c, w);
+    return c;
+  };
+  const [gus, hal] = [await join('Gus'), await join('Hal')];
+  const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, gus.id, hal.id], managers: [ids.ann] })).data.channel;
+  const url = `/api/chat/channels/${ch.id}`;
+  // Ann starts the next key for the same three, sealed only to herself and Gus
+  const next = await chat.roster({ by: ids.ann, channelId: ch.id, epoch: 2, prev: (await ann('GET', `${url}/epochs`)).data.epochs[0].roster, members: [ids.ann, gus.id, hal.id], managers: [ids.ann] });
+  const some = next.grants.filter((g) => g.userId !== hal.id);
+  assert.equal((await ann('POST', `${url}/epochs`, { epoch: 2, roster: next.roster, grants: some.filter((g) => g.userId !== ids.ann) })).status, 400, 'the signer always seals to themselves');
+  assert.equal((await ann('POST', `${url}/epochs`, { epoch: 2, roster: next.roster, grants: some })).status, 200);
+  assert.deepEqual((await ann('GET', url)).data.channel.keyHolders, [ids.ann, gus.id].sort());
+  assert.equal((await hal('POST', `${url}/messages`, chat.message(2))).status, 403, 'Hal waits for the key');
+  // Gus, who confirmed Hal, hands it over; now Hal holds it
+  assert.equal((await gus('POST', `${url}/grants`, { epoch: 2, grants: [{ userId: hal.id, wrappedKey: 'K'.repeat(123) }] })).status, 200);
+  assert.deepEqual((await ann('GET', url)).data.channel.keyHolders, [ids.ann, gus.id, hal.id].sort());
+  assert.equal((await hal('POST', `${url}/messages`, chat.message(2))).status, 200);
+});

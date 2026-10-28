@@ -120,7 +120,7 @@ router.post(
         }
         for (const id of after.filter((m) => !before.includes(m))) sql.run('INSERT INTO chat_members (channel_id, user_id, added_by, added_at) VALUES (?, ?, ?, ?)', channel.id, id, req.user.id, now);
       }
-      takeGrants(channel.id, b.epoch, b.grants, req.user.id, { exactly: roster.members });
+      takeGrants(channel.id, b.epoch, b.grants, req.user.id, { within: roster.members });
       // counted only once everything about it checked out; leaving people out is never held back
       if (!onlyDrops) channelKeyChanges(channel.id);
       announceChat(channel, { kind: 'epoch', epoch: b.epoch }, { also: before.filter((m) => !after.includes(m)) });
@@ -140,7 +140,7 @@ router.post(
     const epoch = check.number(req.body?.epoch, 'Epoch', { min: channel.purged_epoch + 1, max: channel.epoch, integer: true });
     if (!epoch || !wrapsFor(channel.id, epoch, req.user.id).length) throw HttpError.forbidden('You don’t hold that key.');
     chatBudget(req.user.id, JSON.stringify(req.body?.grants ?? []).length);
-    const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel), history: true });
+    const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel), history: true, current: channel.epoch });
     hub.toUsers(given, { type: 'chat', channelId: channel.id, kind: 'keys' });
     return { ok: true };
   }),
