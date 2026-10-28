@@ -47,10 +47,15 @@ async function openVersion(key: Uint8Array, docId: string, version: number, cts:
   return { title: title.text, body: body?.text ?? null, verified, facts: verified ? title.facts : null, olderFormat: !title.facts, by: verified && title.facts ? title.by : updatedBy, oldKey: title.old ?? body?.old ?? null };
 }
 
-function unwrap(doc: EncryptedDoc) {
+// A key that won't open is marked, so the list can drop a grant someone planted (see docs.list).
+async function unwrap(doc: EncryptedDoc) {
   const id = keyring.identity();
   if (!id) throw new Error('Unlock your docs first.');
-  return docKeySeal.open(doc.wrappedKey, id.privateKey, id.publicKey);
+  try {
+    return await docKeySeal.open(doc.wrappedKey, id.privateKey, id.publicKey);
+  } catch {
+    throw Object.assign(new Error('The key you were given for this doc doesn’t open it.'), { unopenable: true });
+  }
 }
 
 // A rich body's words come from its shared state; the converter loads only when one is opened.
@@ -82,7 +87,10 @@ const readDoc = {
       body: v.body,
       text: await plainText(v.body),
       version: doc.version,
-      audience: v.facts?.audience ?? doc.audience,
+      // a version from before signed audiences counts as for its readers only: the server's word
+      // alone never widens a doc to the whole team (see teamClaim)
+      audience: v.facts?.audience ?? 'people',
+      teamClaim: !v.facts && doc.audience === 'team',
       createdBy: doc.createdBy,
       updatedBy: v.by,
       createdAt: doc.createdAt,
@@ -92,6 +100,7 @@ const readDoc = {
       olderFormat: v.olderFormat,
       oldKey: v.oldKey,
       keyHash: keyHash(key),
+      keyEpoch: doc.keyEpoch ?? 0,
       live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [], more: doc.updatesMore === true },
     };
     // so search in this tab can find it, for as long as the keys stay unlocked

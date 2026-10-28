@@ -4,6 +4,7 @@ import readDoc from '../readDoc';
 import liveDocs from './liveDocs';
 import loadState from './loadState';
 import versionState from './versionState';
+import docBody from '../../lib/docState/docBody';
 import createStateGuard from '../../lib/docState/createStateGuard';
 import createInbox from './inbox';
 import REMOTE from './remote';
@@ -59,8 +60,7 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     if (fresh.warning === 'unverified') return ctx.setStatus({ state: 'readonly' });
     const state = versionState.of(fresh);
     if (!guard.accepts(state)) {
-      ctx.setStatus({ state: 'readonly', refused: ctx.status.refused + 1 });
-      toast.show(versionState.unsafe, { tone: 'error' });
+      ctx.setStatus({ state: 'readonly', refused: ctx.status.refused + 1, problem: versionState.unsafe });
       return;
     }
     Y.applyUpdate(ydoc, state, REMOTE);
@@ -94,6 +94,7 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     },
     rebase,
     pending: () => outbox.pending() || saver.dirty(),
+    snapshot: () => ({ title: ydoc.getText('title').toString().trim().slice(0, 200) || 'Untitled', body: docBody.encode(Y.encodeStateAsUpdate(ydoc)), through: ctx.through }),
     reconnected() {
       outbox.retryNow();
       void inbox.catchUp();

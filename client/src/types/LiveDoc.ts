@@ -14,6 +14,8 @@ export default interface LiveDoc {
   rebase(fresh: DocItem): Promise<void>;
   // changes this tab hasn't got onto the server yet
   pending(): boolean;
+  // the doc as it stands in this tab, and how far into the server's numbered changes that reaches
+  snapshot(): { title: string; body: string; through: number };
   reconnected(): void;
   close(): Promise<void>;
 }

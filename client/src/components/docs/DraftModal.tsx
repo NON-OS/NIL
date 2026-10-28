@@ -24,7 +24,8 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
   const draft = async () => {
     setBusy(true);
     try {
-      const { text } = await askAi<{ text: string }>('draft', { instruction, title, context: useDoc ? body : '' });
+      // the title goes only with the doc's text, as the notice below says
+      const { text } = await askAi<{ text: string }>('draft', { instruction, title: useDoc ? title : '', context: useDoc ? body : '' });
       onDraft(text);
       onClose();
     } catch (err) {
@@ -62,7 +63,7 @@ export default function DraftModal({ title, body, onClose, onDraft }: Props) {
           </label>
         )}
         <p className="muted" style={{ margin: 0, fontSize: 'var(--text-sm)' }}>
-          This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ' and the doc’s current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to {provider} without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
+          This doc is end-to-end encrypted, but a draft request isn’t. Your instruction{useDoc ? ', the doc’s title and its current text go' : ' goes'} to this Nil server as readable text, and the server passes them on to {provider} without storing them. The draft comes back the same way and is encrypted in your browser before it’s saved.
         </p>
         <AiMode />
       </div>

@@ -381,6 +381,7 @@
 }
 
 .doc-status.is-offline svg,
+.doc-status.is-unsaved svg,
 .doc-status.is-readonly svg {
   color: var(--warning);
 }

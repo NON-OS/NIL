@@ -80,6 +80,7 @@ export default {
   'POST /api/docs/:id/updates': { allow: MEMBERS, id: 'doc', body: () => ({ updateCt: blob(80) }) },
   'GET /api/docs/:id/updates': { allow: MEMBERS, id: 'doc' },
   'POST /api/docs/:id/mentions': { allow: MEMBERS, id: 'doc', body: ({ world }) => ({ userIds: [world.ids.member] }) },
+  'DELETE /api/docs/:id/grants/me': { allow: MEMBERS, id: 'fresh.doc' },
   'DELETE /api/docs/:id': { allow: MEMBERS, id: 'fresh.doc' },
   'GET /api/encryption-keys': { allow: MEMBERS },
   'PUT /api/me/encryption-key': { allow: MEMBERS, ok: [400] },

@@ -25,6 +25,8 @@ router.post(
   route((req) => {
     const { doc } = docAccess(req.params.id, req.user);
     const updateCt = cipherText(req.body?.updateCt, 'Change', { max: config.docs.updateMaxChars });
+    // sealed under a key the doc has since left: nobody holding the new one could open it
+    if (req.body?.keyEpoch !== undefined && req.body.keyEpoch !== doc.key_epoch) throw new HttpError(409, 'This doc moved to a new key. Reopen it.');
     const size = updateCt.length;
     if (!sent.take(req.user.id, size, config.docs.updateBytesPerMinute)) throw new HttpError(429, 'You’ve sent a lot of changes in the last minute. They’ll be saved as a new version instead.');
     const at = Date.now();

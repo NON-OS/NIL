@@ -152,9 +152,9 @@ test('after missing changes a newer version covers, the open doc reloads and car
   });
   const orig = globalThis.fetch;
   globalThis.fetch = async (url, opts) => (/\/updates\?after=0$/.test(url) ? (sent.push({ method: 'GET', url }), new Response('{"error":"newer"}', { status: 409 })) : orig(url, opts));
-  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 3, updateCt: u3.ct, by: 'w', at: 3 });
+  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 3, updateCt: u3.ct, by: 'w', at: Date.now() });
   await new Promise((r) => setTimeout(r, 200));
-  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 4, updateCt: u4.ct, by: 'w', at: 4 });
+  liveDocs.dispatch({ type: 'doc-update', docId: created.id, seq: 4, updateCt: u4.ct, by: 'w', at: Date.now() });
   await new Promise((r) => setTimeout(r, 200));
   globalThis.fetch = orig;
   assert.ok(sent.some((r) => /\/updates\?after=0$/.test(r.url)));

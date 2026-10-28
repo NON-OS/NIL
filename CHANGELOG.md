@@ -19,9 +19,17 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Live changes and cursors are padded before they're encrypted, so their size no longer tells the server how much was typed.
 - Each change and version another reader writes is checked against the editor's schema on a copy of the doc before the editor sees it, so a crafted one can't freeze or crash teammates' editors, overflow the stack, or make a doc unopenable. Cursors are checked too, and the server now stamps who sent each one, so a malformed cursor can no longer leave an editor showing stale text that the next keystroke writes back over other people's words.
 - A tab that missed changes a newer version already covers reloads and carries on instead of stalling, and reconnecting fetches whatever was sent meanwhile. A doc that trips the editor no longer takes the rest of the app down with it, the doc list and history skip a version they can't read, and a doc only reopens when the change was to it.
+- Version history keeps the newest version in each minute for the last hour, each quarter hour for a day, then each day. Before, steady typing saved over the version before it every few seconds and the history kept almost nothing from a working day.
+- Taking someone out of a doc now re-keys what's in the open editor, every live change included, and the server refuses if newer changes came in meanwhile. Live changes carry the doc's key count, so one sealed under a key the doc has left is turned away and comes back from the browser's kept copy under the new key (migration 046). Before, re-keying could drop what had been typed since the last save.
+- Docs signed for more people and much longer docs save: a title, which is signed with everyone the doc is for, may take `DOC_TITLE_MAX_KB` (160) and a body `DOC_BODY_MAX_MB` (6), and requests that save a doc may be that large. A doc too large gets a clear message, and a refused save shows **Not saved** with the reason, trying again less and less often, instead of a silent retry every few seconds.
+- A doc from before signed sharing counts as shared with the people who have it, whatever the server says; its creator or an admin is told and can share it with the team again. Creators and admins also see when someone switched off or made a guest still holds a doc's key.
+- Someone handed a key that doesn't open a doc drops it, so a teammate can hand over a real one; a reader can no longer lock a member out of a doc that way.
+- A live change whose signed time is more than ten minutes from when the server took it, or signed by someone who has been switched off, isn't taken.
+- Word files are unpacked and measured before they're imported or previewed, so a zip bomb is refused instead of filling the tab's memory.
+- Draft with AI sends the doc's title only when it sends the doc's text, as the dialog says. Mentions show the name the browser knows for the account, not a label stored in the doc.
 - Changes that haven't reached the server are kept in the browser, encrypted under a key derived from the unlocked identity, and sent the next time the doc opens there, so closing the tab or losing power while offline loses nothing.
 - Pictures and files taken out of a doc are deleted once no version in its history uses them, after a grace period. Each version tells the server which blobs it uses (migration 044).
-- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE`, `DOC_REVISIONS`, `DOC_BLOB_GRACE_DAYS` and `DOC_BLOB_REFS_MAX`.
+- New settings: `DOC_UPDATE_MAX_KB`, `DOC_PENDING_UPDATES`, `DOC_UPDATES_PER_MINUTE`, `DOC_REVISIONS`, `DOC_BLOB_GRACE_DAYS`, `DOC_BLOB_REFS_MAX`, `DOC_TITLE_MAX_KB` and `DOC_BODY_MAX_MB`.
 
 ### Chat
 

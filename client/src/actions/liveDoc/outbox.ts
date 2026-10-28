@@ -30,7 +30,7 @@ export default function createOutbox(ctx: LiveContext) {
     const { id, ct } = await docUpdateSeal.seal(ctx.docId, ctx.key, update);
     ctx.sent.add(id);
     try {
-      await http.post(`/docs/${ctx.docId}/updates`, { updateCt: ct });
+      await http.post(`/docs/${ctx.docId}/updates`, { updateCt: ct, keyEpoch: ctx.doc.keyEpoch });
     } catch (err) {
       ctx.sent.delete(id);
       throw err;
@@ -59,7 +59,8 @@ export default function createOutbox(ctx: LiveContext) {
           () => ctx.setStatus({ state: 'offline' }),
         );
       } else {
-        ctx.setStatus({ state: 'offline' });
+        // no answer at all is offline; an answer that refused is a problem worth naming
+        ctx.setStatus(err?.status ? { state: 'unsaved', problem: err.message } : { state: 'offline' });
         retry = Math.min(retry * 2, MAX_RETRY_MS);
       }
     } finally {

@@ -21,6 +21,10 @@ export default Object.freeze({
   mentionsPerHour: envNumber('DOC_MENTIONS_PER_HOUR', 120, { min: 1 }),
   // updates up to this size travel with the live event; bigger ones are fetched by whoever needs them
   liveInlineChars: envNumber('DOC_LIVE_INLINE_KB', 16, { min: 1 }) * 1024,
+  // characters of ciphertext in a doc's title, which is signed with everyone it's for, and in its
+  // body; a save's request may carry both
+  titleMaxChars: envNumber('DOC_TITLE_MAX_KB', 160, { min: 4 }) * 1024,
+  bodyMaxChars: envNumber('DOC_BODY_MAX_MB', 6, { min: 1 }) * units.MB,
   // versions kept in a doc's history, spaced out further the older they get
   revisions: envNumber('DOC_REVISIONS', 100, { min: 10 }),
   // pictures and files one version may say it uses; a version naming more keeps all of the doc's

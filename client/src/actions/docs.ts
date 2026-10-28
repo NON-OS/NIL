@@ -64,7 +64,15 @@ function writable(doc: DocItem, what: string) {
 const docs = {
   async list() {
     const res = await http.get<{ docs: EncryptedDoc[]; waiting: { id: string; createdBy: string | null; updatedAt: number }[] }>('/docs');
-    const items = await Promise.all(res.docs.map((d) => readDoc.decrypt(d).catch(() => null)));
+    const items = await Promise.all(
+      res.docs.map((d) =>
+        readDoc.decrypt(d).catch((err) => {
+          // a planted key that opens nothing is dropped, so a teammate can hand over a real one
+          if (err?.unopenable) http.del(`/docs/${d.id}/grants/me`).catch(() => {});
+          return null;
+        }),
+      ),
+    );
     return { docs: items.filter((d): d is DocItem => d !== null), waiting: res.waiting };
   },
 
@@ -107,14 +115,17 @@ const docs = {
 
   // Taking someone out means a new key for the doc, so a copy of the old one is worthless. It
   // also re-signs the text as yours, which is how a doc that failed its check gets a clean key.
-  async restrict(doc: DocItem, keep: string[], audience: Audience) {
+  // `now` is the doc as it stands in the open editor, with every live change in it; without it
+  // the newest saved version is re-keyed, and the server refuses if live changes came after it.
+  async restrict(doc: DocItem, keep: string[], audience: Audience, now?: { title: string; body: string; through: number }) {
     const me = store.get().me!;
     await confirmKeys.ask(keep, 'this doc');
     const fresh = crypto.getRandomValues(new Uint8Array(32));
     const grants = await sealFor(fresh, [me.id, ...keep]);
-    const words = { title: doc.title, body: doc.body ?? '' };
+    const words = now ? { title: now.title, body: now.body } : { title: doc.title, body: doc.body ?? '' };
+    const through = now?.through ?? doc.live.through;
     const to = { audience, readers: grants.map((g) => g.userId) };
-    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
+    const res = await http.post<{ readers: string[] }>(`/docs/${doc.id}/rotate`, { baseVersion: doc.version, through, audience, grants, blobs: await blobsIn(words.body), ...(await sealed(fresh, doc.id, doc.version + 1, words, to)) });
     keyring.rememberDocKey(doc.id, fresh);
     return res.readers;
   },

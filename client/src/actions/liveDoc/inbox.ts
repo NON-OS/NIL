@@ -1,5 +1,6 @@
 import * as Y from 'yjs';
 import http from '../../api/http';
+import store from '../../state/store';
 import docUpdateSeal from '../docUpdateSeal';
 import REMOTE from './remote';
 import type LiveContext from './liveContext';
@@ -19,7 +20,9 @@ export default function createInbox(ctx: LiveContext) {
   async function applyOne(u: EncryptedUpdate) {
     let opened;
     try {
-      opened = await docUpdateSeal.open(ctx.docId, ctx.key, u.updateCt ?? '', ctx.doc.readers);
+      // someone switched off may still hold the key, but nothing they sign now is taken
+      const readers = ctx.doc.readers.filter((id) => !store.get().users[id]?.deactivated);
+      opened = await docUpdateSeal.open(ctx.docId, ctx.key, u.updateCt ?? '', readers, u.at);
       // this tab's own change, back from the server: already in the state
       if (ctx.sent.delete(opened.id)) return;
       if (!opened.verified || !ctx.accepts(opened.update)) return ctx.setStatus({ refused: ctx.status.refused + 1 });

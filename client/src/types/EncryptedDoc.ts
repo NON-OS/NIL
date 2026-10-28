@@ -15,6 +15,8 @@ export default interface EncryptedDoc {
   readers: string[];
   // when opened: how far into the live changes this version reaches, and the changes after it
   updatesThrough?: number;
+  // how many times the doc moved to a new key; live changes carry it
+  keyEpoch?: number;
   updates?: EncryptedUpdate[];
   // more changes wait after the last of `updates`, to be fetched
   updatesMore?: boolean;

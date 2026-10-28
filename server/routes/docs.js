@@ -1,6 +1,7 @@
 import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
+import config from '../config.js';
 import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
@@ -63,7 +64,7 @@ router.post(
     sql.tx(() => {
       sql.run(
         'INSERT INTO docs (id, title_ct, body_ct, audience, created_by, updated_by, created_at, updated_at, blob_refs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
-        id, cipherText(b.titleCt, 'Title', { max: 4000 }), cipherText(b.bodyCt, 'Body'), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now, docBlobRefs(b.blobs),
+        id, cipherText(b.titleCt, 'Title', { max: config.docs.titleMaxChars }), cipherText(b.bodyCt, 'Body', { max: config.docs.bodyMaxChars }), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now, docBlobRefs(b.blobs),
       );
       grantDocKeys(id, grants, req.user.id);
     });
@@ -82,8 +83,8 @@ router.put(
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
     const base = check.number(req.body?.baseVersion, 'Version', { min: 1, integer: true });
     if (base !== doc.version) throw new HttpError(409, 'Someone saved a newer version of this doc.');
-    const titleCt = cipherText(req.body?.titleCt, 'Title', { max: 4000 });
-    const bodyCt = cipherText(req.body?.bodyCt, 'Body');
+    const titleCt = cipherText(req.body?.titleCt, 'Title', { max: config.docs.titleMaxChars });
+    const bodyCt = cipherText(req.body?.bodyCt, 'Body', { max: config.docs.bodyMaxChars });
     // how far into the live changes this version reaches; those changes are folded in, so they go
     const through = req.body?.through === undefined ? null : check.number(req.body.through, 'Changes', { min: 0, integer: true });
     if (through !== null && through > doc.update_seq) throw HttpError.badRequest('That version names changes this doc never had.');
@@ -115,6 +116,21 @@ router.post(
   }),
 );
 
+// A key someone was handed that doesn't open the doc (another reader can seal anything to
+// them): they drop it, so the doc shows as waiting for them again and a teammate's browser hands
+// over a real one. The last key to a doc is never dropped this way.
+router.delete(
+  '/docs/:id/grants/me',
+  contentWrites,
+  route((req) => {
+    const { doc } = docAccess(req.params.id, req.user);
+    if (!sql.get('SELECT 1 FROM doc_keys WHERE doc_id = ? AND user_id != ?', doc.id, req.user.id)) throw new HttpError(409, 'Nobody else holds a key to this doc, so yours stays.');
+    sql.run('DELETE FROM doc_keys WHERE doc_id = ? AND user_id = ?', doc.id, req.user.id);
+    announceDoc(doc.id);
+    return { ok: true };
+  }),
+);
+
 // Removing someone means a brand-new doc key: the browser re-encrypts the doc and seals the
 // new key for whoever stays. Old revisions used the old key, so they go.
 router.post(
@@ -127,16 +143,19 @@ router.post(
     if (base !== doc.version) throw new HttpError(409, 'Someone saved a newer version of this doc.');
     const grants = Array.isArray(req.body?.grants) ? req.body.grants : [];
     if (!grants.some((g) => g?.userId === req.user.id)) throw HttpError.badRequest('Keep a key for yourself.');
+    // the new version must hold every live change so far, since the ones sealed under the old key go
+    const through = req.body?.through === undefined ? null : check.number(req.body.through, 'Changes', { min: 0, integer: true });
+    if (through !== null && through < doc.update_seq) throw new HttpError(409, 'Someone changed the doc a moment ago. Try again.');
     const before = readers(doc.id);
     sql.tx(() => {
       sql.run(
         'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?',
-        cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), docBlobRefs(req.body?.blobs), doc.id,
+        cipherText(req.body?.titleCt, 'Title', { max: config.docs.titleMaxChars }), cipherText(req.body?.bodyCt, 'Body', { max: config.docs.bodyMaxChars }), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), docBlobRefs(req.body?.blobs), doc.id,
       );
       sql.run('DELETE FROM doc_revisions WHERE doc_id = ?', doc.id);
       // live changes sealed under the old key go with it; the new version holds them all
       sql.run('DELETE FROM doc_updates WHERE doc_id = ?', doc.id);
-      sql.run('UPDATE docs SET updates_through = update_seq, pending_bytes = 0 WHERE id = ?', doc.id);
+      sql.run('UPDATE docs SET updates_through = update_seq, pending_bytes = 0, key_epoch = key_epoch + 1 WHERE id = ?', doc.id);
       grantDocKeys(doc.id, grants, req.user.id, { replace: true });
     });
     announceDoc(doc.id, before);
