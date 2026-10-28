@@ -6,7 +6,10 @@ import chatChannels from './chatChannels';
 import chatRosters from './chatRosters';
 import chatTimeline from './chatTimeline';
 import chatRead from './chatRead';
+import chatMarks from './chatMarks';
 import chatTitle from './chatTitle';
+// listens for the socket coming back, to catch up on what it missed
+import './chatCatchUp';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
 const TYPING_MS = 4000;
@@ -39,16 +42,31 @@ export default async function chatEvents(event: any) {
       const unread = fresh && row.senderId !== me && !watching ? now.unread + 1 : now.unread;
       chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...now, seq: Math.max(now.seq, row.seq), lastAt: row.createdAt, unread } } }));
       if (fresh && watching) chatRead.mark(id, row.seq);
-      const mentioned = me !== undefined && Boolean(item?.mentions.includes(me));
       const here = chatState.get().viewing === id;
-      if (row.edits === 0 && row.kind === 'message' && row.senderId !== me && !here && (channel.kind !== 'channel' || mentioned) && channel.notify !== 'none') tell(id, row.senderId, mentioned);
+      if (row.edits !== 0 || row.kind !== 'message' || row.senderId === me || here || channel.notify === 'none') return;
+      // only a message that checks out says anything, and a mention only when its sender signed it
+      const checked = item ?? (await chatTimeline.check(channel, row).catch(() => null));
+      const mentioned = me !== undefined && Boolean(checked?.mentions.includes(me));
+      if (checked?.state === 'ok' && (channel.kind !== 'channel' || mentioned)) tell(id, row.senderId, mentioned);
       return;
     }
     case 'typing': {
-      const until = Date.now() + TYPING_MS;
-      chatState.set((st) => ({ typing: { ...st.typing, [id]: { ...(st.typing[id] ?? {}), [event.userId]: until } } }));
+      const now = Date.now();
+      const scope = typeof event.threadId === 'string' ? event.threadId : 'main';
+      chatState.set((st) => {
+        // hints that ran out go as new ones come, so they never pile up
+        const here: Record<string, Record<string, number>> = {};
+        for (const [s, who] of Object.entries(st.typing[id] ?? {})) {
+          const live = Object.fromEntries(Object.entries(who).filter(([, until]) => until > now));
+          if (Object.keys(live).length) here[s] = live;
+        }
+        return { typing: { ...st.typing, [id]: { ...here, [scope]: { ...(here[scope] ?? {}), [event.userId]: now + TYPING_MS } } } };
+      });
       return;
     }
+    case 'mark':
+      if (channel && event.mark) await chatMarks.open(channel, event.mark).then(() => chatTimeline.recount(id));
+      return;
     case 'read':
       if (channel) chatState.set((st) => ({ channels: { ...st.channels, [id]: { ...channel, readSeq: event.readSeq, unread: 0 } } }));
       return;
@@ -56,7 +74,8 @@ export default async function chatEvents(event: any) {
       return chatChannels.drop(id);
     case 'keys':
     case 'epoch': {
-      chatRosters.forget(id);
+      // a new epoch extends the checked chain; keys handed over later only refresh the copies
+      if (event.kind === 'keys' && channel) await chatRosters.refreshKeys(channel).catch(() => chatRosters.forget(id));
       const next = await chatChannels.refresh(id);
       if (next) await chatTimeline.reopen(next);
       return;

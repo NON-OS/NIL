@@ -9,9 +9,12 @@ export default function MessageText({ text, people, me }: { text: string; people
     <div className="msg-text">
       {linkParts(text, people).map((p, i) =>
         p.kind === 'link' ? (
-          <a key={i} href={p.href} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">
-            {p.text}
-          </a>
+          // shown left to right on its own, whatever direction the text around it runs
+          <bdi key={i} dir="ltr">
+            <a href={p.href} target="_blank" rel="noopener noreferrer nofollow" referrerPolicy="no-referrer">
+              {p.text}
+            </a>
+          </bdi>
         ) : p.kind === 'mention' ? (
           <span key={i} className={cx('mention', p.userId === me && 'me')}>
             {p.text}

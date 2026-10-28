@@ -25,9 +25,10 @@ export default async function startEpoch(channel: Shape, epoch: number, prev: Ch
     managers: channel.kind === 'channel' ? chatRoster.people(managers).filter((u) => sealed.includes(u)) : sealed,
     key: keyHash(key),
     prev: prev?.hash ?? null,
-    at: Date.now(),
+    // later than the list before, even one dated ahead of this clock, so nobody can hold the next one off
+    at: Math.max(Date.now(), (prev?.at ?? 0) + 1),
   };
   const raw = signedFacts.seal('', { kind: chatRoster.kind, place: chatRoster.place(store.get().workspaceKey, channel.id, epoch), facts: chatRoster.list(facts), by: me, signingPrivate: id.signingPrivate });
-  const roster: ChatRoster = { ...facts, epoch, by: me, hash: chatRoster.hash(raw), wrappedKey: grants[0].wrappedKey };
+  const roster: ChatRoster = { ...facts, epoch, by: me, hash: chatRoster.hash(raw), wrappedKeys: [grants[0].wrappedKey], departed: [] };
   return { key, raw, grants, roster };
 }

@@ -56,6 +56,7 @@ export default async function authzTargets(world) {
     attachment: () => upload(t.task),
     doc: newDoc,
     chat: newChat,
+    chatDm: async () => (await chat.makeChannel(member, ids.member, { kind: 'dm', members: [ids.member, ids.admin] })).data.channel.id,
     proposal: async () => (await owner('POST', '/api/proposals', { title: 'Throwaway', options: ['A', 'B'] })).data.proposal.id,
     shareLink: async () => (await member('POST', '/api/share-links', { kind: 'project', targetId: ids.shared })).data.link.id,
     agent: async () => (await owner('POST', '/api/agents', { name: `Throwaway ${blob(4)}`, access: 'read', runner: 'external' })).data.agent.id,

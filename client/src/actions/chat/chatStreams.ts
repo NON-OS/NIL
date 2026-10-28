@@ -1,5 +1,6 @@
 import type ChatItem from '../../types/ChatItem';
 import type ChatNotice from '../../types/ChatNotice';
+import type { Scopes } from '../../lib/crypto/chatMarkFacts';
 
 type Entry = { seq: number; n: number; id: string; ttl: number | null; senderId: string | null };
 
@@ -9,14 +10,21 @@ type Entry = { seq: number; n: number; id: string; ttl: number | null; senderId:
 // out of order are messages it reordered. `fromStart` says the stretch reaches back to the
 // conversation's first message, so a stream that starts above 1 is missing its beginning.
 // Disappearing messages leave gaps of their own, so a gap counts only between two messages
-// that were set to disappear alike, and the beginning only when none disappear.
-export default function chatStreams(items: ChatItem[], { fromStart }: { fromStart: boolean }): ChatNotice[] {
+// that were set to disappear alike, and the beginning only when none disappear. Each tab also
+// publishes how far it has numbered (its mark), so the last messages it sent can't be held back
+// unnoticed either: a mark ahead of what arrived is messages missing at the end.
+type Marks = Record<string, { senderId: string; scopes: Scopes }>;
+
+// `scope` is the timeline: 'main', or a thread's first message, whose replies are numbered apart.
+export default function chatStreams(items: ChatItem[], { fromStart, marks = {}, now = Date.now(), scope = 'main' }: { fromStart: boolean; marks?: Marks; now?: number; scope?: string }): ChatNotice[] {
   const streams = new Map<string, Entry[]>();
   for (const m of items) {
-    if (m.state !== 'ok' || !m.seq || !m.stream) continue;
-    const list = streams.get(m.stream) ?? [];
+    if (m.state !== 'ok' || !m.seq || !m.stream || (m.threadId ?? 'main') !== scope) continue;
+    // a stream is its sender's: someone else's messages under the same name are a stream of theirs
+    const name = `${m.senderId}/${m.stream}`;
+    const list = streams.get(name) ?? [];
     list.push({ seq: m.seq, n: m.n, id: m.id, ttl: m.expiresAt ? m.expiresAt - m.sentAt : null, senderId: m.senderId });
-    streams.set(m.stream, list);
+    streams.set(name, list);
   }
   const found = new Map<string, ChatNotice>();
   const note = (kind: ChatNotice['kind'], senderId: string | null, count: number) => {
@@ -35,6 +43,15 @@ export default function chatStreams(items: ChatItem[], { fromStart }: { fromStar
       else if (b.n > a.n + 1 && a.ttl === b.ttl) note('missing', sender, b.n - a.n - 1);
     }
     if (fromStart && byN[0].n > 1 && list.every((e) => e.ttl === null)) note('missing', sender, byN[0].n - 1);
+  }
+  for (const [name, mark] of Object.entries(marks)) {
+    const main = mark.scopes[scope];
+    if (!main || (main.until !== null && main.until <= now)) continue;
+    // marks are filed by sender and stream, so a mark speaks only for its own sender's messages
+    const seen = streams.get(name);
+    if (!seen?.length && !fromStart) continue;
+    const highest = seen?.length ? Math.max(...seen.map((e) => e.n)) : 0;
+    if (main.n > highest) note('missing', mark.senderId, main.n - highest);
   }
   return [...found.values()];
 }

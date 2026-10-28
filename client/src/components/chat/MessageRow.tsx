@@ -132,10 +132,10 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
             {item.pending === 'queued' ? 'Queued. It goes when you’re back online.' : item.pending === 'sending' ? 'Sending…' : `Not sent. ${item.error ?? ''}`}
             {item.pending === 'failed' && (
               <>
-                <button type="button" onClick={() => chatSend.retry(item.id)}>
+                <button type="button" onClick={() => void chatSend.retry(item.id)}>
                   Try again
                 </button>
-                <button type="button" onClick={() => chatSend.discard(item)}>
+                <button type="button" onClick={() => void chatSend.discard(item)}>
                   Discard
                 </button>
               </>
@@ -168,7 +168,7 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
       </div>
       {live && item.seq > 0 && !editing && (
         <div className="msg-tools" role="toolbar" aria-label="Message actions">
-          <EmojiPicker onPick={(emoji) => chatSend.react(channel, item, emoji)} />
+          <EmojiPicker onPick={(emoji) => run(() => chatSend.react(channel, item, emoji))} />
           {!inThread && !item.threadId && (
             <button type="button" className="icon-btn" onClick={() => onThread(item.id)} aria-label="Reply in thread" title="Reply in thread">
               <MessageSquareReply size={15} />

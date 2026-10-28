@@ -31,9 +31,12 @@ export default function holderStanding(userId, held, minimum, { now = Date.now()
   const heldSince = !enough ? null : row.holder_held_since ?? (scheduled ? now : null);
   if (scheduled && heldSince !== null && now - heldSince >= Math.max(grace, window)) {
     sql.run('UPDATE users SET holder_below_since = NULL, holder_held_since = NULL, holder_locked_at = NULL WHERE id = ?', userId);
+    // back in: a signed removal from chat from before says nothing about them now
+    if (row.holder_locked_at) sql.run('DELETE FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', userId);
     return { state: 'ok' };
   }
   const state = heldSince !== null && now - heldSince >= window ? 'ok' : until > now ? 'grace' : 'locked';
   sql.run('UPDATE users SET holder_held_since = ?, holder_locked_at = ? WHERE id = ?', heldSince, state === 'locked' ? row.holder_locked_at ?? now : null, userId);
+  if (row.holder_locked_at && state !== 'locked') sql.run('DELETE FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', userId);
   return { state, until };
 }

@@ -1,4 +1,5 @@
 import fileMeta from './fileMeta';
+import stripBidi from './stripBidi';
 import type ChatFile from '../types/ChatFile';
 
 export interface Content {
@@ -15,7 +16,8 @@ const LIMITS = { text: 20_000, files: 10, mentions: 100, emoji: 16 };
 
 function file(v: any): ChatFile | null {
   if (!v || typeof v !== 'object' || !ID.test(v.id) || !B32.test(v.hash) || !B32.test(v.key) || !Number.isSafeInteger(v.size) || v.size < 0) return null;
-  const { name, type } = fileMeta(v.name, v.type);
+  // a name can't turn round which way it reads, to pass off one kind of file as another
+  const { name, type } = fileMeta(stripBidi(String(v.name ?? '')), v.type);
   return { id: v.id, name, type, size: v.size, hash: v.hash, key: v.key };
 }
 

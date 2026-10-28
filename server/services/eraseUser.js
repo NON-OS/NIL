@@ -2,6 +2,7 @@ import sql from '../db/sql.js';
 import checkpoint from '../db/checkpoint.js';
 import hub from '../realtime/hub.js';
 import guestScope from './guestScope.js';
+import eraseOrphans from '../chat/eraseOrphans.js';
 import dropOrphans from './dropOrphans.js';
 import log from '../lib/log.js';
 
@@ -14,6 +15,8 @@ export default function eraseUser(id) {
     // live doc changes name their author without a link to the account
     sql.run('UPDATE doc_updates SET created_by = NULL WHERE created_by = ?', id);
     sql.run('DELETE FROM users WHERE id = ?', id);
+    // conversations only they were left in, or only they held the key to
+    eraseOrphans();
   });
   // docs and folders only they could open can't be opened by anyone now
   dropOrphans().catch((err) => log.error('erase', 'Deleting docs and folders nobody can open failed.', err));

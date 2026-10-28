@@ -58,7 +58,7 @@ router.get(
   '/chat/files/:id',
   route(async (req, res) => {
     const row = sql.get('SELECT * FROM chat_files WHERE id = ?', String(req.params.id));
-    if (!row || !fs.existsSync(chatFilePath(row.id))) throw HttpError.notFound('That file');
+    if (!row) throw HttpError.notFound('That file');
     channelAccess(row.channel_id, req.user);
     // only ciphertext, for the browser to open itself; never something a browser would render
     res.setHeader('Content-Type', 'application/octet-stream');

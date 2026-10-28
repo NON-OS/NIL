@@ -3,159 +3,188 @@ import ApiError from '../../api/ApiError';
 import store from '../../state/store';
 import chatState from '../../state/chatState';
 import b64u from '../../lib/crypto/b64u';
-import chatKeys from './chatKeys';
-import chatRosters from './chatRosters';
 import chatChannels from './chatChannels';
 import chatCounters from './chatCounters';
 import chatFiles from './chatFiles';
 import chatTimeline from './chatTimeline';
-import sealMessage from './sealMessage';
+import chatMarks from './chatMarks';
+import chatQueue, { type Queued } from './chatQueue';
+import sealGate from './sealGate';
 import type { Content } from '../../lib/chatContent';
 import type ChatItem from '../../types/ChatItem';
 import type ChatChannel from '../../types/ChatChannel';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 
-interface Job {
-  item: ChatItem;
-  content: Partial<Content>;
-  uploads: File[];
-  n: number | null;
-  // a send that may have reached the server before the connection went
-  uncertain: boolean;
-}
-
-const queue: Job[] = [];
+// how old a sealed message may get before it's sealed again with a fresh time, well inside
+// what the server accepts (CHAT_CLOCK_SKEW_SECONDS)
+const FRESH_MS = 4 * 60_000;
 let flushing = false;
+// a flush asked for while one runs, for what was written meanwhile
+let again = false;
 
 const offline = (err: unknown) => err instanceof ApiError && err.status === 0;
-const show = (job: Job, patch: Partial<ChatItem>) => {
-  job.item = { ...job.item, ...patch };
-  chatTimeline.local(job.item);
-};
 
-// One send: the conversation's current key (starting a new epoch first when it's due), files
-// encrypted and stored, then the message signed and sealed. A key that changed on the way, or a
-// new disappearing setting, means a fresh look at the conversation and one more try.
-async function deliver(job: Job, retry = true): Promise<void> {
-  let channel = chatState.get().channels[job.item.channelId];
-  if (!channel) throw new Error('This conversation is gone.');
-  await chatChannels.tend(channel);
-  channel = chatState.get().channels[channel.id] ?? channel;
-  const key = await chatKeys.get(channel, await chatRosters.load(channel), channel.epoch);
-  if (!key) throw new Error('You don’t hold this conversation’s key yet. A teammate’s browser hands it over once they’ve confirmed your key.');
-  if (job.uploads.length) {
-    const files = [];
-    for (const file of job.uploads) files.push(await chatFiles.upload(channel.id, file));
-    job.content = { ...job.content, files };
-    job.uploads = [];
-  }
-  const { item } = job;
-  job.n ??= chatCounters.peek(channel.id, item.threadId);
-  const sentAt = Date.now();
-  const facts = { type: item.type, edit: 0, stream: chatCounters.stream, n: job.n, thread: item.threadId, ttl: channel.disappearSeconds };
-  const bodyCt = await sealMessage({ id: item.id, channelId: channel.id, epoch: channel.epoch, sentAt, key, facts, content: job.content });
-  const mentions = (job.content.mentions ?? []).filter((id) => channel!.members.includes(id));
-  try {
-    job.uncertain = true;
-    const body = { id: item.id, kind: item.type, threadId: item.threadId, epoch: channel.epoch, sentAt, ttl: channel.disappearSeconds, bodyCt, files: (job.content.files ?? []).map((f) => f.id), ping: mentions };
-    const { message } = await http.post<{ message: ChatMessageRow }>(`/chat/channels/${channel.id}/messages`, body);
-    chatCounters.used(channel.id, item.threadId, job.n);
-    await chatTimeline.arrive(channel, message);
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 409 && /already sent/.test(err.message)) return chatCounters.used(channel.id, item.threadId, job.n);
-    if (!offline(err)) job.uncertain = false;
-    if (retry && err instanceof ApiError && err.status === 409) {
-      await chatChannels.refresh(channel.id);
-      return deliver(job, false);
-    }
-    throw err;
-  }
-}
-
-async function flush() {
-  if (flushing) return;
-  flushing = true;
-  try {
-    while (queue.length) {
-      const job = queue[0];
-      if (!navigator.onLine) return show(job, { pending: 'queued' });
-      show(job, { pending: 'sending', error: undefined });
-      try {
-        await deliver(job);
-        queue.shift();
-      } catch (err) {
-        if (offline(err)) return show(job, { pending: 'queued' });
-        queue.shift();
-        if (job.uncertain && job.n) chatCounters.used(job.item.channelId, job.item.threadId, job.n);
-        show(job, { pending: 'failed', error: err instanceof Error ? err.message : 'Not sent.' });
-        failed.set(job.item.id, job);
-      }
-    }
-  } finally {
-    flushing = false;
-  }
-}
-
-const failed = new Map<string, Job>();
-window.addEventListener('online', () => void flush());
-
-function draft(channel: ChatChannel, type: ChatItem['type'], threadId: string | null, content: Partial<Content>): ChatItem {
+// What the timeline shows for a message still on its way.
+function shown(q: Queued, content: Partial<Content> | null, pending: ChatItem['pending'], error?: string): ChatItem {
   return {
-    id: b64u.encode(crypto.getRandomValues(new Uint8Array(16))),
-    channelId: channel.id,
+    id: q.id,
+    channelId: q.channelId,
     seq: 0,
-    threadId,
+    threadId: q.threadId,
     senderId: store.get().me!.id,
-    sentAt: Date.now(),
-    epoch: channel.epoch,
-    type,
-    reaction: type === 'reaction',
-    text: content.text ?? '',
-    files: [],
-    mentions: content.mentions ?? [],
-    emoji: content.emoji ?? null,
-    target: content.target ?? null,
+    sentAt: q.sentAt,
+    epoch: q.epoch,
+    type: q.type,
+    reaction: q.type === 'reaction',
+    text: content?.text ?? (content ? '' : 'A message waiting to be sent'),
+    files: content?.files ?? [],
+    mentions: content?.mentions ?? [],
+    emoji: content?.emoji ?? null,
+    target: content?.target ?? null,
     edit: 0,
     editedAt: null,
     replies: 0,
     lastReplyAt: null,
     expiresAt: null,
-    stream: chatCounters.stream,
-    n: 0,
+    stream: q.stream,
+    n: q.n,
     state: 'ok',
-    pending: navigator.onLine ? 'sending' : 'queued',
+    pending,
+    error,
   };
 }
 
-// Sending. Every message waits in order in this tab's queue, in memory only, and shows as
-// queued while there's no network; it goes as soon as there is. A message the server refuses
-// stays on screen, marked, to try again or discard.
+async function display(q: Queued, pending: ChatItem['pending'], error?: string) {
+  const channel = chatState.get().channels[q.channelId];
+  if (!channel || q.type !== 'message') return;
+  chatTimeline.local(shown(q, await chatQueue.open(channel, q), pending, error));
+}
+
+// One send: a new key first when this browser should start one, the message sealed again if its
+// key changed or it waited too long, its files, then the message itself.
+async function deliver(q: Queued, retry = true): Promise<void> {
+  let channel = chatState.get().channels[q.channelId] ?? (await chatChannels.refresh(q.channelId));
+  if (!channel) throw new ApiError(404, 'This conversation is gone.');
+  await chatChannels.tend(channel);
+  channel = chatState.get().channels[channel.id] ?? channel;
+  if (q.epoch !== channel.epoch || q.ttl !== channel.disappearSeconds || Date.now() - q.sentAt > FRESH_MS) {
+    q = await chatQueue.reseal(channel, q, { tombstone: q.type === 'deleted' });
+    await chatQueue.save(q);
+  } else if (q.type !== 'deleted') {
+    // sealed a moment ago under this key, but whoever holds it may have changed since
+    await sealGate(channel);
+  }
+  for (const id of q.files.filter((f) => !q.sent.includes(f))) {
+    const body = await chatQueue.getFile(id);
+    if (!body) throw new ApiError(400, 'A file in this message is gone from this device.');
+    await chatFiles.send(channel.id, id, body);
+    q = { ...q, sent: [...q.sent, id] };
+    await chatQueue.save(q);
+  }
+  const body = { id: q.id, kind: q.type === 'reaction' ? 'reaction' : 'message', threadId: q.threadId, epoch: q.epoch, sentAt: q.sentAt, ttl: q.ttl, bodyCt: q.bodyCt, files: q.files, ping: q.ping, deleted: q.type === 'deleted' };
+  let message: ChatMessageRow | null = null;
+  try {
+    message = (await http.post<{ message: ChatMessageRow }>(`/chat/channels/${channel.id}/messages`, body)).message;
+  } catch (err) {
+    const known = err instanceof ApiError && err.status === 409 && /already sent/.test(err.message);
+    if (!known && retry && err instanceof ApiError && err.status === 409) {
+      await chatChannels.refresh(channel.id);
+      return deliver({ ...q, sentAt: 0 }, false);
+    }
+    if (!known) throw err;
+  }
+  await chatQueue.drop(q);
+  chatMarks.record(channel.id, q.stream, q.threadId ?? 'main', q.n, q.ttl ? q.sentAt + q.ttl * 1000 : null);
+  if (message) await chatTimeline.arrive(channel, message);
+}
+
+async function flush(): Promise<void> {
+  if (!store.get().docsUnlocked) return;
+  if (flushing) return void (again = true);
+  flushing = true;
+  again = false;
+  try {
+    for (const q of await chatQueue.list()) {
+      if (q.failed) continue;
+      if (!navigator.onLine) return void (await display(q, 'queued'));
+      await display(q, 'sending');
+      try {
+        await deliver(q);
+      } catch (err) {
+        if (offline(err)) return void (await display(q, 'queued'));
+        const why = err instanceof Error ? err.message : 'Not sent.';
+        await chatQueue.save({ ...q, failed: why });
+        await display(q, 'failed', why);
+      }
+    }
+  } finally {
+    flushing = false;
+  }
+  if (again && navigator.onLine) return flush();
+}
+
+window.addEventListener('online', () => void flush());
+
+async function queue(given: ChatChannel, type: ChatItem['type'], threadId: string | null, content: Partial<Content>, uploads: File[] = [], ping: string[] = []) {
+  // online, the key is brought up to date first, so what's written isn't sealed to someone who
+  // just left; offline, sealing refuses that on its own
+  if (navigator.onLine) await chatChannels.tend(given);
+  const channel = chatState.get().channels[given.id] ?? given;
+  const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
+  const files = [];
+  const bodies: [string, Uint8Array][] = [];
+  for (const file of uploads) {
+    const prepared = await chatFiles.prepare(channel.id, file);
+    files.push(prepared.file);
+    bodies.push([prepared.file.id, prepared.body]);
+  }
+  // the number is taken now: once sealed, this message is sent, or sent as a tombstone
+  const n = chatCounters.peek(channel.id, threadId);
+  const draft = { id, channelId: channel.id, threadId, type, stream: chatCounters.stream, n, files: files.map((f) => f.id), sent: [], ping, failed: null, at: Date.now() };
+  const q = await chatQueue.seal(channel, draft, { ...content, files });
+  chatCounters.used(channel.id, threadId, n);
+  for (const [fileId, body] of bodies) await chatQueue.putFile(fileId, body);
+  await chatQueue.save(q);
+  if (type === 'message') chatTimeline.local(shown(q, { ...content, files }, navigator.onLine ? 'sending' : 'queued'));
+  void flush();
+}
+
+// Sending. Every message is signed and encrypted as it's written and kept on this device, as
+// ciphertext only, until the server has it: it survives going offline, a reload or closing the
+// tab, and goes on the next unlock. A message the server refuses stays, marked, to try again or
+// discard; discarding sends a signed tombstone in its place, so its number isn't missed.
 const chatSend = {
-  message(channel: ChatChannel, { text, files = [], threadId = null, mentions = [] }: { text: string; files?: File[]; threadId?: string | null; mentions?: string[] }) {
-    const item = draft(channel, 'message', threadId, { text, mentions });
-    queue.push({ item: { ...item, files: files.map((f) => ({ id: '', name: f.name, type: f.type, size: f.size, hash: '', key: '' })) }, content: { text, mentions }, uploads: files, n: null, uncertain: false });
-    chatTimeline.local(queue[queue.length - 1].item);
-    void flush();
-    return item.id;
+  async message(channel: ChatChannel, { text, files = [], threadId = null, mentions = [] }: { text: string; files?: File[]; threadId?: string | null; mentions?: string[] }) {
+    await queue(channel, 'message', threadId, { text, mentions }, files, mentions.filter((id) => channel.members.includes(id)));
   },
 
-  react(channel: ChatChannel, target: ChatItem, emoji: string) {
-    const job = { item: draft(channel, 'reaction', target.threadId, { emoji, target: target.id }), content: { emoji, target: target.id }, uploads: [], n: null, uncertain: false };
-    queue.push(job);
-    void flush();
-  },
+  react: (channel: ChatChannel, target: ChatItem, emoji: string) => queue(channel, 'reaction', target.threadId, { emoji, target: target.id }),
 
-  retry(id: string) {
-    const job = failed.get(id);
-    if (!job) return;
-    failed.delete(id);
-    queue.push({ ...job, n: null, uncertain: false });
+  async retry(id: string) {
+    const q = (await chatQueue.list()).find((x) => x.id === id);
+    if (!q) return;
+    await chatQueue.save({ ...q, failed: null });
     void flush();
   },
 
-  discard(item: ChatItem) {
-    failed.delete(item.id);
+  async discard(item: ChatItem) {
     chatTimeline.drop(item.channelId, item.threadId, item.id);
+    const q = (await chatQueue.list()).find((x) => x.id === item.id);
+    const channel = q && chatState.get().channels[q.channelId];
+    if (!q || !channel) return;
+    try {
+      await chatQueue.drop(q);
+      await chatQueue.save(await chatQueue.reseal(channel, q, { tombstone: true }));
+    } catch {
+      // not a member any more, or the key is gone: nobody is waiting on its number
+    }
+    void flush();
+  },
+
+  // Shows what waits on this device and sends it, after an unlock.
+  async restore() {
+    for (const q of await chatQueue.list()) if (q.type === 'message') await display(q, q.failed ? 'failed' : navigator.onLine ? 'sending' : 'queued', q.failed ?? undefined);
+    await flush();
   },
 
   flush,

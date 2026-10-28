@@ -5,9 +5,9 @@ import Avatar from '../ui/Avatar';
 import ConfirmButton from '../ui/ConfirmButton';
 import PeoplePicker from './PeoplePicker';
 import DisappearSelect from './DisappearSelect';
+import ForwardSelect from './ForwardSelect';
 import useStore from '../../state/useStore';
 import toast from '../../state/toast';
-import isAdmin from '../../lib/isAdmin';
 import dates from '../../lib/dates';
 import chatChannels from '../../actions/chat/chatChannels';
 import chatMeta from '../../actions/chat/chatMeta';
@@ -33,9 +33,16 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
   const [topic, setTopic] = useState(channel.topic);
   const [adding, setAdding] = useState<string[]>([]);
   const [head, setHead] = useState<ChatRoster | null>(null);
-  const manages = channel.kind === 'group' || (channel.kind === 'channel' && (channel.createdBy === me?.id || isAdmin(me)));
-  const every = channel.rotateAt && channel.epochAt ? Math.round((channel.rotateAt - channel.epochAt) / 86_400_000) : null;
+  const manages = chatChannels.manages(channel);
+  const hours = channel.rotateAt && channel.epochAt ? Math.round((channel.rotateAt - channel.epochAt) / 3_600_000) : null;
+  const every = !hours ? null : hours % 24 ? `${hours} hours` : hours === 24 ? 'day' : `${hours / 24} days`;
+  // who holds the key is the checked member list's word; the server's list adds who waits for one
+  const signed = channel.signedMembers ?? [];
+  const people = [...new Set([...signed, ...channel.members])];
   const peopleChange = manages && channel.audience === 'people' && channel.kind !== 'dm';
+  // in a team channel whoever manages it can still leave someone out of the key, an account
+  // nobody can confirm, say; the team's own list brings them back once someone confirms them
+  const canRemove = manages && channel.kind !== 'dm';
 
   useEffect(() => {
     chatRosters.load(channel).then((c) => setHead(c.rosters[c.rosters.length - 1] ?? null), () => {});
@@ -58,7 +65,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
             style={{ display: 'grid', gap: 10 }}
             onSubmit={(e) => {
               e.preventDefault();
-              void run(() => chatChannels.rename(channel, { name, topic }), 'Saved, encrypted.');
+              // a record that didn't check out is signed again whole, with the settings shown here
+              const all = channel.metaState === 'unverified' ? { disappear: channel.disappearSeconds, forward: channel.forwardDays } : {};
+              void run(() => chatChannels.rename(channel, { name, topic, ...all }), 'Saved, encrypted.');
             }}
           >
             <label className="field">
@@ -69,8 +78,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
               <span>Topic</span>
               <input className="input" value={topic} maxLength={chatMeta.limits.topic} onChange={(e) => setTopic(e.target.value)} />
             </label>
+            {channel.metaState === 'unverified' && <small>The name and settings didn’t check out. Check how long messages stay and old keys are kept below, then save to sign them again.</small>}
             <div>
-              <button type="submit" className="btn btn-sm" disabled={(channel.kind === 'channel' && !name.trim()) || (name === channel.name && topic === channel.topic)}>
+              <button type="submit" className="btn btn-sm" disabled={(channel.kind === 'channel' && !name.trim()) || (channel.metaState !== 'unverified' && name === channel.name && topic === channel.topic)}>
                 Save name and topic
               </button>
             </div>
@@ -80,12 +90,17 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
         <div className="field">
           <span>{channel.audience === 'team' ? 'Everyone on the team' : 'People'}</span>
           <div className="chat-people">
-            {channel.members.map((id) => (
+            {people.map((id) => (
               <div key={id} className="chat-person">
                 <Avatar user={users[id]} size={24} />
                 <span className="grow">{users[id]?.name ?? 'Someone'}</span>
-                <small>{channel.keyHolders.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
-                {peopleChange && id !== me?.id && (
+                <small>{!channel.members.includes(id) ? 'Holds the key, but is out' : signed.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
+                {peopleChange && !signed.includes(id) && (
+                  <button type="button" className="btn btn-sm" onClick={() => void run(() => chatChannels.setMembers(channel, channel.members), 'New key, sealed to everyone whose key you’ve confirmed.')}>
+                    Give key
+                  </button>
+                )}
+                {canRemove && id !== me?.id && signed.includes(id) && (
                   <ConfirmButton className="btn btn-sm btn-ghost" confirmLabel="Remove?" label={`Remove ${users[id]?.name ?? 'them'}`} onConfirm={() => void run(() => chatChannels.setMembers(channel, channel.members.filter((m) => m !== id)), 'Removed. The conversation has a new key.')}>
                     Remove
                   </ConfirmButton>
@@ -107,6 +122,7 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
         )}
 
         <DisappearSelect value={channel.disappearSeconds} disabled={!manages && channel.kind !== 'dm'} onChange={(s) => void run(() => chatChannels.disappear(channel, s))} />
+        <ForwardSelect value={channel.forwardDays} disabled={!manages && channel.kind !== 'dm'} onChange={(d) => void run(() => chatChannels.forward(channel, d))} />
 
         <label className="field">
           <span>Notify me about</span>
@@ -125,7 +141,7 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
           <small>
             <KeyRound size={12} /> Key {channel.epoch}
             {head ? `, started ${dates.ago(head.at)} by ${users[head.by]?.name ?? 'someone'}, sealed to ${head.members.length} ${head.members.length === 1 ? 'person' : 'people'}.` : '.'}{' '}
-            A new key starts when someone leaves{every ? `, and at least every ${every === 1 ? 'day' : `${every} days`}` : ''}.
+            A new key starts when someone joins or leaves{every ? `, and at least every ${every}` : ''}.
           </small>
           <div>
             <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show(channel.members.filter((id) => id !== me?.id), 'this conversation')}>

@@ -31,6 +31,15 @@ const chatKeyring = {
       keys.delete(name);
     }
   },
+  // keys a forward-secret conversation let go of go here too
+  forgetUpTo(channelId: string, epoch: number) {
+    for (const [name, key] of keys) {
+      const [id, e] = name.split('/');
+      if (id !== channelId || Number(e) > epoch) continue;
+      key.fill(0);
+      keys.delete(name);
+    }
+  },
   wipe,
 };
 

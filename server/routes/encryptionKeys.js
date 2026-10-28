@@ -11,6 +11,7 @@ import log from '../lib/log.js';
 import publishTask from '../services/publishTask.js';
 import publishUser from '../services/publishUser.js';
 import toEncryptionKey from '../mappers/toEncryptionKey.js';
+import eraseOrphans from '../chat/eraseOrphans.js';
 
 const router = express.Router();
 
@@ -28,6 +29,18 @@ router.get(
   ),
 );
 
+// Keys people replaced, each with its wallet signature, for checking what they signed before.
+// Browsers rebuild and check each statement themselves, and take a key as good only for what
+// was signed before the next one, whose time its own statement signs.
+router.get(
+  '/encryption-keys/earlier',
+  route(() =>
+    sql
+      .all('SELECT h.*, u.deactivated FROM encryption_key_history h JOIN users u ON u.id = h.user_id ORDER BY h.user_id, h.created_at')
+      .map(toEncryptionKey),
+  ),
+);
+
 // Publishing your keys always takes a fresh signature from one of your wallets. Signing the same
 // keys again (after removing the wallet that signed them, say) changes nothing else. New keys
 // need `reset`: that gives up every doc and private task sealed to the old ones, every wallet and
@@ -38,7 +51,7 @@ router.put(
   '/me/encryption-key',
   route((req) => {
     const next = checkKeyStatement(req, req.body);
-    const current = sql.get('SELECT public_key, signing_key, created_at FROM encryption_keys WHERE user_id = ?', req.user.id);
+    const current = sql.get('SELECT public_key, signing_key, address, signature, created_at FROM encryption_keys WHERE user_id = ?', req.user.id);
     const same = Boolean(current) && current.public_key === next.publicKey && current.signing_key === next.signingKey;
     if (current && !same && req.body?.reset !== true) {
       throw new HttpError(409, 'You already have different encryption keys. Unlock with a wallet that opens them, restore your recovery kit, or reset (you’ll lose access to encrypted docs, files and private tasks until someone shares them again, and any that only you could open are deleted).');
@@ -50,14 +63,22 @@ router.put(
     let dropped = [];
     sql.tx(() => {
       if (current && !same) {
+        // the old key stays checkable for what was signed with it, by its wallet signature
+        sql.run(
+          'INSERT OR IGNORE INTO encryption_key_history (user_id, public_key, signing_key, address, signature, created_at, replaced_at) VALUES (?, ?, ?, ?, ?, ?, ?)',
+          req.user.id, current.public_key, current.signing_key, current.address, current.signature, current.created_at, next.createdAt,
+        );
         sql.run('DELETE FROM doc_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM folder_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM chat_epoch_keys WHERE user_id = ?', req.user.id);
+        sql.run('DELETE FROM chat_history_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM identity_wraps WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM passkey_wraps WHERE user_id = ?', req.user.id);
         sql.run('UPDATE encryption_keys SET kit_saved_at = NULL WHERE user_id = ?', req.user.id);
         sql.run('UPDATE users SET stealth_meta = NULL WHERE id = ?', req.user.id);
         dropped = dropTaskKeys(req.user.id);
+        // a conversation whose key only the old keys held can't go on
+        eraseOrphans();
       }
       sql.run(
         `INSERT INTO encryption_keys (user_id, public_key, signing_key, address, signature, created_at) VALUES (?, ?, ?, ?, ?, ?)

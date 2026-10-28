@@ -72,3 +72,30 @@ elab "#check_axioms " ids:ident+ : command => do
   Nil.Invoice.noxDue_ge
   Nil.Invoice.draw_off_balance
   Nil.Invoice.cancel_refunds
+  Nil.ChatRoster.signer_in
+  Nil.ChatRoster.first_by_manager
+  Nil.ChatRoster.later
+  Nil.ChatRoster.dm_fixed
+  Nil.ChatRoster.outsider_refused
+  Nil.ChatRoster.drop_needs_proof
+  Nil.ChatRoster.no_private_add
+  Nil.ChatRoster.managers_kept
+  Nil.ChatRoster.unmanaged_everyone
+  Nil.ChatRoster.member_stays
+  Nil.ChatRoster.time_increases
+  Nil.ChatRoster.shape_fixed
+  Nil.ChatStreams.held_back_reported
+  Nil.ChatStreams.replay_reported
+  Nil.ChatStreams.reorder_reported
+  Nil.ChatStreams.tail_reported
+  Nil.ChatStreams.honest_silent
+  Nil.ChatHistory.deleted_stays
+  Nil.ChatHistory.record_deleted_absorbs
+  Nil.ChatHistory.older_refused
+  Nil.ChatHistory.honest_never_stale
+  Nil.ChatHistory.honest_none_late
+  Nil.ChatHistory.late_caught
+  Nil.ChatSeal.sealed_only_to_confirmed
+  Nil.ChatSeal.none_out
+  Nil.ChatSeal.current_and_signed
+  Nil.ChatSeal.seals_when_safe

@@ -1,10 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Plus } from 'lucide-react';
 import ChannelIcon from './ChannelIcon';
 import useChat from '../../state/useChat';
 import useStore from '../../state/useStore';
 import chatTitle from '../../actions/chat/chatTitle';
 import chatSearch from '../../actions/chat/chatSearch';
+import chatIndex, { type Entry } from '../../actions/chat/chatIndex';
 import fuzzyScore from '../../lib/fuzzyScore';
 import dates from '../../lib/dates';
 import cx from '../../lib/cx';
@@ -17,8 +18,8 @@ interface Props {
 }
 
 // Conversations, channels first, then direct and group messages, each by its newest message.
-// The search box narrows them by name and finds words in messages this tab has opened; nothing
-// typed here reaches the server.
+// The search box narrows them by name and finds words in every message this device has opened,
+// from its encrypted index; nothing typed here reaches the server.
 export default function ChannelList({ current, onOpen, onNew }: Props) {
   const channels = useChat((s) => s.channels);
   const timelines = useChat((s) => s.timelines);
@@ -36,7 +37,23 @@ export default function ChannelList({ current, onOpen, onNew }: Props) {
     };
     // titles of direct messages follow people's names
   }, [channels, q, users]);
-  const hits = useMemo(() => (q.length > 1 ? chatSearch(q, { limit: 30 }) : []), [q, timelines]);
+  // what this tab holds right away, then everything this device has decrypted before
+  const here = useMemo(() => (q.length > 1 ? chatSearch(q, { limit: 30 }) : []), [q, timelines]);
+  const [stored, setStored] = useState<Entry[]>([]);
+  useEffect(() => {
+    let live = true;
+    setStored([]);
+    if (q.length > 1) void chatIndex.search(q, { limit: 50 }).then((found) => live && setStored(found));
+    return () => {
+      live = false;
+    };
+  }, [q]);
+  const hits = useMemo(() => {
+    const byId = new Map<string, { id: string; channelId: string; threadId: string | null; senderId: string | null; sentAt: number; text: string }>();
+    for (const m of here) byId.set(m.id, { ...m, text: m.text || m.files.map((f) => f.name).join(', ') });
+    for (const e of stored) if (!byId.has(e.id) && channels[e.channelId]) byId.set(e.id, e);
+    return [...byId.values()].sort((a, b) => b.sentAt - a.sentAt).slice(0, 50);
+  }, [here, stored, channels]);
 
   const link = ({ c, title }: { c: ChatChannel; title: string }) => (
     <button key={c.id} type="button" className={cx('chat-link', c.unread > 0 && 'unread')} aria-current={c.id === current} onClick={() => onOpen(c.id)}>
@@ -85,11 +102,11 @@ export default function ChannelList({ current, onOpen, onNew }: Props) {
                 <small>
                   {users[m.senderId ?? '']?.name ?? 'Someone'} in {channels[m.channelId] ? chatTitle(channels[m.channelId]) : 'a conversation'} · {dates.ago(m.sentAt)}
                 </small>
-                <span>{m.text || m.files.map((f) => f.name).join(', ')}</span>
+                <span>{m.text}</span>
               </button>
             ))}
             <p className="muted chat-section" style={{ fontSize: 'var(--text-xs)' }}>
-              {hits.length ? 'Searched' : 'Nothing found in'} the messages this tab has opened. Scroll back in a conversation to search further.
+              {hits.length ? 'Searched' : 'Nothing found in'} every message this device has opened, here in your browser.
             </p>
           </>
         )}

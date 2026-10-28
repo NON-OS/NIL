@@ -12,12 +12,14 @@ import ThreadPanel from '../components/chat/ThreadPanel';
 import QuickSwitcher from '../components/chat/QuickSwitcher';
 import NewConversation from '../components/chat/NewConversation';
 import ChannelSettings from '../components/chat/ChannelSettings';
+import RemovalNotice from '../components/chat/RemovalNotice';
 import useStore from '../state/useStore';
 import useChat from '../state/useChat';
 import useRoute from '../hooks/useRoute';
 import router from '../lib/router';
 import cx from '../lib/cx';
 import chatChannels from '../actions/chat/chatChannels';
+import chatSend from '../actions/chat/chatSend';
 
 // Team chat: conversations on the left, the one you're in, and a thread beside it. Ctrl+K (⌘K)
 // jumps between conversations, and Alt+↑/↓ steps through them (with Shift, only unread ones).
@@ -34,10 +36,16 @@ export default function ChatView() {
   const [making, setMaking] = useState<'channel' | 'dm' | null>(null);
   const [settings, setSettings] = useState(false);
 
-  // names and keys open once the keys do
+  // names and keys open once the keys do, and messages waiting on this device go out
   useEffect(() => {
-    if (unlocked) void chatChannels.load();
+    if (unlocked) void chatChannels.load().then(() => chatSend.restore());
   }, [unlocked]);
+
+  // someone leaving the team changes who should hold each conversation's key
+  const gone = useStore((s) => Object.values(s.users).filter((u) => u.deactivated || u.role === 'guest').map((u) => u.id).sort().join(','));
+  useEffect(() => {
+    if (unlocked && loaded) void chatChannels.load();
+  }, [gone]);
 
   // a conversation named in the address that isn't listed yet may have just been made
   useEffect(() => {
@@ -111,7 +119,7 @@ export default function ChatView() {
       <div className={cx('chat', channel && 'has-channel', channel && threadId && 'has-thread')}>
         <ChannelList current={currentId} onOpen={open} onNew={setMaking} />
         {channel ? (
-          <ChannelPane key={channel.id} channel={channel} onThread={(id) => open(channel.id, id)} onSettings={() => setSettings(true)} onBack={() => router.navigate('/chat')} />
+          <ChannelPane key={channel.id} channel={channel} onThread={(id) => open(channel.id, id)} onSettings={() => setSettings(true)} onBack={() => router.navigate('/chat')} onOpen={open} />
         ) : (
           <div className="chat-pane chat-empty">
             <p>Pick a conversation, or press Ctrl+K to jump to one.</p>
@@ -125,6 +133,7 @@ export default function ChatView() {
   return (
     <div className="view-fill">
       <ViewHeader title="Chat" icon={<MessagesSquare size={17} />} subtitle="End-to-end encrypted" actions={unlocked && loaded ? jump : null} />
+      {unlocked && loaded && <RemovalNotice />}
       <div className="chat-body">{body}</div>
       {switcher && <QuickSwitcher onOpen={(id) => open(id)} onClose={() => setSwitcher(false)} />}
       {making && <NewConversation initial={making} onClose={() => setMaking(null)} onMade={(id) => open(id)} />}

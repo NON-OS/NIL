@@ -4,6 +4,7 @@ import chatFacts from '../../lib/crypto/chatFacts';
 import signedFacts from '../../lib/crypto/signedFacts';
 import keyHash from '../../lib/crypto/keyHash';
 import chatContent from '../../lib/chatContent';
+import editHistory from '../../state/editHistory';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
 import chatRosters, { type Chain } from './chatRosters';
@@ -11,8 +12,9 @@ import type ChatItem from '../../types/ChatItem';
 import type ChatMessageRow from '../../types/ChatMessageRow';
 import type ChatChannelRow from '../../types/ChatChannelRow';
 
-// the newest edit of each message this tab has opened, so an older one served later is caught
-const edits = new Map<string, number>();
+// how far apart a sender's clock and the one that started the next key may be: each is within
+// the server's allowance (CHAT_CLOCK_SKEW_SECONDS, ten minutes) of the server's
+const SKEW_MS = 20 * 60_000;
 
 const shell = (row: ChatMessageRow, state: ChatItem['state']): ChatItem => ({
   id: row.id,
@@ -60,9 +62,14 @@ export default async function openMessage(row: ChatMessageRow, channel: ChatChan
     const kindFits = row.kind === 'reaction' ? f.type === 'reaction' || f.type === 'deleted' : f.type !== 'reaction';
     const fits = signed.by === row.senderId && roster?.members.includes(signed.by) && f.key === keyHash(key) && f.thread === row.threadId && f.edit === row.edits && row.deleted === (f.type === 'deleted') && kindFits;
     const statement = { kind: chatFacts.kind, place: chatFacts.place(at), facts: chatFacts.list(f) };
-    if (!fits || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k)))) throw new Error('unverified');
-    if ((edits.get(row.id) ?? 0) > f.edit) throw new Error('older edit');
-    edits.set(row.id, f.edit);
+    // the server takes messages only under a conversation's newest key, so anything signed under
+    // one after the next key started is the server's doing with someone who kept the old key,
+    // someone taken out, say; not a message
+    const next = chatRosters.at(chain, row.epoch + 1);
+    const afterOut = next && Math.max(f.at, row.sentAt) > next.at + SKEW_MS;
+    if (!fits || afterOut || !(await keyDirectory.author(signed.by, f.at, (k) => signedFacts.verify(signed, statement, k), { former: true }))) throw new Error('unverified');
+    if (editHistory.stale(row.id, f.edit, f.type === 'deleted')) throw new Error('older edit');
+    editHistory.record(row.id, f.edit, f.type === 'deleted');
     const content = f.type === 'deleted' ? chatContent.parse('{}') : chatContent.parse(signed.text);
     const expiresAt = f.ttl ? row.sentAt + f.ttl * 1000 : null;
     return { ...shell(row, 'ok'), ...content, type: f.type, edit: f.edit, editedAt: f.edit ? f.at : null, stream: f.stream, n: f.n, expiresAt };

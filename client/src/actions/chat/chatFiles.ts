@@ -14,19 +14,22 @@ const seal = (channelId: string) => `chat.${channelId}`;
 // signs; the server keeps encrypted bytes under an id and nothing else. Pictures lose their
 // location and camera details before anything is encrypted.
 const chatFiles = {
-  async upload(channelId: string, file: File): Promise<ChatFile> {
+  // Cleans and encrypts a file here, for a message to carry; nothing is sent yet.
+  async prepare(channelId: string, file: File): Promise<{ file: ChatFile; body: Uint8Array }> {
     const { name, type } = fileMeta(file.name, file.type);
     const bytes = stripImageMetadata.run(new Uint8Array(await file.arrayBuffer()), type);
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const key = crypto.getRandomValues(new Uint8Array(32));
     try {
       const body = await fileCipher.seal(key, seal(channelId), id, 'bytes', bytes);
-      await http.send(`/chat/channels/${channelId}/files`, new Blob([body]), { 'X-Chat-File': id });
-      return { id, name, type, size: bytes.length, hash: await digest(bytes), key: b64u.encode(key) };
+      return { file: { id, name, type, size: bytes.length, hash: await digest(bytes), key: b64u.encode(key) }, body };
     } finally {
       key.fill(0);
     }
   },
+
+  // The encrypted bytes, to the server, under the id the message names.
+  send: (channelId: string, id: string, body: Uint8Array) => http.send(`/chat/channels/${channelId}/files`, new Blob([body]), { 'X-Chat-File': id }),
 
   // The file's bytes, which have to be the very ones its sender signed for.
   async open(channelId: string, file: ChatFile) {

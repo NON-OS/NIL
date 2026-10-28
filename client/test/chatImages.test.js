@@ -31,6 +31,10 @@ test('a JPEG keeps its picture and turn, and loses Exif, GPS, XMP and comments',
   const app1 = Buffer.from(clean).indexOf(Buffer.from([0xff, 0xe1]));
   assert.ok(app1 > 0);
   assert.equal(jpegOrientation(clean.subarray(app1 + 4)), 6);
+  // a second picture hidden after the end, with its own Exif and GPS, goes too
+  const motion = stripImageMetadata.run(bytes(jpeg, [0xff, 0xd8], seg(0xe1, exif(1)), 'GPSLatitude 1 N', [0xff, 0xd9]), 'image/jpeg');
+  assert.ok(!has(motion, 'GPSLatitude') && has(motion, 'PIXELS'));
+  assert.deepEqual([...motion.subarray(-2)], [0xff, 0xd9]);
   // an upright photo gets no Exif at all
   const upright = stripImageMetadata.run(bytes([0xff, 0xd8], seg(0xe1, exif(1)), scan), 'image/jpeg');
   assert.ok(!has(upright, 'Exif'));

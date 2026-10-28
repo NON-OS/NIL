@@ -1,6 +1,7 @@
 import http from '../../api/http';
 import store from '../../state/store';
 import storage from '../../lib/storage';
+import chatDisk from '../../lib/chatDisk';
 import keyScope from '../../state/keyScope';
 import checkRoster from './checkRoster';
 import type ChatRoster from '../../types/ChatRoster';
@@ -15,7 +16,7 @@ export interface Chain {
   keysRev: number;
 }
 
-type Row = { epoch: number; roster: string; wrappedKey: string | null };
+type Row = { epoch: number; roster: string; proofs: string[]; wrappedKeys: string[] };
 
 const chains = new Map<string, Promise<Chain>>();
 // the newest list this browser checked for each conversation: its epoch and hash
@@ -36,49 +37,99 @@ function remember(channelId: string, chain: Chain) {
 async function extend(channel: ChatChannelRow, held: Chain | null): Promise<Chain> {
   const { workspaceKey } = store.get();
   const chain: Chain = held ? { ...held, rosters: [...held.rosters] } : { rosters: [], broken: null, forked: false, keysRev: store.get().keysRev };
-  const from = chain.rosters.length + 1;
-  const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${from}`);
-  for (const row of epochs) {
-    if (chain.broken !== null) break;
-    const prev = chain.rosters[chain.rosters.length - 1] ?? null;
-    try {
-      if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
-      chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKey: row.wrappedKey }, prev));
-    } catch {
-      chain.broken = row.epoch;
+  // the server answers a page of lists at a time; a long-lived conversation takes several
+  // until the chain reaches the conversation's epoch, as long as each page brings it further
+  while (chain.broken === null && chain.rosters.length < channel.epoch) {
+    const { epochs } = await http.get<{ epochs: Row[] }>(`/chat/channels/${channel.id}/epochs?from=${chain.rosters.length + 1}`);
+    if (!epochs.length) break;
+    for (const row of epochs) {
+      if (chain.broken !== null) break;
+      try {
+        if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
+        chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKeys: row.wrappedKeys, proofs: row.proofs }, chain.rosters));
+      } catch {
+        chain.broken = row.epoch;
+      }
     }
   }
   if (chain.broken === null && chain.rosters.length < channel.epoch) chain.broken = chain.rosters.length + 1;
   return remember(channel.id, chain);
 }
 
+const diskKey = (channelId: string) => `${store.get().workspaceKey}:${store.get().me?.id ?? ''}:${channelId}`;
+const save = (channelId: string, chain: Chain) => (chain.broken === null ? chatDisk.put('rosters', diskKey(channelId), chain.rosters) : chatDisk.drop('rosters', diskKey(channelId)));
+
+// This person's sealed copies of each key, fetched again on their own: someone may have handed
+// over older keys since the lists were checked. A page that doesn't move on ends it.
+async function freshWraps(channelId: string, rosters: ChatRoster[]) {
+  const out = [...rosters];
+  for (let from = 1; from <= out.length; ) {
+    const { epochs } = await http.get<{ epochs: { epoch: number; wrappedKeys: string[] }[] }>(`/chat/channels/${channelId}/epochs?from=${from}&keys=1`);
+    if (!epochs.length) break;
+    for (const e of epochs) if (out[e.epoch - 1]) out[e.epoch - 1] = { ...out[e.epoch - 1], wrappedKeys: e.wrappedKeys };
+    const next = epochs[epochs.length - 1].epoch + 1;
+    if (next <= from) break;
+    from = next;
+  }
+  return out;
+}
+
 // Every epoch's member list of a conversation, checked one after the other from the first.
-// Checked lists are kept for the tab; a new epoch fetches only what's new. A chain that broke
+// Checked lists are kept for the tab and on this device; a visit checks only what's new since,
+// and what the server serves next still has to follow the newest list kept. A chain that broke
 // is checked again from the start once this person confirms a key, since that may be what it
 // was waiting on.
 const chatRosters = {
   load(channel: ChatChannelRow): Promise<Chain> {
     const cached = chains.get(channel.id);
     const run = (async () => {
-      const held = cached ? await cached.catch(() => null) : null;
+      let held = cached ? await cached.catch(() => null) : null;
+      if (!held) {
+        // lists this browser checked on an earlier visit, with the copies of keys as they are now
+        const kept = await chatDisk.get<ChatRoster[]>('rosters', diskKey(channel.id));
+        if (kept?.length && kept.length <= channel.epoch) held = { rosters: await freshWraps(channel.id, kept), broken: null, forked: false, keysRev: store.get().keysRev };
+      }
       const stale = held && held.broken !== null && held.keysRev !== store.get().keysRev;
       if (held && !stale && (held.rosters.length >= channel.epoch || held.broken !== null)) return held;
-      return extend(channel, stale ? null : held);
+      const chain = await extend(channel, stale ? null : held);
+      await save(channel.id, chain);
+      return chain;
     })();
     chains.set(channel.id, run);
     run.catch(() => chains.delete(channel.id));
     return run;
   },
 
+  // Copies of older keys someone handed this person: only the sealed copies are fetched again,
+  // never the checked lists, so handing keys over can't make every member check everything again.
+  async refreshKeys(channel: ChatChannelRow) {
+    const held = await (chains.get(channel.id) ?? Promise.resolve(null)).catch(() => null);
+    if (!held) return;
+    const next = { ...held, rosters: await freshWraps(channel.id, held.rosters) };
+    chains.set(channel.id, Promise.resolve(next));
+    await save(channel.id, next);
+  },
+
   // A list this tab just signed and the server took, so it needn't be fetched to be known.
   async add(channel: ChatChannelRow, roster: ChatRoster) {
     const held = await (chains.get(channel.id) ?? Promise.resolve(null)).catch(() => null);
     if (!held || held.broken !== null || held.rosters.length !== roster.epoch - 1) return chains.delete(channel.id);
-    chains.set(channel.id, Promise.resolve(remember(channel.id, { ...held, rosters: [...held.rosters, roster] })));
+    const next = remember(channel.id, { ...held, rosters: [...held.rosters, roster] });
+    chains.set(channel.id, Promise.resolve(next));
+    await save(channel.id, next);
+  },
+
+  // the newest epoch this browser checked for a conversation, in any tab or visit
+  seenEpoch(channelId: string) {
+    const here = slot();
+    return here ? (storage.get<Record<string, [number, string]>>(here, {})[channelId]?.[0] ?? 0) : 0;
   },
 
   at: (chain: Chain, epoch: number) => (chain.broken !== null && epoch >= chain.broken ? null : (chain.rosters[epoch - 1] ?? null)),
-  forget: (channelId: string) => chains.delete(channelId),
+  forget(channelId: string) {
+    chains.delete(channelId);
+    void chatDisk.drop('rosters', diskKey(channelId));
+  },
   clear: () => chains.clear(),
 };
 

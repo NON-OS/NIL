@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 import MessageList from './MessageList';
 import Composer, { type ComposerHandle } from './Composer';
+import ChatNotices from './ChatNotices';
 import useChat from '../../state/useChat';
 import useStore from '../../state/useStore';
 import chatTimeline from '../../actions/chat/chatTimeline';
@@ -46,6 +47,7 @@ export default function ThreadPanel({ channel, rootId, onClose }: { channel: Cha
           </button>
         </div>
       </header>
+      <ChatNotices channelId={key} chain={null} />
       {timeline && (
         <MessageList
           channel={channel}
@@ -59,7 +61,7 @@ export default function ThreadPanel({ channel, rootId, onClose }: { channel: Cha
           label="Replies in this thread"
         />
       )}
-      <Composer ref={composer} channel={channel} threadId={rootId} placeholder="Reply in thread" blocked={!channel.wrappedKey ? 'Waiting for a key.' : null} onEditLast={editLast} />
+      <Composer ref={composer} channel={channel} threadId={rootId} placeholder="Reply in thread" blocked={!channel.wrappedKeys.length ? 'Waiting for a key.' : null} onEditLast={editLast} />
     </aside>
   );
 }

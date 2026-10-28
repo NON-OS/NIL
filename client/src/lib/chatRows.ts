@@ -1,5 +1,6 @@
 import dates from './dates';
 import type ChatItem from '../types/ChatItem';
+import type { RosterEvent } from './rosterEvents';
 
 export interface Reaction {
   emoji: string;
@@ -11,6 +12,7 @@ export interface Reaction {
 export type ChatRow =
   | { key: string; kind: 'day'; label: string }
   | { key: string; kind: 'unread' }
+  | { key: string; kind: 'event'; text: string; at: number }
   | { key: string; kind: 'message'; item: ChatItem; grouped: boolean; reactions: Reaction[] };
 
 const GROUP_MS = 5 * 60_000;
@@ -34,14 +36,26 @@ function gather(items: ChatItem[], me: string | null) {
 // message this person hasn't read, and messages, each with its reactions. A message from the
 // same person within a few minutes of their last sits under it without their name again.
 // Reactions and deleted reactions aren't rows of their own; messages past their time aren't shown.
-export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.now() }: { me: string | null; readSeq: number; now?: number }): ChatRow[] {
+export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.now(), events = [], fromStart = true }: { me: string | null; readSeq: number; now?: number; events?: RosterEvent[]; fromStart?: boolean }): ChatRow[] {
   const reactions = gather(items, me);
   const rows: ChatRow[] = [];
   let day = '';
   let last: ChatItem | null = null;
   let marked = false;
+  // changes to who is in it, among the messages of their time; older ones once the start is loaded
+  const shown = items.filter((m) => !m.reaction && m.type !== 'reaction');
+  const from = fromStart || !shown.length ? 0 : shown[0].sentAt;
+  const pending = events.filter((e) => e.at >= from).sort((a, b) => a.at - b.at);
+  const flush = (until: number) => {
+    while (pending.length && pending[0].at <= until) {
+      const e = pending.shift()!;
+      rows.push({ key: e.key, kind: 'event', text: e.text, at: e.at });
+      last = null;
+    }
+  };
   for (const item of items) {
     if (item.reaction || item.type === 'reaction' || (item.expiresAt && item.expiresAt <= now)) continue;
+    if (item.seq) flush(item.sentAt);
     const today = dates.toISO(new Date(item.sentAt));
     if (today !== day) {
       day = today;
@@ -57,5 +71,6 @@ export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.no
     rows.push({ key: item.id, kind: 'message', item, grouped, reactions: [...(reactions.get(item.id)?.values() ?? [])] });
     last = item;
   }
+  flush(Number.MAX_SAFE_INTEGER);
   return rows;
 }

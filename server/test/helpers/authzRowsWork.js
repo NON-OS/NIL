@@ -83,6 +83,7 @@ export default {
   'DELETE /api/docs/:id/grants/me': { allow: MEMBERS, id: 'fresh.doc' },
   'DELETE /api/docs/:id': { allow: MEMBERS, id: 'fresh.doc' },
   'GET /api/encryption-keys': { allow: MEMBERS },
+  'GET /api/encryption-keys/earlier': { allow: MEMBERS },
   'PUT /api/me/encryption-key': { allow: MEMBERS, ok: [400] },
   'GET /api/me/identity-wraps': { allow: MEMBERS },
   'PUT /api/me/identity-wraps': { allow: MEMBERS, ok: [400, 409] },

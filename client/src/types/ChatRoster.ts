@@ -6,5 +6,8 @@ export default interface ChatRoster extends RosterFacts {
   by: string;
   // the hash the next list names as its `prev`
   hash: string;
-  wrappedKey: string | null;
+  // this person's own sealed copies of the epoch's key, from whoever gave them one
+  wrappedKeys: string[];
+  // who it left out on the strength of their signed departure rather than a manager's say
+  departed: string[];
 }

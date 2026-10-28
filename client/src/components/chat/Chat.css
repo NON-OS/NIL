@@ -748,3 +748,10 @@
     display: none;
   }
 }
+
+.chat-event {
+  margin: 6px 16px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+  text-align: center;
+}

@@ -19,12 +19,18 @@ const chatKeys = {
     const roster = chatRosters.at(chain, epoch);
     const id = keyring.identity();
     if (!roster || !id) return null;
-    const wrapped = roster.wrappedKey ?? (epoch === channel.epoch ? channel.wrappedKey : epoch === channel.metaEpoch ? channel.metaKey : null);
-    if (!wrapped) return null;
-    const key = await chatKeySeal.open(wrapped, id.privateKey, id.publicKey).catch(() => null);
-    if (!key || keyHash(key) !== roster.key) throw new Error('The key the server handed over for this conversation isn’t the one its members were given.');
-    chatKeyring.put(channel.id, epoch, key);
-    return key;
+    const wraps = roster.wrappedKeys.length ? roster.wrappedKeys : epoch === channel.epoch ? channel.wrappedKeys : epoch === channel.metaEpoch ? channel.metaKeys : [];
+    if (!wraps.length) return null;
+    // each copy came from someone; the first that opens to the listed key is the one
+    for (const wrapped of wraps) {
+      const key = await chatKeySeal.open(wrapped, id.privateKey, id.publicKey).catch(() => null);
+      if (key && keyHash(key) === roster.key) {
+        chatKeyring.put(channel.id, epoch, key);
+        return key;
+      }
+      key?.fill(0);
+    }
+    throw new Error('The key the server handed over for this conversation isn’t the one its members were given.');
   },
 
   fresh: () => crypto.getRandomValues(new Uint8Array(32)),

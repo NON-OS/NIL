@@ -33,3 +33,13 @@ test('each tab’s stream is checked on its own, and messages that disappear lea
   // messages that didn't check out, or wait to be sent, aren't counted
   assert.deepEqual(chatStreams([msg(1), { ...msg(2), state: 'unverified' }, { ...msg(3), seq: 0 }], { fromStart: true }), []);
 });
+
+test('a thread’s replies are numbered apart, and a held-back reply shows in that thread', () => {
+  const reply = (n) => ({ ...msg(n), threadId: 'root' });
+  const thread = [msg(1), reply(1), reply(3)];
+  assert.deepEqual(chatStreams(thread, { fromStart: true, scope: 'root' }), [{ kind: 'missing', senderId: 'v', count: 1 }]);
+  // the first message of the thread is the main timeline's, and doesn't count toward the thread
+  assert.deepEqual(chatStreams([msg(1), reply(1), reply(2)], { fromStart: true, scope: 'root' }), []);
+  const marks = { 'v/aaaaaaaaaaaaaaaa': { senderId: 'v', scopes: { root: { n: 4, until: null } } } };
+  assert.deepEqual(chatStreams([reply(1), reply(2)], { fromStart: true, scope: 'root', marks }), [{ kind: 'missing', senderId: 'v', count: 2 }]);
+});
