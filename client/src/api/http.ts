@@ -33,8 +33,9 @@ async function request<T>(method: string, url: string, body?: unknown, extraHead
   return data as T;
 }
 
-// A file's raw bytes, for the browser to decrypt or re-encrypt itself.
-async function bytes(url: string, signal?: AbortSignal) {
+// A file's raw bytes, for the browser to decrypt or re-encrypt itself. With `limit`, a response
+// longer than that is cut off and refused as it arrives, so a server can't fill the tab's memory.
+async function bytes(url: string, signal?: AbortSignal, limit?: number) {
   let res: Response;
   try {
     res = await fetch(`/api${url}`, { credentials: 'same-origin', cache: 'no-store', signal });
@@ -44,7 +45,23 @@ async function bytes(url: string, signal?: AbortSignal) {
   }
   if (res.status === 401) onSessionEnded?.();
   if (!res.ok) throw new ApiError(res.status, (await res.json().catch(() => null))?.error ?? `Request failed (${res.status}).`);
-  return new Uint8Array(await res.arrayBuffer());
+  if (limit === undefined || !res.body) return new Uint8Array(await res.arrayBuffer());
+  const reader = res.body.getReader();
+  const parts: Uint8Array[] = [];
+  let size = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    size += value.length;
+    if (size > limit) {
+      await reader.cancel();
+      throw new ApiError(0, 'The server sent more than this part of the file can hold.');
+    }
+    parts.push(value);
+  }
+  const out = new Uint8Array(size);
+  parts.reduce((at, p) => (out.set(p, at), at + p.length), 0);
+  return out;
 }
 
 const http = {

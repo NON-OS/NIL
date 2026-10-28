@@ -8,6 +8,7 @@ import cx from '../../lib/cx';
 import type FolderItem from '../../types/FolderItem';
 import type ItemHandlers from '../../types/ItemHandlers';
 import type SharedFolder from '../../types/SharedFolder';
+import FileName from './FileName';
 
 // One file or folder in the list: name, size, last change and who signed it.
 export default function ItemRow({ folder, item, count, signer, handlers }: { folder: SharedFolder; item: FolderItem; count?: number; signer: string; handlers: ItemHandlers }) {
@@ -18,7 +19,7 @@ export default function ItemRow({ folder, item, count, signer, handlers }: { fol
         <button type="button" className="files-open" data-item={item.id} tabIndex={handlers.tabbable(item) ? 0 : -1} onClick={(e) => handlers.onClick(item, e)} onFocus={(e) => handlers.onFocus(item, e)}>
           <ItemArt folder={folder} item={item} />
           <span className="files-name">
-            <strong>{name}</strong>
+            <FileName name={name} file={item.kind === 'file' && !item.locked} />
             <small>
               {item.rollback && <ShieldAlert className="files-warn" aria-label="Older than a version seen before" />}
               <span className="num">{itemCaption(item, count)}</span>

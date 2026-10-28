@@ -72,7 +72,7 @@ const blobTransfer = {
     try {
       for (let i = 0; i < info.chunks; i++) {
         signal?.throwIfAborted();
-        const sealed = await http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${i}`, signal);
+        const sealed = await http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${i}`, signal, blobCipher.chunkSize(i, info.chunks, info.size));
         if (sealed.length !== blobCipher.chunkSize(i, info.chunks, info.size)) throw new Error(CHANGED);
         const plain = await blobCipher.open(opener, oldPrefix, info.id, i, info.chunks, sealed).catch(() => {
           throw new Error(CHANGED);
@@ -111,7 +111,8 @@ const blobTransfer = {
     onProgress?.(0);
     for (let i = 0; i < info.chunks; i++) {
       while (next < info.chunks && ahead.length < AHEAD) {
-        const fetched = http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${next++}`, signal);
+        const fetched = http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${next}`, signal, blobCipher.chunkSize(next, info.chunks, info.size));
+        next++;
         fetched.catch(() => {});
         ahead.push(fetched);
       }

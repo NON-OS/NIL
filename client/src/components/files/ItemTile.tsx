@@ -6,6 +6,7 @@ import cx from '../../lib/cx';
 import type FolderItem from '../../types/FolderItem';
 import type ItemHandlers from '../../types/ItemHandlers';
 import type SharedFolder from '../../types/SharedFolder';
+import FileName from './FileName';
 
 // One file or folder in the grid: its thumbnail or icon, its name and a line about it. The whole
 // tile opens it; its menu has the rest.
@@ -24,7 +25,7 @@ export default function ItemTile({ folder, item, count, handlers }: { folder: Sh
       >
         <ItemArt folder={folder} item={item} />
         <span className="files-name">
-          <strong>{name}</strong>
+          <FileName name={name} file={item.kind === 'file' && !item.locked} />
           <small>
             {item.rollback && <ShieldAlert className="files-warn" aria-label="Older than a version seen before" />}
             <span className="num">{itemCaption(item, count)}</span>

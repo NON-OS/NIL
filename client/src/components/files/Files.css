@@ -190,6 +190,21 @@
   white-space: nowrap;
 }
 
+.files-name-split {
+  display: flex;
+  min-width: 0;
+}
+
+.files-name-base {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.files-name-ext {
+  flex: none;
+}
+
 .files-name small {
   display: flex;
   align-items: center;

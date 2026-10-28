@@ -1,6 +1,7 @@
 import folderFiles from './folderFiles';
 import saveBlob from '../lib/saveBlob';
 import safeBlobType from '../lib/safeBlobType';
+import filesLimits from '../lib/filesLimits';
 import type BlobProgress from '../types/BlobProgress';
 import type FolderItem from '../types/FolderItem';
 import type SharedFolder from '../types/SharedFolder';
@@ -29,6 +30,9 @@ const fileDownload = {
   // Resolves false when the person closed the save dialog.
   async save(folder: SharedFolder, item: FolderItem, opts: BlobProgress = {}) {
     const pick = (window as unknown as { showSaveFilePicker?: SavePicker }).showSaveFilePicker;
+    // a browser that can't write a file in pieces would hold all of it in memory; past what the
+    // server allows for that, it's refused before the tab runs out of room
+    if (!pick && item.size > filesLimits().zipMemoryMaxBytes) throw new Error('This file is too large for this browser to save in one go. Download it in a browser that saves files straight to disk, such as Chrome, Edge or Brave.');
     if (!pick || item.size < STREAM_FROM) {
       saveBlob(await fileDownload.read(folder, item, opts), item.name);
       return true;
