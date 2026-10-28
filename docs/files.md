@@ -23,15 +23,17 @@ A folder listed as "Encrypted folder" with "Waiting for a key from" and a name w
 
 Open a folder and do any of these:
 
-- Click **Upload** and pick one or more files.
-- Drag files from your computer onto the page. Drop them on a folder to put them in that folder.
+- Click **Upload** and pick one or more files, or click the folder button next to it to pick a whole folder.
+- Drag files or folders from your computer onto the page. Drop them on a folder to put them in that folder.
 - Copy files or a screenshot and paste them with `⌘V` or `Ctrl+V`.
 
-Files go up a few at a time. The tray at the bottom of the screen shows each one's progress, with a button to stop it, and to try again if one fails. Uploads carry on while you move between folders. They stop if you close the tab.
+A folder from your computer comes in with everything inside it: its folders are made first, encrypted like any other, and then its files go up into them. Empty folders come too. It has to fit in the shared folder, which holds up to 5,000 files and folders and nests them up to 32 deep unless whoever runs the server changed that.
+
+Files go up a few at a time. The tray at the bottom of the screen shows each one's progress, with a button to stop it, and to try again if one fails. Uploads carry on while you move between folders, and while your connection drops: an upload waits until you're back online. If one fails anyway, **Try again** carries on from where it stopped instead of starting over, as long as the file on your computer hasn't changed. Uploads stop if you close the tab.
+
+An upload that never finished, because a tab was closed part way, still takes up its full size of your file space until the server lets it go, after 30 minutes untouched. Files names any you have under your folders, with **Discard now** to let them go at once.
 
 Your browser encrypts each file in pieces of 1 MB as it sends it, so even a large file never has to fit in memory at once. The largest file a server takes is set by whoever runs it, 2 GB unless they changed it.
-
-Dropping a whole folder from your computer isn't supported yet. Open it and drop the files inside.
 
 ### Photos
 
@@ -50,12 +52,14 @@ The buttons above a folder switch between a grid and a list, and the menu next t
 
 **Search this folder** looks through the names your browser decrypted, in the folder you're in and every folder inside it. The server never sees what you search for.
 
+To work on several at once, hold `Ctrl` (or `⌘` on a Mac) and click each one, or tick the box that shows on a file when you point at it. `Shift`-click picks everything between the last one you picked and this one, and the box at the top of the list picks everything shown. While anything is picked, a click picks instead of opening, and the toolbar turns into **Download**, **Move to…** and **Delete** for all of them. The cross at its left, or `Esc`, lets them go. You can also drag several picked files onto a folder.
+
 Each file and folder has a menu, the three dots, with everything you can do to it:
 
 | Action | What it does |
 |---|---|
 | Preview or Open | Shows the file, or opens the folder |
-| Download | Saves the file on your device, decrypted |
+| Download | Saves the file on your device, decrypted. A folder downloads as a zip of everything in it |
 | Rename | Gives it a new name |
 | Move to… | Moves it into another folder in the same shared folder |
 | Delete | Moves it to the trash for everyone, a folder with everything in it |
@@ -81,6 +85,8 @@ Previews stop at 300 MB, since the whole file has to be decrypted into the tab f
 
 **Download** saves the file decrypted, under its own name. Very large files are written to disk a piece at a time where the browser allows it (Chrome and Edge ask where to save them), and a file that doesn't match what its uploader signed is thrown away before it's kept. Elsewhere the file is put together in memory first and handed to your downloads.
 
+**Download** with several picked, or on a folder, makes one zip of them, decrypted in your browser. Each file in it is checked against what its uploader signed as it goes in, and a file that doesn't match stops the zip rather than end up in it. Its progress shows in the tray, with a button to stop it. A large zip is written straight to disk where the browser allows it, as for one large file. Elsewhere it's put together in memory, up to 500 MB unless whoever runs the server changed that. Locked files are left out, and Files says how many. Names are made safe to unpack anywhere: no slashes, no characters Windows refuses, and a second file with the same name in a folder gets a number.
+
 SVG files are never shown as images, because an SVG can carry a script. They're plain files you can download.
 
 ## Keyboard
@@ -92,8 +98,11 @@ Click a file or folder, or tab to it, and then:
 | Arrow keys | Move between files and folders |
 | `Home`, `End` | Go to the first or last |
 | `Enter` | Open the folder or preview the file |
+| `Space` | Pick it, or let it go. With `Shift`, pick everything from the last one picked |
+| `Ctrl+A`, or `⌘A` on a Mac | Pick everything shown |
+| `Esc` | Let go of everything picked |
 | `F2` | Rename it |
-| `Delete`, or `⌘Backspace` on a Mac | Delete it, after asking |
+| `Delete`, or `⌘Backspace` on a Mac | Delete it, or everything picked, after asking |
 | `Backspace` | Go up one folder |
 
 In a preview, the left and right arrow keys move between files, `+` and `-` zoom an image or PDF, `0` fits it again, `Page Up` and `Page Down` turn the pages of a PDF, and `Esc` closes the window.

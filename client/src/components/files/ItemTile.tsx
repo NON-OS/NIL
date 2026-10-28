@@ -7,13 +7,15 @@ import type FolderItem from '../../types/FolderItem';
 import type ItemHandlers from '../../types/ItemHandlers';
 import type SharedFolder from '../../types/SharedFolder';
 import FileName from './FileName';
+import ItemCheck from './ItemCheck';
 
 // One file or folder in the grid: its thumbnail or icon, its name and a line about it. The whole
-// tile opens it; its menu has the rest.
+// tile opens it, or picks it while others are picked; its box picks it; its menu has the rest.
 export default function ItemTile({ folder, item, count, handlers }: { folder: SharedFolder; item: FolderItem; count?: number; handlers: ItemHandlers }) {
   const name = item.locked ? 'Locked file' : item.name;
   return (
-    <li className={cx('files-tile', handlers.dropTarget === item.id && 'drop-target')} {...handlers.drag(item)}>
+    <li className={cx('files-tile', handlers.dropTarget === item.id && 'drop-target', handlers.selected(item) && 'selected')} {...handlers.drag(item)}>
+      <ItemCheck item={item} name={name} handlers={handlers} />
       <button
         type="button"
         className="files-open"
@@ -26,6 +28,7 @@ export default function ItemTile({ folder, item, count, handlers }: { folder: Sh
         <ItemArt folder={folder} item={item} />
         <span className="files-name">
           <FileName name={name} file={item.kind === 'file' && !item.locked} />
+          {handlers.selected(item) && <span className="sr-only">, selected</span>}
           <small>
             {item.rollback && <ShieldAlert className="files-warn" aria-label="Older than a version seen before" />}
             <span className="num">{itemCaption(item, count)}</span>

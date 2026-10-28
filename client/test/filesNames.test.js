@@ -16,7 +16,7 @@ const stripBidi = await load('lib/stripBidi.ts');
 const NAMES = ['<img src=x onerror=alert(1)>.pdf', '"><script>alert(1)</script>', '<svg/onload=alert(1)>.svg', "'><iframe src=javascript:alert(1)>", '<a href="javascript:alert(1)">click</a>.txt', '{{constructor.constructor("alert(1)")()}}'];
 
 const folder = { id: 'f', name: 'F', version: 1, keyRev: 1, audience: 'team', readers: [], createdBy: 'v', updatedBy: 'v', createdAt: 1, updatedAt: 1, warning: null, oldKey: null, keyHash: 'k' };
-const handlers = { canWrite: true, canDelete: () => true, tabbable: () => true, dropTarget: null, onAction() {}, onFocus() {}, onClick() {}, drag: () => ({ draggable: true }) };
+const handlers = { canWrite: true, canDelete: () => true, selecting: false, selected: () => false, onSelect() {}, tabbable: () => true, dropTarget: null, onAction() {}, onFocus() {}, onClick() {}, drag: () => ({ draggable: true }) };
 const item = (name, kind = 'file') => ({ id: 'i', folderId: 'f', parentId: null, kind, keyWrap: 'w', name, type: 'application/pdf', size: 10, width: null, height: null, hash: 'h', blob: null, thumb: null, edit: 0, by: 'v', createdBy: 'v', createdAt: 1, updatedAt: 1, locked: false, rollback: false, oldKey: null });
 
 test('file and folder names render as text, never as markup', () => {

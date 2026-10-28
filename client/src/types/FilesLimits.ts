@@ -11,6 +11,8 @@ export default interface FilesLimits {
   zipMemoryMaxBytes: number;
   depthMax: number;
   folderItemsMax: number;
+  // how many items one bulk move or delete may name
+  bulkMax: number;
   uploadIdleMs: number;
   trashMs: number;
 }

@@ -20,12 +20,14 @@ interface Props {
   onClose: () => void;
   put: (item: FolderItem) => void;
   drop: (id: string) => void;
+  // after something was done to several picked together
+  onDoneMany: () => void;
   setFolder: (folder: SharedFolder) => void;
   reload: () => Promise<void>;
 }
 
 // The dialog open over a folder, if any: naming, moving, deleting and sharing.
-export default function FolderDialogs({ dialog, folder, items, parent, onClose, put, drop, setFolder, reload }: Props) {
+export default function FolderDialogs({ dialog, folder, items, parent, onClose, put, drop, onDoneMany, setFolder, reload }: Props) {
   const me = useStore((s) => s.me)!;
   if (!dialog) return null;
   switch (dialog.kind) {
@@ -34,7 +36,36 @@ export default function FolderDialogs({ dialog, folder, items, parent, onClose, 
     case 'rename':
       return <NameModal title={dialog.item.kind === 'folder' ? 'Rename folder' : 'Rename file'} label="Name" initial={dialog.item.name} submit="Rename" onSubmit={async (name) => put(await folderFiles.rename(folder, dialog.item, name))} onClose={onClose} />;
     case 'move':
-      return <MoveModal folder={folder} items={items} item={dialog.item} onMove={async (into) => put(await folderFiles.move(folder, dialog.item, into))} onClose={onClose} />;
+      return <MoveModal folder={folder} items={items} moving={[dialog.item]} onMove={async (into) => put(await folderFiles.move(folder, dialog.item, into))} onClose={onClose} />;
+    case 'moveMany':
+      return (
+        <MoveModal
+          folder={folder}
+          items={items}
+          moving={dialog.items}
+          onMove={async (into) => {
+            (await folderFiles.moveMany(folder, dialog.items, into)).forEach(put);
+            onDoneMany();
+          }}
+          onClose={onClose}
+        />
+      );
+    case 'deleteMany':
+      return (
+        <DeleteModal
+          name={`${dialog.items.length} items`}
+          folder={false}
+          many
+          trashDays={Math.round(filesLimits().trashMs / 86_400_000)}
+          onDelete={async () => {
+            await folderFiles.removeMany(folder, dialog.items);
+            onDoneMany();
+            void reload();
+            if (parent && dialog.items.some((i) => i.id === parent)) router.navigate(`/files/${folder.id}`);
+          }}
+          onClose={onClose}
+        />
+      );
     case 'delete':
       return (
         <DeleteModal

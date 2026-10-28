@@ -57,6 +57,14 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Deleting puts things in the folder's trash for `FILES_TRASH_DAYS` (30), with restore. Only whoever added something, the folder's creator or an admin can move, rename or delete it, so no reader can delete someone else's files by moving them into a folder of their own first.
 - Uploads are sturdier: one copy of each chunk at a time, a few per person, a time limit per chunk, chunks synced to disk before they count, sizes checked on disk when an upload finishes, and unfinished uploads listed for their uploader and given up after `SEALED_UPLOAD_IDLE_MINUTES`. Thumbnails and chunk lists have size limits of their own, and grants, deletes, finishes and re-encryption are rate limited, every limit set in `.env`.
 
+### Files, round three
+
+- Pick several files and folders with `Ctrl` or `⌘` and a click, `Shift` and a click, a tick box, `Space` or `Ctrl+A`, then download, move or delete them together. Moves sign every item's details again, and the server takes each request whole or not at all (`FILES_BULK_MAX`, 500 a request).
+- Several files, or a folder with everything in it, download as one zip, decrypted and checked file by file in the browser, written straight to disk where the browser allows and in memory up to `FILES_ZIP_MEMORY_MAX_MB` elsewhere. The zip is stored, not compressed, with zip64 past 4 GB, and names are made safe to unpack.
+- Folders upload from the computer, by drop or by picker, with their subfolders made first and empty folders kept, checked against `FOLDER_DEPTH_MAX` and `FOLDER_ITEMS_MAX` before anything is made.
+- An upload waits out a dropped connection instead of failing, and **Try again** carries on from the chunks the server already has. Before a chunk is sealed again, its hash is checked against the first try's, so a file that changed on disk starts over under fresh nonces rather than reuse one.
+- Uploads a closed tab left unfinished are named under your folders, with the space they hold and **Discard now**.
+
 ### Calls v2
 
 - Bigger calls on an SFU, still end to end. With `SFU_URL`, `SFU_API_KEY` and `SFU_API_SECRET` set, a call of more than `CALL_MESH_MAX_PEERS` (4) moves onto LiveKit 1.9.12, run by `docker-compose.yml` under the `calls` profile, and holds up to `CALL_SFU_MAX_PEERS` (50). Every frame is encrypted in the browser with livekit-client 2.22.4's frame encryption (insertable streams in Chrome, `RTCRtpScriptTransform` in Firefox and Safari). Each browser makes its own frame key, a new one whenever anyone joins or leaves, sealed to each other person's key and signed (`nil/call-media-key/v1`). The SFU gets room and participant names derived under a key it doesn't hold, and tokens that last ten minutes and can't send data. Smaller calls stay browser to browser.

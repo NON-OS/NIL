@@ -16,6 +16,7 @@ import folders from './folders';
 import readFolder from './readFolder';
 import folderItemSeal from './folderItemSeal';
 import type BlobProgress from '../types/BlobProgress';
+import type UploadCarry from '../types/UploadCarry';
 import type EncryptedItem from '../types/EncryptedItem';
 import type FolderItem from '../types/FolderItem';
 import type SharedFolder from '../types/SharedFolder';
@@ -68,6 +69,12 @@ async function update(folder: SharedFolder, item: FolderItem, change: { name?: s
   return readFolder.item(folderKey, folder, res.item);
 }
 
+// as many items as one bulk request may name
+function batches(items: FolderItem[]) {
+  const size = filesLimits().bulkMax;
+  return Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
+}
+
 // A file's chunk list, opened and checked against the hash its uploader signed, or null for a
 // file of one chunk, whose hash checks it whole.
 async function chunkList(item: FolderItem, key: Uint8Array, signal?: AbortSignal) {
@@ -83,15 +90,19 @@ async function chunkList(item: FolderItem, key: Uint8Array, signal?: AbortSignal
 // which is also its blob's key; its details, its thumbnail's hash and its chunks' hashes are signed
 // by whoever adds it; and only its key is wrapped under the folder's key.
 const folderFiles = {
-  async upload(folder: SharedFolder, parentId: string | null, file: File, { onProgress, signal }: BlobProgress = {}): Promise<FolderItem> {
+  // With a `carry`, a try that fails keeps what it sent, and the next try with the same carry
+  // carries on from there.
+  async upload(folder: SharedFolder, parentId: string | null, file: File, { onProgress, signal, carry }: BlobProgress & { carry?: UploadCarry } = {}): Promise<FolderItem> {
     folders.writable(folder, 'add files');
     const clean = await cleanFile(file);
     const scope = { kind: 'folder' as const, id: folder.id };
-    const key = crypto.getRandomValues(new Uint8Array(32));
+    const key = carry?.key ?? crypto.getRandomValues(new Uint8Array(32));
+    if (carry) carry.key = key;
     const hash = blobHash();
     const uploaded: string[] = [];
+    let finished = false;
     try {
-      const blob = await blobTransfer.put(clean.body, key, scope, { signal, onPlain: hash.add, onProgress: (p) => onProgress?.(p * FILE_SHARE) });
+      const blob = await blobTransfer.put(clean.body, key, scope, { signal, carry: carry?.main, onPlain: hash.add, onProgress: (p) => onProgress?.(p * FILE_SHARE) });
       uploaded.push(blob);
       const hashes = blobCipher.chunks(clean.body.size) > 1 ? await blobTransfer.put(new Blob([hash.list()]), itemSubkey(key, 'hashes'), scope, { signal, part: 'hashes' }) : null;
       if (hashes) uploaded.push(hashes);
@@ -104,12 +115,14 @@ const folderFiles = {
       signal?.throwIfAborted();
       const item = await add(folder, { id, kind: 'file', parentId, blobId: blob, thumbId: thumb, hashesId: hashes }, key, (folderKey) => folderItemSeal.seal(folderKey, { id, folderId: folder.id }, key, clean.name, facts));
       onProgress?.(1);
+      finished = true;
       return item;
     } catch (err) {
       for (const blob of uploaded) http.del(`/blobs/${blob}`).catch(() => {});
       throw err;
     } finally {
-      key.fill(0);
+      // a key kept for another try is wiped when the upload is given up instead
+      if (finished || !carry) key.fill(0);
     }
   },
 
@@ -130,6 +143,25 @@ const folderFiles = {
   // into the folder's trash, with everything inside it
   async remove(folder: SharedFolder, item: FolderItem) {
     await http.del(`/folders/${folder.id}/items/${item.id}`);
+  },
+
+  // Several at once, each signed again by whoever moves them, in as few requests as the server
+  // allows. The server takes each request whole or not at all.
+  async moveMany(folder: SharedFolder, items: FolderItem[], parentId: string | null) {
+    const folderKey = folders.writable(folder, 'move them');
+    const moved: FolderItem[] = [];
+    for (const batch of batches(items)) {
+      const entries = await Promise.all(
+        batch.map((item) => withItemKey(folder, item, async (key) => ({ id: item.id, metaCt: await folderItemSeal.seal(folderKey, item, key, item.name, folderItemSeal.facts(item, key, { parent: parentId })) }))),
+      );
+      const res = await http.post<{ items: EncryptedItem[] }>(`/folders/${folder.id}/items/move`, { items: entries, parentId, keyRev: folder.keyRev });
+      moved.push(...(await Promise.all(res.items.map((i) => readFolder.item(folderKey, folder, i)))));
+    }
+    return moved;
+  },
+
+  async removeMany(folder: SharedFolder, items: FolderItem[]) {
+    for (const batch of batches(items)) await http.post(`/folders/${folder.id}/items/remove`, { ids: batch.map((i) => i.id) });
   },
 
   // Decrypts a file chunk by chunk, handing each chunk on. With a chunk list, each chunk is checked

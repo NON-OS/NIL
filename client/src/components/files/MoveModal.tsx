@@ -9,20 +9,21 @@ import type SharedFolder from '../../types/SharedFolder';
 interface Props {
   folder: SharedFolder;
   items: FolderItem[];
-  item: FolderItem;
+  // what's being moved: one file or folder, or several picked together
+  moving: FolderItem[];
   onMove: (parentId: string | null) => Promise<void>;
   onClose: () => void;
 }
 
-// Where to move a file or folder, for anyone not dragging: the top of the shared folder or any
+// Where to move files and folders, for anyone not dragging: the top of the shared folder or any
 // subfolder in it, nested as they are. A folder can't go inside itself.
-export default function MoveModal({ folder, items, item, onMove, onClose }: Props) {
+export default function MoveModal({ folder, items, moving, onMove, onClose }: Props) {
   const [target, setTarget] = useState<string | null | undefined>(undefined);
   const [busy, setBusy] = useState(false);
 
   const options = useMemo(() => {
     const subfolders = items.filter((i) => i.kind === 'folder' && !i.locked);
-    const inside = new Set<string>([item.id]);
+    const inside = new Set<string>(moving.map((m) => m.id));
     let grew = true;
     while (grew) {
       grew = false;
@@ -42,7 +43,9 @@ export default function MoveModal({ folder, items, item, onMove, onClose }: Prop
     };
     walk(null, 1);
     return out;
-  }, [folder.name, items, item.id]);
+  }, [folder.name, items, moving]);
+  // where everything being moved is now, if that's one place
+  const here = moving.every((m) => m.parentId === moving[0].parentId) ? moving[0].parentId : undefined;
 
   const move = async () => {
     if (target === undefined) return;
@@ -58,7 +61,7 @@ export default function MoveModal({ folder, items, item, onMove, onClose }: Prop
 
   return (
     <Modal
-      title={`Move “${item.name}”`}
+      title={moving.length === 1 ? `Move “${moving[0].name}”` : `Move ${moving.length} items`}
       onClose={onClose}
       width={460}
       footer={
@@ -76,10 +79,10 @@ export default function MoveModal({ folder, items, item, onMove, onClose }: Prop
         <ul className="files-move-list" aria-label="Folders">
           {options.map((o) => (
             <li key={o.id ?? 'top'}>
-              <button type="button" className="files-move-option" style={{ paddingLeft: 8 + o.depth * 18 }} aria-pressed={target === o.id} disabled={o.id === item.parentId} onClick={() => setTarget(o.id)}>
+              <button type="button" className="files-move-option" style={{ paddingLeft: 8 + o.depth * 18 }} aria-pressed={target === o.id} disabled={o.id === here} onClick={() => setTarget(o.id)}>
                 {o.id === null ? <FolderLock aria-hidden="true" /> : <Folder aria-hidden="true" />}
                 <span>{o.name}</span>
-                {o.id === item.parentId && <small className="muted">here now</small>}
+                {o.id === here && <small className="muted">here now</small>}
               </button>
             </li>
           ))}

@@ -8,12 +8,14 @@ interface Props {
   folder: boolean;
   // into its folder's trash for this many days, rather than gone at once
   trashDays?: number;
+  // several picked together; `name` then says how many
+  many?: boolean;
   onDelete: () => Promise<void>;
   onClose: () => void;
 }
 
 // Deleting is for everyone, so it always asks first, and says whether it can be undone.
-export default function DeleteModal({ name, folder, trashDays, onDelete, onClose }: Props) {
+export default function DeleteModal({ name, folder, trashDays, many, onDelete, onClose }: Props) {
   const [busy, setBusy] = useState(false);
   const run = async () => {
     setBusy(true);
@@ -28,7 +30,7 @@ export default function DeleteModal({ name, folder, trashDays, onDelete, onClose
 
   return (
     <Modal
-      title={`Delete “${name}”?`}
+      title={many ? `Delete ${name}?` : `Delete “${name}”?`}
       onClose={onClose}
       width={440}
       footer={
@@ -45,7 +47,9 @@ export default function DeleteModal({ name, folder, trashDays, onDelete, onClose
       <div className="modal-body">
         <p style={{ margin: 0 }}>
           {trashDays
-            ? `${folder ? 'The folder and everything in it go' : 'The file goes'} to this shared folder’s trash for everyone who can open it, and stays there for ${trashDays} days, so it can be brought back.`
+            ? many
+              ? `They move to this shared folder’s trash for everyone who can open it, with everything inside any folders among them, and stay there for ${trashDays} days, so they can be brought back.`
+              : `${folder ? 'The folder moves, with everything in it,' : 'The file moves'} to this shared folder’s trash for everyone who can open it, and stays there for ${trashDays} days, so it can be brought back.`
             : folder
               ? 'The folder and everything in it are deleted for everyone who can open them. This can’t be undone.'
               : 'The file is deleted for everyone who can open it. This can’t be undone.'}

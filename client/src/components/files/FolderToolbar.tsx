@@ -1,9 +1,10 @@
 import '../ui/Menu.css';
 import { useRef, useState } from 'react';
-import { Archive, FolderPlus, LayoutGrid, List, Lock, MoreHorizontal, Pencil, Trash2, Upload, Users } from 'lucide-react';
+import { Archive, FolderPlus, FolderUp, LayoutGrid, List, Lock, MoreHorizontal, Pencil, Trash2, Upload, Users } from 'lucide-react';
 import Popover from '../ui/Popover';
 import type SharedFolder from '../../types/SharedFolder';
 import type ItemSort from '../../types/ItemSort';
+import type { Dropped } from '../../lib/droppedFiles';
 
 const SORTS: { value: string; label: string; sort: ItemSort }[] = [
   { value: 'name', label: 'Name, A to Z', sort: { by: 'name', desc: false } },
@@ -26,7 +27,7 @@ interface Props {
   onSort: (sort: ItemSort) => void;
   canWrite: boolean;
   canManage: boolean;
-  onUpload: (files: File[]) => void;
+  onUpload: (dropped: Dropped[]) => void;
   onNewFolder: () => void;
   onShare: () => void;
   onRename: () => void;
@@ -40,6 +41,7 @@ interface Props {
 // list.
 export default function FolderToolbar({ folder, query, onQuery, mode, onMode, sort, onSort, canWrite, canManage, onUpload, onNewFolder, onShare, onRename, onDelete, trashCount, onTrash }: Props) {
   const input = useRef<HTMLInputElement>(null);
+  const tree = useRef<HTMLInputElement | null>(null);
   const more = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const audience = folder.audience === 'team' ? 'Team' : `${folder.readers.length} ${folder.readers.length === 1 ? 'person' : 'people'}`;
@@ -58,11 +60,28 @@ export default function FolderToolbar({ folder, query, onQuery, mode, onMode, so
         onChange={(e) => {
           const files = [...(e.target.files ?? [])];
           e.target.value = '';
-          if (files.length) onUpload(files);
+          if (files.length) onUpload(files.map((file) => ({ file, path: [] })));
+        }}
+      />
+      <input
+        ref={(el) => {
+          tree.current = el;
+          // a picker for a whole folder, which React has no attribute for
+          el?.setAttribute('webkitdirectory', '');
+        }}
+        type="file"
+        hidden
+        onChange={(e) => {
+          const files = [...(e.target.files ?? [])];
+          e.target.value = '';
+          if (files.length) onUpload(files.map((file) => ({ file, path: file.webkitRelativePath.split('/').slice(0, -1) })));
         }}
       />
       <button type="button" className="btn btn-primary" onClick={() => input.current?.click()} disabled={!canWrite}>
         <Upload /> Upload
+      </button>
+      <button type="button" className="btn tip" onClick={() => tree.current?.click()} disabled={!canWrite} aria-label="Upload a folder">
+        <FolderUp />
       </button>
       <button type="button" className="btn" onClick={onNewFolder} disabled={!canWrite}>
         <FolderPlus /> New folder

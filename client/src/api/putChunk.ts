@@ -32,6 +32,15 @@ function send(url: string, body: Uint8Array, onSent: (bytes: number) => void, si
   });
 }
 
+// until the browser says it's back online, however long that takes
+const online = (signal?: AbortSignal) =>
+  new Promise<void>((resolve, reject) => {
+    const back = () => (signal?.removeEventListener('abort', stop), resolve());
+    const stop = () => (window.removeEventListener('online', back), reject(stopped()));
+    window.addEventListener('online', back, { once: true });
+    signal?.addEventListener('abort', stop, { once: true });
+  });
+
 const wait = (ms: number, signal?: AbortSignal) =>
   new Promise<void>((resolve, reject) => {
     const timer = setTimeout(resolve, ms);
@@ -47,15 +56,17 @@ function failure({ status, text }: Sent) {
 }
 
 // Sends one chunk of a sealed blob as raw bytes. `onSent` hears how many of its bytes have gone
-// out so far. A dropped connection or a server that's restarting is tried again a few times,
-// and a server asking to slow down is waited for; any other refusal is final.
+// out so far. A browser that's gone offline waits until it's back; a dropped connection or a
+// server that's restarting is tried again a few times, and a server asking to slow down is waited
+// for; any other refusal is final.
 export default async function putChunk(url: string, body: Uint8Array, { onSent = () => {}, signal }: { onSent?: (bytes: number) => void; signal?: AbortSignal } = {}) {
   for (let tries = 0, waits = 0; ; ) {
     if (signal?.aborted) throw stopped();
     const sent = await send(url, body, onSent, signal);
     if (sent.status >= 200 && sent.status < 300) return;
     onSent(0);
-    if (sent.status === 429 && sent.retryAfter && waits++ < MOST_WAITS) await wait(Math.min(sent.retryAfter * 1000, LONGEST_WAIT), signal);
+    if (sent.status === 0 && typeof navigator !== 'undefined' && navigator.onLine === false) await online(signal);
+    else if (sent.status === 429 && sent.retryAfter && waits++ < MOST_WAITS) await wait(Math.min(sent.retryAfter * 1000, LONGEST_WAIT), signal);
     else if ([0, 502, 503, 504].includes(sent.status) && tries < RETRIES.length) await wait(RETRIES[tries++], signal);
     else throw failure(sent);
   }

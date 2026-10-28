@@ -37,9 +37,9 @@ export default function ItemMenu({ item, canDelete, canWrite, onAction, classNam
               {item.kind === 'folder' ? <FolderOpen size={15} /> : <Eye size={15} />} {item.kind === 'folder' ? 'Open' : 'Preview'}
             </button>
           )}
-          {!item.locked && item.kind === 'file' && (
+          {!item.locked && (
             <button type="button" className="menu-item" onClick={run('download')}>
-              <Download size={15} /> Download
+              <Download size={15} /> {item.kind === 'folder' ? 'Download as zip' : 'Download'}
             </button>
           )}
           {!item.locked && canWrite && (

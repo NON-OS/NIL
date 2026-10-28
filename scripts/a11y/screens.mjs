@@ -117,6 +117,17 @@ const signedIn = [
   { name: 'calls', path: '/calls' },
   { name: 'files', path: '/files' },
   { name: 'files-open', path: '/files', then: openFiles },
+  // something picked, in the list, so the picking boxes and the selection bar are checked too
+  {
+    name: 'files-picked',
+    path: '/files',
+    then: async (page) => {
+      await openFiles(page);
+      await page.getByRole('button', { name: 'Show as a list' }).click();
+      await page.getByRole('checkbox', { name: 'Select all' }).check();
+      await page.getByRole('toolbar', { name: 'Picked files and folders' }).waitFor();
+    },
+  },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },

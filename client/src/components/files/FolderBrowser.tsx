@@ -9,16 +9,23 @@ import FolderToolbar from './FolderToolbar';
 import FolderNotices from './FolderNotices';
 import ItemsView from './ItemsView';
 import FolderDialogs from './FolderDialogs';
+import SelectionBar from './SelectionBar';
 import useStore from '../../state/useStore';
 import useFolderListing from '../../hooks/useFolderListing';
 import useFileDrop from '../../hooks/useFileDrop';
 import useFilesPrefs from '../../hooks/useFilesPrefs';
 import useFolderReseal from '../../hooks/useFolderReseal';
+import useItemSelection from '../../hooks/useItemSelection';
 import TrashModal from './TrashModal';
 import toast from '../../state/toast';
 import folderFiles from '../../actions/folderFiles';
 import fileDownload from '../../actions/fileDownload';
+import zipDownload from '../../actions/zipDownload';
+import zipPaths from '../../lib/zipPaths';
 import uploadQueue from '../../actions/uploadQueue';
+import uploadTree from '../../actions/uploadTree';
+import droppedFiles, { type Dropped } from '../../lib/droppedFiles';
+import filesLimits from '../../lib/filesLimits';
 import router from '../../lib/router';
 import sortItems from '../../lib/sortItems';
 import fileDrag from '../../lib/fileDrag';
@@ -51,7 +58,6 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
   const canManage = Boolean(folder) && (folder!.createdBy === me.id || isAdmin(me));
   const reseal = useFolderReseal(folder, items, trash);
   const [trashOpen, setTrashOpen] = useState(false);
-
   // another folder starts with a clean search and nothing open over it
   useEffect(() => {
     setQuery('');
@@ -59,20 +65,25 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
     setDialog(null);
   }, [folderId]);
 
-  const upload = useCallback(
-    (files: File[], into: string | null = parent) => {
-      if (!folder || !canWrite) return;
-      uploadQueue.add(folder, into, files, { maxFile: usage?.maxFile ?? 0, onDone: put });
-    },
-    [folder, canWrite, parent, usage, put],
-  );
-  const { dragging, zone } = useFileDrop(upload, canWrite);
-
   const path = useMemo(() => {
     const out: FolderItem[] = [];
     for (let at = items.find((i) => i.id === parent); at; at = items.find((i) => i.id === at!.parentId)) out.unshift(at);
     return out;
   }, [items, parent]);
+
+  // files go straight into the queue; folders are made first, with the files going into them
+  const upload = useCallback(
+    (dropped: Dropped[], into: string | null = parent) => {
+      if (!folder || !canWrite) return;
+      const maxFile = usage?.maxFile ?? 0;
+      if (dropped.every((d) => !d.path.length)) return uploadQueue.add(folder, into, dropped.map((d) => d.file!), { maxFile, onDone: put });
+      let depth = 0;
+      for (let at = items.find((i) => i.id === into); at; at = items.find((i) => i.id === at!.parentId)) depth++;
+      uploadTree(folder, dropped, { parentId: into, depth, held: items.length + trash.length, maxFile, put }).catch(toast.error);
+    },
+    [folder, canWrite, parent, usage, put, items, trash.length],
+  );
+  const { dragging, zone } = useFileDrop(upload, canWrite);
   const counts = useMemo(() => {
     const n = new Map<string, number>();
     for (const i of items) if (i.parentId) n.set(i.parentId, (n.get(i.parentId) ?? 0) + 1);
@@ -84,9 +95,23 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
     return sortItems(here, prefs.sort);
   }, [items, parent, query, prefs.sort]);
   const files = shown.filter((i) => i.kind === 'file' && !i.locked);
+  const { picked, isPicked, select, all, toggleAll, clear } = useItemSelection(shown, [folderId, parent, query]);
+  const mayChange = (i: FolderItem) => i.createdBy === me.id || canManage;
+
+  // several files, or a folder with everything in it, as one zip, with its progress in the tray
+  const zip = (chosen: FolderItem[]) => {
+    if (!folder) return;
+    const name = `${chosen.length === 1 ? chosen[0].name : (path.at(-1)?.name ?? folder.name)}.zip`;
+    uploadQueue.track(name, zipPaths(chosen, items).bytes, folder.id, async (opts) => {
+      const locked = await zipDownload.save(folder, chosen, items, name, opts);
+      if (locked) toast.show(`${locked} locked ${locked === 1 ? 'item was' : 'items were'} left out of the zip, since this browser can’t open ${locked === 1 ? 'it' : 'them'}.`);
+      return locked;
+    });
+  };
 
   const download = (item: FolderItem) => {
     if (!folder) return;
+    if (item.kind === 'folder') return zip([item]);
     if (item.size > BIG) toast.show(`Decrypting ${item.name} for download…`);
     fileDownload.save(folder, item).catch(toast.error);
   };
@@ -102,10 +127,13 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
     else setDialog({ kind: action, item });
   };
 
-  const move = async (item: FolderItem, into: string | null) => {
-    if (!folder || item.parentId === into || item.id === into) return;
+  const move = async (moving: FolderItem[], into: string | null) => {
+    const going = moving.filter((i) => i.parentId !== into && i.id !== into);
+    if (!folder || !going.length) return;
     try {
-      put(await folderFiles.move(folder, item, into));
+      if (going.length === 1) put(await folderFiles.move(folder, going[0], into));
+      else (await folderFiles.moveMany(folder, going, into)).forEach(put);
+      clear();
     } catch (err) {
       toast.error(err);
     }
@@ -126,16 +154,22 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
       if (!canWrite) return;
       e.preventDefault();
       e.stopPropagation();
-      const id = e.dataTransfer.getData(fileDrag.ITEM);
-      const item = id ? items.find((i) => i.id === id) : null;
-      if (item) void move(item, into);
-      else if (fileDrag.fromComputer(e)) upload(fileDrag.files(e), into);
+      const ids = e.dataTransfer.getData(fileDrag.ITEM).split(',').filter(Boolean);
+      const moving = items.filter((i) => ids.includes(i.id));
+      if (moving.length) void move(moving, into);
+      else if (fileDrag.fromComputer(e)) droppedFiles(e.dataTransfer, filesLimits().folderItemsMax).then((d) => upload(d, into), toast.error);
     },
   });
 
   const onKey = (item: FolderItem, e: KeyboardEvent) => {
-    if (e.key === 'F2' && canWrite && !item.locked) setDialog({ kind: 'rename', item });
-    else if ((e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey)) && (item.createdBy === me.id || canManage)) setDialog({ kind: 'delete', item });
+    const deleting = e.key === 'Delete' || (e.key === 'Backspace' && e.metaKey);
+    if (e.key === ' ') select(item, e.shiftKey);
+    else if (e.key.toLowerCase() === 'a' && (e.metaKey || e.ctrlKey)) all();
+    else if (e.key === 'Escape' && picked.length) clear();
+    else if (deleting && picked.length > 1) {
+      if (picked.every(mayChange)) setDialog({ kind: 'deleteMany', items: picked });
+    } else if (e.key === 'F2' && canWrite && !item.locked) setDialog({ kind: 'rename', item });
+    else if (deleting && mayChange(item)) setDialog({ kind: 'delete', item });
     else if (e.key === 'Backspace' && !e.metaKey && listing) router.navigate(path.length ? `/files/${path.length > 1 ? path[path.length - 2].id : listing.folder.id}` : '/files');
     else return false;
     return true;
@@ -164,24 +198,36 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
       <KeyNotice reason="shared folders" />
       <Breadcrumbs folder={folder} path={path} dropTarget={target} drop={dropOn} />
       <FolderNotices folder={folder} missing={missing} waiting={reseal.waiting} problem={reseal.problem} />
-      <FolderToolbar
-        folder={folder}
-        query={query}
-        onQuery={setQuery}
-        mode={prefs.mode}
-        onMode={(mode) => setPrefs({ mode })}
-        sort={prefs.sort}
-        onSort={(sort) => setPrefs({ sort })}
-        canWrite={canWrite}
-        canManage={canManage}
-        onUpload={(f) => upload(f)}
-        onNewFolder={() => setDialog({ kind: 'new' })}
-        onShare={() => setDialog({ kind: 'share' })}
-        onRename={() => setDialog({ kind: 'renameFolder' })}
-        onDelete={() => setDialog({ kind: 'deleteFolder' })}
-        trashCount={trash.filter((i) => i.trashRoot === i.id).length}
-        onTrash={() => setTrashOpen(true)}
-      />
+      {picked.length ? (
+        <SelectionBar
+          picked={picked}
+          canMove={canWrite && picked.every(mayChange)}
+          canDelete={picked.every(mayChange)}
+          onDownload={() => zip(picked)}
+          onMove={() => setDialog({ kind: 'moveMany', items: picked.filter((i) => !i.locked) })}
+          onDelete={() => setDialog({ kind: 'deleteMany', items: picked })}
+          onClear={clear}
+        />
+      ) : (
+        <FolderToolbar
+          folder={folder}
+          query={query}
+          onQuery={setQuery}
+          mode={prefs.mode}
+          onMode={(mode) => setPrefs({ mode })}
+          sort={prefs.sort}
+          onSort={(sort) => setPrefs({ sort })}
+          canWrite={canWrite}
+          canManage={canManage}
+          onUpload={(d) => upload(d)}
+          onNewFolder={() => setDialog({ kind: 'new' })}
+          onShare={() => setDialog({ kind: 'share' })}
+          onRename={() => setDialog({ kind: 'renameFolder' })}
+          onDelete={() => setDialog({ kind: 'deleteFolder' })}
+          trashCount={trash.filter((i) => i.trashRoot === i.id).length}
+          onTrash={() => setTrashOpen(true)}
+        />
+      )}
       {shown.length ? (
         <ItemsView
           folder={folder}
@@ -192,16 +238,23 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
           onSort={(sort) => setPrefs({ sort })}
           onKey={onKey}
           label={query ? 'Search results' : `Contents of ${path.at(-1)?.name ?? folder.name}`}
+          onSelectAll={toggleAll}
           handlers={{
             canWrite,
-            canDelete: (i) => i.createdBy === me.id || canManage,
+            canDelete: mayChange,
+            selecting: picked.length > 0,
+            selected: isPicked,
+            onSelect: select,
             dropTarget: target,
             onAction: act,
-            onClick: (i) => act(i, 'open'),
+            // while anything is picked, or with Shift, Ctrl or ⌘ held, a click picks instead of opening
+            onClick: (i, e) => (picked.length || e.shiftKey || e.metaKey || e.ctrlKey ? select(i, e.shiftKey) : act(i, 'open')),
             drag: (i) => ({
               draggable: canWrite && !i.locked,
               onDragStart: (e: DragEvent) => {
-                e.dataTransfer.setData(fileDrag.ITEM, i.id);
+                // dragging one of several picked moves all of them
+                const moving = isPicked(i) ? picked.filter((p) => !p.locked) : [i];
+                e.dataTransfer.setData(fileDrag.ITEM, moving.map((m) => m.id).join(','));
                 e.dataTransfer.effectAllowed = 'move';
                 setDragged(i.id);
               },
@@ -225,7 +278,7 @@ export default function FolderBrowser({ folderId, usage }: { folderId: string; u
           Drop to encrypt and upload to {path.at(-1)?.name ?? folder.name}
         </div>
       )}
-      <FolderDialogs dialog={dialog} folder={folder} items={items} parent={parent} onClose={() => setDialog(null)} put={put} drop={drop} setFolder={setFolder} reload={reload} />
+      <FolderDialogs dialog={dialog} folder={folder} items={items} parent={parent} onClose={() => setDialog(null)} put={put} drop={drop} onDoneMany={clear} setFolder={setFolder} reload={reload} />
       {trashOpen && <TrashModal folder={folder} trash={trash} canManage={canManage} onChanged={() => void reload()} onClose={() => setTrashOpen(false)} />}
       {preview && (
         <Suspense fallback={null}>

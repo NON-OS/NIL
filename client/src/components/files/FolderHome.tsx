@@ -6,6 +6,7 @@ import Spinner from '../ui/Spinner';
 import KeyNotice from '../keys/KeyNotice';
 import NewFolderModal from './NewFolderModal';
 import StorageMeter from './StorageMeter';
+import UnfinishedUploads from './UnfinishedUploads';
 import useStore from '../../state/useStore';
 import router from '../../lib/router';
 import dates from '../../lib/dates';
@@ -104,6 +105,7 @@ export default function FolderHome({ overview, error, onRetry }: Props) {
         <EmptyState icon={<SearchX />} title="No folder by that name" />
       )}
       <StorageMeter usage={overview.usage} />
+      <UnfinishedUploads onChanged={onRetry} />
       {making && <NewFolderModal onClose={() => setMaking(false)} onMade={(f) => router.navigate(`/files/${f.id}`)} />}
     </div>
   );

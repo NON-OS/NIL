@@ -3,6 +3,7 @@ import { ArrowDown, ArrowUp } from 'lucide-react';
 import ItemTile from './ItemTile';
 import ItemRow from './ItemRow';
 import useStore from '../../state/useStore';
+import cx from '../../lib/cx';
 import type FolderItem from '../../types/FolderItem';
 import type ItemHandlers from '../../types/ItemHandlers';
 import type ItemSort from '../../types/ItemSort';
@@ -19,6 +20,8 @@ interface Props {
   // keys beyond moving around (F2, Delete and the like); true when handled
   onKey: (item: FolderItem, e: KeyboardEvent) => boolean;
   label: string;
+  // picks everything shown, or nothing when all of it is picked already
+  onSelectAll: () => void;
 }
 
 const COLUMNS: { by: ItemSort['by']; label: string }[] = [
@@ -28,12 +31,13 @@ const COLUMNS: { by: ItemSort['by']; label: string }[] = [
 
 // A folder's contents as a grid or a list. One item at a time takes Tab; the arrow keys, Home
 // and End move between them, the way a file manager's do.
-export default function ItemsView({ folder, items, counts, mode, sort, onSort, handlers, onKey, label }: Props) {
+export default function ItemsView({ folder, items, counts, mode, sort, onSort, handlers, onKey, label, onSelectAll }: Props) {
   const users = useStore((s) => s.users);
   const ref = useRef<HTMLDivElement>(null);
   const [active, setActive] = useState<string | null>(null);
   const current = items.some((i) => i.id === active) ? active : (items[0]?.id ?? null);
   const local: ItemHandlers = { ...handlers, tabbable: (i) => i.id === current, onFocus: (i) => setActive(i.id) };
+  const picked = items.filter(handlers.selected).length;
 
   useEffect(() => {
     if (active && !items.some((i) => i.id === active)) setActive(null);
@@ -74,15 +78,27 @@ export default function ItemsView({ folder, items, counts, mode, sort, onSort, h
   return (
     <div ref={ref} onKeyDown={onKeyDown}>
       {mode === 'grid' ? (
-        <ul className="files-grid" aria-label={label}>
+        <ul className={cx('files-grid', handlers.selecting && 'selecting')} aria-label={label}>
           {items.map((item) => (
             <ItemTile key={item.id} folder={folder} item={item} count={counts.get(item.id)} handlers={local} />
           ))}
         </ul>
       ) : (
-        <table className="files-list" aria-label={label}>
+        <table className={cx('files-list', handlers.selecting && 'selecting')} aria-label={label}>
           <thead>
             <tr>
+              <th scope="col" className="files-cell-check">
+                <input
+                  type="checkbox"
+                  className="files-check"
+                  checked={picked > 0 && picked === items.length}
+                  ref={(el) => {
+                    if (el) el.indeterminate = picked > 0 && picked < items.length;
+                  }}
+                  onChange={onSelectAll}
+                  aria-label={picked === items.length ? 'Select none' : 'Select all'}
+                />
+              </th>
               {header('name', 'Name', false)}
               {COLUMNS.map((c) => header(c.by, c.label))}
               <th scope="col" className="files-cell-meta wide">

@@ -9,17 +9,22 @@ import type FolderItem from '../../types/FolderItem';
 import type ItemHandlers from '../../types/ItemHandlers';
 import type SharedFolder from '../../types/SharedFolder';
 import FileName from './FileName';
+import ItemCheck from './ItemCheck';
 
 // One file or folder in the list: name, size, last change and who signed it.
 export default function ItemRow({ folder, item, count, signer, handlers }: { folder: SharedFolder; item: FolderItem; count?: number; signer: string; handlers: ItemHandlers }) {
   const name = item.locked ? 'Locked file' : item.name;
   return (
-    <tr className={cx('files-row', handlers.dropTarget === item.id && 'drop-target')} {...handlers.drag(item)}>
+    <tr className={cx('files-row', handlers.dropTarget === item.id && 'drop-target', handlers.selected(item) && 'selected')} {...handlers.drag(item)}>
+      <td className="files-cell-check">
+        <ItemCheck item={item} name={name} handlers={handlers} />
+      </td>
       <td className="files-cell-name">
         <button type="button" className="files-open" data-item={item.id} tabIndex={handlers.tabbable(item) ? 0 : -1} onClick={(e) => handlers.onClick(item, e)} onFocus={(e) => handlers.onFocus(item, e)}>
           <ItemArt folder={folder} item={item} />
           <span className="files-name">
             <FileName name={name} file={item.kind === 'file' && !item.locked} />
+            {handlers.selected(item) && <span className="sr-only">, selected</span>}
             <small>
               {item.rollback && <ShieldAlert className="files-warn" aria-label="Older than a version seen before" />}
               <span className="num">{itemCaption(item, count)}</span>

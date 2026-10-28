@@ -13,7 +13,7 @@ const folderFor = (f, me) => ({ resealRev: 0, ...f, wrappedKey: state.keys.get(f
 // Serves the routes as user `me` (a function, so a test can switch who's asking).
 export function serveFiles(me) {
   // the Files limits a server sends with the bootstrap
-  store.set({ files: { maxFileBytes: 1e9, previewMaxBytes: 1e8, textPreviewMaxBytes: 1e6, cleanMaxBytes: 1e8, inflateMaxBytes: 1e8, imageMaxPixels: 4e7, thumbMaxBytes: 512 * 1024, zipMemoryMaxBytes: 1e8, depthMax: 32, folderItemsMax: 5000, uploadIdleMs: 1800000, trashMs: 30 * 86400000 } });
+  store.set({ files: { maxFileBytes: 1e9, previewMaxBytes: 1e8, textPreviewMaxBytes: 1e6, cleanMaxBytes: 1e8, inflateMaxBytes: 1e8, imageMaxPixels: 4e7, thumbMaxBytes: 512 * 1024, zipMemoryMaxBytes: 1e8, depthMax: 32, folderItemsMax: 5000, bulkMax: 500, uploadIdleMs: 1800000, trashMs: 30 * 86400000 } });
   state.blobs.clear();
   state.folders.clear();
   state.items.clear();
@@ -36,6 +36,11 @@ export function serveFiles(me) {
   route('GET', /^\/api\/blobs\/[^/]+$/, (url) => info(state.blobs.get(url.split('/')[3])));
   route('GET', /^\/api\/blobs\/[^/]+\/chunks\/\d+$/, (url) => state.blobs.get(url.split('/')[3]).parts[Number(url.split('/')[5])]);
   route('DELETE', /^\/api\/blobs\/[^/]+$/, (url) => (state.blobs.delete(url.split('/')[3]), { ok: true }));
+  // where an unfinished upload stands, for carrying on with it
+  route('GET', /^\/api\/blobs\/[^/]+\/upload$/, (url) => {
+    const blob = state.blobs.get(url.split('/')[3]);
+    return { blob: info(blob), received: Object.keys(blob.parts).map(Number) };
+  });
   // a doc's fresh copy takes the old one's place
   route('POST', /^\/api\/blobs\/[^/]+\/adopt$/, (url) => {
     const copy = state.blobs.get(url.split('/')[3]);
@@ -88,6 +93,17 @@ export function serveFiles(me) {
     const item = state.items.get(url.split('/')[5]);
     Object.assign(item, { parentId: body.parentId ?? null, metaCt: body.metaCt, updatedBy: me() });
     return { item: listItem(item) };
+  });
+  // several moved or put in the trash at once
+  route('POST', /^\/api\/folders\/[^/]+\/items\/move$/, (url, body) => {
+    const folder = state.folders.get(url.split('/')[3]);
+    if (body.keyRev !== folder.keyRev) throw Object.assign(new Error('new key'), { status: 409 });
+    const moved = body.items.map(({ id: itemId, metaCt }) => Object.assign(state.items.get(itemId), { parentId: body.parentId ?? null, metaCt, updatedBy: me() }));
+    return { items: moved.map(listItem) };
+  });
+  route('POST', /^\/api\/folders\/[^/]+\/items\/remove$/, (url, body) => {
+    for (const itemId of body.ids) Object.assign(state.items.get(itemId), { deletedAt: Date.now(), deletedBy: me(), trashRoot: itemId });
+    return { ok: true };
   });
   // the trash: deleting marks, restoring unmarks
   route('DELETE', /^\/api\/folders\/[^/]+\/items\/[^/]+$/, (url) => {
