@@ -51,6 +51,12 @@ router.patch(
           // guests don't vote: becoming one empties your seat in open anonymous votes, and back again
           if (role === 'guest') voterGroups.leave(row.id);
           else voterGroups.join(row.id);
+          // a guest is in no conversation, and becoming a member again doesn't bring them back into
+          // private ones; their browsers' signed lists leave them out of the key from here
+          if (role === 'guest') {
+            sql.run('DELETE FROM chat_members WHERE user_id = ?', row.id);
+            sql.run('DELETE FROM chat_reads WHERE user_id = ?', row.id);
+          }
           if (role !== 'guest') sql.run('DELETE FROM project_guests WHERE user_id = ?', row.id);
           // a member again: a signed removal from when they were made a guest no longer counts
           if (role !== 'guest' && row.role === 'guest') sql.run('DELETE FROM chat_departures WHERE user_id = ? AND channel_id IS NULL', row.id);
@@ -59,6 +65,8 @@ router.patch(
           sql.afterCommit(() => {
             hub.setAdmin(row.id, isAdminRole(role));
             hub.presenceChanged();
+            // a member made a guest loses live docs, chat and calls at once: their tabs reconnect as a guest's
+            if (role === 'guest' && row.role !== 'guest') hub.disconnect(row.id);
           });
         }
         // The projects a guest can see. Changing them takes effect on their next request.

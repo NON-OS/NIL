@@ -166,3 +166,15 @@ test('a leaving from an earlier stay doesn’t count once someone is back in', a
   assert.equal(drop.status, 403, JSON.stringify(drop.data));
   assert.match(drop.data.error, /signed leaving/);
 });
+
+test('someone made a guest is in no conversation, and isn’t brought back into one by becoming a member again', async () => {
+  const fay = client(base);
+  const w = wallet();
+  const inv = await owner('POST', '/api/invites', { role: 'member' });
+  const fayId = (await fay.wallet(w, 'invite', { name: 'fay', inviteToken: inv.data.token })).data.user.id;
+  await publishKey(fay, w);
+  const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, fayId], managers: [ids.ann] })).data.channel;
+  assert.equal((await owner('PATCH', `/api/users/${fayId}`, { role: 'guest' })).status, 200);
+  assert.equal((await owner('PATCH', `/api/users/${fayId}`, { role: 'member' })).status, 200);
+  assert.deepEqual((await ann('GET', `/api/chat/channels/${ch.id}`)).data.channel.members, [ids.ann]);
+});

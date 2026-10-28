@@ -28,5 +28,5 @@ export default interface DocItem {
   // the hash of the doc key this version was opened with, so nothing is written under another one
   keyHash: string;
   // the live changes made since this version, still to be checked and laid on top
-  live: { through: number; updates: EncryptedUpdate[] };
+  live: { through: number; updates: EncryptedUpdate[]; more?: boolean };
 }

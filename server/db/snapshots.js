@@ -3,6 +3,11 @@ import path from 'node:path';
 
 const KEEP = 3;
 const NAME = /^pre-migration-\d+-schema-\d+\.db$/;
+// copies made outside the app: the checkpoint taken before an upgrade (deploy/lib.sh, and the
+// hosted control plane) and the one a backup reads from (deploy/backup.sh)
+const FOLDERS = ['.nil-checkpoint', '.nil-snapshot'];
+
+const folders = (dir) => FOLDERS.map((name) => path.join(dir, name)).filter((p) => fs.existsSync(p));
 
 const listed = (dir) =>
   fs
@@ -13,7 +18,8 @@ const listed = (dir) =>
 
 // Consistent copies of the database taken just before a schema upgrade, so an upgrade that goes
 // wrong can be rolled back by hand. Each is a full plaintext copy, including anything retention
-// has erased from the live database since, so only the newest few are kept.
+// has erased from the live database since, so only the newest few are kept, none outlasts the
+// shortest policy, and the checkpoint and backup folders made outside the app go by the same rules.
 const snapshots = {
   take(db, dir, schema) {
     const file = path.join(dir, `pre-migration-${Date.now()}-schema-${schema}.db`);
@@ -27,11 +33,13 @@ const snapshots = {
   // that went wrong shows itself well before UPGRADE_COPY_DAYS, and none outlasts a policy.
   prune(dir, before) {
     for (const name of listed(dir)) if (Number(name.split('-')[2]) < before) fs.rmSync(path.join(dir, name), { force: true });
+    for (const folder of folders(dir)) if (fs.statSync(folder).mtimeMs < before) fs.rmSync(folder, { recursive: true, force: true });
   },
 
   // for "erase everything", which has to mean the copies too
   eraseAll(dir) {
     for (const name of listed(dir)) fs.rmSync(path.join(dir, name), { force: true });
+    for (const folder of folders(dir)) fs.rmSync(folder, { recursive: true, force: true });
   },
 };
 

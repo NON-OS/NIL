@@ -16,4 +16,6 @@ export default interface EncryptedDoc {
   // when opened: how far into the live changes this version reaches, and the changes after it
   updatesThrough?: number;
   updates?: EncryptedUpdate[];
+  // more changes wait after the last of `updates`, to be fetched
+  updatesMore?: boolean;
 }

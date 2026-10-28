@@ -141,7 +141,7 @@ router.post(
     if (!epoch || !wrapsFor(channel.id, epoch, req.user.id).length) throw HttpError.forbidden('You don’t hold that key.');
     chatBudget(req.user.id, JSON.stringify(req.body?.grants ?? []).length);
     const given = takeGrants(channel.id, epoch, req.body?.grants, req.user.id, { members: channelMembers(channel), history: true });
-    for (const userId of given) hub.toUser(userId, { type: 'chat', channelId: channel.id, kind: 'keys' });
+    hub.toUsers(given, { type: 'chat', channelId: channel.id, kind: 'keys' });
     return { ok: true };
   }),
 );

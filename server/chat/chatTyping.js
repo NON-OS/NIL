@@ -19,5 +19,5 @@ export default function chatTyping(client, msg) {
   const thread = typeof msg.threadId === 'string' ? msg.threadId.slice(0, 32) : null;
   if (thread && !sql.get("SELECT 1 FROM chat_messages WHERE id = ? AND channel_id = ? AND thread_id IS NULL AND kind = 'message'", thread, channel.id)) return;
   const event = { type: 'chat', channelId: channel.id, kind: 'typing', userId: client.userId, threadId: thread };
-  for (const userId of members) if (userId !== client.userId) hub.toUser(userId, event);
+  hub.toUsers(members.filter((userId) => userId !== client.userId), event);
 }

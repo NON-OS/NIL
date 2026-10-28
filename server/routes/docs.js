@@ -44,7 +44,8 @@ router.get(
   route((req) => {
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
     // the live changes made since this version, which the browser lays on top
-    const live = { updatesThrough: doc.updates_through, updates: pendingDocUpdates(doc.id, doc.updates_through) };
+    const { updates, more } = pendingDocUpdates(doc.id, doc.updates_through);
+    const live = { updatesThrough: doc.updates_through, updates, updatesMore: more };
     return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id), ...live }) };
   }),
 );
@@ -92,8 +93,8 @@ router.put(
       thinRevisions(doc.id, now);
       sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, docBlobRefs(req.body?.blobs), doc.id);
       if (through !== null) {
-        sql.run('DELETE FROM doc_updates WHERE doc_id = ? AND seq <= ?', doc.id, through);
-        sql.run('UPDATE docs SET updates_through = MAX(updates_through, ?) WHERE id = ?', through, doc.id);
+        const folded = sql.all('DELETE FROM doc_updates WHERE doc_id = ? AND seq <= ? RETURNING size', doc.id, through).reduce((n, r) => n + r.size, 0);
+        sql.run('UPDATE docs SET updates_through = MAX(updates_through, ?), pending_bytes = MAX(0, pending_bytes - ?) WHERE id = ?', through, folded, doc.id);
       }
     });
     announceDoc(doc.id);
@@ -104,6 +105,7 @@ router.put(
 
 router.post(
   '/docs/:id/grants',
+  contentWrites,
   route((req) => {
     const { doc } = docAccess(req.params.id, req.user);
     if (doc.audience === 'people' && !manager(doc, req.user)) throw HttpError.forbidden('Only the doc’s creator or an admin can share it with more people.');
@@ -134,7 +136,7 @@ router.post(
       sql.run('DELETE FROM doc_revisions WHERE doc_id = ?', doc.id);
       // live changes sealed under the old key go with it; the new version holds them all
       sql.run('DELETE FROM doc_updates WHERE doc_id = ?', doc.id);
-      sql.run('UPDATE docs SET updates_through = update_seq WHERE id = ?', doc.id);
+      sql.run('UPDATE docs SET updates_through = update_seq, pending_bytes = 0 WHERE id = ?', doc.id);
       grantDocKeys(doc.id, grants, req.user.id, { replace: true });
     });
     announceDoc(doc.id, before);

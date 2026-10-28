@@ -8,6 +8,7 @@ import config from '../config.js';
 import HttpError from '../lib/HttpError.js';
 import cipherText from '../lib/cipherText.js';
 import blobChunk from '../lib/blobChunk.js';
+import sendFile from '../lib/sendFile.js';
 import receiveUpload from '../lib/receiveUpload.js';
 import rateLimit from '../auth/rateLimit.js';
 import units from '../config/units.js';
@@ -131,20 +132,15 @@ router.get(
 // sandbox that allows nothing.
 router.get(
   '/blobs/:id/chunks/:index',
-  route((req, res) => {
+  route(async (req, res) => {
     const blob = readable(req.params.id, req.user);
     const file = blobChunk(blob.id, chunkIndex(blob, req.params.index));
-    if (!fs.existsSync(file)) throw HttpError.notFound('That part of the file');
     res.setHeader('Content-Type', 'application/octet-stream');
     res.setHeader('Content-Disposition', 'attachment');
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Cache-Control', 'private, no-store');
-    res.setHeader('Content-Length', fs.statSync(file).size);
-    // a blob deleted while it's being read just ends the response
-    fs.createReadStream(file)
-      .on('error', () => res.destroy())
-      .pipe(res);
+    await sendFile(res, file);
   }),
 );
 

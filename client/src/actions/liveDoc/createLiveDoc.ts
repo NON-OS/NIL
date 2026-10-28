@@ -54,13 +54,13 @@ export default async function createLiveDoc(start: DocItem, me: string, onRekey:
     if (fresh.warning === 'unverified') return ctx.setStatus({ state: 'readonly' });
     loadState(ydoc, fresh);
     adopt(fresh);
-    await inbox.receive(fresh.live.updates);
+    await inbox.receive(fresh.live.updates, { more: fresh.live.more });
   }
 
   loadState(ydoc, start);
   const inbox = createInbox(ctx);
   const saver = createSaver(ctx, adopt);
-  await inbox.receive(start.live.updates);
+  await inbox.receive(start.live.updates, { more: start.live.more });
   const outbox = createOutbox(ctx);
   const unsent = createUnsent(ctx);
   const presence = createPresence(ctx, me);
