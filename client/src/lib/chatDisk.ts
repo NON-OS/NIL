@@ -1,12 +1,13 @@
 // What chat keeps on this device between visits, in IndexedDB: messages already signed and
-// encrypted, waiting to be sent, with their encrypted files; and the search index, encrypted under
-// a key derived from the unlocked identity. Nothing here is readable without the person's keys,
+// encrypted, waiting to be sent, with their encrypted files; the search index, encrypted under
+// a key derived from the unlocked identity; and the member lists this browser already checked,
+// with its own sealed copies of each key, so a visit picks up where the last one left off. Nothing here is readable without the person's keys,
 // and nothing in it is a key. Where IndexedDB can't be used (a private window, a test) it lives in
 // memory for the tab instead. Every entry is filed under the workspace key and account it's for.
-export type Shelf = 'queue' | 'files' | 'search';
+export type Shelf = 'queue' | 'files' | 'search' | 'rosters';
 
 const NAME = 'nil-chat';
-const SHELVES: Shelf[] = ['queue', 'files', 'search'];
+const SHELVES: Shelf[] = ['queue', 'files', 'search', 'rosters'];
 const memory = new Map<string, unknown>();
 let opening: Promise<IDBDatabase | null> | null = null;
 
@@ -14,7 +15,7 @@ function db() {
   opening ??= new Promise((resolve) => {
     try {
       if (typeof indexedDB === 'undefined') return resolve(null);
-      const req = indexedDB.open(NAME, 1);
+      const req = indexedDB.open(NAME, 2);
       req.onupgradeneeded = () => SHELVES.forEach((s) => req.result.objectStoreNames.contains(s) || req.result.createObjectStore(s));
       req.onsuccess = () => resolve(req.result);
       req.onerror = () => resolve(null);

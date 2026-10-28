@@ -25,7 +25,8 @@ beforeEach(async () => {
   await confirm(['w']);
   shape = { id: id(), kind: 'group', audience: 'people' };
   rows = [];
-  route('GET', /\/api\/chat\/channels\/[^/]+\/epochs/, () => ({ epochs: rows }));
+  // as the server answers: from the epoch asked for on
+  route('GET', /\/api\/chat\/channels\/[^/]+\/epochs/, (url) => ({ epochs: rows.filter((r) => r.epoch >= Number(new URL(url, 'https://x').searchParams.get('from') ?? 1)) }));
   chatRosters.clear();
   chatKeyring.wipe();
 });
@@ -114,4 +115,24 @@ test('a mark is signed by its tab’s sender and opens only as theirs', async ()
   chatState.set({ marks: {} });
   await chatMarks.open(channel(1), { ...row, userId: 'w' });
   assert.equal(chatState.get().marks[shape.id], undefined);
+});
+
+test('a later visit checks only the lists that are new, and they still have to follow the ones kept', async () => {
+  const { sent } = await import('./helpers/fakeBrowser.js');
+  const first = await epoch(1, null);
+  const one = await chatRosters.load(channel(1));
+  await epoch(2, one.rosters[0]);
+  // the tab goes away; what it checked stays on the device
+  chatRosters.clear();
+  sent.length = 0;
+  const two = await chatRosters.load(channel(2));
+  assert.deepEqual([two.broken, two.rosters.length], [null, 2]);
+  const fetched = sent.filter((r) => r.url.includes('/epochs') && !r.url.includes('keys=1')).map((r) => new URL(r.url, 'https://x').searchParams.get('from'));
+  assert.deepEqual(fetched, ['2'], 'only what came after');
+  // a server serving a third list that doesn't follow the second is caught, kept lists or not
+  chatRosters.clear();
+  const stray = await startEpoch(shape, 3, one.rosters[0], { members: ['v', 'w'], managers: ['v', 'w'] });
+  rows.push({ epoch: 3, roster: stray.raw, proofs: [], wrappedKeys: [] });
+  assert.equal((await chatRosters.load(channel(3))).broken, 3);
+  assert.ok(first.key.length === 32);
 });
