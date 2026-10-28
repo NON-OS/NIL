@@ -34,6 +34,7 @@ const initialState: State = {
   docsUnlocked: false,
   docsRev: 0,
   filesRev: 0,
+  files: null,
   origin: '',
   workspaceKey: '',
   passkeys: [],

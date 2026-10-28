@@ -6,6 +6,8 @@ export default interface EncryptedFolder {
   version: number;
   // counts the folder's keys: one more each time someone is taken out
   keyRev: number;
+  // items whose own key was made under an older folder key than this wait to be encrypted again
+  resealRev: number;
   audience: 'team' | 'people';
   createdBy: string | null;
   updatedBy: string | null;

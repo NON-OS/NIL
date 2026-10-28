@@ -28,6 +28,7 @@ import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
 import type Passkey from '../types/Passkey';
+import type FilesLimits from '../types/FilesLimits';
 import type AiProviderSummary from '../types/AiProviderSummary';
 import vault from './vault';
 import offline from './offline';
@@ -58,6 +59,7 @@ interface Bootstrap {
   privacyPools?: boolean;
   timer: TimeEntry | null;
   sourceUrl: string | null;
+  files?: FilesLimits | null;
   build: string | null;
   origin: string;
   workspaceKey: string;
@@ -110,6 +112,7 @@ async function load() {
     privacyPools: Boolean(b.privacyPools),
     timer: b.timer,
     sourceUrl: b.sourceUrl,
+    files: b.files ?? null,
     origin: b.origin,
     workspaceKey: b.workspaceKey,
     passkeys: b.passkeys ?? [],
