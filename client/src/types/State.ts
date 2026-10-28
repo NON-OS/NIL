@@ -65,6 +65,8 @@ export default interface State {
   timer: TimeEntry | null;
   docsUnlocked: boolean;
   docsRev: number;
+  // the doc the last change was about, or null when it could be any
+  docsChanged: string | null;
   // bumped when a shared folder you can open, or wait for, changes
   filesRev: number;
   // the site and workspace key every key message is bound to (from bootstrap, set by APP_URL)

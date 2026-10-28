@@ -33,6 +33,7 @@ const initialState: State = {
   timer: null,
   docsUnlocked: false,
   docsRev: 0,
+  docsChanged: null,
   filesRev: 0,
   origin: '',
   workspaceKey: '',

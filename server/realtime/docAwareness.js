@@ -15,7 +15,10 @@ export default function docAwareness(ws, client, msg) {
     return;
   }
   if (!docId || docId !== client.docOpen || typeof msg.ct !== 'string' || msg.ct.length > MAX_CHARS) return;
-  const out = JSON.stringify({ type: 'doc-aware', docId, ct: msg.ct });
+  // a key taken away since the doc was opened stops this tab's cursor going out too
+  if (!holdsKey(docId, client.userId)) return hub.openDoc(ws, null);
+  // who sent it, so the cursor can't claim to be someone else's
+  const out = JSON.stringify({ type: 'doc-aware', docId, ct: msg.ct, from: client.userId });
   for (const [other, c] of hub.onDoc(docId)) {
     if (other === ws || !c) continue;
     // a key taken away since they opened the doc stops their cursor feed too

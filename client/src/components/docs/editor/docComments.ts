@@ -18,6 +18,14 @@ export interface CommentThread {
 const MAX_TEXT = 4000;
 const newId = () => Array.from(crypto.getRandomValues(new Uint8Array(9)), (b) => b.toString(16).padStart(2, '0')).join('');
 
+// a time a Date can hold, so showing it can't throw
+const when = (v: unknown) => Number.isSafeInteger(v) && (v as number) >= 0 && (v as number) <= 8.64e15;
+// another reader wrote it, so only a message in the shape Nil writes is shown at all
+const wellFormed = (m: unknown): m is CommentMessage => {
+  const x = m as Record<string, unknown> | null;
+  return typeof x === 'object' && x !== null && typeof x.id === 'string' && typeof x.by === 'string' && typeof x.text === 'string' && x.text.length <= MAX_TEXT && when(x.at);
+};
+
 const message = (docId: string, thread: string, text: string, quote: string) => docCommentSeal.sign(docId, thread, { id: newId(), at: Date.now(), text: text.slice(0, MAX_TEXT) }, quote);
 
 // Comment threads live in the doc's shared state, beside the text they're about, so they're
@@ -33,9 +41,9 @@ const docComments = {
         id,
         quote: String(t.get('quote') ?? '').slice(0, 300),
         by: String(t.get('by') ?? ''),
-        at: Number(t.get('at')) || 0,
+        at: when(t.get('at')) ? (t.get('at') as number) : 0,
         resolved: t.get('resolved') === true,
-        messages: messages instanceof Y.Array ? (messages.toArray() as CommentMessage[]).filter((m) => m && typeof m.id === 'string' && typeof m.text === 'string') : [],
+        messages: messages instanceof Y.Array ? (messages.toArray() as CommentMessage[]).filter(wellFormed) : [],
       });
     });
     return out;

@@ -138,7 +138,9 @@ const docs = {
     const key = readDoc.keyOf(doc);
     if (!key) return [];
     const rows = await http.get<{ version: number; titleCt: string; bodyCt: string; updatedBy: string | null; createdAt: number }[]>(`/docs/${doc.id}/revisions`);
-    return Promise.all(rows.map((r) => readDoc.revision(doc, key, r)));
+    // a version that can't be read is left out of the list instead of emptying it
+    const read = await Promise.all(rows.map((r) => readDoc.revision(doc, key, r).catch(() => null)));
+    return read.filter((r) => r !== null);
   },
 
   async remove(doc: DocItem) {

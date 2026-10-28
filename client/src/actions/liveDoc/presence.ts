@@ -2,6 +2,7 @@ import { Awareness, applyAwarenessUpdate, encodeAwarenessUpdate, removeAwareness
 import socket from '../../realtime/socket';
 import docLiveCipher from '../../lib/crypto/docLiveCipher';
 import cursorColor from '../../lib/docState/cursorColor';
+import awarenessCheck from '../../lib/docState/awarenessCheck';
 import REMOTE from './remote';
 import type LiveContext from './liveContext';
 
@@ -41,11 +42,18 @@ export default function createPresence(ctx: LiveContext, me: string) {
   socket.docOpen(ctx.docId);
   queue(awareness.clientID);
 
+  // which account each cursor belongs to, so nobody can move or hide someone else's
+  const owners = new Map<number, string>();
+
   return {
     awareness,
-    async receive(ct: string) {
+    // `from` is the account the server says sent it; the cursor must name the same one
+    async receive(ct: string, from: string) {
       try {
         const { payload } = await docLiveCipher.open(ctx.key, ctx.docId, 'aware', ct);
+        const clientID = awarenessCheck(payload, from);
+        if (clientID === null || clientID === awareness.clientID || (owners.get(clientID) ?? from) !== from) return;
+        owners.set(clientID, from);
         applyAwarenessUpdate(awareness, payload, REMOTE);
       } catch {}
     },

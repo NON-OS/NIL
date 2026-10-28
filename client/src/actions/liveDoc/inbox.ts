@@ -17,14 +17,21 @@ export default function createInbox(ctx: LiveContext) {
   let filling = false;
 
   async function applyOne(u: EncryptedUpdate) {
+    let opened;
     try {
-      const opened = await docUpdateSeal.open(ctx.docId, ctx.key, u.updateCt ?? '', ctx.doc.readers);
+      opened = await docUpdateSeal.open(ctx.docId, ctx.key, u.updateCt ?? '', ctx.doc.readers);
       // this tab's own change, back from the server: already in the state
       if (ctx.sent.delete(opened.id)) return;
-      if (opened.verified) Y.applyUpdate(ctx.ydoc, opened.update, REMOTE);
-      else ctx.setStatus({ refused: ctx.status.refused + 1 });
+      if (!opened.verified || !ctx.accepts(opened.update)) return ctx.setStatus({ refused: ctx.status.refused + 1 });
     } catch {
-      ctx.setStatus({ refused: ctx.status.refused + 1 });
+      return ctx.setStatus({ refused: ctx.status.refused + 1 });
+    }
+    try {
+      Y.applyUpdate(ctx.ydoc, opened.update, REMOTE);
+    } catch {
+      // the state took the change but the editor didn't show it; typing on would write the old
+      // view back over it, so the doc opens afresh instead
+      ctx.reopen();
     }
   }
 
@@ -50,7 +57,9 @@ export default function createInbox(ctx: LiveContext) {
         more = res.more === true && res.updates.length > 0;
       }
     } catch (err: any) {
-      if (err?.status === 409) await ctx.reload();
+      // not awaited: reloading lays the newer version on top and hands its changes back here,
+      // which would wait on this very fill
+      if (err?.status === 409) void ctx.reload().catch(() => {});
     } finally {
       filling = false;
     }
@@ -66,6 +75,11 @@ export default function createInbox(ctx: LiveContext) {
         else fetch = true;
       }
       chain = chain.then(drain, drain).then(() => (fetch && !filling ? fill() : undefined));
+      return chain;
+    },
+    // after a dropped connection: whatever was numbered meanwhile
+    catchUp() {
+      chain = chain.then(() => (filling ? undefined : fill()), () => undefined);
       return chain;
     },
   };

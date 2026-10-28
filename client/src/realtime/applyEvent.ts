@@ -107,7 +107,7 @@ export default function applyEvent(event: any): void {
       if (s.nox) store.set({ nox: { ...s.nox, verification: event.verification } });
       break;
     case 'docs':
-      store.set({ docsRev: s.docsRev + 1 });
+      store.set({ docsRev: s.docsRev + 1, docsChanged: typeof event.id === 'string' ? event.id : null });
       break;
     case 'files':
       store.set({ filesRev: s.filesRev + 1 });
