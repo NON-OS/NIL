@@ -6,6 +6,8 @@ import hub from '../realtime/hub.js';
 import checkKeyStatement from '../keys/checkKeyStatement.js';
 import parseWrap from '../keys/parseWrap.js';
 import dropTaskKeys from '../keys/dropTaskKeys.js';
+import dropOrphans from '../services/dropOrphans.js';
+import log from '../lib/log.js';
 import publishTask from '../services/publishTask.js';
 import publishUser from '../services/publishUser.js';
 import toEncryptionKey from '../mappers/toEncryptionKey.js';
@@ -39,7 +41,7 @@ router.put(
     const current = sql.get('SELECT public_key, signing_key, created_at FROM encryption_keys WHERE user_id = ?', req.user.id);
     const same = Boolean(current) && current.public_key === next.publicKey && current.signing_key === next.signingKey;
     if (current && !same && req.body?.reset !== true) {
-      throw new HttpError(409, 'You already have different encryption keys. Unlock with a wallet that opens them, restore your recovery kit, or reset (you’ll lose access to encrypted docs and private tasks until someone shares them again).');
+      throw new HttpError(409, 'You already have different encryption keys. Unlock with a wallet that opens them, restore your recovery kit, or reset (you’ll lose access to encrypted docs, files and private tasks until someone shares them again, and any that only you could open are deleted).');
     }
     if (current && next.createdAt <= current.created_at) throw new HttpError(409, 'A newer signature for your keys is already published.');
     const wrap = req.body?.wrap ? parseWrap(req.body.wrap, req.user.id) : null;
@@ -49,6 +51,7 @@ router.put(
     sql.tx(() => {
       if (current && !same) {
         sql.run('DELETE FROM doc_keys WHERE user_id = ?', req.user.id);
+        sql.run('DELETE FROM folder_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM chat_epoch_keys WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM identity_wraps WHERE user_id = ?', req.user.id);
         sql.run('DELETE FROM passkey_wraps WHERE user_id = ?', req.user.id);
@@ -70,6 +73,8 @@ router.put(
     });
     for (const id of dropped) publishTask(id);
     if (current && !same) publishUser(req.user.id);
+    // docs and folders only the old keys could open can't be opened by anyone now
+    if (current && !same) dropOrphans().catch((err) => log.error('keys', 'Deleting docs and folders nobody can open failed.', err));
     hub.broadcast({ type: 'keys' });
     // online teammates' browsers react by sealing team docs for a newcomer they've confirmed
     if (!same) hub.broadcast({ type: 'docs', id: null });

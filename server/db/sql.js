@@ -22,6 +22,8 @@ const sql = {
   get: (text, ...params) => prepared(text).get(...params),
   all: (text, ...params) => prepared(text).all(...params),
   run: (text, ...params) => prepared(text).run(...params),
+  // rows one at a time, for reads that may stop early instead of loading everything
+  iterate: (text, ...params) => prepared(text).iterate(...params),
 
   // how many prepared statements are kept, for tests and diagnostics
   get cachedStatements() {

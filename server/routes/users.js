@@ -57,6 +57,8 @@ router.patch(
           sql.afterCommit(() => {
             hub.setAdmin(row.id, isAdminRole(role));
             hub.presenceChanged();
+            // a member made a guest loses live docs, chat and calls at once: their tabs reconnect as a guest's
+            if (role === 'guest' && row.role !== 'guest') hub.disconnect(row.id);
           });
         }
         // The projects a guest can see. Changing them takes effect on their next request.

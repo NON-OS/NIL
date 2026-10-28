@@ -92,7 +92,7 @@ const readDoc = {
       olderFormat: v.olderFormat,
       oldKey: v.oldKey,
       keyHash: keyHash(key),
-      live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [] },
+      live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [], more: doc.updatesMore === true },
     };
     // so search in this tab can find it, for as long as the keys stay unlocked
     openedText.rememberDoc({ id: item.id, title: item.title, body: item.text });

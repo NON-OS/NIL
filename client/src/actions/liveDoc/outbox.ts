@@ -49,8 +49,8 @@ export default function createOutbox(ctx: LiveContext) {
       if (!queue.length) ctx.settled();
     } catch (err: any) {
       queue.unshift(update);
-      if (err?.status === 409 || err?.status === 400) {
-        // the doc wants a new version first, or the change is too big to go live: a version carries it
+      if (err?.status === 409 || err?.status === 400 || err?.status === 429) {
+        // the doc wants a new version first, or the change is too big or too much to go live: a version carries it
         await ctx.saveNow().then(
           () => {
             queue = [];

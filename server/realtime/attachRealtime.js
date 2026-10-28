@@ -75,6 +75,15 @@ function guarded(key, fn, onError) {
   };
 }
 
+// what each person's sockets sent together this minute
+const budgets = new Map();
+
+function overBudget(userId, now) {
+  let b = budgets.get(userId);
+  if (!b || now - b.start > 60_000) budgets.set(userId, (b = { start: now, count: 0 }));
+  return ++b.count > config.realtimeUserMessagesPerMinute;
+}
+
 function connected(ws, user, session) {
   hub.add(ws, { userId: user.id, isAdmin: user.isAdmin, session });
   ws.on('pong', () => {
@@ -89,7 +98,7 @@ function connected(ws, user, session) {
     guarded('message', (raw) => {
       const now = Date.now();
       if (now - budget.start > 60_000) budget = { start: now, count: 0 };
-      if (++budget.count > config.realtimeMessagesPerMinute) return ws.close(1008, 'too many messages');
+      if (++budget.count > config.realtimeMessagesPerMinute || overBudget(user.id, now)) return ws.close(1008, 'too many messages');
       handleMessage(ws, raw);
     }),
   );
@@ -113,6 +122,9 @@ export default function attachRealtime(server) {
     if (!originAllowed(req)) return refuse(socket, '403 Forbidden');
     const user = currentUser(req);
     if (!user) return refuse(socket, '401 Unauthorized');
+    // a few tabs and devices each; more is a script, and the server's total keeps one from starving the rest
+    if (hub.count(user.id) >= config.realtimeSocketsPerUser) return refuse(socket, '429 Too Many Requests');
+    if (hub.count() >= config.realtimeMaxSockets) return refuse(socket, '503 Service Unavailable');
     const session = tokenHash(sessionCookie.read(req));
     wss.handleUpgrade(req, socket, head, guarded('connection', (ws) => connected(ws, user, session), (ws) => ws.terminate()));
   }
@@ -132,6 +144,8 @@ export default function attachRealtime(server) {
 
   const heartbeat = setInterval(
     guarded('heartbeat', () => {
+      const now = Date.now();
+      for (const [userId, b] of budgets) if (now - b.start > 60_000) budgets.delete(userId);
       for (const [ws, c] of hub.entries()) {
         if (!sessions.isLive(c.session)) {
           ws.close(4001, 'signed out');

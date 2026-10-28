@@ -9,6 +9,7 @@ import rateLimit from '../auth/rateLimit.js';
 import chatId from '../chat/chatId.js';
 import channelAccess from '../chat/channelAccess.js';
 import chatQuota from '../chat/chatQuota.js';
+import sendFile from '../lib/sendFile.js';
 import chatFilePath from '../chat/chatFilePath.js';
 
 const router = express.Router();
@@ -55,7 +56,7 @@ router.post(
 
 router.get(
   '/chat/files/:id',
-  route((req, res) => {
+  route(async (req, res) => {
     const row = sql.get('SELECT * FROM chat_files WHERE id = ?', String(req.params.id));
     if (!row || !fs.existsSync(chatFilePath(row.id))) throw HttpError.notFound('That file');
     channelAccess(row.channel_id, req.user);
@@ -64,7 +65,7 @@ router.get(
     res.setHeader('Content-Disposition', 'attachment; filename="file"');
     res.setHeader('Content-Security-Policy', "default-src 'none'; sandbox");
     res.setHeader('Cache-Control', 'private, no-store');
-    fs.createReadStream(chatFilePath(row.id)).pipe(res);
+    await sendFile(res, chatFilePath(row.id));
   }),
 );
 
