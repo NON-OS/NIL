@@ -96,13 +96,21 @@ export default function PreviewModal({ folder, item, files, onShow, onDownload, 
     return () => window.removeEventListener('keydown', onKey);
   }, [prev, next, onShow]);
 
+  // the player wouldn't take the stream: decrypt the whole file instead, as other previews do
+  const unstream = () => {
+    setStream(null);
+    setStreamless(true);
+    if (tooLarge) return;
+    fileDownload.read(folder, item, { onProgress: setProgress }).then(setBlob, (err) => setError(err instanceof Error ? err.message : 'This file couldn’t be opened.'));
+  };
+
   // a file already decrypted for the preview is saved from memory, not fetched again
   const save = () => (blob ? saveBlob(blob, item.name) : onDownload(item));
 
   const body = () => {
     if (kind === 'none') return <NoPreview item={item} onDownload={() => onDownload(item)} />;
     if (error) return <NoPreview item={item} note={error} onDownload={() => onDownload(item)} />;
-    if (stream) return <MediaPreview src={stream} video={kind === 'video'} name={item.name} />;
+    if (stream) return <MediaPreview src={stream} video={kind === 'video'} name={item.name} onStreamFailed={unstream} />;
     if (tooLarge && streamless) return <NoPreview item={item} note="This file is too large to preview here. Download it to open it on your device." onDownload={() => onDownload(item)} />;
     if (!blob) {
       return (
