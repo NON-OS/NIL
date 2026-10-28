@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import useStore from '../../../state/useStore';
 import createLiveDoc from '../../../actions/liveDoc/createLiveDoc';
+import docBlobReseal from '../../../actions/liveDoc/docBlobReseal';
 import type DocItem from '../../../types/DocItem';
 import type LiveDoc from '../../../types/LiveDoc';
 import type LiveStatus from '../../../types/LiveStatus';
@@ -50,6 +51,14 @@ export default function useLiveDoc(doc: DocItem, onRekey: () => void) {
   useEffect(() => {
     if (connected) live?.reconnected();
   }, [connected, live]);
+
+  // pictures and files waiting to be encrypted again after someone was taken out of the doc
+  useEffect(() => {
+    if (!live || !doc.reseal || live.status().state === 'readonly') return;
+    const stop = new AbortController();
+    void docBlobReseal(live, doc, stop.signal).catch(() => {});
+    return () => stop.abort();
+  }, [live]);
 
   // closing the tab with changes still on their way asks first
   useEffect(() => {

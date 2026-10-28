@@ -101,6 +101,7 @@ const readDoc = {
       oldKey: v.oldKey,
       keyHash: keyHash(key),
       keyEpoch: doc.keyEpoch ?? 0,
+      reseal: doc.reseal ?? null,
       live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [], more: doc.updatesMore === true },
     };
     // so search in this tab can find it, for as long as the keys stay unlocked

@@ -32,6 +32,8 @@ export default interface DocItem {
   keyHash: string;
   // how many times the doc moved to a new key, as the server counts it
   keyEpoch: number;
+  // pictures and files still waiting to be encrypted again, as the server lists them
+  reseal: { waiting: string[]; copies: { id: string; replaces: string }[] } | null;
   // the live changes made since this version, still to be checked and laid on top
   live: { through: number; updates: EncryptedUpdate[]; more?: boolean };
 }

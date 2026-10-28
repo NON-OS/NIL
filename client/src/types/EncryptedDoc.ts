@@ -17,6 +17,9 @@ export default interface EncryptedDoc {
   updatesThrough?: number;
   // how many times the doc moved to a new key; live changes carry it
   keyEpoch?: number;
+  // pictures and files waiting to be encrypted again after someone was taken out, and fresh
+  // copies already made for them
+  reseal?: { waiting: string[]; copies: { id: string; replaces: string }[] } | null;
   updates?: EncryptedUpdate[];
   // more changes wait after the last of `updates`, to be fetched
   updatesMore?: boolean;

@@ -36,6 +36,13 @@ export function serveFiles(me) {
   route('GET', /^\/api\/blobs\/[^/]+$/, (url) => info(state.blobs.get(url.split('/')[3])));
   route('GET', /^\/api\/blobs\/[^/]+\/chunks\/\d+$/, (url) => state.blobs.get(url.split('/')[3]).parts[Number(url.split('/')[5])]);
   route('DELETE', /^\/api\/blobs\/[^/]+$/, (url) => (state.blobs.delete(url.split('/')[3]), { ok: true }));
+  // a doc's fresh copy takes the old one's place
+  route('POST', /^\/api\/blobs\/[^/]+\/adopt$/, (url) => {
+    const copy = state.blobs.get(url.split('/')[3]);
+    state.blobs.delete(copy.replaces);
+    copy.replaces = null;
+    return { ok: true };
+  });
 
   route('GET', '/api/folders', () => ({ folders: [...state.folders.values()].filter((f) => state.keys.get(f.id).has(me())).map((f) => folderFor(f, me())), waiting: [], usage: { used: 0, quota: 1e9, maxFile: 1e9 } }));
   route('POST', '/api/folders', (url, body) => {
