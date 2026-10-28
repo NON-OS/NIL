@@ -4,7 +4,7 @@ import route from '../lib/route.js';
 import HttpError from '../lib/HttpError.js';
 import docAccess from '../services/docAccess.js';
 import notify from '../services/notify.js';
-import docUpdateWrites from '../auth/docUpdateWrites.js';
+import docMentionWrites from '../auth/docMentionWrites.js';
 import units from '../config/units.js';
 
 const MAX_PEOPLE = 20;
@@ -18,7 +18,7 @@ const router = express.Router();
 
 router.post(
   '/docs/:id/mentions',
-  docUpdateWrites,
+  docMentionWrites,
   route((req) => {
     const { doc } = docAccess(req.params.id, req.user);
     const ids = req.body?.userIds;

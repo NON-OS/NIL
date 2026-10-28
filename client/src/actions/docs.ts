@@ -76,8 +76,8 @@ const docs = {
     const me = store.get().me!;
     const id = b64u.encode(crypto.getRandomValues(new Uint8Array(16)));
     const docKey = crypto.getRandomValues(new Uint8Array(32));
-    // agents never read docs: they hold no key
-    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id) : people;
+    // agents never read docs: they hold no key, and guests don't get team docs
+    const everyone = audience === 'team' ? Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent' && u.role !== 'guest').map((u) => u.id) : people;
     const grants = await sealFor(docKey, [me.id, ...everyone]);
     const readers = grants.map((g) => g.userId);
     // a new doc starts as shared editing state, with its title in it
@@ -123,7 +123,7 @@ const docs = {
   // person has confirmed their keys. Only a version signed as the team's counts, whatever the
   // server lists; never asks, never shares a doc that failed its check or can't say who it's for.
   async shareWithTeam(items: DocItem[]) {
-    const people = Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent').map((u) => u.id);
+    const people = Object.values(store.get().users).filter((u) => !u.deactivated && u.kind !== 'agent' && u.role !== 'guest').map((u) => u.id);
     const ready = new Set((await keyDirectory.sharable(people)).keys());
     for (const doc of items.filter((d) => d.audience === 'team' && !d.warning && !d.olderFormat)) {
       const missing = people.filter((u) => ready.has(u) && !doc.readers.includes(u));

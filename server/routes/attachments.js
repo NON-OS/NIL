@@ -6,6 +6,7 @@ import route from '../lib/route.js';
 import newId from '../lib/newId.js';
 import config from '../config.js';
 import uploadDir from '../lib/uploadDir.js';
+import sendFile from '../lib/sendFile.js';
 import stagedFile from '../lib/stagedFile.js';
 import HttpError from '../lib/HttpError.js';
 import visibleTask from '../services/visibleTask.js';
@@ -89,7 +90,7 @@ router.post(
 
 router.get(
   '/attachments/:id',
-  route((req, res) => {
+  route(async (req, res) => {
     const row = sql.get('SELECT * FROM attachments WHERE id = ?', req.params.id);
     const file = row && path.join(uploadDir, row.id);
     if (!row || !fs.existsSync(file)) throw HttpError.notFound('That file');
@@ -101,7 +102,7 @@ router.get(
     res.setHeader('Content-Disposition', `${inline ? 'inline' : 'attachment'}; filename*=UTF-8''${encodeURIComponent(row.filename)}`);
     res.setHeader('Content-Security-Policy', "default-src 'none'; img-src 'self'; style-src 'unsafe-inline'; sandbox");
     res.setHeader('Cache-Control', 'private, no-store');
-    fs.createReadStream(file).pipe(res);
+    await sendFile(res, file);
   }),
 );
 

@@ -7,12 +7,12 @@ import cipherText from '../lib/cipherText.js';
 const WRAPPED = 123;
 
 // Stores keys that a member's browser sealed for other members. Recipients must be active
-// people who have published an encryption key; existing grants are left alone.
+// members (not guests) who have published an encryption key; existing grants are left alone.
 export default function grantDocKeys(docId, grants, grantedBy, { replace = false } = {}) {
   if (!Array.isArray(grants) || grants.length > 500) throw HttpError.badRequest('Too many people at once.');
   const clean = grants.map((g) => ({ userId: String(g?.userId ?? ''), wrappedKey: cipherText(g?.wrappedKey, 'Wrapped key', { exact: WRAPPED }) }));
   for (const g of clean) {
-    if (!sql.get('SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0', g.userId)) {
+    if (!sql.get("SELECT 1 FROM users u JOIN encryption_keys k ON k.user_id = u.id WHERE u.id = ? AND u.deactivated = 0 AND u.role != 'guest'", g.userId)) {
       throw HttpError.badRequest('One of those people can’t receive encrypted docs yet.');
     }
   }
