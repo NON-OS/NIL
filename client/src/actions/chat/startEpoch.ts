@@ -8,16 +8,18 @@ import type ChatRoster from '../../types/ChatRoster';
 
 type Shape = { id: string; kind: RosterFacts['kind']; audience: RosterFacts['audience'] };
 
-// Makes the key for a conversation's next epoch, seals it to `members` (those whose keys this
-// person confirmed; the others wait), and signs the list of who got it. Nothing is sent: the
-// caller posts it with whatever else changes.
-export default async function startEpoch(channel: Shape, epoch: number, prev: ChatRoster | null, { members, managers }: { members: string[]; managers: string[] }) {
+// Makes the key for a conversation's next epoch, seals it to `members` whose keys this person
+// confirmed, and signs the list of who holds it. Anyone else is left off, except those in
+// `listed`: people already on the list before, who stay on it and get the key from a member who
+// confirmed them, so a key can move on schedule without everyone having checked everyone.
+// Nothing is sent: the caller posts it with whatever else changes.
+export default async function startEpoch(channel: Shape, epoch: number, prev: ChatRoster | null, { members, managers, listed = [] }: { members: string[]; managers: string[]; listed?: string[] }) {
   const id = keyring.identity();
   if (!id) throw new Error('Unlock your keys first.');
   const me = store.get().me!.id;
   const key = chatKeys.fresh();
   const grants: Grant[] = await chatKeys.seal(key, chatRoster.people([me, ...members]));
-  const sealed = chatRoster.people(grants.map((g) => g.userId));
+  const sealed = chatRoster.people([...grants.map((g) => g.userId), ...listed.filter((u) => members.includes(u))]);
   const facts: RosterFacts = {
     kind: channel.kind,
     audience: channel.audience,

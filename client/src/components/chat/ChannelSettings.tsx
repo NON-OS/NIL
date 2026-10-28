@@ -94,9 +94,9 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
               <div key={id} className="chat-person">
                 <Avatar user={users[id]} size={24} />
                 <span className="grow">{users[id]?.name ?? 'Someone'}</span>
-                <small>{!channel.members.includes(id) ? 'Holds the key, but is out' : signed.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
-                {peopleChange && !signed.includes(id) && (
-                  <button type="button" className="btn btn-sm" onClick={() => void run(() => chatChannels.setMembers(channel, channel.members), 'New key, sealed to everyone whose key you’ve confirmed.')}>
+                <small>{!channel.members.includes(id) ? 'Holds the key, but is out' : signed.includes(id) && channel.keyHolders.includes(id) ? 'Holds the key' : 'Waiting for a key'}</small>
+                {id !== me?.id && channel.members.includes(id) && !channel.keyHolders.includes(id) && (
+                  <button type="button" className="btn btn-sm" onClick={() => void run(() => chatChannels.giveKey(channel, id), 'Key handed over, sealed to the key you confirmed.')}>
                     Give key
                   </button>
                 )}

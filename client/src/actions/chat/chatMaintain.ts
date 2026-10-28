@@ -4,10 +4,11 @@ import chatKeyring from '../../state/chatKeyring';
 import rosterLead from '../../lib/rosterLead';
 import keyDirectory from '../keyDirectory';
 import chatKeys from './chatKeys';
-import chatRosters from './chatRosters';
+import chatRosters, { type Chain } from './chatRosters';
 import startEpoch from './startEpoch';
 import departureCounts from './departureCounts';
 import type ChatChannelRow from '../../types/ChatChannelRow';
+import type ChatRoster from '../../types/ChatRoster';
 
 // how many earlier epochs a newcomer is handed, so they can read back
 const HISTORY = 50;
@@ -26,6 +27,21 @@ async function handHistory(channel: ChatChannelRow, newcomers: string[]) {
     const grants = (await chatKeys.seal(key, newcomers)).filter((g) => newcomers.includes(g.userId));
     if (grants.length) await http.post(`/chat/channels/${channel.id}/grants`, { epoch, grants }).catch(() => {});
   }
+}
+
+// Hands the current key to people on its list still waiting for it, whose keys this person
+// confirmed: how the key reaches someone a scheduled new key couldn't be sealed to. True when any
+// went out.
+async function handOver(channel: ChatChannelRow, chain: Chain, head: ChatRoster, keys: Awaited<ReturnType<typeof keyDirectory.load>>) {
+  const me = store.get().me!.id;
+  const waiting = head.members.filter((id) => id !== me && !channel.keyHolders.includes(id) && keys.get(id)?.active && keys.get(id)?.state === 'confirmed');
+  if (!waiting.length) return false;
+  const key = await chatKeys.get(channel, chain, channel.epoch).catch(() => null);
+  if (!key) return false;
+  const grants = (await chatKeys.seal(key, waiting)).filter((g) => waiting.includes(g.userId));
+  if (!grants.length) return false;
+  await http.post(`/chat/channels/${channel.id}/grants`, { epoch: channel.epoch, grants });
+  return true;
 }
 
 // Keeps a conversation's key where it belongs, starting a new epoch when:
@@ -53,9 +69,11 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   // a copy of the current key that doesn't open to the one the list names is a member's doing;
   // a new key from here, sealed by this browser, mends it
   const mended = await chatKeys.get(channel, chain, channel.epoch).then(() => false, () => true);
-  if (!members && !due && !mended && same(head.members, wanted) && same(head.members, channel.keyHolders)) return false;
   // the cached directory is enough to decide; sealing looks again, fresh
   const keys = await keyDirectory.load();
+  // someone on the list still waiting for the key gets it from here, once this person confirmed them
+  const handed = !mended && (await handOver(channel, chain, head, keys));
+  if (!members && !due && !mended && same(head.members, wanted)) return handed;
   const sealable = new Set(wanted.filter((id) => keys.get(id)?.active && keys.get(id)?.state === 'confirmed'));
   const removing = head.members.filter((id) => !wanted.includes(id));
   // a departure the server hands over counts only once its signature and signer check out here
@@ -70,14 +88,14 @@ export default async function chatMaintain(channel: ChatChannelRow, { members }:
   const joining = wanted.filter((id) => id !== me && sealable.has(id) && !head.members.includes(id));
   const adding = members || channel.audience === 'team' ? joining : [];
   const next = [...head.members.filter((id) => wanted.includes(id)), ...adding];
-  if (next.some((id) => id !== me && !sealable.has(id))) return false;
-  const keyless = next.some((id) => !channel.keyHolders.includes(id));
-  if (!removing.length && !adding.length && !keyless && !due && !mended && !members) return false;
+  // nobody new comes in without a confirmed key; those already on the list stay on it, waiting
+  if (next.some((id) => id !== me && !sealable.has(id) && !head.members.includes(id))) return false;
+  if (!removing.length && !adding.length && !due && !mended && !members) return handed;
   if (members && channel.audience === 'people' && !manager) throw new Error('Only whoever manages this conversation can change who is in it.');
   // who manages a channel carries over: never from what the server says about anyone's role
   const managers = channel.kind === 'channel' ? head.managers.filter((id) => next.includes(id)) : next;
   const epoch = channel.epoch + 1;
-  const made = await startEpoch(channel, epoch, head, { members: next, managers });
+  const made = await startEpoch(channel, epoch, head, { members: next, managers, listed: head.members });
   const cited = proofs.filter((p): p is string => p !== null);
   await http.post(`/chat/channels/${channel.id}/epochs`, { epoch, roster: made.raw, grants: made.grants, proofs: cited, ...(members && channel.audience === 'people' ? { members: wanted } : {}) });
   chatKeyring.put(channel.id, epoch, made.key);

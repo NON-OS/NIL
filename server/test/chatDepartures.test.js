@@ -178,3 +178,19 @@ test('someone made a guest is in no conversation, and isn’t brought back into 
   assert.equal((await owner('PATCH', `/api/users/${fayId}`, { role: 'member' })).status, 200);
   assert.deepEqual((await ann('GET', `/api/chat/channels/${ch.id}`)).data.channel.members, [ids.ann]);
 });
+
+test('a scheduled key goes to whoever the signer confirmed; the others on the list get it handed over later', async () => {
+  const ch = (await chat.makeChannel(ann, ids.ann, { members: [ids.ann, ids.ben, ids.cat], managers: [ids.ann] })).data.channel;
+  const url = `/api/chat/channels/${ch.id}`;
+  // Ann starts the next key for the same three, sealed only to herself and Ben
+  const next = await chat.roster({ by: ids.ann, channelId: ch.id, epoch: 2, prev: (await ann('GET', `${url}/epochs`)).data.epochs[0].roster, members: [ids.ann, ids.ben, ids.cat], managers: [ids.ann] });
+  const some = next.grants.filter((g) => g.userId !== ids.cat);
+  assert.equal((await ann('POST', `${url}/epochs`, { epoch: 2, roster: next.roster, grants: some.filter((g) => g.userId !== ids.ann) })).status, 400, 'the signer always seals to themselves');
+  assert.equal((await ann('POST', `${url}/epochs`, { epoch: 2, roster: next.roster, grants: some })).status, 200);
+  assert.deepEqual((await ann('GET', url)).data.channel.keyHolders, [ids.ann, ids.ben].sort());
+  assert.equal((await cat('POST', `${url}/messages`, chat.message(2))).status, 403, 'Cat waits for the key');
+  // Ben, who confirmed Cat, hands it over; now she holds it
+  assert.equal((await ben('POST', `${url}/grants`, { epoch: 2, grants: [{ userId: ids.cat, wrappedKey: 'K'.repeat(123) }] })).status, 200);
+  assert.deepEqual((await ann('GET', url)).data.channel.keyHolders, [ids.ann, ids.ben, ids.cat].sort());
+  assert.equal((await cat('POST', `${url}/messages`, chat.message(2))).status, 200);
+});

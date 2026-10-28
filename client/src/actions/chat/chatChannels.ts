@@ -140,6 +140,15 @@ const chatChannels = {
     return chatChannels.refresh(channel.id);
   },
 
+  // Hands someone waiting the key, after checking theirs: the current key if they're on its list
+  // already, otherwise, for whoever manages it, a new key that brings them in.
+  async giveKey(channel: ChatChannel, userId: string) {
+    await confirmKeys.ask([userId], 'this conversation');
+    if (!channel.signedMembers?.includes(userId)) return chatChannels.setMembers(channel, channel.members);
+    await chatMaintain(channel);
+    return chatChannels.refresh(channel.id);
+  },
+
   // Leaving signs a statement here, so any member left can start the next key without you.
   async leave(channel: ChatChannel) {
     await departures.leave(channel.id);
