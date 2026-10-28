@@ -2,6 +2,7 @@ import callApi from './callApi';
 import callRuntime from './callRuntime';
 import iceConfig from './iceConfig';
 import sfuKeys from './sfuKeys';
+import frameRatchet from '../../lib/calls/frameRatchet';
 import audioLevels from './audioLevels';
 import { ed25519 } from '@noble/curves/ed25519';
 import type { LinkPlace } from '../../lib/crypto/callLink';
@@ -18,6 +19,8 @@ let worker: Worker | null = null;
 const published = new Map<'audio' | 'camera' | 'screen', Publication>();
 // whose sound the speaking ring listens to, by track
 const hearing = new Map<string, string>();
+// names whose frames turned out not to be theirs: remembered until a key says whose they are
+const caught = new Set<string>();
 
 const SOURCES = { audio: 'microphone', camera: 'camera', screen: 'screen_share' } as const;
 
@@ -38,6 +41,7 @@ function refresh() {
   for (const peer of Object.values(rt.active()?.peers ?? {})) {
     if (peer.link !== 'refused') rt.patchPeer(peer.userId, { link: up ? 'connected' : 'connecting', holding: !sfuKeys.has(peer.userId) }, peer.session);
   }
+  for (const identity of caught) forged(identity);
   for (const participant of room.remoteParticipants.values()) {
     const userId = sfuKeys.userOf(participant.identity);
     const peer = userId ? rt.active()?.peers[userId] : null;
@@ -55,9 +59,10 @@ function refresh() {
 // Frames came under someone's name that they never signed for: the SFU, with someone who holds
 // their key, made them up. Nothing more of theirs is shown in this call.
 function forged(identity: string) {
+  caught.add(identity);
   const userId = sfuKeys.userOf(identity);
   const peer = userId ? rt.active()?.peers[userId] : null;
-  if (!userId || !peer) return;
+  if (!userId || !peer || peer.refusal === 'frames') return;
   rt.patchPeer(userId, { link: 'refused', refusal: 'frames', media: null, screenMedia: null }, peer.session);
   rt.say(`Nil stopped showing ${rt.name(userId)}: frames arrived in their name that they didn’t send.`);
 }
@@ -78,7 +83,8 @@ const sfuLink = {
     const guard = (worker = new Worker(new URL('../../lib/calls/frameGuard.worker.ts', import.meta.url), { type: 'module' }));
     const provider = new (class extends lk.BaseKeyProvider {
       constructor() {
-        super({ sharedKey: false, ratchetWindowSize: 0, failureTolerance: -1, keyringSize: 16 });
+        // a sender who stepped their key forward for a newcomer is followed here by stepping too
+        super({ sharedKey: false, ratchetWindowSize: 8, ratchetSalt: frameRatchet.salt, failureTolerance: -1, keyringSize: 16 });
       }
       async put(identity: string, raw: Uint8Array, index: number) {
         this.onSetEncryptionKey(await lk!.createKeyMaterialFromBuffer(raw.slice().buffer), identity, index);
@@ -104,6 +110,11 @@ const sfuLink = {
       .on(lk.RoomEvent.TrackMuted, refresh)
       .on(lk.RoomEvent.TrackUnmuted, refresh)
       .on(lk.RoomEvent.ParticipantConnected, refresh)
+      // a tab that left: what its frames did is forgotten, and a finding about them with it
+      .on(lk.RoomEvent.ParticipantDisconnected, (p) => {
+        caught.delete(p.identity);
+        guard.postMessage({ kind: 'nil-forget', data: { identity: p.identity } });
+      })
       .on(lk.RoomEvent.Reconnecting, () => linkAll('reconnecting'))
       .on(lk.RoomEvent.Reconnected, () => linkAll('connected'));
     await room.connect(grant.url, grant.token, { rtcConfig: iceConfig.current(), autoSubscribe: true });
@@ -134,6 +145,7 @@ const sfuLink = {
     room = null;
     published.clear();
     hearing.clear();
+    caught.clear();
     sfuKeys.stop();
     await leaving?.disconnect().catch(() => {});
     worker?.terminate();

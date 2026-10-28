@@ -1,6 +1,7 @@
 import keyring from '../../state/keyring';
 import b64u from '../../lib/crypto/b64u';
 import callMediaKey, { type MediaKeyMessage } from '../../lib/crypto/callMediaKey';
+import frameRatchet from '../../lib/calls/frameRatchet';
 import keyDirectory from '../keyDirectory';
 import callRuntime from './callRuntime';
 import callSignals from './callSignals';
@@ -42,6 +43,15 @@ async function sendTo(userId: string, key: Uint8Array, at: number) {
   callSignals.send(place.callId, userId, message);
 }
 
+// moves this browser's frames onto the key waiting to take over
+function use() {
+  if (!next || !sink) return;
+  current?.key.fill(0);
+  current = next;
+  next = null;
+  void sink.put(myIdentity, current.key, current.at % RING);
+}
+
 // This browser's frame keys on the SFU, and everyone else's. Each person makes their own key,
 // a new one whenever someone joins or leaves, and seals it to the others (see callMediaKey).
 const sfuKeys = {
@@ -63,17 +73,30 @@ const sfuKeys = {
     const at = epoch;
     next = { key, at };
     await Promise.all(others.map((userId) => sendTo(userId, key, at).catch(() => {})));
-    const use = () => {
-      if (at !== epoch || !sink) return;
-      current?.key.fill(0);
-      current = { key, at };
-      next = null;
-      void sink.put(myIdentity, key, at % RING);
-    };
+    if (next?.at !== at) return;
     clearTimeout(switchTimer);
     if (current) switchTimer = window.setTimeout(use, SWITCH_MS);
     else use();
   },
+
+  // Someone joined. Rather than a new key sealed to everyone, this browser's key steps forward
+  // and only the newcomers get it: the others' browsers step it forward themselves when frames
+  // stop decrypting, and the newcomers can't step back to anything sent before they came.
+  async ratchet(newcomers: string[]) {
+    const base = next ?? current;
+    if (!sink || !base) return;
+    const stepped = { key: frameRatchet(base.key), at: base.at };
+    await Promise.all(newcomers.map((userId) => sendTo(userId, stepped.key, stepped.at).catch(() => {})));
+    if (next === base) {
+      // a switch is waiting: it takes the stepped key
+      next = stepped;
+    } else if (current === base && !next) {
+      next = stepped;
+      clearTimeout(switchTimer);
+      switchTimer = window.setTimeout(use, SWITCH_MS);
+    }
+  },
+
 
   // someone this person just let hear them gets the key in use now and, in the moment before
   // a new one takes over, that one too, oldest first so it isn't taken for a replay

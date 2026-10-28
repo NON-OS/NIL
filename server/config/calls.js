@@ -72,7 +72,7 @@ export default Object.freeze({
   // how long someone whose connection to the server dropped keeps their place in a call
   rejoinSeconds: envNumber('CALL_REJOIN_SECONDS', 30, { min: 2, max: 300 }),
   // handshake messages one person may send into a call a minute, and how large each may be
-  signalsPerMinute: envNumber('CALL_SIGNALS_PER_MINUTE', 240, { min: 30 }),
+  signalsPerMinute: envNumber('CALL_SIGNALS_PER_MINUTE', 600, { min: 30 }),
   maxSignalBytes: envNumber('CALL_SIGNAL_MAX_KB', 24, { min: 8, max: 128 }) * 1024,
   startsPerMinute: envNumber('CALL_STARTS_PER_MINUTE', 6, { min: 1 }),
   // how often one person may ring the same teammate

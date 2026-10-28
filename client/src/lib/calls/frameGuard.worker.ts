@@ -53,7 +53,7 @@ function incoming(identity: string, trackId: string) {
     transform(frame, out) {
       const now = Date.now();
       const opened = frameFooter.unwrap(new Uint8Array(frame.data));
-      if (!opened) return void ledger.unwrapped(identity, now);
+      if (!opened) return void ledger.unwrapped(identity, trackId, now);
       if (!ledger.frame(identity, trackId, opened.frame, opened.list, now)) return;
       frame.data = opened.frame.slice().buffer as ArrayBuffer;
       out.enqueue(frame);

@@ -5,6 +5,7 @@ import frameFooter from '../src/lib/calls/frameFooter.ts';
 import frameManifest from '../src/lib/calls/frameManifest.ts';
 import frameSender from '../src/lib/calls/frameSender.ts';
 import frameLedger from '../src/lib/calls/frameLedger.ts';
+import frameRatchet from '../src/lib/calls/frameRatchet.ts';
 
 // Frames on the SFU carry their sender's signed word for them. Someone who holds the frame key
 // (anyone in the call), with the SFU's help, can make frames that decrypt as another person's;
@@ -100,6 +101,49 @@ test('her own frames played again, or with an old list, are caught too', () => {
 test('frames without the footer, sent around the browser\'s own encryption, count against the sender', () => {
   const ledger = frameLedger();
   ledger.key(ANA, publicKey, 0);
-  for (let i = 0; i < 16; i++) ledger.unwrapped(ANA, i);
+  for (let i = 0; i < 16; i++) ledger.unwrapped(ANA, 'mic', i);
   assert.deepEqual(ledger.check(100), [ANA]);
+});
+
+test('a key stepped forward for a newcomer is the one LiveKit steps to when a frame fails', async () => {
+  const key = crypto.getRandomValues(new Uint8Array(32));
+  const material = await crypto.subtle.importKey('raw', key, 'HKDF', false, ['deriveBits']);
+  const theirs = new Uint8Array(await crypto.subtle.deriveBits({ name: 'HKDF', salt: new TextEncoder().encode(frameRatchet.salt), hash: 'SHA-256', info: new ArrayBuffer(128) }, material, 256));
+  assert.deepEqual(frameRatchet(key), theirs);
+  assert.notDeepEqual(frameRatchet(key), key);
+});
+
+test('frames that came before their sender\'s key are not held against them', () => {
+  const send = frameSender(ANA, secret);
+  const ledger = frameLedger();
+  // seconds of video in three layers before Ana's key reaches this browser: it can't decrypt
+  // them either, so it doesn't judge them
+  let t = 0;
+  for (; t < 4000; t += 11) {
+    const opened = frameFooter.unwrap(send.out(frame(t), (t % 3) + 1, false, t))!;
+    ledger.frame(ANA, 'cam', opened.frame, opened.list, t);
+  }
+  ledger.key(ANA, publicKey, t);
+  for (const end = t + 4000; t < end; t += 11) {
+    const opened = frameFooter.unwrap(send.out(frame(t), (t % 3) + 1, false, t))!;
+    ledger.frame(ANA, 'cam', opened.frame, opened.list, t);
+  }
+  assert.deepEqual(ledger.check(t + 3000), []);
+});
+
+test('sound and video stopping together, as when someone leaves, are not taken for forgery', () => {
+  const sound = frameSender(ANA, secret);
+  const video = frameSender(ANA, secret);
+  const ledger = frameLedger();
+  ledger.key(ANA, publicKey, 0);
+  // sound in 20 ms frames, video at 25 frames a second
+  for (let t = 0; t < 3190; t += 20) {
+    const s = frameFooter.unwrap(sound.out(frame(t), 1, true, t))!;
+    ledger.frame(ANA, 'mic', s.frame, s.list, t);
+    if (t % 40 === 0) {
+      const v = frameFooter.unwrap(video.out(frame(t + 1), 2, false, t))!;
+      ledger.frame(ANA, 'cam', v.frame, v.list, t);
+    }
+  }
+  assert.deepEqual(ledger.check(60_000), []);
 });
