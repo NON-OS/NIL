@@ -82,4 +82,9 @@ export default async function sfuCall({ ada, ana, ben, check }) {
   for (const p of [ben, ada, ana]) await allow(p, 1);
   await until('Ben to see the others again', async () => (await pictures(ben.page)) >= 2, 45_000);
   check('someone who comes back gets the new keys', true);
+  // for a newcomer each sender's key steps forward, and the others' browsers step with it
+  if (await ben.page.getByRole('button', { name: 'Turn camera on' }).count()) await ben.page.getByRole('button', { name: 'Turn camera on' }).click();
+  await ada.page.waitForTimeout(4000);
+  const still = await Promise.all([ada, ana, ben].map((p) => until(`${p.size} to see both others after the step`, async () => (await pictures(p.page)) >= 2, 20_000).catch(() => false)));
+  check('everyone already in the call follows the stepped keys and keeps seeing the others', still.every(Boolean), JSON.stringify(await Promise.all([ada, ana, ben].map((p) => pictures(p.page)))));
 }
