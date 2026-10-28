@@ -78,10 +78,10 @@ Clicking a file previews it in a window over the page. The file is decrypted in 
 | PDF | Page by page, with zoom. Forms show as they're filled in, but you can't type into them, and a PDF's scripts never run |
 | Word (.docx) | The text, headings, lists, tables and pictures, in a simplified layout. Links aren't clickable |
 | Text, Markdown and code | As text, and Markdown formatted, up to 2 MB |
-| Audio and video | Played by your browser, in the formats it supports |
+| Audio and video | Played by your browser as it arrives, in the formats it supports, at any size, and you can skip around |
 | Anything else, SVG included | Its icon and a **Download** button |
 
-Previews stop at 300 MB, since the whole file has to be decrypted into the tab first. Larger files can still be downloaded.
+Video and sound start playing while the rest is still on its way. Your browser fetches and decrypts only the parts the player asks for, checks each against what the uploader signed, and hands them to the player through Nil's own service worker, inside your browser. Nothing decrypted is stored, and no other page can ask for it. Two cases decrypt the whole file first, the way every other preview does: a file of more than 1 MB uploaded before this version, which wasn't signed piece by piece, and a browser where Nil's service worker isn't running, such as a private window in Firefox. Those previews, and every preview of another kind, stop at 200 MB, or 2 MB for text, unless whoever runs the server changed that. Larger files can still be downloaded.
 
 **Download** saves the file decrypted, under its own name. Very large files are written to disk a piece at a time where the browser allows it (Chrome and Edge ask where to save them), and a file that doesn't match what its uploader signed is thrown away before it's kept. Elsewhere the file is put together in memory first and handed to your downloads.
 

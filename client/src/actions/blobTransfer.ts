@@ -125,6 +125,23 @@ const blobTransfer = {
     return info;
   },
 
+  // Chunks one at a time in any order, for a player that skips around: each fetched and decrypted
+  // on its own, checked against its place and size like any other.
+  async opener(info: BlobInfo, key: Uint8Array) {
+    const prefix = checkInfo(info, info.id);
+    const aes = await blobCipher.key(key, 'decrypt').catch(() => {
+      throw new Error(CHANGED);
+    });
+    return async (i: number, signal?: AbortSignal) => {
+      const size = blobCipher.chunkSize(i, info.chunks, info.size);
+      const sealed = await http.bytes(`/blobs/${encodeURIComponent(info.id)}/chunks/${i}`, signal, size);
+      if (sealed.length !== size) throw new Error(CHANGED);
+      return blobCipher.open(aes, prefix, info.id, i, info.chunks, sealed).catch(() => {
+        throw new Error(CHANGED);
+      });
+    };
+  },
+
   // Fetches and decrypts every chunk of a blob in order, handing each one's plain bytes to
   // `sink` before the next is decrypted. Any chunk that doesn't open, or has the wrong size,
   // stops it: nothing after a chunk that fails is ever handed on.

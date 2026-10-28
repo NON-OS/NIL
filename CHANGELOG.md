@@ -63,6 +63,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 - Several files, or a folder with everything in it, download as one zip, decrypted and checked file by file in the browser, written straight to disk where the browser allows and in memory up to `FILES_ZIP_MEMORY_MAX_MB` elsewhere. The zip is stored, not compressed, with zip64 past 4 GB, and names are made safe to unpack.
 - Folders upload from the computer, by drop or by picker, with their subfolders made first and empty folders kept, checked against `FOLDER_DEPTH_MAX` and `FOLDER_ITEMS_MAX` before anything is made.
 - An upload waits out a dropped connection instead of failing, and **Try again** carries on from the chunks the server already has. Before a chunk is sealed again, its hash is checked against the first try's, so a file that changed on disk starts over under fresh nonces rather than reuse one.
+- Video and sound play as they arrive, at any size, with seeking: the app's service worker answers the player's range requests by asking the page, which decrypts only the chunks a range covers and checks each against the signed chunk list. Other previews' limits now come from the server's settings (`FILES_PREVIEW_MAX_MB`, `FILES_TEXT_PREVIEW_MAX_KB`) instead of numbers in the page.
 - Uploads a closed tab left unfinished are named under your folders, with the space they hold and **Discard now**.
 
 ### Calls v2

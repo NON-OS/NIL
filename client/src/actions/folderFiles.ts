@@ -184,6 +184,26 @@ const folderFiles = {
     });
   },
 
+  // A file read a chunk at a time in any order, for a player that skips around. Each chunk is
+  // checked against the file's signed chunk list, or for a file of one chunk against its signed
+  // hash, before it's handed on. A file of several chunks from before chunk lists were signed
+  // can't be read this way.
+  async reader(folder: SharedFolder, item: FolderItem) {
+    return withItemKey(folder, item, async (key) => {
+      if (!item.blob || !item.hash || item.blob.size !== blobCipher.sealedSize(item.size)) throw new Error('This isn’t a file that can play as it arrives.');
+      const list = await chunkList(item, key);
+      if (!list && item.blob.chunks > 1) throw new Error('This file was uploaded before Nil signed each piece of a file, so it can’t play as it arrives.');
+      const open = await blobTransfer.opener(item.blob, key);
+      return async (index: number, signal?: AbortSignal) => {
+        const plain = await open(index, signal);
+        const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', plain));
+        const fits = list ? list.fits(index, digest) : blobHash.of(digest) === item.hash;
+        if (!fits) throw new Error('Part of this file isn’t what its uploader signed. It may have been changed on the server.');
+        return plain;
+      };
+    });
+  },
+
   // The small copy shown in the grid, or null for a file without one. Only a thumbnail whose
   // hash and length its uploader signed is shown, and only after both check out, within the size
   // and pixel limits, so nobody can show another picture or a decoding bomb in its place.

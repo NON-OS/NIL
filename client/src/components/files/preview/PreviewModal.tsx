@@ -6,6 +6,8 @@ import Spinner from '../../ui/Spinner';
 import NoPreview from './NoPreview';
 import MediaPreview from './MediaPreview';
 import fileDownload from '../../../actions/fileDownload';
+import mediaStreams from '../../../actions/mediaStreams';
+import filesLimits from '../../../lib/filesLimits';
 import previewKind from '../../../lib/previewKind';
 import saveBlob from '../../../lib/saveBlob';
 import fileSize from '../../../lib/fileSize';
@@ -18,11 +20,6 @@ const PdfPreview = lazy(() => import('./PdfPreview'));
 const DocxPreview = lazy(() => import('./DocxPreview'));
 const TextPreview = lazy(() => import('./TextPreview'));
 
-// Previews decrypt the whole file into this tab first, so they stop at a size a tab handles
-// comfortably; text stops much sooner, since a huge log is no use on screen.
-const MAX_PREVIEW = 300 * 1024 * 1024;
-const MAX_TEXT = 2 * 1024 * 1024;
-
 interface Props {
   folder: SharedFolder;
   item: FolderItem;
@@ -33,12 +30,20 @@ interface Props {
   onClose: () => void;
 }
 
-// A file shown in the browser after decrypting it here. Left and right arrows move through the
-// folder's files; nothing is sent anywhere to show them.
+// A file shown in the browser after decrypting it here. Video and sound stream as they arrive
+// where the app's service worker runs; everything else is decrypted whole into this tab first, so
+// it stops at a size a tab handles comfortably, and text much sooner, since a huge log is no use on
+// screen. Left and right arrows move through the folder's files; nothing is sent anywhere to show
+// them.
 export default function PreviewModal({ folder, item, files, onShow, onDownload, onClose }: Props) {
   const kind = previewKind(item.type, item.name);
-  const tooLarge = item.size > (kind === 'text' || kind === 'markdown' ? MAX_TEXT : MAX_PREVIEW);
+  const { previewMaxBytes, textPreviewMaxBytes } = filesLimits();
+  const tooLarge = item.size > (kind === 'text' || kind === 'markdown' ? textPreviewMaxBytes : previewMaxBytes);
+  const media = kind === 'audio' || kind === 'video';
   const [blob, setBlob] = useState<Blob | null>(null);
+  const [stream, setStream] = useState<string | null>(null);
+  // a large video or sound file is too large only once it's known it can't stream
+  const [streamless, setStreamless] = useState(!media);
   const [progress, setProgress] = useState(0);
   const [error, setError] = useState('');
   const at = files.findIndex((f) => f.id === item.id);
@@ -47,15 +52,38 @@ export default function PreviewModal({ folder, item, files, onShow, onDownload, 
 
   useEffect(() => {
     setBlob(null);
+    setStream(null);
+    setStreamless(!media);
     setError('');
     setProgress(0);
-    if (kind === 'none' || tooLarge) return;
+    if (kind === 'none') return;
     const stop = new AbortController();
-    fileDownload
-      .read(folder, item, { signal: stop.signal, onProgress: setProgress })
-      .then(setBlob)
-      .catch((err) => !stop.signal.aborted && setError(err instanceof Error ? err.message : 'This file couldn’t be opened.'));
-    return () => stop.abort();
+    let close = () => {};
+    const failed = (err: unknown) => !stop.signal.aborted && setError(err instanceof Error ? err.message : 'This file couldn’t be opened.');
+    const whole = () => {
+      setStreamless(true);
+      if (tooLarge) return;
+      fileDownload.read(folder, item, { signal: stop.signal, onProgress: setProgress }).then(setBlob).catch(failed);
+    };
+    if (!media || !mediaStreams.fits(item)) whole();
+    else {
+      void mediaStreams.available().then(async (ok) => {
+        if (stop.signal.aborted) return;
+        if (!ok) return whole();
+        try {
+          const opened = await mediaStreams.open(folder, item);
+          close = opened.close;
+          if (stop.signal.aborted) return close();
+          setStream(opened.url);
+        } catch (err) {
+          failed(err);
+        }
+      });
+    }
+    return () => {
+      stop.abort();
+      close();
+    };
   }, [item.id, folder.keyHash]);
 
   useEffect(() => {
@@ -73,13 +101,14 @@ export default function PreviewModal({ folder, item, files, onShow, onDownload, 
 
   const body = () => {
     if (kind === 'none') return <NoPreview item={item} onDownload={() => onDownload(item)} />;
-    if (tooLarge) return <NoPreview item={item} note="This file is too large to preview here. Download it to open it on your device." onDownload={() => onDownload(item)} />;
     if (error) return <NoPreview item={item} note={error} onDownload={() => onDownload(item)} />;
+    if (stream) return <MediaPreview src={stream} video={kind === 'video'} name={item.name} />;
+    if (tooLarge && streamless) return <NoPreview item={item} note="This file is too large to preview here. Download it to open it on your device." onDownload={() => onDownload(item)} />;
     if (!blob) {
       return (
         <div className="files-placeholder" role="status">
           <Spinner size={20} />
-          <span>Decrypting… <span className="num">{Math.round(progress * 100)}%</span></span>
+          <span>{streamless ? <>Decrypting… <span className="num">{Math.round(progress * 100)}%</span></> : 'Opening…'}</span>
         </div>
       );
     }
