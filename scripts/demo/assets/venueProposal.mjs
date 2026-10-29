@@ -11,7 +11,7 @@ const COSTS = [
 // The venue's proposal for the offsite, sitting next to the courtyard photo.
 export default paper(
   `<header><b>Palácio do Pátio</b><span>Rua da Saudade 12, Lisbon</span></header>
-   <h1>Proposal: Northwind team offsite</h1><p class="muted">Prepared for Dev Rao. Held until Friday for 12 to 14 March or 19 to 21 March.</p>
+   <h1>Proposal: Atlas team offsite</h1><p class="muted">Prepared for Dev Rao. Held until Friday for 12 to 14 March or 19 to 21 March.</p>
    <h2>What is included</h2>
    <table><tr><th>Item</th><th>Price</th></tr>${COSTS.map(([item, price]) => `<tr><td>${item}</td><td>${price}</td></tr>`).join('')}
    <tr><td><b>Total, before VAT</b></td><td><b>€10,560</b></td></tr></table>

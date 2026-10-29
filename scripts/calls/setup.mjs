@@ -6,7 +6,7 @@ export default async function setup({ app, ada, ana, ben }) {
   await ada.wallet(ada.key);
   await ada.page.goto(app.base);
   await ada.page.getByLabel('Setup token').fill(app.setupToken);
-  await ada.page.getByLabel('Workspace name').fill('Northwind');
+  await ada.page.getByLabel('Workspace name').fill('Atlas');
   await ada.page.getByLabel('Your name').fill('Ada');
   await ada.page.getByRole('button', { name: 'Create workspace with your wallet' }).click();
   await ada.page.locator('.view-head h1').waitFor();

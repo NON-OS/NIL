@@ -7,7 +7,7 @@ import fs from 'node:fs';
 
 const LETTER = `Dear Priya,
 
-We would like to offer you the role of senior mobile engineer at Northwind. You would work on the Atlas wallet with Cleo, Ben and Dev, and report to me.
+We would like to offer you the role of senior mobile engineer at Atlas Labs. You would work on the Atlas wallet with Cleo, Ben and Dev, and report to me.
 
 ## The role
 
@@ -31,7 +31,7 @@ If you are happy with this, reply by Friday 6 November and we will send the cont
 We all enjoyed the system design conversation, and hope you say yes.
 
 Ada Okafor
-Product lead, Northwind
+Product lead, Atlas Labs
 `;
 
 const lib = new URL('../../../client/src/lib/docConvert/', import.meta.url);

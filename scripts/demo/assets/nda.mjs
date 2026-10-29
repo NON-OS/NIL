@@ -11,10 +11,10 @@ const TERMS = [
 
 // A signed mutual NDA with a hardware partner, the kind of file that lives in Contracts.
 export default paper(
-  `<header><b>Northwind</b><span>Mutual non-disclosure agreement</span></header>
-   <h1>Mutual NDA</h1><p class="muted">Between Northwind Ltd and Helix Labs GmbH, 14 October</p>
+  `<header><b>Atlas Labs</b><span>Mutual non-disclosure agreement</span></header>
+   <h1>Mutual NDA</h1><p class="muted">Between Atlas Labs Ltd and Helix Labs GmbH, 14 October</p>
    ${TERMS.map(([h, p], i) => `<h2>${i + 1}. ${h}</h2><p>${p}</p>`).join('')}
-   <div class="signs"><div><span class="sig">Ada Okafor</span><p>Ada Okafor, for Northwind Ltd</p></div><div><span class="sig">J. Brandt</span><p>Jonas Brandt, for Helix Labs GmbH</p></div></div>`,
+   <div class="signs"><div><span class="sig">Ada Okafor</span><p>Ada Okafor, for Atlas Labs Ltd</p></div><div><span class="sig">J. Brandt</span><p>Jonas Brandt, for Helix Labs GmbH</p></div></div>`,
   `.signs{display:flex;gap:40px;margin-top:70px}.signs div{flex:1;border-top:1px solid #9AA1AD;padding-top:6px}
    .sig{display:block;margin-top:-40px;height:34px;font:italic 22pt Georgia,'DejaVu Serif',serif;color:#2b3a8f}
    .signs p{margin:0;font-size:9pt;color:#5B6270}`,

@@ -11,7 +11,7 @@ const SWATCHES = [
 
 // Two pages of brand guidelines: a cover, then colour, type and voice.
 export default paper(
-  `<section class="page cover"><p class="muted">Northwind · Brand</p><h1>Atlas 2.0<br>brand guidelines</h1>
+  `<section class="page cover"><p class="muted">Atlas · Brand</p><h1>Atlas 2.0<br>brand guidelines</h1>
      <p>Version 2.0, October. Owner: Ben Hart.</p>
      <div class="shapes"><span style="background:${c.blue};border-radius:50%"></span><span style="background:${c.ember}"></span><span style="background:${c.harbour}"></span></div></section>
    <section><header><b>Atlas 2.0 brand guidelines</b><span>Page 2</span></header>

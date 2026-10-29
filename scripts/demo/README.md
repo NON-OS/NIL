@@ -2,7 +2,7 @@
 
 These scripts run a real Nil server on a mock chain, fill it with a believable team workspace, and take screenshots of every main screen. Everything goes through real browsers, with a wallet per person signing for real, so the docs, chat and files are end-to-end encrypted the same way they are for a real team.
 
-The team is Northwind: Ada Okafor, Ben Hart, Cleo Marsh and Dev Rao, shipping version 2.0 of a wallet app called Atlas. They have four projects, about eighty tasks with twelve weeks of history, goals, votes, tracked time, six docs with a comment thread, three chat channels and shared folders of design files, contracts and a video.
+The team is Atlas Labs: Ada Okafor, Ben Hart, Cleo Marsh and Dev Rao, shipping version 2.0 of their Atlas wallet app. The workspace is called Atlas, so screens read "Nil / Atlas" and task keys start with ATL. They have four projects, about eighty tasks with twelve weeks of history, goals, votes, tracked time, six docs with a comment thread, three chat channels and shared folders of design files, contracts and a video.
 
 ## Running it
 

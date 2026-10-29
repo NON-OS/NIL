@@ -7,7 +7,7 @@ import signIn from '../lib/signIn.mjs';
 async function create(page, { base, setupToken }) {
   await page.goto(base);
   await page.getByLabel('Setup token').fill(setupToken);
-  await page.getByLabel('Workspace name').fill('Northwind');
+  await page.getByLabel('Workspace name').fill('Atlas');
   await page.getByLabel('Your name').fill('Ada Okafor');
   await page.getByText('Crypto team').click();
   await page.getByRole('button', { name: 'Create workspace with your wallet' }).click();
@@ -21,7 +21,7 @@ async function join(page, base, token, name) {
   await page.locator('.view-head h1').waitFor();
 }
 
-// Ada makes the Northwind workspace through the setup screen and invites the others, who join
+// Ada makes the Atlas workspace through the setup screen and invites the others, who join
 // with their own wallets. Anyone already in the workspace just signs in.
 export default async function workspace(browser, server) {
   const { base } = server;

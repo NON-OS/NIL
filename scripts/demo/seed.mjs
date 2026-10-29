@@ -1,4 +1,4 @@
-// Fills the running demo server with the Northwind team's workspace, through real browsers with
+// Fills the running demo server with the Atlas team's workspace, through real browsers with
 // real wallets signing. Parts already there are skipped, so it is safe to run again.
 //
 //   npm run demo:seed [-- --only <assets|work|keys|docs|comments|chat|files>]
