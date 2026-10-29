@@ -9,8 +9,11 @@ import router from '../../lib/router';
 import cx from '../../lib/cx';
 
 // The short checklist on My work for whoever set up the workspace. Each step ticks itself
-// when it happens, wherever it happens; the card goes away once everything is done or it's
-// dismissed. A sample project can be added from here and taken away again in one click.
+// when it happens, wherever it happens; the card goes away once everything is done, once it's
+// dismissed, or once the team is plainly using the workspace already. A sample project can be
+// added from here while there's nothing real to look at, and taken away again in one click.
+const IN_USE = 25;
+
 export default function GettingStarted() {
   const state = useStore((s) => s.firstRun);
   const meId = useStore((s) => s.me?.id);
@@ -25,12 +28,14 @@ export default function GettingStarted() {
   }, []);
 
   const sampleId = state?.sample?.projectId;
+  const real = useMemo(() => Object.values(tasks).filter((t) => t.projectId !== sampleId), [tasks, sampleId]);
+  const hasProject = Object.values(projects).some((p) => p.id !== sampleId);
   const steps = useMemo(
     () => [
       {
         title: 'Create a project',
         detail: 'Group the tasks for one goal, like a launch or a hiring round.',
-        done: Object.values(projects).some((p) => p.id !== sampleId),
+        done: hasProject,
         run: () => setNewProject(true),
       },
       {
@@ -42,7 +47,7 @@ export default function GettingStarted() {
       {
         title: 'Add a task with quick add',
         detail: 'Press C anywhere and type naturally, like “Call the venue friday !high”.',
-        done: Boolean(state?.quickAdd),
+        done: Boolean(state?.quickAdd) || real.filter((t) => t.creatorId === meId).length >= 3,
         run: () => ui.quickAdd(),
       },
       {
@@ -52,7 +57,7 @@ export default function GettingStarted() {
         run: () => ui.quickAdd({ private: true }),
       },
     ],
-    [projects, tasks, people, meId, sampleId, state?.invited, state?.quickAdd],
+    [hasProject, real, tasks, people, meId, state?.invited, state?.quickAdd],
   );
 
   const sample = async (add: boolean) => {
@@ -74,7 +79,7 @@ export default function GettingStarted() {
         Remove sample project
       </button>
     </>
-  ) : (
+  ) : hasProject ? null : (
     <>
       <span>Want to look around first? A sample project has a website launch, an offsite and a hiring round.</span>
       <button type="button" className="btn btn-sm" disabled={busy} onClick={() => sample(true)}>
@@ -83,8 +88,8 @@ export default function GettingStarted() {
     </>
   );
 
-  // dismissed, or everything done: only a sample project still needs a way out
-  if (!state.active || (!left && !sampleId)) {
+  // dismissed, everything done or a team already at work: only a sample project still needs a way out
+  if (!state.active || (!left && !sampleId) || real.length >= IN_USE) {
     return sampleId ? <div className="getting-started-bar">{sampleControls}</div> : null;
   }
 
@@ -113,7 +118,7 @@ export default function GettingStarted() {
           </li>
         ))}
       </ol>
-      <div className="getting-started-sample">{sampleControls}</div>
+      {sampleControls && <div className="getting-started-sample">{sampleControls}</div>}
       {newProject && <ProjectModal onClose={() => setNewProject(false)} />}
     </section>
   );

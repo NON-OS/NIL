@@ -121,21 +121,31 @@
 
 .card-foot {
   display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
+/* the details wrap among themselves; the move button and the assignee stay on the right */
+.card-tags {
+  display: flex;
+  flex: 1;
   flex-wrap: wrap;
   align-items: center;
   gap: 6px 8px;
-  color: var(--muted);
-  font-size: var(--text-xs);
+  min-width: 0;
+  min-height: 22px;
+}
+
+.card-foot > span {
+  flex: none;
 }
 
 .card-foot .meta {
   display: inline-flex;
   align-items: center;
   gap: 3px;
-}
-
-.card-foot .grow {
-  flex: 1;
 }
 
 .card-viewers {

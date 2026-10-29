@@ -1,6 +1,6 @@
 import './Files.css';
 import { useMemo, useState } from 'react';
-import { Clock, FolderLock, FolderPlus, Lock, SearchX, ShieldAlert, Users } from 'lucide-react';
+import { Clock, Folder, FolderLock, FolderPlus, Lock, SearchX, ShieldAlert, Users } from 'lucide-react';
 import EmptyState from '../ui/EmptyState';
 import Spinner from '../ui/Spinner';
 import KeyNotice from '../keys/KeyNotice';
@@ -74,7 +74,7 @@ export default function FolderHome({ overview, error, onRetry }: Props) {
           {shown.map((f) => (
             <li key={f.id} className="files-tile files-folder-card">
               <a className="files-open" href={`/files/${f.id}`} onClick={router.link(`/files/${f.id}`)}>
-                <span className="files-art">{f.audience === 'team' ? <Users aria-hidden="true" /> : <FolderLock aria-hidden="true" />}</span>
+                <span className="files-art">{f.audience === 'team' ? <Folder aria-hidden="true" /> : <FolderLock aria-hidden="true" />}</span>
                 <span className="files-name">
                   <strong>{f.name}</strong>
                   <small>

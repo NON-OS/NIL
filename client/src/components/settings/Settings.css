@@ -31,9 +31,12 @@
 }
 
 .settings-tabs button[aria-selected='true'] {
-  background: var(--surface);
+  background: var(--accent-soft);
   color: var(--ink);
-  box-shadow: var(--shadow-1);
+}
+
+.settings-tabs button[aria-selected='true'] svg {
+  color: var(--accent-text);
 }
 
 .settings-tabs svg {

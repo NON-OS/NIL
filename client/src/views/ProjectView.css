@@ -54,7 +54,7 @@
 .view-switch button[aria-pressed='true'] {
   background: var(--surface);
   color: var(--ink);
-  box-shadow: var(--shadow-1);
+  box-shadow: 0 0 0 1px var(--line-strong);
 }
 
 .view-switch svg {

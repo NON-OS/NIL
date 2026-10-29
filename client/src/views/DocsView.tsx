@@ -131,7 +131,7 @@ export default function DocsView() {
               </Suspense>
             ) : (
               <div className="docs-locked">
-                <p className="muted">{list.docs.length ? 'Pick a doc, or start a new one.' : 'Start your first encrypted doc with the + button.'}</p>
+                <p className="muted">{list.docs.length ? 'Pick a doc, or start a new one.' : list.waiting.length ? 'Your team’s docs open once a teammate’s browser hands you their keys. Meanwhile, start one of your own with the + button.' : 'Start your first encrypted doc with the + button.'}</p>
               </div>
             )}
           </div>

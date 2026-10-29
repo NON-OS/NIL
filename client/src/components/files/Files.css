@@ -106,8 +106,8 @@
 
 .files-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 10px;
+  grid-template-columns: repeat(auto-fill, minmax(184px, 1fr));
+  gap: 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -170,6 +170,22 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
+}
+
+.files-art-icon {
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+}
+
+.files-ext {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+}
+
+.files-row .files-ext {
+  display: none;
 }
 
 .files-art.locked {

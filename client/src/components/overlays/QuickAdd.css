@@ -75,3 +75,9 @@
   color: var(--muted);
   font-size: var(--text-sm);
 }
+
+.quickadd-private-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}

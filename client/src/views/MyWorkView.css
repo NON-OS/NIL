@@ -122,3 +122,17 @@
     grid-column: 1 / -1;
   }
 }
+
+/* the My Day column is narrow: titles get two lines, and the project shows as its colour alone */
+.myday .line-title {
+  display: -webkit-box;
+  line-height: 1.35;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.myday .line-project {
+  gap: 0;
+  font-size: 0;
+}
