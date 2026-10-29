@@ -16,6 +16,7 @@ import callPeers from './callPeers';
 import callSfu from './callSfu';
 import callLifecycle from './callLifecycle';
 import callSignals from './callSignals';
+import callHistory from './callHistory';
 import ringNotice from './ringNotice';
 import type CallView from '../../types/CallView';
 
@@ -69,6 +70,7 @@ function drop(userId: string) {
 }
 
 function teardown() {
+  callHistory.ended(rt.active()?.phase === 'live');
   callLifecycle.stop();
   callSignals.clear();
   for (const userId of [...rt.links.keys()]) drop(userId);
@@ -96,6 +98,8 @@ function reconcile(view: CallView) {
     }
   }
   rt.patch(() => ({ view }));
+  callHistory.saw(view);
+  callHistory.camera(a.cam);
   if (a.phase !== 'live') return;
   if (view.mode === 'sfu') {
     for (const userId of [...rt.links.keys()]) drop(userId);
@@ -172,6 +176,7 @@ const callSession = {
       throw err;
     }
     callLifecycle.start();
+    callHistory.began(view, video);
     callSession.rejoin();
   },
 
@@ -205,8 +210,8 @@ const callSession = {
     if (a?.id !== callId) return;
     const wasIn = a.phase === 'live';
     teardown();
-    if (reason === 'full') return void toast.show('This call is full.', { tone: 'error' });
-    if (!wasIn) return void toast.show('That call has ended.', { tone: 'error' });
+    if (reason === 'full') return void toast.show(`This call is full: it holds ${callStore.get().settings?.maxPeers ?? 'no more'} people. Try again when someone leaves.`, { tone: 'error' });
+    if (!wasIn) return void toast.show('That call ended before you got in.', { tone: 'error' });
     // away longer than the call waits for anyone, as when a phone slept: the way back in
     toast.show('You were away from the call for too long, so you left it.', { tone: 'error', action: { label: 'Rejoin', run: () => void rejoinCall(callId) } });
   },
@@ -215,7 +220,7 @@ const callSession = {
   replaced(callId: string) {
     if (rt.active()?.id !== callId) return;
     teardown();
-    toast.show('This call moved to another tab.');
+    toast.show('This call moved to another tab of yours.', { action: { label: 'Bring it here', run: () => void rejoinCall(callId) } });
   },
 
   // ends the call here, and tells the server this tab is out of it

@@ -1,4 +1,6 @@
 import './Calls.css';
+import './CallTiles.css';
+import './CallBar.css';
 import { useEffect } from 'react';
 import CallScreen from './CallScreen';
 import CallAudio from './CallAudio';

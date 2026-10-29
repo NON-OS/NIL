@@ -18,19 +18,23 @@ import useMediaQuery from '../../hooks/useMediaQuery';
 import type ActiveCall from '../../types/ActiveCall';
 
 const mod = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform) ? '⌘' : 'Ctrl+';
+const shortcut = (keys?: string) => (keys ? keys.split(' ')[0].replace('Control+', mod).replace('Escape', 'Esc') : '');
 
-// The label says what a button will do, so it carries the state for screen readers; `on` fills
-// it in cyan, and `muted` marks a microphone or camera that's off in red, so nobody talks into
-// a muted call by mistake.
-function Control({ label, keys, on, muted, danger, onClick, children, disabled }: { label: string; keys?: string; on?: boolean; muted?: boolean; danger?: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
+// One round button. Its label says what it will do and shows on hover and focus, with the
+// shortcut; `off` fills a microphone or camera that's off in white, and `on` fills what you're
+// doing, like sharing your screen, in cyan.
+function Control({ label, keys, on, off, onClick, children, disabled }: { label: string; keys?: string; on?: boolean; off?: boolean; onClick: () => void; children: React.ReactNode; disabled?: boolean }) {
+  const tip = keys ? `${label} · ${shortcut(keys)}` : label;
   return (
-    <button type="button" className={cx('call-control', on && 'on', muted && 'off', danger && 'danger')} onClick={onClick} aria-label={label} aria-keyshortcuts={keys} title={keys ? `${label} (${keys.replace('Control+', mod).replace('Meta+', mod)})` : label} disabled={disabled}>
+    <button type="button" className={cx('call-control', on && 'on', off && 'off')} onClick={onClick} aria-label={label} aria-keyshortcuts={keys} data-tip={tip} disabled={disabled}>
       {children}
     </button>
   );
 }
 
-// The buttons along the bottom of a call.
+// The buttons along the bottom of a call: your microphone and camera, what you can do in the
+// call, and leaving it. On a phone the middle group sits behind one button, so the bar stays one
+// row within reach of a thumb.
 export default function CallControls({ call, onPip }: { call: ActiveCall; onPip: (() => void) | null }) {
   const users = useStore((s) => s.users);
   const me = useStore((s) => s.me?.id);
@@ -49,38 +53,40 @@ export default function CallControls({ call, onPip }: { call: ActiveCall; onPip:
     [users, me, call.view],
   );
 
-  const invite = (userId: string) => callApi.invite(call.id, [userId]).then((r) => toast.show(r.rung.length ? `Calling ${users[userId]?.name ?? 'them'}…` : 'They can’t be added to this call.'), toast.error);
+  const invite = (userId: string) => callApi.invite(call.id, [userId]).then((r) => toast.show(r.rung.length ? `Calling ${users[userId]?.name ?? 'them'}…` : `${users[userId]?.name ?? 'They'} can’t be added to this call right now.`), toast.error);
 
-  const more = [
+  const tools = [
     localMedia.canShareScreen() && { label: call.screen ? 'Stop sharing your screen' : 'Share your screen', keys: 'S', on: call.screen, icon: <MonitorUp />, run: () => void callMedia.toggleScreen() },
     { label: call.layout === 'grid' ? 'Speaker layout' : 'Grid layout', keys: 'L', icon: call.layout === 'grid' ? <Rows3 /> : <LayoutGrid />, run: () => callRuntime.patch((a) => ({ layout: a.layout === 'grid' ? 'speaker' : 'grid', pinned: null })) },
     { label: 'Microphone, camera and speaker', icon: <Settings2 />, run: () => callStore.set({ devices: { open: true, join: null } }) },
     onPip && { label: 'Picture in picture', keys: 'P', icon: <PictureInPicture2 />, run: onPip },
-    { label: 'Minimize the call', keys: 'Escape', icon: <Minimize2 />, run: () => callRuntime.patch(() => ({ minimized: true })) },
   ].filter((c): c is Exclude<typeof c, false | null> => Boolean(c));
+  const minimize = { label: 'Minimize the call', keys: 'Escape', icon: <Minimize2 />, run: () => callRuntime.patch(() => ({ minimized: true })) };
+  const add = room > 0 && people.length > 0 && (
+    <Picker options={people} value={null} onChange={(id) => void invite(id)} title="Add someone to the call" className="call-control" align="start">
+      <UserPlus />
+    </Picker>
+  );
 
   return (
     <div className="call-controls" role="toolbar" aria-label="Call controls">
-      <Control label={call.mic ? 'Mute' : 'Unmute'} keys="Control+D Meta+D" on={call.mic} muted={!call.mic} onClick={callMedia.toggleMic}>
-        {call.mic ? <Mic /> : <MicOff />}
-      </Control>
-      <Control label={call.cam ? 'Turn camera off' : 'Turn camera on'} keys="Control+E Meta+E" on={call.cam} muted={!call.cam} onClick={() => void callMedia.toggleCam()}>
-        {call.cam ? <Video /> : <VideoOff />}
-      </Control>
-      {room > 0 && people.length > 0 && (
-        <Picker options={people} value={null} onChange={(id) => void invite(id)} title="Add someone to the call" className="call-control" align="start">
-          <UserPlus />
-        </Picker>
-      )}
-      {/* on a phone the rest sit behind one button, so the bar stays one row */}
+      <div className="call-controls-group">
+        <Control label={call.mic ? 'Mute' : 'Unmute'} keys="Control+D Meta+D" off={!call.mic} onClick={callMedia.toggleMic}>
+          {call.mic ? <Mic /> : <MicOff />}
+        </Control>
+        <Control label={call.cam ? 'Turn camera off' : 'Turn camera on'} keys="Control+E Meta+E" off={!call.cam} onClick={() => void callMedia.toggleCam()}>
+          {call.cam ? <Video /> : <VideoOff />}
+        </Control>
+      </div>
       {phone ? (
-        <>
+        <div className="call-controls-group">
+          {add}
           <button ref={moreRef} type="button" className="call-control" onClick={() => setOpen((o) => !o)} aria-label="More call controls" aria-haspopup="true" aria-expanded={open}>
             <Ellipsis />
           </button>
           <Popover anchor={moreRef} open={open} onClose={() => setOpen(false)} width={260} align="end">
             <div className="call-menu">
-              {more.map((c) => (
+              {[...tools, minimize].map((c) => (
                 <button
                   key={c.label}
                   type="button"
@@ -95,17 +101,27 @@ export default function CallControls({ call, onPip }: { call: ActiveCall; onPip:
               ))}
             </div>
           </Popover>
-        </>
+        </div>
       ) : (
-        more.map((c) => (
-          <Control key={c.label} label={c.label} keys={c.keys} on={'on' in c ? c.on : undefined} onClick={c.run}>
-            {c.icon}
-          </Control>
-        ))
+        <div className="call-controls-group">
+          {tools.map((c) => (
+            <Control key={c.label} label={c.label} keys={c.keys} on={'on' in c ? c.on : undefined} onClick={c.run}>
+              {c.icon}
+            </Control>
+          ))}
+          {add}
+        </div>
       )}
-      <Control label="Leave the call" danger onClick={callSession.leave}>
-        <PhoneOff />
-      </Control>
+      <div className="call-controls-group">
+        {!phone && (
+          <Control label={minimize.label} keys={minimize.keys} onClick={minimize.run}>
+            {minimize.icon}
+          </Control>
+        )}
+        <button type="button" className="call-leave" onClick={callSession.leave} aria-label="Leave the call" data-tip="Leave the call">
+          <PhoneOff /> <span className="call-leave-word">Leave</span>
+        </button>
+      </div>
     </div>
   );
 }

@@ -11,8 +11,10 @@ import callSession from '../../actions/calls/callSession';
 import callRuntime from '../../actions/calls/callRuntime';
 import ringNotice from '../../actions/calls/ringNotice';
 import callApi from '../../actions/calls/callApi';
+import callHistory from '../../actions/calls/callHistory';
 
-// A call ringing this person: who's calling, and answer with sound only, with video, or decline.
+// A call ringing this person: who's calling and from where, and three answers within reach of a
+// thumb: decline, answer with sound only, or answer with video.
 export default function IncomingCall({ callId }: { callId: string }) {
   const view = useCallStore((s) => s.live[callId]);
   const caller = useStore((s) => (view ? s.users[view.startedBy] : undefined));
@@ -38,40 +40,44 @@ export default function IncomingCall({ callId }: { callId: string }) {
     }
   };
 
-  const block = () => {
-    decline();
-    void callApi.setBlocks({ block: view.startedBy }).then(() => toast.show(`${name} can’t ring you any more. Change that on the Calls page.`), toast.error);
-  };
-
   const decline = () => {
+    callHistory.rang(view, 'declined');
     socket.call({ type: 'call.decline', callId });
     ringNotice.stop(callId);
     callStore.set((s) => ({ ringing: s.ringing.filter((id) => id !== callId) }));
   };
 
+  const block = () => {
+    decline();
+    void callApi.setBlocks({ block: view.startedBy }).then(() => toast.show(`${name} can’t ring you any more. You can change that on the Calls page.`), toast.error);
+  };
+
   return (
     <section className="call-ring" role="dialog" aria-labelledby={`ring-${callId}`} aria-describedby={`ring-${callId}-sub`}>
-      <Avatar user={caller} size={40} />
-      <div className="call-ring-text">
-        <strong id={`ring-${callId}`}>{name}</strong>
-        <span id={`ring-${callId}-sub`}>
-          {project ? `is calling from ${project.name}` : others > 1 ? `is calling you and ${others - 1} more` : 'is calling you'}
-        </span>
+      <div className="call-ring-who">
+        <Avatar user={caller} size={48} />
+        <div className="call-ring-text">
+          <strong id={`ring-${callId}`}>{name}</strong>
+          <span id={`ring-${callId}-sub`}>{project ? `Calling from ${project.name}` : others > 1 ? `Calling you and ${others - 1} more` : 'Calling you'}</span>
+        </div>
+      </div>
+      <div className="call-ring-actions">
+        <button type="button" className="call-ring-btn decline" onClick={decline} aria-label={`Decline the call from ${name}`} disabled={busy !== null}>
+          <PhoneOff aria-hidden="true" />
+          <span>Decline</span>
+        </button>
+        <button type="button" className="call-ring-btn answer" onClick={() => void answer(false)} aria-label={`Answer ${name} with sound only`} disabled={busy !== null}>
+          {busy === 'audio' ? <Spinner size={18} /> : <Phone aria-hidden="true" />}
+          <span>Audio</span>
+        </button>
+        <button type="button" className="call-ring-btn answer" onClick={() => void answer(true)} aria-label={`Answer ${name} with video`} disabled={busy !== null}>
+          {busy === 'video' ? <Spinner size={18} /> : <Video aria-hidden="true" />}
+          <span>Video</span>
+        </button>
       </div>
       <button type="button" className="call-ring-block" onClick={block} disabled={busy !== null}>
         Don’t let {name} ring me
       </button>
-      <div className="call-ring-actions">
-        <button type="button" className="call-control small danger" onClick={decline} aria-label={`Decline the call from ${name}`} disabled={busy !== null}>
-          <PhoneOff />
-        </button>
-        <button type="button" className="call-control small answer" onClick={() => void answer(false)} aria-label={`Answer ${name} with sound only`} disabled={busy !== null}>
-          {busy === 'audio' ? <Spinner size={16} /> : <Phone />}
-        </button>
-        <button type="button" className="call-control small answer" onClick={() => void answer(true)} aria-label={`Answer ${name} with video`} disabled={busy !== null}>
-          {busy === 'video' ? <Spinner size={16} /> : <Video />}
-        </button>
-      </div>
     </section>
   );
 }

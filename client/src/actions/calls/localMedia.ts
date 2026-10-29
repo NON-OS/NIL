@@ -61,10 +61,10 @@ const localMedia = {
   // What went wrong opening a device, in words a person can act on.
   problem(err: unknown, what: 'microphone' | 'camera' | 'screen') {
     const name = err instanceof DOMException ? err.name : '';
-    if (name === 'NotAllowedError' || name === 'SecurityError') return what === 'screen' ? null : `Nil isn’t allowed to use your ${what}. Allow it in your browser’s site settings.`;
-    if (name === 'NotFoundError' || name === 'OverconstrainedError') return `No ${what} was found.`;
-    if (name === 'NotReadableError') return `Your ${what} is in use by another app.`;
-    return `Your ${what} couldn’t be opened.`;
+    if (name === 'NotAllowedError' || name === 'SecurityError') return what === 'screen' ? null : `Nil isn’t allowed to use your ${what}. Click the lock or settings icon next to the address bar, allow the ${what} for this site, then try again.`;
+    if (name === 'NotFoundError' || name === 'OverconstrainedError') return what === 'screen' ? 'No screen was found.' : `No ${what} was found. Plug one in, or pick another under Microphone, camera and speaker.`;
+    if (name === 'NotReadableError') return `Your ${what} is in use by another app. Close that app, or pick another ${what}, then try again.`;
+    return `Your ${what} couldn’t be opened. Check it’s connected and try again.`;
   },
 };
 

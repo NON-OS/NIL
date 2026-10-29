@@ -1,22 +1,13 @@
-import { MicOff, Pin, PinOff, RefreshCw } from 'lucide-react';
+import { useCallback, useState } from 'react';
+import { MicOff, Pin, PinOff } from 'lucide-react';
 import Avatar from '../ui/Avatar';
-import Spinner from '../ui/Spinner';
 import VideoView from './VideoView';
 import TrustBadge from './TrustBadge';
 import QualityBars from './QualityBars';
+import TileTrouble from './TileTrouble';
 import useStore from '../../state/useStore';
 import cx from '../../lib/cx';
-import callSession from '../../actions/calls/callSession';
-import confirmKeys from '../../actions/confirmKeys';
 import type CallPeer from '../../types/CallPeer';
-
-const REFUSED: Record<string, string> = {
-  'no-key': 'hasn’t set up encryption keys, so Nil can’t check this connection is theirs.',
-  theirs: 'Their browser couldn’t verify this connection and refused it.',
-  forged: 'The connection wasn’t signed with the key you hold for them, so Nil refused it.',
-  tampered: 'The connection details were changed on the way, so Nil refused it.',
-  frames: 'Frames arrived in their name that they didn’t send, so Nil stopped showing them for this call.',
-};
 
 interface Props {
   userId: string;
@@ -30,73 +21,45 @@ interface Props {
   pinned?: boolean;
   onPin?: () => void;
   videoRef?: (el: HTMLVideoElement | null) => void;
-  // a tile in the strip or the corner, with a smaller picture when there's no video
+  // a tile in the strip or the corner: a smaller face, and the name only
   compact?: boolean;
+  style?: React.CSSProperties;
 }
 
-// One person, or one shared screen, in the call.
-export default function CallTile({ userId, peer, stream, video, mic, speaking, screen = false, pinned = false, onPin, videoRef, compact = false }: Props) {
+// One person, or one shared screen, in the call: their picture, or their face until a picture
+// arrives, with a name plate saying whether they're muted, whose key it is and how the
+// connection is doing.
+export default function CallTile({ userId, peer, stream, video, mic, speaking, screen = false, pinned = false, onPin, videoRef, compact = false, style }: Props) {
   const user = useStore((s) => s.users[userId]);
   const me = useStore((s) => s.me?.id === userId);
+  const [showing, setShowing] = useState(false);
+  const onShowing = useCallback((on: boolean) => setShowing(on), []);
   const name = me ? 'You' : user?.name ?? 'Someone';
   const label = screen ? `${me ? 'Your' : `${name}’s`} screen` : name;
-  const trouble = peer && peer.link !== 'connected';
+  const picture = video && stream;
+  // waiting on them: they haven't let this person see or hear them yet
+  const waiting = peer && peer.holding && !screen && peer.link !== 'refused';
 
   return (
-    <figure className={cx('call-tile', speaking && !screen && 'speaking', screen && 'screen')} aria-label={label}>
-      {video && stream ? <VideoView stream={stream} mirror={me && !screen} fit={screen ? 'contain' : 'cover'} videoRef={videoRef} /> : <Avatar user={user} size={compact ? 36 : 72} />}
-      {trouble && peer.link !== 'refused' && (
-        <div className="call-tile-state" role="status">
-          {peer.link === 'lost' ? <RefreshCw aria-hidden="true" /> : <Spinner size={18} />}
-          <span>{peer.link === 'connecting' ? 'Connecting…' : peer.link === 'lost' ? 'Connection lost. Still trying…' : 'Reconnecting…'}</span>
+    <figure className={cx('call-tile', speaking && !screen && 'speaking', screen && 'screen', compact && 'compact', picture && showing && 'live')} aria-label={label} style={style}>
+      {picture && <VideoView stream={stream} mirror={me && !screen} fit={screen ? 'contain' : 'cover'} videoRef={videoRef} onShowing={onShowing} />}
+      {!(picture && showing) && (
+        <div className="call-tile-face">
+          <Avatar user={user} size={compact ? 44 : 88} />
+          {!compact && waiting && <p className="call-tile-note">Waiting for {name} to check your key</p>}
+          {!compact && !waiting && picture && !screen && peer?.link === 'connected' && <p className="call-tile-note">Waiting for {name}’s picture…</p>}
         </div>
       )}
-      {peer && peer.held && !screen && peer.link !== 'refused' && (
-        <div className="call-held" role="status">
-          <p>{compact ? 'Can’t hear you yet' : `${name} can’t see or hear you yet: you haven’t confirmed their key.`}</p>
-          {!compact && (
-            <div className="call-tile-actions">
-              {peer.trust !== 'none' && (
-                <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show([userId], 'this call')}>
-                  Check their keys
-                </button>
-              )}
-              <button type="button" className="btn btn-sm" onClick={() => callSession.allow(userId)}>
-                Talk anyway
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-      {peer && !peer.held && peer.holding && !screen && <p className="call-held-them">Waiting for {name} to check your key</p>}
-      {peer?.link === 'refused' && (
-        <div className="call-tile-state refused" role="alert">
-          <p>
-            {peer.refusal === 'no-key' ? `${name} ` : ''}
-            {REFUSED[peer.refusal ?? ''] ?? 'Nil couldn’t verify this connection, so it refused it.'}
-          </p>
-          <div className="call-tile-actions">
-            {peer.refusal !== 'no-key' && (
-              <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show([userId], 'this call')}>
-                Check their keys
-              </button>
-            )}
-            {peer.refusal !== 'frames' && (
-              <button type="button" className="btn btn-sm" onClick={() => callSession.retry(userId)}>
-                Try again
-              </button>
-            )}
-          </div>
-        </div>
-      )}
+      {peer && !screen && <TileTrouble peer={peer} name={name} compact={compact} />}
       <figcaption className="call-tile-name">
-        {!mic && !screen && <MicOff aria-label="Muted" />}
-        <span>{label}</span>
-        {peer && !screen && <TrustBadge peer={peer} name={name} />}
+        {!mic && !screen && <MicOff className="call-tile-muted" aria-label="Muted" />}
+        <span className="call-tile-label">{label}</span>
+        {peer && !screen && !compact && <TrustBadge peer={peer} name={name} />}
+        {peer && peer.held && !screen && peer.link !== 'refused' && <span className="call-tile-chip">Can’t hear you</span>}
         {peer && !screen && peer.link === 'connected' && <QualityBars quality={peer.quality} />}
       </figcaption>
       {onPin && !compact && (
-        <button type="button" className="icon-btn call-pin" onClick={onPin} aria-pressed={pinned} aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`}>
+        <button type="button" className="call-pin" onClick={onPin} aria-pressed={pinned} aria-label={pinned ? `Unpin ${label}` : `Pin ${label}`} title={pinned ? 'Unpin' : 'Pin'}>
           {pinned ? <PinOff /> : <Pin />}
         </button>
       )}

@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { CameraOff, TriangleAlert } from 'lucide-react';
 import Modal from '../ui/Modal';
 import Spinner from '../ui/Spinner';
 import VideoView from './VideoView';
@@ -126,20 +127,38 @@ export default function DeviceCheck() {
       }
     >
       <div className="modal-body call-check">
-        <div className="call-preview">{showVideo && stream?.getVideoTracks().length ? <VideoView stream={stream} mirror /> : <span>{problem ?? (showVideo ? 'Starting your camera…' : 'Camera off')}</span>}</div>
-        <label className="call-meter">
-          <span>Microphone level</span>
-          <meter min={0} max={1} low={0.05} value={level} />
-        </label>
+        <div className="call-preview">
+          {showVideo && stream?.getVideoTracks().length ? (
+            <VideoView stream={stream} mirror />
+          ) : problem ? (
+            <p className="call-preview-note bad" role="alert">
+              <TriangleAlert aria-hidden="true" />
+              {problem}
+            </p>
+          ) : (
+            <p className="call-preview-note">
+              {showVideo ? <Spinner size={18} /> : <CameraOff aria-hidden="true" />}
+              {showVideo ? 'Starting your camera…' : join ? 'Your camera stays off. Turn it on below to join with video.' : 'Your camera is off.'}
+            </p>
+          )}
+        </div>
+        <div className="call-meter">
+          <span id="call-meter-label">{level > 0.05 ? 'Your microphone hears you' : 'Say something to check your microphone'}</span>
+          <div className="call-meter-bar" role="meter" aria-labelledby="call-meter-label" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(level * 100)}>
+            <span style={{ width: `${Math.round(level * 100)}%` }} />
+          </div>
+        </div>
         {join && (
           <label className="filter-toggle">
             <span>Join with your camera on</span>
             <button type="button" className="toggle" role="switch" aria-checked={video} onClick={() => setVideo((v) => !v)} aria-label="Join with your camera on" />
           </label>
         )}
-        {select('mic', 'Microphone', devices.mics)}
-        {select('cam', 'Camera', devices.cams)}
-        {localMedia.canPickSpeaker() && select('speaker', 'Speaker', devices.speakers)}
+        <div className="call-check-fields">
+          {select('mic', 'Microphone', devices.mics)}
+          {select('cam', 'Camera', devices.cams)}
+          {localMedia.canPickSpeaker() && select('speaker', 'Speaker', devices.speakers)}
+        </div>
       </div>
     </Modal>
   );

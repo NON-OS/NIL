@@ -1,5 +1,8 @@
 import callStore from '../../state/callStore';
 import ringNotice from './ringNotice';
+import callHistory from './callHistory';
+import store from '../../state/store';
+import toast from '../../state/toast';
 import type CallView from '../../types/CallView';
 
 // the connection code loads the first time a call needs it, not with the app
@@ -7,13 +10,23 @@ let loading: Promise<typeof import('./callSession').default> | null = null;
 const engine = () => (loading ??= import('./callSession').then((m) => m.default));
 
 const isView = (v: any): v is CallView => typeof v?.id === 'string' && Array.isArray(v.members) && Array.isArray(v.ringing) && (v.kind === 'person' || v.kind === 'project');
+let limited: string | null = null;
 const inCall = (callId: unknown) => callStore.get().active?.id === callId;
 
 function put(call: CallView) {
   callStore.set((s) => ({ live: { ...s.live, [call.id]: call } }));
 }
 
+// a call that stopped ringing here without this person in it: missed, unless declined here
+function unanswered(callId: string) {
+  const view = callStore.get().live[callId];
+  const me = store.get().me?.id;
+  if (!view || !callStore.get().ringing.includes(callId) || view.members.some((m) => m.userId === me)) return;
+  callHistory.rang(view, 'missed');
+}
+
 function forget(callId: string) {
+  unanswered(callId);
   ringNotice.stop(callId);
   callStore.set((s) => ({ live: Object.fromEntries(Object.entries(s.live).filter(([id]) => id !== callId)), ringing: s.ringing.filter((id) => id !== callId) }));
 }
@@ -34,6 +47,7 @@ export default function callEvents(event: any) {
       ringNotice.start(event.call.id);
       break;
     case 'call.ring.end':
+      unanswered(event.callId);
       ringNotice.stop(event.callId);
       callStore.set((s) => ({ ringing: s.ringing.filter((id) => id !== event.callId) }));
       break;
@@ -54,6 +68,12 @@ export default function callEvents(event: any) {
       break;
     case 'call.declined':
       if (inCall(event.callId)) void engine().then((s) => s.declined(event.callId, event.userId));
+      break;
+    case 'call.limited':
+      // said once a call: the server drops what's over the limit, and the handshake retries
+      if (!inCall(event.callId) || limited === event.callId) return;
+      limited = event.callId;
+      toast.show('Your browser sent the call more than the server allows in a minute, so some of it was dropped. If someone stops connecting, wait a moment and they’ll try again.', { tone: 'error' });
       break;
     case 'call.replaced':
       void engine().then((s) => s.replaced(event.callId));
