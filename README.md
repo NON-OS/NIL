@@ -19,7 +19,7 @@
 
 <p align="center">
   <a href="https://github.com/NON-OS/NIL/actions/workflows/ci.yml"><img src="https://github.com/NON-OS/NIL/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
-  <img src="https://img.shields.io/badge/version-3.0.0-0A0B0D" alt="Version 3.0.0">
+  <img src="https://img.shields.io/badge/version-4.0.0-0A0B0D" alt="Version 4.0.0">
   <img src="https://img.shields.io/badge/licence-BSL%201.1-0A0B0D" alt="Licence: BSL 1.1">
   <img src="https://img.shields.io/badge/proofs-Lean%204-007C85" alt="Proofs in Lean 4">
 </p>

@@ -11,7 +11,7 @@ You need Node.js 22, git and about two minutes. Get the source at the release th
 ```bash
 git clone https://github.com/NON-OS/NIL.git nil-check
 cd nil-check
-git checkout v3.0.0
+git checkout v4.0.0
 npm ci
 npm run build
 npm run verify:server -- https://nonos.nil.nonos.app
@@ -22,7 +22,7 @@ The check prints the release hash of the build you just made. Then it asks the s
 If you'd rather not build, compare with the manifest published for the release:
 
 ```bash
-npm run verify:server -- https://nonos.nil.nonos.app --manifest release/web-3.0.0.json
+npm run verify:server -- https://nonos.nil.nonos.app --manifest release/web-4.0.0.json
 ```
 
 That trusts the manifest instead of your own build. Building is the stronger check, because then you rely on nothing but source code you can read.
@@ -60,7 +60,7 @@ Commit the manifest, tag the release, and put the printed hash in the release no
 The Docker image builds the web app the same way, from the pinned base image and the lockfile. `deploy/release.sh` builds it from the committed tree only (`git archive` of the tagged commit), so a stray file in `client/public` or `docs` on the release machine can't end up in it. To confirm an image carries the release, copy its build out and hash it:
 
 ```bash
-docker create --name nil-image localhost/nonos/nil:3.0.0
+docker create --name nil-image localhost/nonos/nil:4.0.0
 docker cp nil-image:/app/dist image-dist
 docker rm nil-image
 npm run release:manifest -- --dist image-dist

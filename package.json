@@ -1,6 +1,6 @@
 {
   "name": "nonos",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "private": true,
   "description": "NØNOS: a self-hosted team workspace with wallet-only sign-in, end-to-end encrypted docs, bounties and votes in NOX, and signed proof of work.",
   "type": "module",

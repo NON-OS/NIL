@@ -2,7 +2,7 @@
 
 All notable changes to Nil, the task app made by NØNOS, are listed here, newest first. Versions up to 3.0.0 were released under the NØNOS name.
 
-## Unreleased
+## 4.0.0 (2026-10-29)
 
 ### Docs v2
 
