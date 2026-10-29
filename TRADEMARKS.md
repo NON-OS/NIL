@@ -15,6 +15,6 @@ Nil's code is available under the [Business Source License 1.1](LICENSE), which 
 - Using either logo in your product, website, app store listing or marketing.
 - Suggesting that the NØNOS foundation made, checked or endorses your version.
 
-Running Nil in production, hosting it for others or publishing a fork needs a license from NØNOS under the Business Source License, whatever it is called. A version that has reached its Change Date may be forked under the Change License, but not under our names or logos.
+Running Nil for your own organization is allowed under the Business Source License's additional use grant. Hosting it for others, selling access to it or offering a fork as a service needs a license from NØNOS, whatever it is called. A version that has reached its Change Date may be forked under the Change License, but not under our names or logos.
 
 To ask for permission, open an issue in this repository.

@@ -122,10 +122,56 @@ async function page(event) {
   }
 }
 
+// ---------------------------------------------------------------------------------------------
+// Video and sound from Files, played as they arrive. The player asks for a range of bytes; this
+// worker asks the page that opened the file, which fetches and decrypts only the chunks covering
+// it, checks them against what the uploader signed, and hands the bytes back. Keys stay in the
+// page, nothing is stored, and a stream's name works only for the page that made it.
+// ---------------------------------------------------------------------------------------------
+const STREAM = '/__nil/stream/';
+// how long a page has to answer before the player is told the range isn't there
+const STREAM_WAIT = 60000;
+
+async function stream(event) {
+  const token = new URL(event.request.url).pathname.slice(STREAM.length);
+  const client = event.clientId ? await self.clients.get(event.clientId) : null;
+  if (!client || !/^[A-Za-z0-9_-]{16,64}$/.test(token)) return new Response(null, { status: 404 });
+  const range = /^bytes=(\d+)-(\d*)$/.exec(event.request.headers.get('Range') || 'bytes=0-');
+  if (!range) return new Response(null, { status: 416 });
+  const start = Number(range[1]);
+  const reply = await new Promise((resolve) => {
+    const channel = new MessageChannel();
+    const timer = setTimeout(() => resolve(null), STREAM_WAIT);
+    channel.port1.onmessage = (e) => {
+      clearTimeout(timer);
+      resolve(e.data);
+    };
+    client.postMessage({ type: 'nil:stream', token, start, end: range[2] ? Number(range[2]) : null }, [channel.port2]);
+  });
+  if (!reply || !reply.bytes) {
+    const status = reply?.status || 404;
+    return new Response(null, { status, headers: status === 416 && reply.total ? { 'Content-Range': `bytes */${reply.total}` } : {} });
+  }
+  const end = start + reply.bytes.byteLength - 1;
+  return new Response(reply.bytes, {
+    status: 206,
+    headers: { 'Content-Type': reply.type, 'Content-Range': `bytes ${start}-${end}/${reply.total}`, 'Content-Length': String(reply.bytes.byteLength), 'Accept-Ranges': 'bytes', 'Cache-Control': 'no-store' },
+  });
+}
+
+// a page asking whether this worker streams, before it relies on it
+self.addEventListener('message', (event) => {
+  if (event.data?.type === 'nil:stream-ping') event.ports[0]?.postMessage('nil:stream-ready');
+});
+
 self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   if (request.method !== 'GET' || url.origin !== self.location.origin) return;
+  if (url.pathname.startsWith(STREAM)) {
+    event.respondWith(stream(event));
+    return;
+  }
   if (url.pathname.startsWith('/api/') || url.pathname === '/ws' || url.pathname.startsWith('/.well-known/')) return;
 
   if (url.pathname.startsWith('/assets/')) {
@@ -155,7 +201,9 @@ self.addEventListener('push', (event) => {
       body: text(message.body),
       tag: text(message.tag) || undefined,
       icon: '/icons/icon-192.png',
-      data: { task: text(message.task) || null },
+      // a ring stays up until it's answered or replaced by "Missed call"
+      requireInteraction: Boolean(text(message.call)),
+      data: { task: text(message.task) || null, chat: message.chat === true, call: text(message.call) || null },
     }),
   );
 });
@@ -164,13 +212,19 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   const taskId = event.notification.data?.task ?? null;
-  const url = taskId ? `/?open-task=${encodeURIComponent(taskId)}` : '/inbox';
+  // a chat message's push names nothing, so it opens chat itself
+  const chat = event.notification.data?.chat === true;
+  const callId = event.notification.data?.call ?? null;
+  // a ring or a missed call opens the Calls page, where a ring waits to be answered
+  const call = Boolean(callId) || String(event.notification.tag || '').startsWith('nil-call-');
+  const url = call ? `/calls${callId ? `?call=${encodeURIComponent(callId)}` : ''}` : chat ? '/chat' : taskId ? `/?open-task=${encodeURIComponent(taskId)}` : '/inbox';
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (windows) => {
       const open = windows.find((w) => new URL(w.url).origin === self.location.origin);
       if (!open) return self.clients.openWindow(url);
       await open.focus();
-      open.postMessage({ type: 'nil:open', taskId });
+      if (call) open.postMessage({ type: 'nil:call', callId });
+      else open.postMessage({ type: 'nil:open', taskId, chat });
     }),
   );
 });

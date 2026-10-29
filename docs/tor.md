@@ -54,3 +54,7 @@ An Ethereum wallet is the only way to sign in to Nil. There are no passwords or 
 - The onion service hides where the server is from its visitors. The server's own outgoing requests, to the Ethereum node in `NOX_RPC_URL`, to the AI provider if built-in AI is on, and to the browser makers' push services (`PUSH_SERVICES`) once someone turns on push notifications, still leave over the normal network. `PUSH_NOTIFICATIONS=off` keeps the server from contacting a push service at all. An onion server must name its own node in `NOX_RPC_URL` (or `off`): there is no public default, because a public node would see every address the server looks up, and from where.
 - Leave `TRUST_PROXY` empty. Tor adds no forwarded headers, and nothing else sits in front of Nil.
 - The Tor compose file stops publishing Nil's port, so the server answers only through Tor. The deployment guide shows how to run it next to HTTPS.
+
+## Calls
+
+Calls don't work over Tor: Tor carries TCP only, and a call needs UDP and a path between the browsers in it. `docker-compose.tor.yml` turns calls off, and Nil turns them off by itself whenever `APP_URL` is an .onion address, so nobody is offered a call that would reach around Tor. The Calls page says so. A server reached over Tor and over HTTPS at once, with a separate `APP_URL` for HTTPS, can't offer calls either while it runs with `docker-compose.tor.yml`.

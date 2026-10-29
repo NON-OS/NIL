@@ -10,6 +10,7 @@ import signingKey from '../proofs/signingKey.js';
 import billingTables from '../billing/billingTables.js';
 import billingState from '../billing/billingState.js';
 import secretBox from '../agents/secretBox.js';
+import dropCallRows from '../calls/dropCallRows.js';
 import checkCapsule from './checkCapsule.js';
 
 const STAGED = '.restoring';
@@ -76,6 +77,7 @@ function copyRows(file, tables) {
         // everyone signs in again on the new server, and turns push on again there
         db.exec('DELETE FROM main.sessions');
         db.exec('DELETE FROM main.push_subscriptions');
+        dropCallRows(db);
       });
       emptySearchIndex();
       db.exec('UPDATE main.tasks SET number = number');

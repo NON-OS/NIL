@@ -56,10 +56,13 @@ export default function createApp() {
 
   // Uploads stream as raw bytes; everything else in the API is JSON.
   const json = express.json({ limit: config.maxJsonBytes, verify: jsonDepthLimit(config.maxJsonDepth) });
+  // a doc's versions carry the whole doc, so creating, saving and re-keying one may send more
+  const docJson = express.json({ limit: config.docs.titleMaxChars + config.docs.bodyMaxChars + 256 * 1024, verify: jsonDepthLimit(config.maxJsonDepth) });
+  const isDocVersion = (req) => (req.method === 'POST' && /^\/docs(\/[^/]+\/rotate)?$/.test(req.path)) || (req.method === 'PUT' && /^\/docs\/[^/]+$/.test(req.path));
   const isUpload = (req) =>
     (req.method === 'POST' && (/^\/tasks\/[^/]+\/attachments$/.test(req.path) || req.path === '/auth/restore')) ||
-    (req.method === 'PUT' && /^\/attachments\/[^/]+\/content$/.test(req.path));
-  app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : json(req, res, next)), csrfGuard, api);
+    (req.method === 'PUT' && (/^\/attachments\/[^/]+\/content$/.test(req.path) || /^\/blobs\/[^/]+\/chunks\/[^/]+$/.test(req.path)));
+  app.use('/api', noStore, (req, res, next) => (isUpload(req) ? next() : (isDocVersion(req) ? docJson : json)(req, res, next)), csrfGuard, api);
 
   if (fs.existsSync(DIST)) {
     serveWebApp(app, DIST);
@@ -68,7 +71,7 @@ export default function createApp() {
   }
 
   app.use((err, req, res, next) => {
-    if (err?.type === 'entity.too.large') return res.status(413).json({ error: 'That file is too large.' });
+    if (err?.type === 'entity.too.large') return res.status(413).json({ error: req.originalUrl.startsWith('/api/docs') ? 'This doc is too large to save. Move part of it into another doc.' : 'That file is too large.' });
     if (err?.type === 'entity.parse.failed') return res.status(400).json({ error: 'The request body wasn’t valid JSON.' });
     if (err?.type === 'entity.too.deep') return res.status(400).json({ error: 'The request body is nested too deeply.' });
     log.error('http', `${req.method} ${req.baseUrl}${req.route?.path ?? ''} failed.`, err);

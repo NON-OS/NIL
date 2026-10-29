@@ -17,7 +17,7 @@ Coordinate in one public place, such as a GitHub issue, where every file and eve
 You need a computer you trust, Node.js 22 and git. Download the latest key from the ceremony thread, then:
 
 ```bash
-git clone https://github.com/NON-OS/NIL-.git nil-ceremony
+git clone https://github.com/NON-OS/NIL.git nil-ceremony
 cd nil-ceremony
 npm ci
 npm run ceremony:contribute -- ~/Downloads/ballot_0003.zkey --name "Your name or handle"

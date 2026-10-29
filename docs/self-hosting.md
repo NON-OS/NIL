@@ -1,6 +1,6 @@
 # Self-hosting
 
-Nil's source is available under the Business Source License 1.1. You can build it and run it to try it, test it or audit it; running it in production for a team needs a license from NØNOS (write to ops@nonos.app). A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
+Nil's source is available under the Business Source License 1.1. You can build it, audit it and run it in production for your own organization, free of charge. Hosting it for other people or organizations, or selling access to it, needs a license from NØNOS (write to ops@nonos.app). A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
 
 Everyone who signs in needs a browser with an Ethereum wallet extension, or a wallet's in-app browser.
 
@@ -9,7 +9,7 @@ Everyone who signs in needs a browser with an Ethereum wallet extension, or a wa
 You need Docker with Compose v2.24 or newer.
 
 ```bash
-git clone https://github.com/NON-OS/NIL-.git nonos
+git clone https://github.com/NON-OS/NIL.git nonos
 cd nonos
 cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
@@ -56,9 +56,10 @@ Every setting is an environment variable. All of them are optional except `APP_U
 | `REWARD_TOKENS` | USDC on mainnet | Extra bounty tokens, as `SYMBOL:address:decimals`, or `none` for NOX only |
 | `PLAN_TREASURY` | none | Set only to charge workspaces for Nil Pro, in USDC or NOX. Unset means community mode |
 | `ANTHROPIC_API_KEY`, `ANTHROPIC_MODEL` | none | Both together give built-in AI a server-wide default. Each workspace can bring its own key in Settings → Connect AI instead. There's no default model |
+| `TURN_URLS`, `TURN_SECRET` | none | The relay for calls and the secret it shares with Nil. Calls stay off without them, unless an admin allows direct connections. See [Set up calls](calls.md#set-up-calls) |
 | `WALLETCONNECT_PROJECT_ID` | none | Turns on phone wallets over WalletConnect for computers without a wallet. Public, not a secret. See [Use a wallet on your phone](signing-in.md#use-a-wallet-on-your-phone) |
 
-Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `UPLOADS_PER_HOUR`, `UPLOAD_QUOTA_PER_MEMBER_MB`, `UPLOAD_QUOTA_PER_GUEST_MB`, `UPLOAD_QUOTA_MB`, `MAX_CAPSULE_MB`), sign-in and access keys (`SIGNIN_CHAIN_TIMEOUT_SECONDS`, `SIGNIN_RESET_HOURS`, `SIGNIN_OWNER_RESET_WAIT_HOURS`, `SIGNIN_CONFIRM_MINUTES`, `ACCESS_KEY_MAX_DAYS`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_FINALITY_DEPTH`, `NOX_EXPLORER`), bounty payments (`PAYMENT_INTENT_DAYS`, `PAYMENT_WATCH_DAYS`), Nil Pro (`PLAN_PRICE_USD`, `PLAN_SEAT_USD`, `PLAN_FREE_SEATS`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_TRIAL_DAYS`, the NOX price and the perks), the token-holder door (`HOLDER_ZSP_NOX`, `HOLDER_RECHECK_HOURS`, `HOLDER_GRACE_DAYS`), private payouts, voting power and anonymous votes, push notifications (`PUSH_NOTIFICATIONS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_SERVICES`), due notes (`DUE_SOON_MINUTES`, `DUE_DAY_HOUR`) and calendar feeds (`CALENDAR_FEEDS`, `CALENDAR_FEED_PER_HOUR`).
+Other groups in `.env.example` cover sessions and uploads (`SESSION_DAYS`, `TRASH_DAYS`, `MAX_UPLOAD_MB`, `UPLOADS_PER_HOUR`, `UPLOAD_QUOTA_PER_MEMBER_MB`, `UPLOAD_QUOTA_PER_GUEST_MB`, `UPLOAD_QUOTA_MB`, `MAX_CAPSULE_MB`), encrypted files (`SEALED_FILE_MAX_MB`, `SEALED_UPLOADS_PER_HOUR`, `SEALED_CHUNKS_PER_MINUTE`, `SEALED_UPLOAD_STALE_MINUTES`, `FOLDER_ITEMS_MAX`), sign-in and access keys (`SIGNIN_CHAIN_TIMEOUT_SECONDS`, `SIGNIN_RESET_HOURS`, `SIGNIN_OWNER_RESET_WAIT_HOURS`, `SIGNIN_CONFIRM_MINUTES`, `ACCESS_KEY_MAX_DAYS`), the token and network (`NOX_TOKEN`, `NOX_CHAIN_ID`, `NOX_FINALITY_DEPTH`, `NOX_EXPLORER`), bounty payments (`PAYMENT_INTENT_DAYS`, `PAYMENT_WATCH_DAYS`), Nil Pro (`PLAN_PRICE_USD`, `PLAN_SEAT_USD`, `PLAN_FREE_SEATS`, `PLAN_PERIOD_DAYS`, `PLAN_GRACE_DAYS`, `PLAN_TRIAL_DAYS`, the NOX price and the perks), the token-holder door (`HOLDER_ZSP_NOX`, `HOLDER_RECHECK_HOURS`, `HOLDER_GRACE_DAYS`), private payouts, voting power and anonymous votes, push notifications (`PUSH_NOTIFICATIONS`, `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`, `PUSH_SERVICES`), due notes (`DUE_SOON_MINUTES`, `DUE_DAY_HOUR`), calls (`CALLS`, `TURN_TTL_SECONDS`, `CALL_MAX_PEERS`, `CALL_MESH_MAX_PEERS`, `CALL_SFU_MAX_PEERS`, `SFU_URL`, `SFU_API_KEY`, `SFU_API_SECRET`, `SFU_API_URL`, `STUN_URLS`, `CALL_RECORD_HOURS`, `CALL_RINGS_PER_PERSON`, `CALL_RING_WINDOW_MINUTES`, `CALL_RING_SECONDS`, `CALL_REJOIN_SECONDS`, `CALL_SIGNALS_PER_MINUTE`, `CALL_SIGNAL_MAX_KB`, `CALL_STARTS_PER_MINUTE`, and the relay's own `TURN_REALM`, `TURN_EXTERNAL_IP`, `TURN_ALLOWED_PEER_IP`, `TURN_MIN_PORT`, `TURN_MAX_PORT`, `TURN_CERT_DIR`, `TURN_LOG`) and calendar feeds (`CALENDAR_FEEDS`, `CALENDAR_FEED_PER_HOUR`).
 
 A setting that is set but can't be used, such as a malformed number or treasury address, is named in a line starting with `[config]` in the startup log. The line says what the server does instead: use the default, or stay in community mode.
 
@@ -148,12 +149,16 @@ Leave `PLAN_TREASURY` unset to run in community mode, with every tool unlocked. 
 
 With `ANTHROPIC_API_KEY` (or `ANTHROPIC_AUTH_TOKEN`) and `ANTHROPIC_MODEL` set, text goes to Anthropic only when someone clicks an AI button. Leave it unset and no task data ever goes there. Connecting your own assistant over MCP works either way. See [AI assistants](ai-assistants.md).
 
+### Calls
+
+Calls need a TURN relay so nobody in a call learns anyone else's IP address. `docker-compose.yml` runs a hardened coturn with `COMPOSE_PROFILES=calls`. It needs these ports open to the internet: 3478 over UDP and TCP, 5349 over TCP for TURN over TLS, and 49160 to 49999 over UDP for the media it relays. [Set up calls](calls.md#set-up-calls) walks through it. Without a relay, calls are off, unless an admin allows direct connections, which shows people in a call each other's IP addresses. For calls of more than four, the same profile runs an SFU, LiveKit, which forwards frames encrypted in the browsers and can't open them. It needs 7881 over TCP and 50000 to 50200 over UDP, and its host name sent to 127.0.0.1:7880 by Caddy.
+
 ### Tor and memory-only mode
 
 Nil can run as a Tor onion service; see [Tor onion service](tor.md). It can also keep its data in memory only, so nothing is written to disk; see [Zero-state](zero-state.md#memory-only-mode).
 
 ## Running it well
 
-- Run exactly one copy. Nil uses SQLite and keeps live updates and rate limits in memory, so it can't run behind a load balancer with several replicas.
+- Run exactly one copy. Nil uses SQLite and keeps live updates and rate limits in memory, so it can't run behind a load balancer with several replicas. Calls are the exception: they're kept in the database and work across several processes sharing it.
 - Back up the data folder, and above all `DATA_DIR/keys`. See [Backups and moving](backups-and-moving.md).
 - Read the changelog before you upgrade. Database migrations run on start and only go forward.

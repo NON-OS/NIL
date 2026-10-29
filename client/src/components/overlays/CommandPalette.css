@@ -102,11 +102,18 @@
 
 .palette-foot {
   display: flex;
+  align-items: center;
   gap: 14px;
   padding: 8px 14px;
   border-top: 1px solid var(--line);
   color: var(--muted);
   font-size: var(--text-sm);
+}
+
+/* the key hints keep their size; only the note gives way */
+.palette-foot > span:not(.palette-note) {
+  flex: none;
+  white-space: nowrap;
 }
 
 @media (pointer: coarse) {

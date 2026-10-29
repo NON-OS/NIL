@@ -18,3 +18,17 @@
   margin-top: 2px;
   color: var(--warning);
 }
+
+/* a screen that fills the window gives up the banner's height, so nothing slides off the bottom */
+main:has(> [role='status'] > .offline-banner):has(> .view-fill) {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  height: 100dvh;
+}
+
+main:has(> [role='status'] > .offline-banner) > .view-fill {
+  flex: 1;
+  height: auto;
+  min-height: 0;
+}

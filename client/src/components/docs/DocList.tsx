@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import { Clock, Lock, Plus, ShieldAlert, Users } from 'lucide-react';
+import { useMemo, useRef, useState } from 'react';
+import { Clock, LayoutTemplate, Lock, Plus, ShieldAlert, Users } from 'lucide-react';
+import Popover from '../ui/Popover';
+import docTemplates, { type DocTemplate } from '../../lib/docState/docTemplates';
 import useStore from '../../state/useStore';
 import dates from '../../lib/dates';
 import type DocItem from '../../types/DocItem';
@@ -9,25 +11,59 @@ interface Props {
   waiting: { id: string; createdBy: string | null; updatedAt: number }[];
   current: string | undefined;
   onOpen: (id: string) => void;
-  onNew: () => void;
+  onNew: (template?: DocTemplate) => void;
+  // a new doc made from a Word or Markdown file
+  onImport: (file: File) => void;
 }
 
 // Search runs over titles decrypted in this tab; the server never sees what you look for.
-export default function DocList({ docs, waiting, current, onOpen, onNew }: Props) {
+export default function DocList({ docs, waiting, current, onOpen, onNew, onImport }: Props) {
   const users = useStore((s) => s.users);
   const [query, setQuery] = useState('');
+  const [picking, setPicking] = useState(false);
+  const templatesAnchor = useRef<HTMLButtonElement>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
   const shown = useMemo(() => {
     const q = query.trim().toLowerCase();
-    return q ? docs.filter((d) => d.title.toLowerCase().includes(q) || d.body?.toLowerCase().includes(q)) : docs;
+    return q ? docs.filter((d) => d.title.toLowerCase().includes(q) || d.text?.toLowerCase().includes(q)) : docs;
   }, [docs, query]);
 
   return (
     <aside className="doc-list" aria-label="Docs">
       <div className="doc-list-head">
         <input className="input" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search docs" aria-label="Search docs" />
-        <button type="button" className="btn btn-primary" onClick={onNew} aria-label="New doc" title="New doc">
+        <button ref={templatesAnchor} type="button" className="btn" onClick={() => setPicking((p) => !p)} aria-label="New doc from a template" aria-expanded={picking} title="New doc from a template">
+          <LayoutTemplate />
+        </button>
+        <button type="button" className="btn btn-primary" onClick={() => onNew()} aria-label="New doc" title="New doc">
           <Plus />
         </button>
+        <Popover anchor={templatesAnchor} open={picking} onClose={() => setPicking(false)} width={220} align="end">
+          <div className="menu-list" role="menu" aria-label="Templates">
+            {docTemplates.map((t) => (
+              <button key={t.id} type="button" role="menuitem" className="menu-item" onClick={() => (setPicking(false), onNew(t))}>
+                {t.label}
+              </button>
+            ))}
+            <div className="menu-divider" />
+            <button type="button" role="menuitem" className="menu-item" onClick={() => (setPicking(false), fileInput.current?.click())}>
+              From a Word or Markdown file
+            </button>
+          </div>
+        </Popover>
+        <input
+          ref={fileInput}
+          type="file"
+          hidden
+          aria-hidden
+          tabIndex={-1}
+          accept=".docx,.md,.markdown,.txt,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/markdown,text/plain"
+          onChange={(e) => {
+            const file = e.target.files?.[0];
+            e.target.value = '';
+            if (file) onImport(file);
+          }}
+        />
       </div>
       <div className="doc-list-items">
         {shown.map((d) => (

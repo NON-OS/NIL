@@ -58,6 +58,28 @@ async function fetchKeys() {
   return out;
 }
 
+// Keys members replaced, whose wallet signature checks out here, each good for what was signed
+// before the key after it was published (that key's own signed time): userId -> keys, oldest first.
+type Earlier = Map<string, { publicKey: string; signingKey: string; until: number }[]>;
+let earlierCache: { rev: number; keys: Promise<Earlier> } | null = null;
+
+async function fetchEarlier(current: Keys): Promise<Earlier> {
+  const { origin, workspaceKey } = store.get();
+  const entries = (await http.get<KeyEntry[]>('/encryption-keys/earlier').catch(() => [] as KeyEntry[])).filter((e) => verifyKeyStatement(e, { origin, workspaceKey }));
+  const out: Earlier = new Map();
+  for (const userId of new Set(entries.map((e) => e.userId))) {
+    const mine = entries.filter((e) => e.userId === userId).sort((a, b) => a.createdAt - b.createdAt);
+    const list = [];
+    for (let i = 0; i < mine.length; i++) {
+      const until = mine[i + 1]?.createdAt ?? current.get(userId)?.createdAt;
+      // without a signed successor there's nothing that says when it stopped counting
+      if (until !== undefined && until > mine[i].createdAt) list.push({ publicKey: mine[i].publicKey, signingKey: mine[i].signingKey, until });
+    }
+    out.set(userId, list);
+  }
+  return out;
+}
+
 // The key directory as this browser sees it. The server lists keys; the browser decides which to
 // believe: only wallet-signed ones, and for sharing only ones this person has confirmed.
 const keyDirectory = {
@@ -77,6 +99,16 @@ const keyDirectory = {
     });
     cache = { rev, keys };
     keys.catch(() => (cache = null));
+    return keys;
+  },
+
+  // Keys members replaced, checked here; fetched again whenever the directory is.
+  earlier() {
+    const rev = store.get().keysRev;
+    if (earlierCache?.rev === rev) return earlierCache.keys;
+    const keys = keyDirectory.load().then(fetchEarlier);
+    earlierCache = { rev, keys };
+    keys.catch(() => (earlierCache = null));
     return keys;
   },
 
@@ -118,23 +150,31 @@ const keyDirectory = {
   // carries no time). The pinned key counts once this person has confirmed it, or while it's
   // listed for an active member, where the notice shows it. A key confirmed earlier counts for
   // what was signed before its successor was published. `old` is that key's fingerprint.
-  async signers(userId: string, at: number | null) {
+  // With `former`, a member no longer active counts too, for what carries a time: chat, where every
+  // list and message is also held to who was in the conversation then.
+  async signers(userId: string, at: number | null, { former = false } = {}) {
     const listed = (await keyDirectory.load()).get(userId);
     const pin = keyPins.all()[userId];
     const user = store.get().users[userId];
     const id = keyring.identity();
     const out: { key: Uint8Array; old: string | null }[] = [];
     if (id && userId === store.get().me?.id) out.push({ key: id.signingKey, old: null });
-    else if (pin && (pin.confirmed || (listed?.active && user && !user.deactivated))) out.push({ key: b64u.decode(pin.signingKey), old: null });
+    const counts = Boolean(listed && user && (listed.active && !user.deactivated ? true : former && at !== null));
+    if (!(id && userId === store.get().me?.id) && pin && (pin.confirmed || counts)) out.push({ key: b64u.decode(pin.signingKey), old: null });
     if (at !== null) for (const e of pin?.earlier ?? []) if (at < e.until) out.push({ key: b64u.decode(e.signingKey), old: memberFingerprint(e.publicKey, e.signingKey) });
+    // a key they replaced, wallet-signed when it was published, counts for what was signed while
+    // it was theirs, on the same terms as a key they have now that nobody here confirmed yet
+    if (at !== null && counts) {
+      for (const e of (await keyDirectory.earlier()).get(userId) ?? []) if (at < e.until) out.push({ key: b64u.decode(e.signingKey), old: memberFingerprint(e.publicKey, e.signingKey) });
+    }
     return out;
   },
 
   // Whether `by` signed something, as `check` tells for one signing key: null when no key of
   // theirs checks out, otherwise the fingerprint of the earlier key that did, or null for the
   // current one.
-  async author(by: string, at: number | null, check: (signingKey: Uint8Array) => boolean): Promise<{ old: string | null } | null> {
-    for (const signer of await keyDirectory.signers(by, at)) if (check(signer.key)) return { old: signer.old };
+  async author(by: string, at: number | null, check: (signingKey: Uint8Array) => boolean, options: { former?: boolean } = {}): Promise<{ old: string | null } | null> {
+    for (const signer of await keyDirectory.signers(by, at, options)) if (check(signer.key)) return { old: signer.old };
     return null;
   },
 };

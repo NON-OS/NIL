@@ -72,7 +72,7 @@ export default function DataSettings() {
         <h2>Source code</h2>
         <div className="settings-card">
           <p style={{ color: 'var(--ink-2)' }}>
-            Nil’s source is available under the Business Source License 1.1. Anyone may read and audit it and check that a server runs a published release. Running it in production or hosting it for others needs a license from NØNOS.
+            Nil’s source is available under the Business Source License 1.1. Anyone may read and audit it and check that a server runs a published release. Any organization may run it for its own people. Hosting it for others or selling access to it needs a license from NØNOS.
           </p>
           {sourceUrl && (
             <a className="btn" href={sourceUrl} target="_blank" rel="noopener noreferrer" style={{ justifySelf: 'start' }}>

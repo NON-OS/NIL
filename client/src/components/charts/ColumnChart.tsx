@@ -15,6 +15,8 @@ interface Props {
 }
 
 const PAD = { top: 18, right: 8, bottom: 24, left: 28 };
+// room one axis label like "Sep 28" needs at 11px, so narrow charts label every few columns
+const LABEL_W = 46;
 
 function niceMax(v: number) {
   if (v <= 4) return 4;
@@ -43,6 +45,7 @@ export default function ColumnChart({ data, height = 200, color = 'var(--accent-
   const barW = Math.min(24, band * 0.6);
   const y = (v: number) => PAD.top + plotH - (v / max) * plotH;
   const ticks = [0, max / 2, max];
+  const every = Math.max(1, Math.ceil(LABEL_W / band));
   const peak = data.reduce((best, d, i) => (d.value > data[best].value ? i : best), 0);
 
   return (
@@ -72,9 +75,11 @@ export default function ColumnChart({ data, height = 200, color = 'var(--accent-
                   {d.value}
                 </text>
               )}
-              <text x={cx} y={height - 6} textAnchor="middle">
-                {d.label}
-              </text>
+              {(data.length - 1 - i) % every === 0 && (
+                <text x={cx} y={height - 6} textAnchor="middle">
+                  {d.label}
+                </text>
+              )}
               <rect className="hit" x={PAD.left + band * i} y={PAD.top} width={band} height={plotH} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} />
             </g>
           );

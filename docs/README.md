@@ -14,12 +14,15 @@ Nil is the private task app for you and your team, made by the NØNOS foundation
 - [Views and finding things](views.md): My work, My Day, Inbox, Board, All tasks, Calendar, projects and search.
 - [Time and reminders](time-and-reminders.md): the timer, your private timesheet and reminders.
 - [Goals, insights and decks](goals-and-insights.md): goals with numbers, team charts and PowerPoint status decks.
+- [Calls](calls.md): calls with sound, video and screens, encrypted end to end, and setting up the relay.
 - [Keyboard shortcuts](keyboard-shortcuts.md): every key Nil listens for.
 
 ## Privacy and encryption
 
 - [Private tasks](private-tasks.md): tasks only two people can read, encrypted in the browser.
 - [Encrypted docs](encrypted-docs.md): team documents the server can't read.
+- [Chat](chat.md): channels, direct messages and threads, encrypted in the browser.
+- [Files](files.md): shared folders of files the server can't read, previewed in your browser.
 - [Privacy model](privacy-model.md): what is encrypted, what the server can see and the honest limits.
 - [Encryption and trust](encryption.md): who holds which key, how teammates check each other's keys, and the recovery kit.
 - [Zero-state](zero-state.md): auto-erase, erasing everything and memory-only mode.

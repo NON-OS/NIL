@@ -220,7 +220,7 @@ export default function CommandPalette() {
         <span>
           <span className="kbd">esc</span> to close
         </span>
-        {q && <span className="palette-note">Private tasks and docs are searched only in this browser</span>}
+        {q && <span className="palette-note">Private items are searched on this device</span>}
       </div>
     </Modal>
   );

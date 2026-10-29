@@ -1,6 +1,7 @@
 import express from 'express';
 import sql from '../db/sql.js';
 import route from '../lib/route.js';
+import config from '../config.js';
 import check from '../lib/check.js';
 import newId from '../lib/newId.js';
 import HttpError from '../lib/HttpError.js';
@@ -9,12 +10,16 @@ import docAccess from '../services/docAccess.js';
 import grantDocKeys from '../services/grantDocKeys.js';
 import announceDoc from '../services/announceDoc.js';
 import docRecipients from '../services/docRecipients.js';
+import dropBlobs from '../services/dropBlobs.js';
 import hub from '../realtime/hub.js';
 import toDoc from '../mappers/toDoc.js';
 import contentWrites from '../auth/contentWrites.js';
+import pendingDocUpdates from '../services/pendingDocUpdates.js';
+import thinRevisions from '../services/thinRevisions.js';
+import docBlobRefs from '../services/docBlobRefs.js';
+import docReseal from '../services/docReseal.js';
 
 const router = express.Router();
-const KEEP_REVISIONS = 25;
 
 const manager = (doc, user) => doc.created_by === user.id || user.isAdmin;
 const readers = (docId) => sql.all('SELECT user_id FROM doc_keys WHERE doc_id = ?', docId).map((r) => r.user_id);
@@ -40,7 +45,10 @@ router.get(
   '/docs/:id',
   route((req) => {
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
-    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id) }) };
+    // the live changes made since this version, which the browser lays on top
+    const { updates, more } = pendingDocUpdates(doc.id, doc.updates_through);
+    const live = { updatesThrough: doc.updates_through, updates, updatesMore: more };
+    return { doc: toDoc(doc, wrappedKey, { bodyCt: doc.body_ct, readers: readers(doc.id), ...live, reseal: docReseal(doc.id) }) };
   }),
 );
 
@@ -56,8 +64,8 @@ router.post(
     const now = Date.now();
     sql.tx(() => {
       sql.run(
-        'INSERT INTO docs (id, title_ct, body_ct, audience, created_by, updated_by, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        id, cipherText(b.titleCt, 'Title', { max: 4000 }), cipherText(b.bodyCt, 'Body'), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now,
+        'INSERT INTO docs (id, title_ct, body_ct, audience, created_by, updated_by, created_at, updated_at, blob_refs) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)',
+        id, cipherText(b.titleCt, 'Title', { max: config.docs.titleMaxChars }), cipherText(b.bodyCt, 'Body', { max: config.docs.bodyMaxChars }), check.oneOf(b.audience ?? 'team', ['team', 'people'], 'Audience'), req.user.id, req.user.id, now, now, docBlobRefs(b.blobs),
       );
       grantDocKeys(id, grants, req.user.id);
     });
@@ -76,22 +84,30 @@ router.put(
     const { doc, wrappedKey } = docAccess(req.params.id, req.user);
     const base = check.number(req.body?.baseVersion, 'Version', { min: 1, integer: true });
     if (base !== doc.version) throw new HttpError(409, 'Someone saved a newer version of this doc.');
-    const titleCt = cipherText(req.body?.titleCt, 'Title', { max: 4000 });
-    const bodyCt = cipherText(req.body?.bodyCt, 'Body');
+    const titleCt = cipherText(req.body?.titleCt, 'Title', { max: config.docs.titleMaxChars });
+    const bodyCt = cipherText(req.body?.bodyCt, 'Body', { max: config.docs.bodyMaxChars });
+    // how far into the live changes this version reaches; those changes are folded in, so they go
+    const through = req.body?.through === undefined ? null : check.number(req.body.through, 'Changes', { min: 0, integer: true });
+    if (through !== null && through > doc.update_seq) throw HttpError.badRequest('That version names changes this doc never had.');
     const now = Date.now();
     sql.tx(() => {
-      sql.run('INSERT OR REPLACE INTO doc_revisions (doc_id, version, title_ct, body_ct, updated_by, created_at) VALUES (?, ?, ?, ?, ?, ?)', doc.id, doc.version, doc.title_ct, doc.body_ct, doc.updated_by, doc.updated_at);
-      sql.run('DELETE FROM doc_revisions WHERE doc_id = ? AND version <= ?', doc.id, doc.version - KEEP_REVISIONS);
-      sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, doc.id);
+      sql.run('INSERT OR REPLACE INTO doc_revisions (doc_id, version, title_ct, body_ct, updated_by, created_at, blob_refs) VALUES (?, ?, ?, ?, ?, ?, ?)', doc.id, doc.version, doc.title_ct, doc.body_ct, doc.updated_by, doc.updated_at, doc.blob_refs);
+      thinRevisions(doc.id, now);
+      sql.run('UPDATE docs SET title_ct = ?, body_ct = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?', titleCt, bodyCt, req.user.id, now, docBlobRefs(req.body?.blobs), doc.id);
+      if (through !== null) {
+        const folded = sql.all('DELETE FROM doc_updates WHERE doc_id = ? AND seq <= ? RETURNING size', doc.id, through).reduce((n, r) => n + r.size, 0);
+        sql.run('UPDATE docs SET updates_through = MAX(updates_through, ?), pending_bytes = MAX(0, pending_bytes - ?) WHERE id = ?', through, folded, doc.id);
+      }
     });
     announceDoc(doc.id);
     const fresh = sql.get('SELECT * FROM docs WHERE id = ?', doc.id);
-    return { doc: toDoc(fresh, wrappedKey, { bodyCt: fresh.body_ct, readers: readers(doc.id) }) };
+    return { doc: toDoc(fresh, wrappedKey, { bodyCt: fresh.body_ct, readers: readers(doc.id), updatesThrough: fresh.updates_through }) };
   }),
 );
 
 router.post(
   '/docs/:id/grants',
+  contentWrites,
   route((req) => {
     const { doc } = docAccess(req.params.id, req.user);
     if (doc.audience === 'people' && !manager(doc, req.user)) throw HttpError.forbidden('Only the doc’s creator or an admin can share it with more people.');
@@ -101,8 +117,24 @@ router.post(
   }),
 );
 
+// A key someone was handed that doesn't open the doc (another reader can seal anything to
+// them): they drop it, so the doc shows as waiting for them again and a teammate's browser hands
+// over a real one. The last key to a doc is never dropped this way.
+router.delete(
+  '/docs/:id/grants/me',
+  contentWrites,
+  route((req) => {
+    const { doc } = docAccess(req.params.id, req.user);
+    if (!sql.get('SELECT 1 FROM doc_keys WHERE doc_id = ? AND user_id != ?', doc.id, req.user.id)) throw new HttpError(409, 'Nobody else holds a key to this doc, so yours stays.');
+    sql.run('DELETE FROM doc_keys WHERE doc_id = ? AND user_id = ?', doc.id, req.user.id);
+    announceDoc(doc.id);
+    return { ok: true };
+  }),
+);
+
 // Removing someone means a brand-new doc key: the browser re-encrypts the doc and seals the
-// new key for whoever stays. Old revisions used the old key, so they go.
+// new key for whoever stays. Old revisions used the old key, so they go, and the doc's files
+// wait to be encrypted again by whoever opens the doc next with its key.
 router.post(
   '/docs/:id/rotate',
   contentWrites,
@@ -113,13 +145,22 @@ router.post(
     if (base !== doc.version) throw new HttpError(409, 'Someone saved a newer version of this doc.');
     const grants = Array.isArray(req.body?.grants) ? req.body.grants : [];
     if (!grants.some((g) => g?.userId === req.user.id)) throw HttpError.badRequest('Keep a key for yourself.');
+    // the new version must hold every live change so far, since the ones sealed under the old key go
+    const through = req.body?.through === undefined ? null : check.number(req.body.through, 'Changes', { min: 0, integer: true });
+    if (through !== null && through < doc.update_seq) throw new HttpError(409, 'Someone changed the doc a moment ago. Try again.');
     const before = readers(doc.id);
+    // someone taken out may have kept the keys to the doc's files, so each is encrypted again
+    const removed = before.some((id) => !grants.some((g) => g?.userId === id));
     sql.tx(() => {
+      if (removed) sql.run("UPDATE sealed_blobs SET reseal = 1, replaces = NULL WHERE scope_kind = 'doc' AND scope_id = ? AND finished_at IS NOT NULL", doc.id);
       sql.run(
-        'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ? WHERE id = ?',
-        cipherText(req.body?.titleCt, 'Title', { max: 4000 }), cipherText(req.body?.bodyCt, 'Body'), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), doc.id,
+        'UPDATE docs SET title_ct = ?, body_ct = ?, audience = ?, version = version + 1, updated_by = ?, updated_at = ?, blob_refs = ? WHERE id = ?',
+        cipherText(req.body?.titleCt, 'Title', { max: config.docs.titleMaxChars }), cipherText(req.body?.bodyCt, 'Body', { max: config.docs.bodyMaxChars }), check.oneOf(req.body?.audience ?? doc.audience, ['team', 'people'], 'Audience'), req.user.id, Date.now(), docBlobRefs(req.body?.blobs), doc.id,
       );
       sql.run('DELETE FROM doc_revisions WHERE doc_id = ?', doc.id);
+      // live changes sealed under the old key go with it; the new version holds them all
+      sql.run('DELETE FROM doc_updates WHERE doc_id = ?', doc.id);
+      sql.run('UPDATE docs SET updates_through = update_seq, pending_bytes = 0, key_epoch = key_epoch + 1 WHERE id = ?', doc.id);
       grantDocKeys(doc.id, grants, req.user.id, { replace: true });
     });
     announceDoc(doc.id, before);
@@ -148,6 +189,8 @@ router.delete(
     if (!manager(doc, req.user)) throw HttpError.forbidden('Only the doc’s creator or an admin can delete it.');
     const everyone = docRecipients(doc.id);
     sql.run('DELETE FROM docs WHERE id = ?', doc.id);
+    // the doc's images and files go with it
+    dropBlobs(sql.all("SELECT id FROM sealed_blobs WHERE scope_kind = 'doc' AND scope_id = ?", doc.id).map((b) => b.id));
     for (const userId of everyone) hub.toUser(userId, { type: 'docs', id: doc.id });
     return { ok: true };
   }),

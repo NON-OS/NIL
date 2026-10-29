@@ -1,0 +1,2 @@
+# The relay host's TLS certificate and key go here as fullchain.pem and privkey.pem
+# (docs/calls.md). Nothing in this folder is ever committed.

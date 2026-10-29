@@ -46,7 +46,7 @@ test('a project ID or relay that can’t be used is named at startup and falls b
 test('the policy lets the page reach the relay only when phone wallets are on', () => {
   const off = contentSecurityPolicy({ secure: true });
   // exactly the policy Nil sent before phone wallets existed
-  assert.equal(off, "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self'; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests");
+  assert.equal(off, "default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self'; connect-src 'self'; media-src 'self' blob:; object-src 'none'; frame-src 'none'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'; upgrade-insecure-requests");
   const on = contentSecurityPolicy({ secure: true, relay: RELAY });
   assert.equal(on, off.replace("connect-src 'self'", `connect-src 'self' ${RELAY}`));
   assert.ok(!contentSecurityPolicy({ secure: false, relay: RELAY }).includes('upgrade-insecure-requests'));

@@ -85,30 +85,31 @@ function TaskCard({ task, showProject = true, dragging, overlay, innerRef, style
         </button>
       </div>
       <div className="card-foot">
-        <DueBadge task={task} />
-        <BountyChip task={task} />
-        <LabelChips ids={task.labels} max={2} />
-        {steps && steps.total > 0 && (
-          <span className="progress-mini num" title={`${steps.done} of ${countOf(steps.total, 'step')} done`}>
-            <b>
-              <i style={{ width: `${(steps.done / steps.total) * 100}%` }} />
-            </b>
-            {steps.done}/{steps.total}
-          </span>
-        )}
-        {task.commentCount > 0 && (
-          <span className="meta num">
-            <MessageSquare size={12} />
-            {task.commentCount}
-          </span>
-        )}
-        {task.attachmentCount > 0 && (
-          <span className="meta num">
-            <Paperclip size={12} />
-            {task.attachmentCount}
-          </span>
-        )}
-        <span className="grow" />
+        <div className="card-tags">
+          <DueBadge task={task} />
+          <BountyChip task={task} />
+          <LabelChips ids={task.labels} max={2} />
+          {steps && steps.total > 0 && (
+            <span className="progress-mini num" title={`${steps.done} of ${countOf(steps.total, 'step')} done`}>
+              <b>
+                <i style={{ width: `${(steps.done / steps.total) * 100}%` }} />
+              </b>
+              {steps.done}/{steps.total}
+            </span>
+          )}
+          {task.commentCount > 0 && (
+            <span className="meta num">
+              <MessageSquare size={12} />
+              {task.commentCount}
+            </span>
+          )}
+          {task.attachmentCount > 0 && (
+            <span className="meta num">
+              <Paperclip size={12} />
+              {task.attachmentCount}
+            </span>
+          )}
+        </div>
         {/* dragging is fiddly on a phone; this moves the card to another column instead */}
         <span className="card-move" onClick={stop}>
           <StatusPicker value={task.status} onChange={(status) => taskActions.update(task.id, { status })} className="btn btn-sm" title="Move to column">

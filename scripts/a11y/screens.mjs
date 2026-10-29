@@ -13,8 +13,47 @@ const unlockDocs = async (page) => {
   await page.locator('.docs').waitFor();
   const first = page.locator('.doc-link:not(.waiting)').first();
   if (await first.count()) await first.click();
-  else await page.getByRole('button', { name: 'New doc' }).click();
+  else await page.getByRole('button', { name: 'New doc', exact: true }).click();
   await page.locator('.doc-editor').waitFor();
+};
+
+// unlocks chat and opens a channel with a message in it, starting one the first time
+const openChat = async (page) => {
+  await page.getByRole('button', { name: 'Unlock with your wallet' }).click();
+  await page.locator('.chat, .empty').first().waitFor();
+  if (!(await page.locator('.chat-link').count())) {
+    await page.getByRole('button', { name: 'Start a channel' }).click();
+    await page.getByLabel('Name', { exact: true }).fill('launch');
+    await page.getByRole('button', { name: 'Create channel' }).click();
+    await page.locator('.chat-composer textarea').fill('The launch post is ready for review. https://example.com/post');
+    await page.keyboard.press('Enter');
+  } else await page.locator('.chat-link').first().click();
+  await page.locator('.msg').first().waitFor();
+};
+const newConversation = async (page) => {
+  await openChat(page);
+  // on a phone the conversation covers the list, so step back to it first
+  const back = page.getByRole('button', { name: 'All conversations' });
+  if (await back.isVisible()) await back.click();
+  await page.getByRole('button', { name: 'New conversation' }).click();
+  await page.getByRole('dialog').waitFor();
+};
+// unlocks Files and opens a shared folder with a subfolder in it, making both the first time
+const openFiles = async (page) => {
+  await page.getByRole('button', { name: 'Unlock with your wallet' }).click();
+  const folder = page.locator('.files-folder-card a.files-open').first();
+  await Promise.race([folder.waitFor(), page.getByText('No shared folders yet').waitFor()]);
+  if (await folder.count()) await folder.click();
+  else {
+    await page.getByRole('button', { name: 'New folder' }).first().click();
+    await page.getByLabel('Name').fill('Contracts');
+    await page.getByRole('button', { name: 'Create folder' }).click();
+    await page.getByText('This folder is empty').waitFor();
+    await page.getByRole('button', { name: 'New folder' }).click();
+    await page.getByLabel('Name').fill('Signed');
+    await page.getByRole('button', { name: 'Create', exact: true }).click();
+  }
+  await page.locator('.files-tile').first().waitFor();
 };
 
 // the network goes while the page is open, and the app is reloaded while it's gone
@@ -71,6 +110,24 @@ const signedIn = [
   { name: 'calendar', path: '/calendar' },
   { name: 'docs', path: '/docs' },
   { name: 'docs-open', path: '/docs', then: unlockDocs },
+  { name: 'chat', path: '/chat' },
+  { name: 'chat-open', path: '/chat', then: openChat },
+  { name: 'chat-new', path: '/chat', then: newConversation, after: closeDialog },
+  // the calls page; with no relay here it says calls aren't set up, and scripts/calls checks the rest
+  { name: 'calls', path: '/calls' },
+  { name: 'files', path: '/files' },
+  { name: 'files-open', path: '/files', then: openFiles },
+  // something picked, in the list, so the picking boxes and the selection bar are checked too
+  {
+    name: 'files-picked',
+    path: '/files',
+    then: async (page) => {
+      await openFiles(page);
+      await page.getByRole('button', { name: 'Show as a list' }).click();
+      await page.getByRole('checkbox', { name: 'Select all' }).check();
+      await page.getByRole('toolbar', { name: 'Picked files and folders' }).waitFor();
+    },
+  },
   { name: 'goals', path: '/goals' },
   { name: 'insights', path: '/insights' },
   { name: 'time', path: '/time' },

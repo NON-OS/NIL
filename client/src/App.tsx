@@ -36,6 +36,8 @@ const GoalsView = lazy(() => import('./views/GoalsView'));
 const InsightsView = lazy(() => import('./views/InsightsView'));
 const SettingsView = lazy(() => import('./views/SettingsView'));
 const DocsView = lazy(() => import('./views/DocsView'));
+const ChatView = lazy(() => import('./views/ChatView'));
+const FilesView = lazy(() => import('./views/FilesView'));
 const TimeView = lazy(() => import('./views/TimeView'));
 const VotesView = lazy(() => import('./views/VotesView'));
 const BountiesView = lazy(() => import('./views/BountiesView'));
@@ -49,6 +51,9 @@ const ExtractModal = lazy(() => import('./components/overlays/ExtractModal'));
 const DeckModal = lazy(() => import('./components/decks/DeckModal'));
 // the help center carries every docs page as text
 const HelpView = lazy(() => import('./views/HelpView'));
+// calls load their own code; the ring and the call itself sit over every screen
+const CallsView = lazy(() => import('./views/CallsView'));
+const CallLayer = lazy(() => import('./components/calls/CallLayer'));
 
 function LoadingScreen() {
   return (
@@ -90,6 +95,10 @@ function Screen({ segments }: { segments: string[] }) {
       return <SettingsView />;
     case 'docs':
       return <DocsView />;
+    case 'chat':
+      return <ChatView />;
+    case 'files':
+      return <FilesView folderId={second} />;
     case 'time':
       return <TimeView />;
     case 'votes':
@@ -102,6 +111,8 @@ function Screen({ segments }: { segments: string[] }) {
       return <VerifyView />;
     case 'help':
       return <HelpView />;
+    case 'calls':
+      return <CallsView />;
     case 'projects':
       return second ? <ProjectView key={second} projectId={second} /> : <NotFoundView />;
     default:
@@ -185,6 +196,9 @@ export default function App() {
         {shortcuts && <ShortcutsHelp />}
         {extract && <ExtractModal />}
         {deckOpen && <DeckModal />}
+      </Suspense>
+      <Suspense fallback={null}>
+        <CallLayer />
       </Suspense>
       <UpdatePrompt />
       {keyCheck && <KeyCheckModal />}

@@ -238,7 +238,7 @@ test('billing settings default sensibly and say so when a value can’t be used'
   const { config, warnings } = load({});
   assert.deepEqual(warnings, []);
   const b = config.billing;
-  assert.deepEqual([b.priceUsd, b.seatUsd, b.noxDiscount, b.suffixDigits, b.amountDecimals, b.invoiceHours, b.burnShare, b.slot, b.treasuryName], [12_000_000, 3_000_000, 20, 4, 8, 24, 0, null, 'the treasury']);
+  assert.deepEqual([b.priceUsd, b.seatUsd, b.noxDiscount, b.suffixDigits, b.amountDecimals, b.invoiceHours, b.burnShare, b.slot, b.treasuryName], [4_000_000, 1_000_000, 50, 4, 8, 24, 0, null, 'the treasury']);
   assert.deepEqual(b.stakerTiers, [{ stake: '10000', percent: 10 }, { stake: '100000', percent: 25 }]);
   assert.deepEqual(b.remindDays, [7, 1]);
   assert.equal(b.usdc.address, '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48');
@@ -257,7 +257,7 @@ test('billing settings default sensibly and say so when a value can’t be used'
     PRO_FOR_ZSP: 'maybe',
     BURN_REPORT_URL: 'javascript:alert(1)',
   });
-  assert.deepEqual([bad.config.billing.priceUsd, bad.config.billing.seatUsd, bad.config.billing.stakerTiers, bad.config.billing.slot, bad.config.billing.burnShare, bad.config.billing.oracle.manualUsd, bad.config.billing.oracle.pool, bad.config.billing.proForZsp, bad.config.billing.burnReportUrl], [12_000_000, 3_000_000, [], null, 0, null, null, true, null]);
+  assert.deepEqual([bad.config.billing.priceUsd, bad.config.billing.seatUsd, bad.config.billing.stakerTiers, bad.config.billing.slot, bad.config.billing.burnShare, bad.config.billing.oracle.manualUsd, bad.config.billing.oracle.pool, bad.config.billing.proForZsp, bad.config.billing.burnReportUrl], [4_000_000, 1_000_000, [], null, 0, null, null, true, null]);
   for (const name of ['PLAN_PRICE_USD', 'PLAN_SEAT_USD', 'PLAN_STAKER_TIERS', 'PLAN_INVOICE_SLOT', 'BURN_SHARE', 'PLAN_NOX_USD', 'PLAN_NOX_POOL', 'PRO_FOR_ZSP', 'BURN_REPORT_URL']) {
     assert.ok(bad.warnings.some((w) => w.includes(name)), name);
   }

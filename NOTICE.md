@@ -27,3 +27,5 @@ They are used in three places, each kept apart from Nil's own code:
 The encrypted ballot circuit in [circuits/](circuits/) is built from circomlib templates (https://github.com/iden3/circomlib), which are GPL-3.0, so the circuit and the files compiled from it are GPL-3.0 as well. Those files are data the prover reads, served from `/zk/` next to the app.
 
 Every other dependency is under a permissive licence (MIT, ISC, Apache-2.0, BSD or similar). `npm ls --omit=dev` lists them, and each package's own licence file is in `node_modules`.
+
+The file previews in Files load three of them into the browser: pdf.js (`pdfjs-dist`, Apache-2.0), mammoth (BSD-2-Clause) and DOMPurify (Apache-2.0 or MPL-2.0; Nil uses it under Apache-2.0). The build copies pdf.js's image decoders, Adobe CMaps, colour profile and standard fonts to `/assets/pdfjs-<version>/`, each with its licence file beside it: the Foxit fonts, the JPEG 2000 and JBIG2 decoders and the CMaps under BSD-style licences, the colour profile decoder under the MIT licence, and the colour profile under CC0. pdf.js's Liberation fonts, which are under the GNU GPL v2, are left out of the build.

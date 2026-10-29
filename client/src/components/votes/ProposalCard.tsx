@@ -64,6 +64,15 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
       {proposal.encrypted ? <EncryptedBallot proposal={proposal} open={open} onChange={onChange} /> : proposal.anonymous && <AnonymousBallot proposal={proposal} open={open} onChange={onChange} />}
 
       {open && !proposal.anonymous && (
+        <div className="proposal-options" role="group" aria-label="Your vote">
+          {proposal.options.map((option, i) => (
+            <button key={option} type="button" className="btn" aria-pressed={proposal.myVote?.choice === i} disabled={busy !== null} onClick={() => run(i, () => votes.cast(proposal.id, i), 'Vote signed and counted.')}>
+              {busy === i && <Spinner size={13} />} {option}
+            </button>
+          ))}
+        </div>
+      )}
+      {open && !proposal.anonymous && (
         <p className="proposal-notice" role="note">
           <Eye aria-hidden="true" />{' '}
           {proposal.publicVote
@@ -72,15 +81,6 @@ export default function ProposalCard({ proposal, onChange }: { proposal: Proposa
             ? 'Not anonymous. Your wallet signs your ballot, and everyone in the workspace can see who voted for what.'
             : 'Not anonymous. Your wallet signs your ballot, and admins can see who voted for what.'}
         </p>
-      )}
-      {open && !proposal.anonymous && (
-        <div className="proposal-options" role="group" aria-label="Your vote">
-          {proposal.options.map((option, i) => (
-            <button key={option} type="button" className="btn" aria-pressed={proposal.myVote?.choice === i} disabled={busy !== null} onClick={() => run(i, () => votes.cast(proposal.id, i), 'Vote signed and counted.')}>
-              {busy === i && <Spinner size={13} />} {option}
-            </button>
-          ))}
-        </div>
       )}
 
       {totals ? (

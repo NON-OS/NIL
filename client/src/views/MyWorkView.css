@@ -116,4 +116,23 @@
   .mywork-stats {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  /* an odd one out takes the whole row rather than leave a hole beside it */
+  .mywork-stats > :last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* the My Day column is narrow: titles get two lines, and the project shows as its colour alone */
+.myday .line-title {
+  display: -webkit-box;
+  line-height: 1.35;
+  white-space: normal;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.myday .line-project {
+  gap: 0;
+  font-size: 0;
 }

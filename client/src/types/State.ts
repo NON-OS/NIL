@@ -23,6 +23,7 @@ import type TaskArchive from './TaskArchive';
 import type FirstRun from './FirstRun';
 import type AgentActivity from './AgentActivity';
 import type Passkey from './Passkey';
+import type FilesLimits from './FilesLimits';
 
 export default interface State {
   // offline: the server couldn't be reached while starting, which isn't the same as signed out
@@ -65,6 +66,12 @@ export default interface State {
   timer: TimeEntry | null;
   docsUnlocked: boolean;
   docsRev: number;
+  // the doc the last change was about, or null when it could be any
+  docsChanged: string | null;
+  // bumped when a shared folder you can open, or wait for, changes
+  filesRev: number;
+  // what Files works within on this server; null for guests and until the bootstrap is in
+  files: FilesLimits | null;
   // the site and workspace key every key message is bound to (from bootstrap, set by APP_URL)
   origin: string;
   workspaceKey: string;

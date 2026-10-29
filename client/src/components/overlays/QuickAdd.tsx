@@ -127,16 +127,19 @@ export default function QuickAdd() {
           <LabelPicker value={draft.labels} onChange={(next) => set({ labels: next })}>
             <Tag size={14} /> {draft.labels.length ? <LabelChips ids={draft.labels} max={2} /> : <span>Labels</span>}
           </LabelPicker>
-          <button
-            type="button"
-            className={`prop-btn quickadd-private${draft.private ? ' on' : ''}`}
-            aria-pressed={Boolean(draft.private)}
-            onClick={() => set({ private: !draft.private })}
-            title="Only you and the assignee can see it. Encrypted in your browser before it’s saved."
-          >
-            <Lock size={14} /> <span>{draft.private ? 'Private · encrypted' : 'Private'}</span>
-          </button>
-          <HelpLink topic="private-tasks" label="How private tasks work" newTab />
+          {/* the help sits with the switch it explains, and wraps with it */}
+          <span className="quickadd-private-group">
+            <button
+              type="button"
+              className={`prop-btn quickadd-private${draft.private ? ' on' : ''}`}
+              aria-pressed={Boolean(draft.private)}
+              onClick={() => set({ private: !draft.private })}
+              title="Only you and the assignee can see it. Encrypted in your browser before it’s saved."
+            >
+              <Lock size={14} /> <span>{draft.private ? 'Private · encrypted' : 'Private'}</span>
+            </button>
+            <HelpLink topic="private-tasks" label="How private tasks work" newTab />
+          </span>
           {draft.recurrence && (
             <span className="chip">
               <Repeat size={12} /> {recurrenceRule.describe(draft.recurrence)}

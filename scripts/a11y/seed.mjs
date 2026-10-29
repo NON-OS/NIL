@@ -45,7 +45,7 @@ const signBallot = async (page, id, choice) => {
 export default async function seed(page, world) {
   await page.goto(world.base);
   await page.getByLabel('Setup token').fill(world.setupToken);
-  await page.getByLabel('Workspace name').fill('Northwind');
+  await page.getByLabel('Workspace name').fill('Atlas');
   await page.getByLabel('Your name').fill('Ada');
   await page.getByText('Crypto team').click();
   await page.getByRole('button', { name: 'Create workspace with your wallet' }).click();

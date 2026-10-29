@@ -26,7 +26,9 @@ function authorization(audience) {
 
 // Delivers one encrypted message to one browser subscription. Says 'sent', 'gone' (the
 // subscription will never work again and should be dropped) or 'failed' (try another time).
-export default async function sendPush(subscription, message, { urgency = 'normal' } = {}) {
+// `ttlSeconds` is how long the push service keeps trying a device that's away; a call's ring
+// is worth nothing once it stops.
+export default async function sendPush(subscription, message, { urgency = 'normal', ttlSeconds = config.push.ttlHours * 3600 } = {}) {
   const url = pushEndpoint(subscription.endpoint);
   if (!url) return 'gone';
   const text = JSON.stringify(message);
@@ -49,7 +51,7 @@ export default async function sendPush(subscription, message, { urgency = 'norma
         Authorization: authorization(url.origin),
         'Content-Encoding': 'aes128gcm',
         'Content-Type': 'application/octet-stream',
-        TTL: String(config.push.ttlHours * 3600),
+        TTL: String(ttlSeconds),
         Urgency: urgency,
       },
       body,

@@ -9,7 +9,7 @@ Two things make the check possible. Nil's web app builds to the same bytes on an
 You need Node.js 22, git and about two minutes. Get the source at the release the server runs, build it, and compare:
 
 ```bash
-git clone https://github.com/NON-OS/NIL-.git nil-check
+git clone https://github.com/NON-OS/NIL.git nil-check
 cd nil-check
 git checkout v3.0.0
 npm ci

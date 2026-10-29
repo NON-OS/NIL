@@ -28,12 +28,23 @@ function arrange(tasks: Task[]): Columns {
   return Object.fromEntries(meta.statuses.map((s) => [s, cols[s].map((t) => t.id)])) as Columns;
 }
 
+// where the board turns into one column at a time, as in TaskBoard.css
+const PHONE = '(max-width: 640px)';
+
 export default function TaskBoard({ tasks, showProject = true, defaults }: Props) {
   const byId = useMemo(() => Object.fromEntries(tasks.map((t) => [t.id, t])), [tasks]);
   const [columns, setColumns] = useState<Columns>(() => arrange(tasks));
   const [activeId, setActiveId] = useState<string | null>(null);
   const boardRef = useRef<HTMLDivElement>(null);
   const [shownColumn, showColumn] = useScrollIndex(boardRef);
+
+  // A phone shows one column at a time: it opens on the first one with something in it rather
+  // than on an empty backlog.
+  useEffect(() => {
+    if (!window.matchMedia(PHONE).matches) return;
+    const first = meta.boardStatuses.findIndex((s) => columns[s].length > 0);
+    if (first > 0) boardRef.current?.scrollTo({ left: (boardRef.current.children[first] as HTMLElement).offsetLeft - (boardRef.current.firstElementChild as HTMLElement).offsetLeft });
+  }, []);
 
   // Live updates from teammates re-arrange the board, except mid-drag.
   useEffect(() => {

@@ -10,6 +10,8 @@ export default function describeNotification(n: InboxItem) {
       return 'assigned you';
     case 'mention':
       return 'mentioned you on';
+    case 'doc_mention':
+      return 'mentioned you in';
     case 'comment':
       return 'commented on';
     case 'status':

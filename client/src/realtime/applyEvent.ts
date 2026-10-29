@@ -11,6 +11,9 @@ import checkBuild from '../actions/checkBuild';
 import recountArchive from '../actions/recountArchive';
 import isArchived from '../lib/isArchived';
 import agentActivity from '../actions/agentActivity';
+import liveDocs from '../actions/liveDoc/liveDocs';
+import chatEvents from '../actions/chat/chatEvents';
+import callEvents from '../actions/calls/callEvents';
 
 // a comment on a private task arrives encrypted and is opened before it's shown
 const openComment = (comment: Comment) => {
@@ -41,6 +44,11 @@ export default function applyEvent(event: any): void {
       break;
     case 'presence':
       store.set({ presence: event.presence });
+      break;
+    // live changes and cursors go straight to the open editor, which decrypts and checks them
+    case 'doc-update':
+    case 'doc-aware':
+      liveDocs.dispatch(event);
       break;
     case 'task':
       putTask(event.task);
@@ -99,7 +107,10 @@ export default function applyEvent(event: any): void {
       if (s.nox) store.set({ nox: { ...s.nox, verification: event.verification } });
       break;
     case 'docs':
-      store.set({ docsRev: s.docsRev + 1 });
+      store.set({ docsRev: s.docsRev + 1, docsChanged: typeof event.id === 'string' ? event.id : null });
+      break;
+    case 'files':
+      store.set({ filesRev: s.filesRev + 1 });
       break;
     // someone published or re-signed encryption keys: the directory is fetched and checked again
     case 'keys':
@@ -151,6 +162,9 @@ export default function applyEvent(event: any): void {
     case 'agent.approval':
       agentActivity.putApproval(event.approval);
       break;
+    case 'chat':
+      void chatEvents(event);
+      break;
     case 'wiped':
       // the workspace was erased; reload into the fresh-install screen
       location.replace('/');
@@ -160,5 +174,8 @@ export default function applyEvent(event: any): void {
       store.set({ typing: { ...s.typing, [event.taskId]: forTask } });
       break;
     }
+    // calls keep their own store (actions/calls)
+    default:
+      if (typeof event.type === 'string' && event.type.startsWith('call.')) callEvents(event);
   }
 }

@@ -7,9 +7,13 @@ import tokenHash from '../auth/tokenHash.js';
 import originAllowed from '../security/originAllowed.js';
 import loadTask from '../services/loadTask.js';
 import canSeeTask from '../services/canSeeTask.js';
+import docAwareness from './docAwareness.js';
 import logLimited from '../lib/logLimited.js';
 import buildId from '../lib/buildId.js';
 import config from '../config.js';
+import chatTyping from '../chat/chatTyping.js';
+import callSocket from '../calls/callSocket.js';
+import callSweep from '../calls/callSweep.js';
 
 const TYPING_INTERVAL_MS = 1500;
 const HEARTBEAT_MS = 30_000;
@@ -48,6 +52,12 @@ function handleMessage(ws, raw) {
     if (!canSeeTask(task, { id: client.userId })) return;
     const typing = { type: 'typing', taskId: task.id, userId: client.userId };
     hub.broadcast((viewer) => (canSeeTask(task, viewer) ? typing : null), { except: ws });
+  } else if (msg?.type === 'doc-open' || msg?.type === 'doc-aware') {
+    docAwareness(ws, client, msg);
+  } else if (msg?.type === 'chat.typing') {
+    chatTyping(client, msg);
+  } else if (typeof msg?.type === 'string' && msg.type.startsWith('call.')) {
+    callSocket(ws, client, msg);
   }
 }
 
@@ -65,6 +75,15 @@ function guarded(key, fn, onError) {
   };
 }
 
+// what each person's sockets sent together this minute
+const budgets = new Map();
+
+function overBudget(userId, now) {
+  let b = budgets.get(userId);
+  if (!b || now - b.start > 60_000) budgets.set(userId, (b = { start: now, count: 0 }));
+  return ++b.count > config.realtimeUserMessagesPerMinute;
+}
+
 function connected(ws, user, session) {
   hub.add(ws, { userId: user.id, isAdmin: user.isAdmin, session });
   ws.on('pong', () => {
@@ -79,18 +98,22 @@ function connected(ws, user, session) {
     guarded('message', (raw) => {
       const now = Date.now();
       if (now - budget.start > 60_000) budget = { start: now, count: 0 };
-      if (++budget.count > config.realtimeMessagesPerMinute) return ws.close(1008, 'too many messages');
+      if (++budget.count > config.realtimeMessagesPerMinute || overBudget(user.id, now)) return ws.close(1008, 'too many messages');
       handleMessage(ws, raw);
     }),
   );
-  ws.on('close', () => hub.remove(ws));
+  ws.on('close', () => {
+    hub.remove(ws);
+    callSocket.closed(ws);
+  });
   ws.on('error', () => hub.remove(ws));
   // the build lets a tab that reconnects after a deploy see it's running an old version
   ws.send(JSON.stringify({ type: 'hello', presence: hub.presenceFor({ id: user.id, isAdmin: user.isAdmin }), build: buildId() }));
 }
 
 export default function attachRealtime(server) {
-  const wss = new WebSocketServer({ noServer: true, maxPayload: 16 * 1024 });
+  // a call's handshake carries a whole session description, so frames may be a little larger
+  const wss = new WebSocketServer({ noServer: true, maxPayload: Math.max(16 * 1024, config.calls.maxSignalBytes + 2048) });
   let closing = false;
 
   function upgrade(req, socket, head) {
@@ -99,6 +122,9 @@ export default function attachRealtime(server) {
     if (!originAllowed(req)) return refuse(socket, '403 Forbidden');
     const user = currentUser(req);
     if (!user) return refuse(socket, '401 Unauthorized');
+    // a few tabs and devices each; more is a script, and the server's total keeps one from starving the rest
+    if (hub.count(user.id) >= config.realtimeSocketsPerUser) return refuse(socket, '429 Too Many Requests');
+    if (hub.count() >= config.realtimeMaxSockets) return refuse(socket, '503 Service Unavailable');
     const session = tokenHash(sessionCookie.read(req));
     wss.handleUpgrade(req, socket, head, guarded('connection', (ws) => connected(ws, user, session), (ws) => ws.terminate()));
   }
@@ -113,8 +139,13 @@ export default function attachRealtime(server) {
 
   // Drop sockets that stopped answering pings (sleeping laptops, dead proxies), and sockets
   // whose session ended some other way: it expired, or it was revoked from another device.
+  // calls kept in the database: rings running out, people who didn't come back, other processes
+  callSweep.start();
+
   const heartbeat = setInterval(
     guarded('heartbeat', () => {
+      const now = Date.now();
+      for (const [userId, b] of budgets) if (now - b.start > 60_000) budgets.delete(userId);
       for (const [ws, c] of hub.entries()) {
         if (!sessions.isLive(c.session)) {
           ws.close(4001, 'signed out');
@@ -139,6 +170,7 @@ export default function attachRealtime(server) {
     async close() {
       closing = true;
       clearInterval(heartbeat);
+      callSweep.stop();
       const sockets = [...hub.entries()].map(([ws]) => ws);
       const closed = sockets.map((ws) => (ws.readyState === ws.CLOSED ? null : new Promise((resolve) => ws.once('close', resolve))));
       for (const ws of sockets) ws.close(1001, 'Server restarting');

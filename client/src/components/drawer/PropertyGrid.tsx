@@ -83,7 +83,8 @@ export default function PropertyGrid({ task }: { task: Task }) {
           title="Due date"
         >
           {task.dueDate ? <DueBadge task={task} /> : empty('No due date')}
-          {task.dueDate && <span className="muted">{dates.long(task.dueDate)}</span>}
+          {/* "Sat" already names the day, so the date beside it doesn't again */}
+          {task.dueDate && <span className="muted">{dates.DAYS.includes(dates.relative(task.dueDate)) ? dates.long(task.dueDate).replace(/^\w+, /, '') : dates.long(task.dueDate)}</span>}
         </DatePicker>
       </Row>
       <Row icon={<CalendarPlus size={14} />} label="Start">

@@ -4,11 +4,12 @@ import wallet from './wallet.js';
 import publishKey from './publishKey.js';
 
 // One workspace with every kind of caller the authorization matrix asks about. A guest sees the
-// project "shared" only, and so do the two agents. "outsider" was a member until an admin removed
+// project "shared" only, and so do the two agents. "keyless" is a member who holds no key to the
+// encrypted docs and folders the Files rows point at. "outsider" was a member until an admin removed
 // them and still holds their old cookie and personal key; "stranger" brings a cookie and a key
 // that were never issued here, as someone signed in to another workspace would.
 export default async function authzWorld(base) {
-  const people = { owner: client(base), admin: client(base), member: client(base), guest: client(base), outsider: client(base) };
+  const people = { owner: client(base), admin: client(base), member: client(base), guest: client(base), outsider: client(base), keyless: client(base) };
   const wallets = Object.fromEntries(Object.keys(people).map((who) => [who, wallet()]));
   const ids = {};
   const keys = {};
@@ -24,7 +25,9 @@ export default async function authzWorld(base) {
   ids.member = await join('member', 'member');
   ids.guest = await join('guest', 'guest', { projectIds: [ids.shared] });
   ids.outsider = await join('outsider', 'member');
-  for (const who of ['owner', 'admin', 'member']) await publishKey(people[who], wallets[who]);
+  // a member with keys of their own who was never given a key to the matrix's docs and folders
+  ids.keyless = await join('keyless', 'member');
+  for (const who of ['owner', 'admin', 'member', 'keyless']) await publishKey(people[who], wallets[who]);
 
   // personal access keys, for the endpoints that take a bearer key instead of a cookie; making
   // one, like linking a wallet, needs a linked wallet to confirm the session first

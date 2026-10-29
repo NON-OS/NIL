@@ -278,8 +278,27 @@
   margin-left: 12px;
 }
 
+/* on a phone the header stays one line: Draft and who it's for show as icons, named by their labels */
+@media (max-width: 520px) {
+  .doc-toolbar {
+    flex-wrap: nowrap;
+    padding: 8px 12px;
+  }
+
+  .doc-toolbar .doc-tool-label {
+    display: none;
+  }
+}
+
 @media (max-width: 860px) {
   .doc-toolbar .only-mobile {
     display: inline-flex;
   }
+}
+
+.doc-error-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-top: 12px;
 }

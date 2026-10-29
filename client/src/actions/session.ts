@@ -10,7 +10,9 @@ import toast from '../state/toast';
 import keyScope from '../state/keyScope';
 import keyPins from '../state/keyPins';
 import router from '../lib/router';
+import chatDisk from '../lib/chatDisk';
 import socket from '../realtime/socket';
+import sealedLocal from '../lib/sealedLocal/sealedLocal';
 import type User from '../types/User';
 import type Workspace from '../types/Workspace';
 import type Project from '../types/Project';
@@ -27,6 +29,7 @@ import type Plan from '../types/Plan';
 import type StealthInfo from '../types/StealthInfo';
 import type TaskArchive from '../types/TaskArchive';
 import type Passkey from '../types/Passkey';
+import type FilesLimits from '../types/FilesLimits';
 import type AiProviderSummary from '../types/AiProviderSummary';
 import vault from './vault';
 import offline from './offline';
@@ -57,6 +60,7 @@ interface Bootstrap {
   privacyPools?: boolean;
   timer: TimeEntry | null;
   sourceUrl: string | null;
+  files?: FilesLimits | null;
   build: string | null;
   origin: string;
   workspaceKey: string;
@@ -109,6 +113,7 @@ async function load() {
     privacyPools: Boolean(b.privacyPools),
     timer: b.timer,
     sourceUrl: b.sourceUrl,
+    files: b.files ?? null,
     origin: b.origin,
     workspaceKey: b.workspaceKey,
     passkeys: b.passkeys ?? [],
@@ -134,6 +139,8 @@ function signedOut(message?: string) {
   keyScope.reset();
   // a phone wallet goes with the sign-in: the phone is told, and its keys are forgotten here
   void phoneWallet.end();
+  // chat's queue and search index on this device, encrypted as they are, go with the session
+  void chatDisk.clear('');
   pinsChecked = false;
   // a count never used before, so the key directory isn't served from this account's pins
   store.reset({ phase: 'auth', keysRev: store.get().keysRev + 1 });
@@ -176,6 +183,8 @@ const session = {
   async signOutEverywhere(keys = false) {
     try {
       await http.post('/me/sign-out-everywhere', { keys });
+      // revoked keys leave nothing worth keeping in this browser
+      if (keys) await sealedLocal.wipe();
     } finally {
       signedOut(keys ? 'Signed out on every device, and your access keys were revoked.' : 'Signed out on every device.');
     }

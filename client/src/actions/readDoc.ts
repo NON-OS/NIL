@@ -7,6 +7,7 @@ import docFacts, { type DocFacts } from '../lib/crypto/docFacts';
 import signedText from '../lib/crypto/signedText';
 import signedFacts from '../lib/crypto/signedFacts';
 import keyHash from '../lib/crypto/keyHash';
+import docBody from '../lib/docState/docBody';
 import keyDirectory from './keyDirectory';
 import type DocItem from '../types/DocItem';
 import type EncryptedDoc from '../types/EncryptedDoc';
@@ -46,10 +47,22 @@ async function openVersion(key: Uint8Array, docId: string, version: number, cts:
   return { title: title.text, body: body?.text ?? null, verified, facts: verified ? title.facts : null, olderFormat: !title.facts, by: verified && title.facts ? title.by : updatedBy, oldKey: title.old ?? body?.old ?? null };
 }
 
-function unwrap(doc: EncryptedDoc) {
+// A key that won't open is marked, so the list can drop a grant someone planted (see docs.list).
+async function unwrap(doc: EncryptedDoc) {
   const id = keyring.identity();
   if (!id) throw new Error('Unlock your docs first.');
-  return docKeySeal.open(doc.wrappedKey, id.privateKey, id.publicKey);
+  try {
+    return await docKeySeal.open(doc.wrappedKey, id.privateKey, id.publicKey);
+  } catch {
+    throw Object.assign(new Error('The key you were given for this doc doesn’t open it.'), { unopenable: true });
+  }
+}
+
+// A rich body's words come from its shared state; the converter loads only when one is opened.
+async function plainText(body: string | null) {
+  if (!docBody.isRich(body)) return body;
+  const { default: stateText } = await import('../lib/docState/stateText');
+  return stateText(body);
 }
 
 // Decrypts docs and checks who wrote each version and who it's for. Only a key that opened a
@@ -72,8 +85,12 @@ const readDoc = {
       id: doc.id,
       title: v.title,
       body: v.body,
+      text: await plainText(v.body),
       version: doc.version,
-      audience: v.facts?.audience ?? doc.audience,
+      // a version from before signed audiences counts as for its readers only: the server's word
+      // alone never widens a doc to the whole team (see teamClaim)
+      audience: v.facts?.audience ?? 'people',
+      teamClaim: !v.facts && doc.audience === 'team',
       createdBy: doc.createdBy,
       updatedBy: v.by,
       createdAt: doc.createdAt,
@@ -83,9 +100,12 @@ const readDoc = {
       olderFormat: v.olderFormat,
       oldKey: v.oldKey,
       keyHash: keyHash(key),
+      keyEpoch: doc.keyEpoch ?? 0,
+      reseal: doc.reseal ?? null,
+      live: { through: doc.updatesThrough ?? 0, updates: doc.updates ?? [], more: doc.updatesMore === true },
     };
     // so search in this tab can find it, for as long as the keys stay unlocked
-    openedText.rememberDoc(item);
+    openedText.rememberDoc({ id: item.id, title: item.title, body: item.text });
     return item;
   },
 
@@ -97,7 +117,7 @@ const readDoc = {
 
   async revision(doc: DocItem, key: Uint8Array, r: { version: number; titleCt: string; bodyCt: string; updatedBy: string | null; createdAt: number }) {
     const v = await openVersion(key, doc.id, r.version, r, r.updatedBy);
-    return { version: r.version, updatedBy: v.by, createdAt: r.createdAt, title: v.title, body: v.body ?? '', verified: v.verified, olderFormat: v.olderFormat, oldKey: v.oldKey };
+    return { version: r.version, updatedBy: v.by, createdAt: r.createdAt, title: v.title, body: v.body ?? '', text: (await plainText(v.body)) ?? '', verified: v.verified, olderFormat: v.olderFormat, oldKey: v.oldKey };
   },
 };
 

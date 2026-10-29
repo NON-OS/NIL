@@ -5,6 +5,7 @@ The NØNOS foundation runs Nil for anyone who doesn't want to run their own serv
 ## What you get
 
 - Your own copy of Nil, in its own container with its own storage. Other teams' workspaces can't reach it, and it has no network access of its own except to the Ethereum node that checks payments. That is also why push notifications are off: they would have to go through the browser makers' push services.
+- No calls yet. A call needs a relay server so nobody in it learns anyone else's IP address, and hosted workspaces don't have one. Rather than offer calls that either fail or show people's addresses, they're off until a relay with its own secret and limits for each workspace is in place. Self-hosted Nil has calls; see [Calls](calls.md).
 - The free tier, with Nil Pro paid from inside your workspace (Settings → Plan), in USDC or NOX, straight to the NØNOS DAO treasury. Nothing is charged automatically.
 - Nightly encrypted backups, updates and monitoring done for you.
 
@@ -22,9 +23,9 @@ A workspace nobody sets up within 30 days is removed, and its address becomes fr
 
 ## What NØNOS can and cannot see
 
-**Encrypted in your browser.** Docs (titles and text) and private tasks (title, notes, checklist and comments) are encrypted before they leave your browser, with keys that only you and the people you share with hold. NØNOS stores them and cannot read them. The same goes for the contents of encrypted votes and who cast an anonymous vote. That depends on your browser running Nil's real code, and anyone can [check what a hosted workspace sends](verify-a-server.md) against the release, byte for byte.
+**Encrypted in your browser.** Docs (titles and text), chat (messages, files, channel names and topics), files in shared folders (with their names and thumbnails) and private tasks (title, notes, checklist and comments) are encrypted before they leave your browser, with keys that only you and the people you share with hold. NØNOS stores them and cannot read them. The same goes for the contents of encrypted votes and who cast an anonymous vote. That depends on your browser running Nil's real code, and anyone can [check what a hosted workspace sends](verify-a-server.md) against the release, byte for byte.
 
-**Stored in plain form.** Everything else in your workspace is stored as written, in your workspace's own storage on NØNOS's server: team tasks and their comments, files, goals, projects, time entries, reminders, notifications, the activity history, and the member list with names, roles and linked wallet addresses. NØNOS doesn't look at any of it, and its tools never open your workspace's database. But it runs the server, so it could, and it could be ordered by a court to hand it over. Docs and private tasks would be handed over still encrypted.
+**Stored in plain form.** Everything else in your workspace is stored as written, in your workspace's own storage on NØNOS's server: team tasks with their comments and attached files, goals, projects, time entries, reminders, notifications, the activity history, and the member list with names, roles and linked wallet addresses. NØNOS doesn't look at any of it, and its tools never open your workspace's database. But it runs the server, so it could, and it could be ordered by a court to hand it over. Docs, chat, shared files and private tasks would be handed over still encrypted.
 
 **What NØNOS keeps about your workspace.** Its address, the wallet address that signed up, its state, app version and plan, when it was created, how much disk it uses, whether its setup was finished, and when its data last changed (the time on its database files, not what is in them). Not your members, not your tasks.
 

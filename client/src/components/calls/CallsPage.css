@@ -1,0 +1,365 @@
+/* The Calls page: calls going on now across the top, the team on the left, recent calls and
+   how you take calls on the right. Panels and rules as in the rest of Nil. */
+.calls-page {
+  display: grid;
+  gap: 16px;
+}
+
+.calls-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+}
+
+.calls-unlock {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 12px;
+  padding: 12px 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--accent-soft);
+}
+
+.calls-unlock > svg {
+  width: 18px;
+  height: 18px;
+  color: var(--accent-text);
+}
+
+.calls-unlock p {
+  flex: 1;
+  min-width: 220px;
+  margin: 0;
+}
+
+.calls-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.calls-side {
+  display: grid;
+  gap: 16px;
+}
+
+.calls-panel-body {
+  padding-top: 8px;
+}
+
+.calls-settings {
+  display: grid;
+  gap: 14px;
+}
+
+.calls-settings .filter-toggle {
+  justify-content: space-between;
+  white-space: normal;
+}
+
+.call-panel-empty {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin: 4px 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.call-panel-empty p {
+  margin: 0;
+}
+
+.call-panel-foot {
+  display: flex;
+  justify-content: flex-end;
+  padding-top: 8px;
+  border-top: 1px solid var(--line);
+}
+
+/* people and recent calls share one row shape: who, a line about them, and call buttons */
+.call-people,
+.call-recents {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.call-person,
+.call-recent {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 6px 0;
+}
+
+.call-person + .call-person,
+.call-recent + .call-recent {
+  border-top: 1px solid var(--line);
+}
+
+.call-person-text {
+  display: grid;
+  flex: 1;
+  min-width: 0;
+}
+
+.call-person-name,
+.call-person-sub {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.call-person-name {
+  font-weight: 550;
+}
+
+.call-person-sub {
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.call-person-sub svg {
+  width: 13px;
+  height: 13px;
+  margin-right: 2px;
+  vertical-align: -2px;
+}
+
+.call-recent.missed .call-person-sub {
+  color: var(--danger);
+}
+
+.call-person-btn {
+  width: var(--tap-min);
+  height: var(--tap-min);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--accent-text);
+}
+
+.call-person-btn:hover:not(:disabled) {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.call-person-btn:disabled {
+  color: var(--faint);
+  opacity: 0.6;
+}
+
+.call-search {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+  padding: 0 10px;
+  border: 1px solid var(--line-control);
+  border-radius: var(--r-md);
+}
+
+.call-search:focus-within {
+  border-color: var(--accent-line);
+  box-shadow: 0 0 0 1px var(--accent-line);
+}
+
+.call-search svg {
+  width: 15px;
+  height: 15px;
+  color: var(--muted);
+}
+
+.call-search input {
+  flex: 1;
+  height: 36px;
+  border: 0;
+  background: transparent;
+  font-size: var(--field-text);
+  outline: none;
+}
+
+/* calls going on now: one card each, with a live dot */
+.calls-live {
+  display: grid;
+  gap: 8px;
+}
+
+.call-live {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 12px 16px;
+  border: 1px solid var(--accent-line);
+  border-radius: var(--r-lg);
+  background: var(--surface);
+}
+
+.call-live-dot {
+  width: 10px;
+  height: 10px;
+  flex: none;
+  border-radius: 999px;
+  background: var(--accent-line);
+}
+
+.call-live-actions {
+  display: flex;
+  gap: 6px;
+}
+
+.call-live-video {
+  width: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+.calls-foot {
+  display: block;
+  padding-left: 23px;
+  text-indent: -23px;
+  margin: 8px 0 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.calls-foot a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.calls-foot svg {
+  width: 15px;
+  height: 15px;
+  margin-right: 8px;
+  vertical-align: -3px;
+  color: var(--accent-line);
+}
+
+/* not set up yet: the steps for whoever runs the server */
+.calls-setup {
+  max-width: 720px;
+}
+
+.calls-setup .panel-head h2 svg {
+  width: 18px;
+  height: 18px;
+  color: var(--muted);
+}
+
+.calls-setup p {
+  margin: 0 0 12px;
+}
+
+.calls-setup-steps {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 14px;
+  padding-left: 22px;
+}
+
+.calls-setup-steps code {
+  font-size: var(--text-sm);
+  overflow-wrap: anywhere;
+}
+
+/* the new call dialog */
+.call-new {
+  display: grid;
+  gap: 10px;
+}
+
+.call-new-who {
+  margin: 0;
+  color: var(--muted);
+  font-size: var(--text-sm);
+}
+
+.call-new-list {
+  display: grid;
+  gap: 2px;
+  max-height: min(48vh, 420px);
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+}
+
+.call-new-person {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 52px;
+  padding: 6px 8px;
+  border: 1px solid transparent;
+  border-radius: var(--r-md);
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+}
+
+.call-new-person:hover:not(:disabled) {
+  background: var(--surface-2);
+}
+
+.call-new-person.on {
+  border-color: var(--accent-line);
+  background: var(--accent-soft);
+}
+
+.call-new-person:disabled {
+  opacity: 0.55;
+}
+
+.call-new-check {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid var(--line-control);
+  border-radius: 999px;
+  color: var(--accent-ink);
+}
+
+.call-new-person.on .call-new-check {
+  border-color: var(--accent-line);
+  background: var(--accent);
+}
+
+.call-new-check svg {
+  width: 14px;
+  height: 14px;
+}
+
+.call-new-count {
+  margin-right: auto;
+  font-size: var(--text-sm);
+}
+
+@media (max-width: 860px) {
+  .calls-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 599px) {
+  .calls-wide {
+    display: none;
+  }
+
+  .call-recent .call-person-sub {
+    white-space: normal;
+  }
+
+  .call-live > .avatar-stack {
+    display: none;
+  }
+}

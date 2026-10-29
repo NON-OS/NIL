@@ -28,11 +28,16 @@ import due from './config/due.js';
 import calendarFeeds from './config/calendarFeeds.js';
 import bountyBoard from './config/bountyBoard.js';
 import uploads from './config/uploads.js';
+import docs from './config/docs.js';
+import chat from './config/chat.js';
+import sealedBlobs from './config/sealedBlobs.js';
+import files from './config/files.js';
 import ai from './config/ai.js';
 import aiCredits from './config/aiCredits.js';
 import agents from './config/agents.js';
 import verification from './config/verification.js';
 import walletConnect from './config/walletConnect.js';
+import calls from './config/calls.js';
 import PUBLIC_NODE from './config/publicNode.js';
 
 // Every setting is optional except APP_URL, and NOX_RPC_URL on a server reached over the network.
@@ -73,10 +78,21 @@ const config = Object.freeze({
   maxJsonDepth: envNumber('MAX_JSON_DEPTH', 64, { min: 8 }),
   maxUploadBytes: envNumber('MAX_UPLOAD_MB', 25, { min: 1 }) * MB,
   uploads,
+  docs,
+  chat,
+  sealedBlobs,
+  files,
   maxCapsuleBytes: envNumber('MAX_CAPSULE_MB', 4096, { min: 1 }) * MB,
   sessionDays: envNumber('SESSION_DAYS', 30, { min: 1 }),
   // messages one live connection may send a minute; the app sends a few, a flood gets cut off
   realtimeMessagesPerMinute: envNumber('REALTIME_MESSAGES_PER_MINUTE', 600, { min: 10 }),
+  // the same across all of one person's connections, so more tabs don't buy a bigger flood
+  realtimeUserMessagesPerMinute: envNumber('REALTIME_USER_MESSAGES_PER_MINUTE', 1200, { min: 10 }),
+  // live connections one person may hold open, and the server in all
+  realtimeSocketsPerUser: envNumber('REALTIME_SOCKETS_PER_USER', 20, { min: 1 }),
+  realtimeMaxSockets: envNumber('REALTIME_MAX_SOCKETS', 5000, { min: 10 }),
+  // what may queue up for a connection that stopped reading before it's cut off
+  realtimeMaxBufferedBytes: envNumber('REALTIME_MAX_BUFFERED_KB', 1024, { min: 64 }) * 1024,
   trashDays: envNumber('TRASH_DAYS', 30),
   readNotificationDays: envNumber('NOTIFICATION_DAYS', 90),
   usedInviteDays: envNumber('USED_INVITE_DAYS', 30),
@@ -105,6 +121,7 @@ const config = Object.freeze({
   agents,
   verification,
   walletConnect,
+  calls,
 });
 
 // Settings that work but are wrong for a public server. Only production gets these, so a

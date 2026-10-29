@@ -5,7 +5,7 @@ import wallet from '../../../server/test/helpers/wallet.js';
 
 globalThis.window = globalThis;
 globalThis.addEventListener = () => {};
-globalThis.document = { querySelector: () => null, createElement: () => ({ click() {}, remove() {} }), body: { append() {} }, addEventListener() {}, visibilityState: 'visible' };
+globalThis.document = { querySelector: () => null, createElement: () => ({ click() {}, remove() {} }), body: { append() {} }, documentElement: { style: {} }, addEventListener() {}, visibilityState: 'visible' };
 globalThis.location = { protocol: 'https:', host: 'nil.example', pathname: '/', search: '', origin: 'https://nil.example', replace() {} };
 globalThis.history = { replaceState() {}, pushState() {} };
 globalThis.WebSocket = class {

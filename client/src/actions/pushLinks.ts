@@ -23,7 +23,9 @@ export default function followPushLinks() {
     void open(linked || null);
   }
   const onMessage = (e: MessageEvent) => {
-    if (e.data?.type === 'nil:open') void open(typeof e.data.taskId === 'string' ? e.data.taskId : null);
+    if (e.data?.type !== 'nil:open') return;
+    if (e.data.chat === true) router.navigate('/chat');
+    else void open(typeof e.data.taskId === 'string' ? e.data.taskId : null);
   };
   navigator.serviceWorker?.addEventListener('message', onMessage);
   return () => navigator.serviceWorker?.removeEventListener('message', onMessage);

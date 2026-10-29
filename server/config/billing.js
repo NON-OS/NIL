@@ -25,10 +25,10 @@ const usdc = envAddress('PLAN_USDC', '0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48
 const unpriced = 'NOX is priced with PLAN_NOX_USD alone.';
 
 export default Object.freeze({
-  priceUsd: envUsd('PLAN_PRICE_USD', '12', { positive: true }),
-  seatUsd: envUsd('PLAN_SEAT_USD', '3'),
+  priceUsd: envUsd('PLAN_PRICE_USD', '4', { positive: true }),
+  seatUsd: envUsd('PLAN_SEAT_USD', '1'),
   usdc: usdc ? Object.freeze({ symbol: 'USDC', address: usdc, decimals: envNumber('PLAN_USDC_DECIMALS', 6, { min: suffixDigits, max: 77 }) }) : null,
-  noxDiscount: envNumber('PLAN_NOX_DISCOUNT', 20, { max: 90 }),
+  noxDiscount: envNumber('PLAN_NOX_DISCOUNT', 50, { max: 90 }),
   stakerTiers: stakerTiers((env.PLAN_STAKER_TIERS ?? '10000:10,100000:25').trim()),
   invoiceHours: envNumber('PLAN_INVOICE_HOURS', 24, { min: 1, max: 24 * 14 }),
   lateDays: envNumber('PLAN_LATE_DAYS', 7, { max: 90 }),

@@ -21,12 +21,15 @@ import rowsTeam from './helpers/authzRowsTeam.js';
 import rowsPools from './helpers/authzRowsPools.js';
 import rowsAgentApi from './helpers/authzRowsAgentApi.js';
 import rowsEdge from './helpers/authzRowsEdge.js';
+import rowsChat from './helpers/authzRowsChat.js';
+import rowsCalls from './helpers/authzRowsCalls.js';
+import rowsFiles from './helpers/authzRowsFiles.js';
 
 // The authorization matrix: every route the server answers, called as every kind of caller, with
 // what each one may and may not do written down per route. Routes are found by walking the
 // routers, so a route added without a row here fails the first test, and a row whose route is
 // gone fails it too.
-const API = { ...rowsOpen, ...rowsWork, ...rowsTeam, ...rowsPools };
+const API = { ...rowsOpen, ...rowsWork, ...rowsTeam, ...rowsPools, ...rowsChat, ...rowsCalls, ...rowsFiles };
 const ROWS = { ...API, ...rowsAgentApi, ...rowsEdge };
 const PEOPLE = new Set(actors.PEOPLE);
 
@@ -64,7 +67,7 @@ async function runRow(key, row, { bearer = false } = {}) {
 
 before(async () => {
   // the world's wallets confirm their sessions once, and the matrix takes longer than the default few minutes
-  srv = await startServer({ env: { TRUST_PROXY: 'loopback', SIGNIN_CONFIRM_MINUTES: '60' } });
+  srv = await startServer({ env: { TRUST_PROXY: 'loopback', SIGNIN_CONFIRM_MINUTES: '60', TURN_URLS: 'turn:turn.example.org:3478', TURN_SECRET: 'm'.repeat(40), CALL_STARTS_PER_MINUTE: '1000', CALL_RING_SECONDS: '300', CALL_RINGS_PER_PERSON: '1000' } });
   const world = await authzWorld(() => srv.base);
   ctx = { world, t: await authzTargets(world) };
   tools = (await import('../mcp/tools.js')).default;
@@ -96,6 +99,22 @@ test('every route the server answers has a row in the matrix, and every row a ro
 test('the JSON API: every route, every caller', async () => {
   const misses = [];
   for (const [key, row] of Object.entries(API).filter(([, r]) => !r.last)) misses.push(...(await runRow(key, row)));
+  assert.deepEqual(misses, []);
+});
+
+// A member like any other, but without a key to the doc and folders the Files rows point at: to
+// them those don't exist, and only the rows marked `keyless` let them through.
+test('Files: a member who holds no key to a doc or folder gets nowhere with it', async () => {
+  const misses = [];
+  for (const [key, row] of Object.entries(rowsFiles)) {
+    const [method, routePath] = key.split(' ');
+    const allowed = Boolean(row.keyless);
+    const sent = await authzResolve(routePath, row, ctx, 'keyless', { allowed: false });
+    const res = await authzRequest(ctx.world, 'keyless', { method, ...sent });
+    cells += 1;
+    const fits = allowed ? res.status >= 200 && res.status < 300 : [403, 404].includes(res.status);
+    if (!fits) misses.push(`${key} as a member without a key: got ${res.status}, expected ${allowed ? 'allowed' : 'refused'} ${JSON.stringify(res.data).slice(0, 160)}`);
+  }
   assert.deepEqual(misses, []);
 });
 
