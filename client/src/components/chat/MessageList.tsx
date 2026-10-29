@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { ArrowDown } from 'lucide-react';
 import Spinner from '../ui/Spinner';
 import MessageRow from './MessageRow';
 import useVirtualList from '../../hooks/useVirtualList';
 import useNow from '../../hooks/useNow';
 import useStore from '../../state/useStore';
 import chatRows from '../../lib/chatRows';
+import cx from '../../lib/cx';
 import type { RosterEvent } from '../../lib/rosterEvents';
 import type { Timeline } from '../../state/chatState';
 import type ChatChannel from '../../types/ChatChannel';
@@ -17,6 +19,8 @@ interface Props {
   onEditing: (id: string | null) => void;
   onThread: (id: string) => void;
   onOlder: () => void;
+  // in a thread, the message it hangs from
+  root?: string;
   // where Escape sends focus: the composer
   onLeave: () => void;
   label: string;
@@ -28,13 +32,18 @@ interface Props {
 // pages load as it's scrolled up, and it stays at the newest message while you're there. Arrow
 // keys move between messages, Home and End jump to either end, E edits your own message, R
 // replies in a thread, and Escape goes back to writing.
-export default function MessageList({ channel, timeline, inThread, editing, onEditing, onThread, onOlder, onLeave, label, events }: Props) {
+export default function MessageList({ channel, timeline, inThread, editing, onEditing, onThread, onOlder, onLeave, label, events, root }: Props) {
   const me = useStore((s) => s.me?.id ?? null);
   // disappearing messages go from the screen as their time runs out
   const now = useNow(30_000);
+  // the New line stays where you left off for as long as the conversation is open, though
+  // opening it marks everything read straight away
+  const since = useRef({ id: channel.id, seq: channel.readSeq });
+  if (since.current.id !== channel.id) since.current = { id: channel.id, seq: channel.readSeq };
+  const readSeq = inThread ? Number.MAX_SAFE_INTEGER : since.current.seq;
   const rows = useMemo(
-    () => chatRows(timeline.items, { me, readSeq: inThread ? Number.MAX_SAFE_INTEGER : channel.readSeq, now, events, fromStart: !timeline.more }),
-    [timeline.items, me, channel.readSeq, inThread, now, events, timeline.more],
+    () => chatRows(timeline.items, { me, readSeq, now, events, fromStart: !timeline.more, root }),
+    [timeline.items, me, readSeq, now, events, timeline.more, root],
   );
   const keyAt = useCallback((i: number) => rows[i].key, [rows]);
   const list = useVirtualList({ count: rows.length, keyAt, estimate: 56, onTop: timeline.more ? onOlder : undefined });
@@ -46,6 +55,22 @@ export default function MessageList({ channel, timeline, inThread, editing, onEd
   useEffect(() => {
     if (lastPending) list.toBottom();
   }, [lastPending]);
+
+  // a conversation opens where you left off, at the New line, when that's above the newest
+  const unreadAt = rows.findIndex((r) => r.kind === 'unread');
+  const placed = useRef<string | null>(null);
+  useEffect(() => {
+    if (placed.current === channel.id || !rows.length) return;
+    placed.current = channel.id;
+    if (unreadAt >= 0) list.toIndex(unreadAt);
+  }, [channel.id, rows.length > 0]);
+
+  // scrolled up, newer messages arriving are counted on a button that goes down to them
+  const newest = timeline.items.reduce((n, m) => Math.max(n, m.seq), 0);
+  const left = useRef(newest);
+  const down = !list.atBottom();
+  if (!down) left.current = newest;
+  const arrived = down ? timeline.items.filter((m) => m.seq > left.current && m.senderId !== me).length : 0;
 
   // a row the keyboard moved to that wasn't in the page yet gets focus once it's drawn
   useEffect(() => {
@@ -93,9 +118,10 @@ export default function MessageList({ channel, timeline, inThread, editing, onEd
   };
 
   return (
+    <div className="chat-feed-wrap">
     <section ref={list.ref} className="chat-feed" onScroll={list.onScroll} aria-label={label} aria-busy={timeline.loading} tabIndex={0} onKeyDown={onKeyDown}>
       <div className="chat-older">
-        {timeline.loading ? <Spinner size={14} /> : timeline.more ? <span>Scroll up for older messages</span> : <span>{inThread ? 'The start of this thread.' : 'The start of this conversation.'}</span>}
+        {timeline.loading ? <Spinner size={14} /> : timeline.more ? <span>Scroll up for older messages</span> : <span>{inThread ? '' : 'The start of this conversation.'}</span>}
       </div>
       <div style={{ paddingTop: list.before, paddingBottom: list.after }}>
         {rows.slice(list.start, list.end).map((row, i) => {
@@ -110,6 +136,10 @@ export default function MessageList({ channel, timeline, inThread, editing, onEd
                 <div className="chat-unread" role="separator">
                   New
                 </div>
+              ) : row.kind === 'replies' ? (
+                <div className="chat-day chat-replies" role="separator">
+                  {row.count ? (row.count === 1 ? '1 reply' : `${row.count} replies`) : 'No replies yet'}
+                </div>
               ) : row.kind === 'event' ? (
                 <p className="chat-event">{row.text}</p>
               ) : (
@@ -120,5 +150,11 @@ export default function MessageList({ channel, timeline, inThread, editing, onEd
         })}
       </div>
     </section>
+      {down && (
+        <button type="button" className={cx('chat-to-newest', arrived > 0 && 'new')} onClick={() => list.toBottom()}>
+          <ArrowDown size={14} /> {arrived ? `${arrived} new ${arrived === 1 ? 'message' : 'messages'}` : 'Newest'}
+        </button>
+      )}
+    </div>
   );
 }

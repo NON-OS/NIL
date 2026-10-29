@@ -45,7 +45,7 @@ async function extend(channel: ChatChannelRow, held: Chain | null): Promise<Chai
     for (const row of epochs) {
       if (chain.broken !== null) break;
       try {
-        if (row.epoch !== chain.rosters.length + 1) throw new Error('An epoch is missing.');
+        if (row.epoch !== chain.rosters.length + 1) throw new Error('One of this conversation’s keys is missing from the server, so who is in it can’t be checked. Tell whoever runs your server.');
         chain.rosters.push(await checkRoster(row.roster, { workspaceKey, channelId: channel.id, epoch: row.epoch, wrappedKeys: row.wrappedKeys, proofs: row.proofs }, chain.rosters));
       } catch {
         chain.broken = row.epoch;

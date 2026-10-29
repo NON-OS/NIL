@@ -1,4 +1,4 @@
-import { memo, useState } from 'react';
+import { memo, useEffect, useRef, useState, type MouseEvent } from 'react';
 import { CircleAlert, Clock, Lock, MessageSquareReply, Pencil, ShieldAlert, Trash2 } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import Spinner from '../ui/Spinner';
@@ -30,7 +30,7 @@ interface Props {
   onThread: (id: string) => void;
 }
 
-function Body({ item, people, me }: { item: ChatItem; people: User[]; me: string | undefined }) {
+function Body({ item, people, me, edited }: { item: ChatItem; people: User[]; me: string | undefined; edited: boolean }) {
   if (item.state === 'locked') {
     return (
       <p className="msg-gone">
@@ -46,15 +46,18 @@ function Body({ item, people, me }: { item: ChatItem; people: User[]; me: string
     );
   }
   if (item.type === 'deleted') return <p className="msg-gone">This message was deleted.</p>;
-  return <MessageText text={item.text} people={people} me={me} />;
+  return <MessageText text={item.text} people={people} me={me} edited={edited} />;
 }
 
 // One message: who and when, the words, files, reactions and replies, and on hover or focus the
-// things to do with it. Only the sender can edit or delete it.
+// things to do with it; on a touch screen, which has no hover, a tap on the message shows them.
+// Only the sender can edit or delete it.
 function MessageRow({ item, channel, grouped, reactions, index, inThread, editing, onEditing, onThread }: Props) {
   const users = useStore((s) => s.users);
   const me = useStore((s) => s.me?.id);
   const [draft, setDraft] = useState(item.text);
+  const [touched, setTouched] = useState(false);
+  const row = useRef<HTMLElement>(null);
   const sender = item.senderId ? users[item.senderId] : null;
   const mine = item.senderId === me && item.seq > 0;
   const live = item.state === 'ok' && item.type === 'message';
@@ -68,8 +71,21 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
   };
   const label = `${sender?.name ?? 'Someone'}, ${dates.time(item.sentAt)}`;
 
+  // a tap anywhere else puts the actions away again
+  useEffect(() => {
+    if (!touched) return;
+    const away = (e: PointerEvent) => !row.current?.contains(e.target as Node) && setTouched(false);
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [touched]);
+  const onTap = (e: MouseEvent<HTMLElement>) => {
+    if (!matchMedia('(hover: none)').matches || (e.target as HTMLElement).closest('a, button, input, textarea, video, audio')) return;
+    if (!window.getSelection()?.isCollapsed) return;
+    setTouched((on) => !on);
+  };
+
   return (
-    <article className={cx('msg', grouped && 'grouped', mentionsMe && 'mentions-me')} data-index={index} tabIndex={-1} aria-label={label}>
+    <article ref={row} className={cx('msg', grouped && 'grouped', mentionsMe && 'mentions-me', touched && 'touched')} data-index={index} tabIndex={-1} aria-label={label} onClick={onTap}>
       {grouped ? <time className="stamp">{dates.clock(item.sentAt)}</time> : <Avatar user={sender} size={36} />}
       <div>
         {!grouped && (
@@ -107,7 +123,7 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
             </div>
           </div>
         ) : (
-          <Body item={item} people={people} me={me} />
+          <Body item={item} people={people} me={me} edited={Boolean(item.editedAt) && live} />
         )}
         {live && item.files.length > 0 && (
           <div className="msg-files">
@@ -116,14 +132,9 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
             ))}
           </div>
         )}
-        {(item.editedAt || item.expiresAt) && live && (
+        {item.expiresAt && live && (
           <span className="msg-meta">
-            {item.editedAt ? '(edited) ' : ''}
-            {item.expiresAt ? (
-              <>
-                <Clock size={10} /> disappears, {timeLeft(item.expiresAt)}
-              </>
-            ) : null}
+            <Clock size={10} /> disappears, {timeLeft(item.expiresAt)}
           </span>
         )}
         {item.pending && (
@@ -167,7 +178,7 @@ function MessageRow({ item, channel, grouped, reactions, index, inThread, editin
         )}
       </div>
       {live && item.seq > 0 && !editing && (
-        <div className="msg-tools" role="toolbar" aria-label="Message actions">
+        <div className={cx('msg-tools', touched && 'open')} role="toolbar" aria-label="Message actions">
           <EmojiPicker onPick={(emoji) => run(() => chatSend.react(channel, item, emoji))} />
           {!inThread && !item.threadId && (
             <button type="button" className="icon-btn" onClick={() => onThread(item.id)} aria-label="Reply in thread" title="Reply in thread">

@@ -37,6 +37,17 @@ const GROUPS = [
       ['G V', 'Votes'],
       ['G P', 'Proof of work'],
       ['G T', 'Settings'],
+      ['G K', 'Chat'],
+    ],
+  },
+  {
+    title: 'In chat',
+    keys: [
+      ['⌘ J', 'Jump to a conversation'],
+      ['Alt ↑', 'Conversation above'],
+      ['Alt ↓', 'Conversation below'],
+      ['R', 'Reply in a thread'],
+      ['E', 'Edit your message'],
     ],
   },
   {

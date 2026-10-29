@@ -64,12 +64,18 @@ export default function useVirtualList({ count, keyAt, estimate, onTop }: Option
     () =>
       typeof ResizeObserver === 'undefined'
         ? null
-        : new ResizeObserver((entries) => {
+        : new ResizeObserver((entries, self) => {
             const node = ref.current;
             let shift = 0;
             let changed = false;
             for (const entry of entries) {
               const row = entry.target as HTMLElement;
+              // a row that scrolled out of the list reports itself at no height; keeping that
+              // would pull it back in, measure it again and loop
+              if (!row.isConnected) {
+                self.unobserve(row);
+                continue;
+              }
               const key = row.dataset.key!;
               const h = row.offsetHeight;
               const before = heights.current.get(key) ?? estimate;

@@ -56,7 +56,7 @@ Scroll up and older messages load. Long conversations stay quick, because only t
 
 | Keys | What it does |
 |---|---|
-| `⌘K` (Mac) or `Ctrl+K` | Jump to a conversation by name |
+| `⌘J` (Mac) or `Ctrl+J` | Jump to a conversation by name |
 | `Alt+↑` and `Alt+↓` | The conversation above or below in the list |
 | `Alt+Shift+↑` and `Alt+Shift+↓` | The next conversation with something unread |
 | `↑` in an empty box | Edit your last message |

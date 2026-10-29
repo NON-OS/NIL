@@ -83,7 +83,11 @@ export default function ChannelList({ current, onOpen, onNew }: Props) {
           </button>
         </div>
         {sorted.channels.map(link)}
-        {!sorted.channels.length && !q && <p className="muted chat-section">No channels yet.</p>}
+        {!sorted.channels.length && !q && (
+          <button type="button" className="chat-list-empty" onClick={() => onNew('channel')}>
+            <Plus size={14} /> Start a channel for a team or topic
+          </button>
+        )}
         <div className="chat-section">
           <span className="eyebrow">Direct messages</span>
           <button type="button" className="icon-only" onClick={() => onNew('dm')} aria-label="New direct message" title="New direct message">
@@ -91,7 +95,11 @@ export default function ChannelList({ current, onOpen, onNew }: Props) {
           </button>
         </div>
         {sorted.direct.map(link)}
-        {!sorted.direct.length && !q && <p className="muted chat-section">No direct messages yet.</p>}
+        {!sorted.direct.length && !q && (
+          <button type="button" className="chat-list-empty" onClick={() => onNew('dm')}>
+            <Plus size={14} /> Message a teammate directly
+          </button>
+        )}
         {q.length > 1 && (
           <>
             <div className="chat-section">
