@@ -138,9 +138,8 @@ jobs:
           docker stop upgrade
           test "$(docker inspect upgrade --format '{{.State.ExitCode}}')" = 0
 
-  # The calls check in Safari's engine, which Linux can't give a camera or microphone: on macOS,
-  # with coturn and the SFU. LiveKit ships no macOS build of 1.9.12, so it's built from its Go
-  # module at that tag, which the Go checksum database pins.
+  # The calls check in Safari's engine, on macOS with coturn. Playwright can't give WebKit a
+  # camera or microphone, so its people join without them and the SFU is left to calls-chromium.
   calls-webkit:
     runs-on: macos-14
     timeout-minutes: 45
@@ -155,6 +154,26 @@ jobs:
       - run: npm ci
       - run: npm run build
       - run: brew install coturn
+      - run: npx playwright-core install webkit
+      - name: Calls check in WebKit
+        run: node scripts/calls/check.mjs --browser webkit
+
+  # The whole calls check, fake camera and microphone, coturn and the SFU, in Chromium. LiveKit is
+  # built from its Go module at 1.9.12, which the Go checksum database pins.
+  calls-chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6.5.0
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run build
+      - run: sudo apt-get update && sudo apt-get install -y coturn
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version: 1.24.6
@@ -163,8 +182,8 @@ jobs:
         run: |
           GOBIN="$RUNNER_TEMP/livekit" go install github.com/livekit/livekit-server/cmd/server@v1.9.12
           mv "$RUNNER_TEMP/livekit/server" "$RUNNER_TEMP/livekit/livekit-server"
-      - run: npx playwright-core install webkit
-      - name: Calls check in WebKit, SFU included
+      - run: npx playwright-core install --with-deps chromium
+      - name: Calls check in Chromium, SFU included
         env:
           LIVEKIT_SERVER: ${{ runner.temp }}/livekit/livekit-server
-        run: node scripts/calls/check.mjs --browser webkit
+        run: node scripts/calls/check.mjs --browser chromium
