@@ -9,7 +9,7 @@ Everyone who signs in needs a browser with an Ethereum wallet extension, or a wa
 You need Docker with Compose v2.24 or newer.
 
 ```bash
-git clone https://github.com/NON-OS/NIL-.git nonos
+git clone https://github.com/NON-OS/NIL.git nonos
 cd nonos
 cp .env.example .env        # APP_URL starts as http://localhost:3000 for trying it here
 docker compose up -d --build
