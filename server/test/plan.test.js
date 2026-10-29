@@ -32,7 +32,7 @@ const ids = {};
 before(async () => {
   srv = await startServer({
     chain,
-    env: { PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '10', PLAN_SEAT_USD: '2', PLAN_FREE_SEATS: '2', PLAN_TRIAL_DAYS: '0', PLAN_GRACE_DAYS: '7', PLAN_NOX_USD: '0.05', PLAN_INVOICES_PER_DAY: '40', NOX_FINALITY_DEPTH: '5' },
+    env: { PLAN_TREASURY: TREASURY, PLAN_PRICE_USD: '10', PLAN_SEAT_USD: '2', PLAN_FREE_SEATS: '2', PLAN_TRIAL_DAYS: '0', PLAN_GRACE_DAYS: '7', PLAN_NOX_USD: '0.05', PLAN_NOX_DISCOUNT: '20', PLAN_INVOICES_PER_DAY: '40', NOX_FINALITY_DEPTH: '5' },
   });
   ({ default: watchInvoices } = await import('../jobs/watchInvoices.js'));
   ({ default: sql } = await import('../db/sql.js'));
