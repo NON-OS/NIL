@@ -1,6 +1,6 @@
 # Production deployment
 
-Running Nil in production needs a license from NØNOS (the source is under the Business Source License 1.1; write to ops@nonos.app). Trying it out and testing it doesn't.
+Running Nil in production for your own organization is free under the Business Source License 1.1's additional use grant. Hosting it for other people or organizations, or selling access to it, needs a license from NØNOS (write to ops@nonos.app).
 
 This guide puts Nil on a Linux VPS with Docker, behind Caddy for automatic HTTPS. It ends with an optional Tor onion service, backups, upgrades, a pre-launch checklist and troubleshooting.
 

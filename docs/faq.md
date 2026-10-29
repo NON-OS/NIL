@@ -72,4 +72,4 @@ No. Nil has a light interface only.
 
 ## Is Nil open source?
 
-Its source is available, under the Business Source License 1.1. Anyone can read and audit the code, and check that a server runs exactly a published release. Running it in production, hosting it for others or offering a fork as a service needs a license from NØNOS, which makes it. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later.
+Its source is available, under the Business Source License 1.1. Anyone can read and audit the code, and check that a server runs exactly a published release. Any organization may run it in production for its own people, free. Hosting it for others, selling access to it or offering a fork as a service needs a license from NØNOS, which makes it. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later.

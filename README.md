@@ -100,7 +100,7 @@ node --env-file=.env --disable-warning=ExperimentalWarning server/index.js
 
 For development, run `npm install` and `APP_URL=http://localhost:5173 npm run dev`, then open `http://localhost:5173`. `npm run demo` fills a server with a sample team and takes screenshots of every screen.
 
-For a public server with HTTPS, follow [Production deployment](docs/deploy.md). Every setting is explained in [.env.example](.env.example). Read the [licence](#licence) before running it in production.
+For a public server with HTTPS, follow [Production deployment](docs/deploy.md). Every setting is explained in [.env.example](.env.example). Running Nil for your own team is free; see the [licence](#licence).
 
 ## Documentation
 
@@ -120,6 +120,6 @@ To report a vulnerability, see [SECURITY.md](SECURITY.md). To contribute, see [C
 
 ## Licence
 
-Nil's source is available under the Business Source License 1.1. You may read, audit, build and test it, and check that a running server matches a release, but running it in production, hosting it for others or offering a fork as a service needs a license from NØNOS: write to ops@nonos.app. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later. See [LICENSE](LICENSE). Third-party components keep their own licences; see [NOTICE.md](NOTICE.md).
+Nil's source is available under the Business Source License 1.1. You may read, audit, build and test it, and run it in production for your own organization, including its employees, contractors and members, free of charge. Offering it to other people or organizations as a hosted or managed service, or selling access to it, needs a license from NØNOS: write to ops@nonos.app. Four years after each version is published, that version becomes available under the GNU Affero General Public License v3 or later. See [LICENSE](LICENSE). Third-party components keep their own licences; see [NOTICE.md](NOTICE.md).
 
 The Nil and NØNOS names and logos are not covered by the licence. See [TRADEMARKS.md](TRADEMARKS.md).

@@ -1,6 +1,6 @@
 # Self-hosting
 
-Nil's source is available under the Business Source License 1.1. You can build it and run it to try it, test it or audit it; running it in production for a team needs a license from NØNOS (write to ops@nonos.app). A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
+Nil's source is available under the Business Source License 1.1. You can build it, audit it and run it in production for your own organization, free of charge. Hosting it for other people or organizations, or selling access to it, needs a license from NØNOS (write to ops@nonos.app). A server with 2 CPU cores and 2 GB of memory is a comfortable start for a team of a few dozen people, though these are starting points rather than measured limits. This page gets a copy running and explains the settings that matter. For a public server with HTTPS, backups and a launch checklist, follow [Production deployment](deploy.md).
 
 Everyone who signs in needs a browser with an Ethereum wallet extension, or a wallet's in-app browser.
 
