@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import Avatar from '../ui/Avatar';
 import AvatarStack from '../ui/AvatarStack';
 import useStore from '../../state/useStore';
+import callScene from '../../lib/calls/callScene';
 import type ActiveCall from '../../types/ActiveCall';
 
 const names = (list: string[]) => (list.length <= 2 ? list.join(' and ') : `${list.slice(0, 2).join(', ')} and ${list.length - 2} more`);
@@ -14,9 +15,12 @@ export default function CallRinging({ call, self }: { call: ActiveCall; self: Re
   const ringing = call.view.ringing.map((id) => users[id]).filter(Boolean);
   const one = ringing.length === 1 ? ringing[0] : null;
   const project = call.view.projectId ? projects[call.view.projectId] : null;
+  // the scene of whoever you're calling, or of the project's call
+  const scene = callScene(ringing[0]?.id ?? call.view.projectId ?? call.view.startedBy);
 
   return (
     <div className="call-stage ringing">
+      {scene && <div className="call-scene stage" style={{ backgroundImage: `url(${scene})` }} aria-hidden="true" />}
       <div className="call-ringing" role="status">
         {one ? <Avatar user={one} size={120} /> : ringing.length ? <AvatarStack users={ringing} size={72} max={4} /> : null}
         <p className="call-ringing-title">{ringing.length ? names(ringing.map((u) => u.name)) : project ? `${project.name} call` : 'You’re the first one here'}</p>

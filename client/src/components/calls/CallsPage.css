@@ -230,6 +230,11 @@
   font-size: var(--text-sm);
 }
 
+.calls-foot a {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
 .calls-foot svg {
   width: 15px;
   height: 15px;

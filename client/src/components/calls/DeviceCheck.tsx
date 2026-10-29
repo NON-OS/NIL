@@ -10,6 +10,8 @@ import localMedia from '../../actions/calls/localMedia';
 import callMedia from '../../actions/calls/callMedia';
 import callSession from '../../actions/calls/callSession';
 import audioLevels from '../../actions/calls/audioLevels';
+import callScene from '../../lib/calls/callScene';
+import useStore from '../../state/useStore';
 
 type Devices = Awaited<ReturnType<typeof localMedia.devices>>;
 
@@ -18,6 +20,7 @@ type Devices = Awaited<ReturnType<typeof localMedia.devices>>;
 // on the spot.
 export default function DeviceCheck() {
   const join = useCallStore((s) => s.devices.join);
+  const me = useStore((s) => s.me?.id);
   const inCall = useCallStore((s) => s.active);
   const [devices, setDevices] = useState<Devices>({ mics: [], cams: [], speakers: [] });
   const [prefs, setPrefs] = useState(localMedia.prefs);
@@ -127,7 +130,7 @@ export default function DeviceCheck() {
       }
     >
       <div className="modal-body call-check">
-        <div className="call-preview">
+        <div className="call-preview" style={callScene(me) ? { backgroundImage: `url(${callScene(me)})` } : undefined}>
           {showVideo && stream?.getVideoTracks().length ? (
             <VideoView stream={stream} mirror />
           ) : problem ? (

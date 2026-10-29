@@ -6,6 +6,7 @@ import TrustBadge from './TrustBadge';
 import QualityBars from './QualityBars';
 import TileTrouble from './TileTrouble';
 import useStore from '../../state/useStore';
+import callScene from '../../lib/calls/callScene';
 import cx from '../../lib/cx';
 import type CallPeer from '../../types/CallPeer';
 
@@ -26,6 +27,12 @@ interface Props {
   style?: React.CSSProperties;
 }
 
+// their scene behind their face while there's no picture of them
+function CallSceneBackdrop({ id }: { id: string }) {
+  const scene = callScene(id);
+  return scene ? <div className="call-scene" style={{ backgroundImage: `url(${scene})` }} aria-hidden="true" /> : null;
+}
+
 // One person, or one shared screen, in the call: their picture, or their face until a picture
 // arrives, with a name plate saying whether they're muted, whose key it is and how the
 // connection is doing.
@@ -43,6 +50,7 @@ export default function CallTile({ userId, peer, stream, video, mic, speaking, s
   return (
     <figure className={cx('call-tile', speaking && !screen && 'speaking', screen && 'screen', compact && 'compact', picture && showing && 'live')} aria-label={label} style={style}>
       {picture && <VideoView stream={stream} mirror={me && !screen} fit={screen ? 'contain' : 'cover'} videoRef={videoRef} onShowing={onShowing} />}
+      {!(picture && showing) && !screen && <CallSceneBackdrop id={userId} />}
       {!(picture && showing) && (
         <div className="call-tile-face">
           <Avatar user={user} size={compact ? 44 : 88} />

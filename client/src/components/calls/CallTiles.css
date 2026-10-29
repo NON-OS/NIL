@@ -275,3 +275,49 @@ button.call-trust:hover span {
 .call-quality.poor {
   color: #ff8a84;
 }
+
+/* a NØNOS scene behind someone whose camera is off, under a flat ink scrim so the face and
+   name plate read on any of them */
+.call-scene {
+  position: absolute;
+  inset: 0;
+  background-color: var(--room-tile);
+  background-position: center;
+  background-size: cover;
+}
+
+.call-scene::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 11, 13, 0.42);
+}
+
+.call-tile.compact .call-scene::after {
+  background: rgba(10, 11, 13, 0.3);
+}
+
+.call-tile-face .avatar {
+  outline: 3px solid rgba(10, 11, 13, 0.55);
+}
+
+.call-tile-face .call-tile-note {
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: var(--room-plate);
+  color: var(--room-text);
+}
+
+/* the whole stage while a call rings, and the ring card */
+.call-scene.stage {
+  overflow: hidden;
+  border-radius: 16px;
+}
+
+.call-scene.stage::after {
+  background: rgba(10, 11, 13, 0.5);
+}
+
+.call-scene.ring::after {
+  background: rgba(10, 11, 13, 0.62);
+}

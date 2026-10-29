@@ -76,7 +76,7 @@ export default function CallStage({ call, onMainVideo }: { call: ActiveCall; onM
         {duo ? (
           <div className="call-self-corner">{self(true)}</div>
         ) : (
-          <div className="call-strip" role="list" aria-label="Everyone else in the call">
+          <div className="call-strip" role="group" aria-label="Everyone else in the call">
             {rest.map((t) => render(t, false, true))}
             {self(true)}
           </div>

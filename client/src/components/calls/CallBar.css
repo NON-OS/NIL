@@ -229,13 +229,19 @@
 }
 
 .call-ring {
+  position: relative;
   display: grid;
+  overflow: hidden;
   gap: 14px;
   padding: 16px;
   border: 1px solid var(--brand-cyan);
   border-radius: 20px;
   background: var(--room);
   color: var(--room-text);
+}
+
+.call-ring > :not(.call-scene) {
+  position: relative;
 }
 
 .call-ring-who {
@@ -329,18 +335,30 @@
   aspect-ratio: 16 / 9;
   overflow: hidden;
   border-radius: var(--r-lg);
-  background: var(--brand-ink);
+  background: var(--brand-ink) center / cover;
   color: #c9ccd3;
   font-size: var(--text-sm);
   text-align: center;
 }
 
+.call-preview::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(10, 11, 13, 0.5);
+}
+
 .call-preview-note {
+  position: relative;
   display: grid;
   justify-items: center;
   gap: 8px;
   max-width: 40ch;
-  padding: 16px;
+  margin: 16px;
+  padding: 12px 16px;
+  border-radius: var(--r-lg);
+  background: var(--room-plate, rgba(10, 11, 13, 0.72));
+  color: #ffffff;
 }
 
 .call-preview-note svg {

@@ -12,6 +12,7 @@ import callRuntime from '../../actions/calls/callRuntime';
 import ringNotice from '../../actions/calls/ringNotice';
 import callApi from '../../actions/calls/callApi';
 import callHistory from '../../actions/calls/callHistory';
+import callScene from '../../lib/calls/callScene';
 
 // A call ringing this person: who's calling and from where, and three answers within reach of a
 // thumb: decline, answer with sound only, or answer with video.
@@ -22,6 +23,7 @@ export default function IncomingCall({ callId }: { callId: string }) {
   const [busy, setBusy] = useState<'audio' | 'video' | null>(null);
   const name = caller?.name ?? 'Someone';
   const others = view ? view.members.length + view.ringing.length - 1 : 0;
+  const scene = callScene(view?.startedBy);
 
   useEffect(() => {
     callRuntime.say(`${name} is calling${project ? ` from ${project.name}` : ''}.`);
@@ -54,6 +56,7 @@ export default function IncomingCall({ callId }: { callId: string }) {
 
   return (
     <section className="call-ring" role="dialog" aria-labelledby={`ring-${callId}`} aria-describedby={`ring-${callId}-sub`}>
+      {scene && <div className="call-scene ring" style={{ backgroundImage: `url(${scene})` }} aria-hidden="true" />}
       <div className="call-ring-who">
         <Avatar user={caller} size={48} />
         <div className="call-ring-text">

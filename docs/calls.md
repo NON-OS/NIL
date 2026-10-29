@@ -48,7 +48,7 @@ The buttons along the bottom come in three groups: your microphone and camera on
 
 Someone who is speaking gets a cyan frame. In the speaker layout, whoever spoke last is shown large, unless someone is sharing a screen, which is then shown large instead. Pin a person or a screen with the pin button on its tile to keep it large. With just one other person in the call, they fill the window and you sit in the corner.
 
-Each tile shows the person's picture, or their face until their picture arrives or while their camera is off, and a name plate with a crossed-out microphone when they're muted, their key's state, and bars for how well their connection is doing. If anything goes wrong with a connection, the tile says what happened and what you can do about it.
+Each tile shows the person's picture, or, until their picture arrives or while their camera is off, their face over a NØNOS scene that's theirs on every screen and in every call, and a name plate with a crossed-out microphone when they're muted, their key's state, and bars for how well their connection is doing. If anything goes wrong with a connection, the tile says what happened and what you can do about it.
 
 When the other person in a call with one person leaves, the call ends for you too. A project call stays open as long as someone is in it.
 
