@@ -31,13 +31,24 @@ const frame = (stream, text) => {
 async function fakeEngine(t, env = {}) {
   const socket = path.join(fs.mkdtempSync(path.join(os.tmpdir(), 'nil-docker-')), 'docker.sock');
   const seen = [];
-  const state = { networks: new Set(), volumes: new Set(), busy: new Map(), stuck: new Set(), lingering: new Map(), connected: new Set(), joined: new Map(), disconnected: [], containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
+  const state = { networks: new Set(), volumes: new Set(), busy: new Map(), stuck: new Set(), lingering: new Map(), connected: new Set(), joined: new Map(), disconnected: [], containers: new Map(), removed: [], waited: [], helperExit: 0, mtimes: new Map(), execs: new Map(), uploads: [], locked: new Map(), volume: new Map([['nonos.db', 'live-db'], ['nonos.db-wal', 'live-wal']]) };
   const json = (res, status, body) => {
     res.writeHead(status, { 'content-type': 'application/json' });
     res.end(body === undefined ? '' : JSON.stringify(body));
   };
   const server = http.createServer(async (req, res) => {
     const url = new URL(req.url, 'http://docker');
+    // Docker holds a container's lock for the whole of an archive read or write
+    const archived = req.method !== 'HEAD' && /^(?:\/v1\.44)?\/containers\/([^/]+)\/archive$/.exec(url.pathname);
+    if (archived) {
+      while (state.locked.has(archived[1])) await state.locked.get(archived[1]);
+      let unlock;
+      state.locked.set(archived[1], new Promise((resolve) => (unlock = resolve)));
+      res.on('close', () => {
+        state.locked.delete(archived[1]);
+        unlock();
+      });
+    }
     const body = await collect(req);
     seen.push({ method: req.method, path: url.pathname, query: Object.fromEntries(url.searchParams), body });
     const route = `${req.method} ${url.pathname.replace(/^\/v1\.44/, '')}`;
@@ -170,7 +181,7 @@ async function fakeEngine(t, env = {}) {
   });
   await new Promise((resolve) => server.listen(socket, resolve));
   t.after(() => server.close());
-  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_IMAGE_PULL: 'missing', CLOUD_DOCKER_REMOVE_WAIT_MS: '1', ...env });
+  const { config } = loadConfig({ ...baseEnv, CLOUD_DOCKER_SOCKET: socket, CLOUD_DATA_DIR: path.dirname(socket), CLOUD_IMAGE_PULL: 'missing', CLOUD_DOCKER_REMOVE_WAIT_MS: '1', ...env });
   const log = { info() {}, warn() {}, error() {} };
   return { config, seen, state, driver: dockerDriver({ config, log }) };
 }

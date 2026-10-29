@@ -1,4 +1,7 @@
+import fs from 'node:fs';
+import path from 'node:path';
 import { Readable, pipeline } from 'node:stream';
+import { pipeline as pipe } from 'node:stream/promises';
 import dockerClient from './dockerClient.js';
 import containerBody from './containerBody.js';
 import readExecOutput from './readExecOutput.js';
@@ -55,6 +58,20 @@ export default function dockerDriver({ config, log, client = dockerClient(config
   async function writeArchive(id, body) {
     // copyUIDGID hands every extracted file to the container's user, whatever the archive says
     await client.json('PUT', archive(id), { query: { path: mount, copyUIDGID: 'true' }, body, headers: { 'content-type': 'application/x-tar' }, timeout: 600_000 });
+  }
+
+  // Writes back into a workspace what was read out of that same workspace. Docker holds the
+  // container's lock for the whole of an archive request, so a write fed by a read as it goes
+  // waits on the read, and the read on the write. The archive is read out to a file first.
+  async function writeBack(id, body) {
+    fs.mkdirSync(config.dataDir, { recursive: true });
+    const spool = path.join(config.dataDir, `.archive-${containerName(id)}.tar`);
+    try {
+      await pipe(Readable.from(body()), fs.createWriteStream(spool, { mode: 0o600 }));
+      await writeArchive(id, fs.createReadStream(spool));
+    } finally {
+      fs.rmSync(spool, { force: true });
+    }
   }
 
   // The containers that join every workspace's network: Caddy, the only way in and the way to
@@ -210,7 +227,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
         }
         yield tarBlocks.end();
       }
-      await writeArchive(id, Readable.from(body()));
+      await writeBack(id, body);
     },
 
     async restoreCheckpoint(id) {
@@ -222,7 +239,7 @@ export default function dockerDriver({ config, log, client = dockerClient(config
         yield tarEntry({ name: `${DB}-shm` });
         yield tarBlocks.end();
       }
-      await writeArchive(id, Readable.from(body()));
+      await writeBack(id, body);
     },
 
     async discardCheckpoint(id) {
