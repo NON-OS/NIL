@@ -1,6 +1,6 @@
 {
   "name": "nil-cloud",
-  "version": "3.0.0",
+  "version": "4.0.0",
   "private": true,
   "description": "Control plane for hosted Nil: one isolated container per workspace, wallet sign-up, routing, backups and health checks.",
   "type": "module",
