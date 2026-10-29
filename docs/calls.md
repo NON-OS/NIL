@@ -6,7 +6,9 @@ Calls are for members. Guests don't get them.
 
 ## Start a call
 
-Open **Calls** in the sidebar. Everyone on the team is listed with a **Call** button for sound only and a **Video** button. Click one and Nil rings them: in Nil, on every tab they have open, and on their phone if they turned on notifications. The notification says "Incoming call" and nothing else, so a locked phone doesn't show who is calling.
+Open **Calls** in the sidebar. Calls going on now that you can join are at the top. Below them, under **People**, is everyone on the team, with whoever is online first, each with a phone button for sound only and a camera button for video. Click one and Nil rings them: in Nil, on every tab they have open, and on their phone if they turned on notifications. The notification says "Incoming call" and nothing else, so a locked phone doesn't show who is calling.
+
+To call several people at once, click **New call**, pick them, and click **Call** or **Video call**. Everyone you picked is rung at the same moment.
 
 From a [chat](chat.md) conversation, the phone and camera buttons at the top call everyone in it, as long as the conversation is small enough for a call.
 
@@ -16,20 +18,26 @@ Without a forwarding server (an SFU), a call holds up to six people unless whoev
 
 The first time you start or answer a call in a tab, Nil asks you to unlock your keys, with your wallet or a passkey, as it does for [Docs](encrypted-docs.md#unlock-docs). Every call is checked with them. To get that out of the way, click **Unlock your keys** on the Calls page.
 
+While a call you started rings, the call screen shows who you're calling, large, with your own picture in the corner.
+
+## Recent calls
+
+**Recent** on the Calls page lists the calls you made, took, missed and declined, with who was in them, when, and for how long, and buttons to call back. The server keeps no history of calls, so this list is kept only in this browser, encrypted with your keys like Docs' unsent changes, and shows once your keys are unlocked. Another browser or device has its own list. **Clear recent calls** empties it.
+
 ## Answer a call
 
-A ringing call shows at the top of the window with three round buttons: decline, answer with sound only, and answer with video. A call rings for 45 seconds. If nobody answers, it stops and the caller sees "No answer". A call you didn't answer turns into "Missed call" on your phone.
+A ringing call shows a card with three buttons: **Decline**, **Audio** to answer with sound only, and **Video**. On a computer it's at the top right; on a phone it's at the bottom, within reach of your thumb. A call rings for 45 seconds. If nobody answers, it stops and the caller sees "No answer". A call you didn't answer turns into "Missed call" on your phone.
 
 **Don't let them ring me** on a ringing call declines it and stops that person ringing you again. Under **Taking calls** on the Calls page, **Don't ring me** stops every call ringing you, and the list of people you stopped has **Let them ring me** next to each. Someone you stopped can still add you to a call, which then shows on your Calls page without ringing. Nobody can ring the same person more than four times in ten minutes.
 
 ## In a call
 
-The buttons along the bottom, from the left:
+The buttons along the bottom come in three groups: your microphone and camera on the left, what you can do in the call in the middle, and minimize and **Leave** on the right. Point at a button, or move to it with Tab, to see what it does and its shortcut. On a phone the middle group sits behind the **More** button.
 
 | Button | What it does |
 |---|---|
-| Microphone | Mutes and unmutes you. It's filled in while you can be heard |
-| Camera | Turns your camera on and off. Off, the camera stops, and its light goes out |
+| Microphone | Mutes and unmutes you. It turns white while you're muted |
+| Camera | Turns your camera on and off. Off, the camera stops, its light goes out, and the button turns white |
 | Share your screen | Shares a screen, a window or a tab. Phones can't share their screen from a browser |
 | Layout | Switches between a grid of everyone and the speaker layout, with one person large |
 | Add someone | Rings another teammate into the call |
@@ -40,7 +48,7 @@ The buttons along the bottom, from the left:
 
 Someone who is speaking gets a cyan frame. In the speaker layout, whoever spoke last is shown large, unless someone is sharing a screen, which is then shown large instead. Pin a person or a screen with the pin button on its tile to keep it large. With just one other person in the call, they fill the window and you sit in the corner.
 
-Each tile shows the person's name, a crossed-out microphone when they're muted, and bars for how well their connection is doing.
+Each tile shows the person's picture, or their face until their picture arrives or while their camera is off, and a name plate with a crossed-out microphone when they're muted, their key's state, and bars for how well their connection is doing. If anything goes wrong with a connection, the tile says what happened and what you can do about it.
 
 When the other person in a call with one person leaves, the call ends for you too. A project call stays open as long as someone is in it.
 
@@ -74,7 +82,7 @@ Every call is checked with the encryption keys teammates confirm for each other,
 - A **Key changed** label means their key differs from the one you confirmed. That's normal after they reset their keys, and it's also what a tampered server would show. The call won't connect until you check it.
 - A **No keys** label means they haven't unlocked Nil yet. You can't call them until they do.
 
-Until you confirm someone's key, they don't hear or see you. Their tile says "Ada can't see or hear you yet" with **Check their keys** and **Talk anyway**. **Talk anyway** lets them in for this call only; confirming their key lets them in on every call. Their side says "Waiting for you to check their key" in the meantime. That way a key the server slipped in never gets a word or a picture out of you. Someone whose key you confirmed hears and sees you straight away.
+Until you confirm someone's key, they don't hear or see you. A bar above the call says who, such as "Ada can't see or hear you yet", with **Check their keys** and **Talk anyway**, and their name plate says **Can't hear you**. **Talk anyway** lets them in for this call only; confirming their key lets them in on every call. Meanwhile their screen says they're waiting for you to check their key. That way a key the server slipped in never gets a word or a picture out of you. Someone whose key you confirmed hears and sees you straight away.
 
 If Nil can't verify a connection, it refuses it and says why on the person's tile. Nothing of what you say or show reaches them. Check their key, then click **Try again**.
 
