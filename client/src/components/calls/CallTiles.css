@@ -276,8 +276,8 @@ button.call-trust:hover span {
   color: #ff8a84;
 }
 
-/* a NØNOS scene behind someone whose camera is off, under a flat ink scrim so the face and
-   name plate read on any of them */
+/* a NØNOS scene behind someone whose camera is off; the scenes are flat ink, so only a light
+   scrim is needed for the face and name plate */
 .call-scene {
   position: absolute;
   inset: 0;
@@ -290,11 +290,11 @@ button.call-trust:hover span {
   content: '';
   position: absolute;
   inset: 0;
-  background: rgba(10, 11, 13, 0.42);
+  background: rgba(10, 11, 13, 0.18);
 }
 
 .call-tile.compact .call-scene::after {
-  background: rgba(10, 11, 13, 0.3);
+  background: rgba(10, 11, 13, 0.12);
 }
 
 .call-tile-face .avatar {
@@ -315,9 +315,9 @@ button.call-trust:hover span {
 }
 
 .call-scene.stage::after {
-  background: rgba(10, 11, 13, 0.5);
+  background: rgba(10, 11, 13, 0.25);
 }
 
 .call-scene.ring::after {
-  background: rgba(10, 11, 13, 0.62);
+  background: rgba(10, 11, 13, 0.4);
 }

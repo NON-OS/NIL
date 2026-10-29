@@ -1,6 +1,6 @@
 import './InboxView.css';
 import { useEffect, useMemo, useState } from 'react';
-import { BellRing, CheckCheck } from 'lucide-react';
+import { AlarmClock, BellRing, CalendarClock, CheckCheck } from 'lucide-react';
 import ViewHeader from '../components/shell/ViewHeader';
 import Avatar from '../components/ui/Avatar';
 import EmptyState from '../components/ui/EmptyState';
@@ -113,7 +113,14 @@ export default function InboxView() {
                     <li key={n.id}>
                       <button type="button" className={cx('inbox-item', !!n.readAt && 'read')} onClick={() => open(n)}>
                         <span className="unread-dot" aria-label={n.readAt ? undefined : 'Unread'} />
-                        <Avatar user={actor} size={28} />
+                        {/* a notice from Nil itself shows what it's about, not an empty face */}
+                        {notice && !actor ? (
+                          <span className="inbox-icon" aria-hidden="true">
+                            {n.type === 'reminder' ? <AlarmClock /> : n.type.startsWith('due') ? <CalendarClock /> : <BellRing />}
+                          </span>
+                        ) : (
+                          <Avatar user={actor} size={28} />
+                        )}
                         <span className="inbox-text">
                           <span>
                             <strong>{notice ? notice.heading : n.type === 'application' ? n.data.name : actor?.name ?? 'Someone'}</strong> {notice ? '' : describeNotification(n)}{' '}
