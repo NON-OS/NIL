@@ -160,7 +160,9 @@ jobs:
           go-version: 1.24.6
           cache: false
       - name: Build LiveKit 1.9.12
-        run: GOBIN="$RUNNER_TEMP/livekit" go install github.com/livekit/livekit-server@v1.9.12
+        run: |
+          GOBIN="$RUNNER_TEMP/livekit" go install github.com/livekit/livekit-server/cmd/server@v1.9.12
+          mv "$RUNNER_TEMP/livekit/server" "$RUNNER_TEMP/livekit/livekit-server"
       - run: npx playwright-core install webkit
       - name: Calls check in WebKit, SFU included
         env:
