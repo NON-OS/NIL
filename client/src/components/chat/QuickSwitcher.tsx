@@ -7,7 +7,7 @@ import useChat from '../../state/useChat';
 import chatTitle from '../../actions/chat/chatTitle';
 import fuzzyScore from '../../lib/fuzzyScore';
 
-// Ctrl+K (⌘K on a Mac) in chat: jump to any conversation by typing part of its name. Unread
+// Ctrl+J (⌘J on a Mac) in chat: jump to any conversation by typing part of its name. Unread
 // ones come first while nothing is typed.
 export default function QuickSwitcher({ onOpen, onClose }: { onOpen: (id: string) => void; onClose: () => void }) {
   const channels = useChat((s) => s.channels);

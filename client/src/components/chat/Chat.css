@@ -239,6 +239,39 @@
   color: var(--danger);
 }
 
+.chat-feed-wrap {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.chat-to-newest {
+  position: absolute;
+  bottom: 10px;
+  left: 50%;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 4px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 550;
+  transform: translateX(-50%);
+}
+
+.chat-to-newest.new {
+  border-color: var(--accent-line);
+  background: var(--accent);
+  color: var(--accent-ink);
+}
+
 .chat-feed {
   position: relative;
   flex: 1;
@@ -307,7 +340,12 @@
   padding-top: 1px;
 }
 
-.msg:hover,
+@media (hover: hover) {
+  .msg:hover {
+    background: var(--surface-2);
+  }
+}
+
 .msg:focus-within,
 .msg:focus-visible {
   background: var(--surface-2);
@@ -351,6 +389,11 @@
   font-size: var(--text-xs);
 }
 
+.msg-edited {
+  color: var(--muted);
+  font-size: var(--text-xs);
+}
+
 .msg-text {
   overflow-wrap: anywhere;
   white-space: pre-wrap;
@@ -377,6 +420,51 @@
 .msg.mentions-me {
   border-left: 3px solid var(--warning);
   padding-left: 13px;
+  background: color-mix(in srgb, var(--warning-soft) 45%, transparent);
+}
+
+.msg-text code {
+  padding: 1px 4px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface-3);
+  font-family: var(--font-mono);
+  font-size: 0.88em;
+}
+
+.msg-text .msg-code {
+  max-width: 100%;
+  margin: 4px 0;
+  overflow-x: auto;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--surface-3);
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  white-space: pre;
+}
+
+.msg-text .msg-code code {
+  padding: 0;
+  border: 0;
+  background: none;
+}
+
+.msg-text.folded {
+  max-height: 16.5em;
+  overflow: hidden;
+}
+
+.msg-more {
+  margin-top: 2px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 550;
 }
 
 .msg-gone {
@@ -422,10 +510,22 @@
   background: var(--surface);
 }
 
-.msg:hover .msg-tools,
-.msg:focus-within .msg-tools,
+@media (hover: hover) {
+  .msg:hover .msg-tools,
+  .msg:focus-within .msg-tools {
+    display: flex;
+  }
+}
+
+/* a tap focuses the message too, so on touch only keyboard focus or the tap toggle shows them */
+.msg:focus-visible .msg-tools,
+.msg:has(:focus-visible) .msg-tools,
 .msg-tools.open {
   display: flex;
+}
+
+.msg.touched {
+  background: var(--surface-2);
 }
 
 .msg-tools .icon-btn {
@@ -588,7 +688,11 @@
 }
 
 .chat-composer-bar .hint {
+  display: inline-flex;
   flex: 1;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
   overflow: hidden;
   color: var(--muted);
   font-size: var(--text-xs);
@@ -716,8 +820,17 @@
     display: inline-flex;
   }
 
+  .chat-close {
+    display: none;
+  }
+
   .chat-pane-head .topic {
     display: none;
+  }
+
+  /* on a phone the thread covers its conversation, so it says which one */
+  .chat-thread .chat-pane-head .topic {
+    display: inline-flex;
   }
 
   .msg-tools {
@@ -754,4 +867,37 @@
   color: var(--muted);
   font-size: var(--text-xs);
   text-align: center;
+}
+
+.chat-list-empty {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: calc(100% - 16px);
+  min-height: 32px;
+  margin: 2px 8px 6px;
+  padding: 6px 8px;
+  border: 1px dashed var(--line-strong);
+  border-radius: var(--r-md);
+  background: none;
+  color: var(--ink-2);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: left;
+}
+
+.chat-list-empty:hover {
+  border-style: solid;
+  color: var(--ink);
+}
+
+.chat-thread .chat-pane-head .topic {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.chat-thread .chat-pane-head .topic svg {
+  width: 14px;
+  height: 14px;
 }

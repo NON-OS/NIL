@@ -4,6 +4,7 @@ import ChannelIcon from './ChannelIcon';
 import MessageList from './MessageList';
 import Composer, { type ComposerHandle } from './Composer';
 import ChatNotices from './ChatNotices';
+import ChatWaiting from './ChatWaiting';
 import KeyNotice from '../keys/KeyNotice';
 import ChatCallButton from '../calls/ChatCallButton';
 import useChat from '../../state/useChat';
@@ -87,7 +88,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
   const holdingOut = (channel.signedMembers ?? []).filter((id) => !channel.members.includes(id));
   const leftNames = holdingOut.map((id) => users[id]?.name ?? 'someone').join(', ');
   const blocked = !channel.wrappedKeys.length
-    ? 'Waiting for a key. A teammate’s browser hands it over once they’ve confirmed your key.'
+    ? 'You can write here once the key arrives'
     : tampered
       ? 'The server’s settings for this conversation don’t match the signed ones.'
       : unchecked.length
@@ -134,7 +135,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
           </button>
         </div>
       </header>
-      <KeyNotice reason="this conversation" />
+      {channel.wrappedKeys.length > 0 && <KeyNotice reason="this conversation" />}
       <ChatNotices
         channelId={channel.id}
         chain={chain}
@@ -147,7 +148,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
       )}
       {unchecked.length > 0 && channel.wrappedKeys.length > 0 && (
         <div className="chat-notice" role="status">
-          <span style={{ flex: 1 }}>{`Nil seals nothing to a key you haven’t checked. Compare fingerprints with ${names} to write here.`}</span>
+          <span style={{ flex: 1 }}>{`To write here, check the key of ${names}. Nil seals nothing to a key you haven’t checked, and anyone still waiting for this conversation’s key gets it from your browser once you have.`}</span>
           <button type="button" className="btn btn-sm" onClick={() => confirmKeys.show(unchecked, 'this conversation')}>
             Check keys
           </button>
@@ -158,7 +159,9 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
           <span>{`${leftNames} left this conversation but ${holdingOut.length === 1 ? 'holds' : 'hold'} its current key. Any member’s browser starts a new key without them once their leaving is signed; if it isn’t, whoever manages the conversation can take them out.`}</span>
         </div>
       )}
-      {timeline ? (
+      {!channel.wrappedKeys.length ? (
+        <ChatWaiting channel={channel} chain={chain} />
+      ) : timeline ? (
         <MessageList
           channel={channel}
           timeline={timeline}
@@ -182,7 +185,7 @@ export default function ChannelPane({ channel, onThread, onSettings, onBack, onO
           </button>
         </div>
       )}
-      {timeline && !timeline.loading && !timeline.items.length && !timeline.error && (
+      {channel.wrappedKeys.length > 0 && timeline && !timeline.loading && !timeline.items.length && !timeline.error && (
         <p className="muted" style={{ padding: '0 16px', textAlign: 'center' }}>
           {channel.kind === 'dm' ? `This is the start of your messages with ${title}.` : `This is the start of ${title}.`} Only the people in it can read what’s written here.
         </p>

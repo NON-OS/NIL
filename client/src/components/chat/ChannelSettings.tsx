@@ -38,7 +38,8 @@ export default function ChannelSettings({ channel, onClose, onGone }: { channel:
   const every = !hours ? null : hours % 24 ? `${hours} hours` : hours === 24 ? 'day' : `${hours / 24} days`;
   // who holds the key is the checked member list's word; the server's list adds who waits for one
   const signed = channel.signedMembers ?? [];
-  const people = [...new Set([...signed, ...channel.members])];
+  // you first, then everyone else by name
+  const people = [...new Set([...signed, ...channel.members])].sort((a, b) => Number(b === me?.id) - Number(a === me?.id) || (users[a]?.name ?? '').localeCompare(users[b]?.name ?? ''));
   const peopleChange = manages && channel.audience === 'people' && channel.kind !== 'dm';
   // in a team channel whoever manages it can still leave someone out of the key, an account
   // nobody can confirm, say; the team's own list brings them back once someone confirms them

@@ -10,7 +10,7 @@ export default function chatTitle(channel: ChatChannel) {
     const others = (channel.signedMembers ?? channel.members).filter((id) => id !== me?.id).map((id) => users[id]?.name ?? 'Someone');
     return others.length ? others.join(', ') : 'Just you';
   }
-  if (channel.metaState === 'locked') return 'Locked channel';
+  if (channel.metaState === 'locked') return 'Waiting for a key';
   if (channel.metaState === 'unverified') return 'Unverified name';
   return channel.name || 'Untitled channel';
 }

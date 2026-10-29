@@ -21,8 +21,8 @@ import cx from '../lib/cx';
 import chatChannels from '../actions/chat/chatChannels';
 import chatSend from '../actions/chat/chatSend';
 
-// Team chat: conversations on the left, the one you're in, and a thread beside it. Ctrl+K (⌘K)
-// jumps between conversations, and Alt+↑/↓ steps through them (with Shift, only unread ones).
+// Team chat: conversations on the left, the one you're in, and a thread beside it. Ctrl+J (⌘J)
+// jumps between conversations, leaving Ctrl+K to search as everywhere else, and Alt+↑/↓ steps through them (with Shift, only unread ones).
 export default function ChatView() {
   const unlocked = useStore((s) => s.docsUnlocked);
   const loaded = useChat((s) => s.loaded);
@@ -57,8 +57,7 @@ export default function ChatView() {
   useEffect(() => {
     const ordered = () => Object.values(channels).sort((a, b) => b.lastAt - a.lastAt);
     const onKey = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') {
-        // in chat, the quick switcher takes this key from search
+      if ((e.metaKey || e.ctrlKey) && !e.shiftKey && e.key.toLowerCase() === 'j') {
         e.preventDefault();
         e.stopPropagation();
         setSwitcher((on) => !on);
@@ -76,8 +75,8 @@ export default function ChatView() {
 
   const empty = loaded && !Object.keys(channels).length;
   const jump = (
-    <button type="button" className="btn btn-sm chat-jump" onClick={() => setSwitcher(true)} aria-label="Jump to a conversation" title="Jump to a conversation (Ctrl+K)">
-      <Search size={14} /> <span>Jump to</span> <span className="kbd">⌘K</span>
+    <button type="button" className="btn btn-sm chat-jump" onClick={() => setSwitcher(true)} aria-label="Jump to a conversation" title="Jump to a conversation (Ctrl+J)">
+      <Search size={14} /> <span>Jump to</span> <span className="kbd">⌘J</span>
     </button>
   );
 

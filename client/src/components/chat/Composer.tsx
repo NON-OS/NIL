@@ -1,5 +1,5 @@
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from 'react';
-import { Paperclip, SendHorizontal, X } from 'lucide-react';
+import { Lock, Paperclip, SendHorizontal, X } from 'lucide-react';
 import Avatar from '../ui/Avatar';
 import useStore from '../../state/useStore';
 import useChat from '../../state/useChat';
@@ -179,7 +179,9 @@ const Composer = forwardRef<ComposerHandle, Props>(function Composer({ channel, 
           <button type="button" className="icon-btn" onClick={() => picker.current?.click()} disabled={Boolean(blocked)} aria-label="Attach files" title="Attach files">
             <Paperclip size={16} />
           </button>
-          <span className="hint">Encrypted. Pictures lose their location before they’re sent.</span>
+          <span className="hint" title="Only the people in this conversation can read what you send. Pictures lose their location before they go.">
+            <Lock size={11} aria-hidden /> End-to-end encrypted
+          </span>
           <button type="button" className="btn btn-primary btn-sm" onClick={send} disabled={Boolean(blocked) || (!text.trim() && !files.length)} aria-label="Send">
             <SendHorizontal size={15} />
           </button>

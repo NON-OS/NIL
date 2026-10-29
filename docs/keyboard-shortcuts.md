@@ -7,7 +7,7 @@ Press `?` anywhere in Nil to see the main shortcuts. Shortcuts don't fire while 
 | Keys | What it does |
 |---|---|
 | `C` or `N` | New task |
-| `⌘K` (Mac) or `Ctrl+K` | Search and commands. In chat it jumps to a conversation, and in a doc's text it adds a link |
+| `⌘K` (Mac) or `Ctrl+K` | Search and commands. In a doc's text it adds a link |
 | `/` | Search |
 | `?` | Show the shortcuts |
 | `Esc` | Close the open panel or dialog |
@@ -96,4 +96,4 @@ Press `G`, then the second key, within about a second.
 | `Enter` | Open the highlighted result |
 | `Esc` | Close the search |
 
-| `⌘K` (Mac) or `Ctrl+K` | Search and commands. In chat it jumps to a conversation, and in a doc's text it adds a link |
+| `⌘K` (Mac) or `Ctrl+K` | Search and commands. In a doc's text it adds a link |

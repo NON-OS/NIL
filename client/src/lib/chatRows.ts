@@ -12,6 +12,7 @@ export interface Reaction {
 export type ChatRow =
   | { key: string; kind: 'day'; label: string }
   | { key: string; kind: 'unread' }
+  | { key: string; kind: 'replies'; count: number }
   | { key: string; kind: 'event'; text: string; at: number }
   | { key: string; kind: 'message'; item: ChatItem; grouped: boolean; reactions: Reaction[] };
 
@@ -36,7 +37,8 @@ function gather(items: ChatItem[], me: string | null) {
 // message this person hasn't read, and messages, each with its reactions. A message from the
 // same person within a few minutes of their last sits under it without their name again.
 // Reactions and deleted reactions aren't rows of their own; messages past their time aren't shown.
-export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.now(), events = [], fromStart = true }: { me: string | null; readSeq: number; now?: number; events?: RosterEvent[]; fromStart?: boolean }): ChatRow[] {
+// In a thread, `root` is the message it hangs from, set apart from the replies under it.
+export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.now(), events = [], fromStart = true, root }: { me: string | null; readSeq: number; now?: number; events?: RosterEvent[]; fromStart?: boolean; root?: string }): ChatRow[] {
   const reactions = gather(items, me);
   const rows: ChatRow[] = [];
   let day = '';
@@ -70,6 +72,11 @@ export default function chatRows(items: ChatItem[], { me, readSeq, now = Date.no
     const grouped = Boolean(last && last.senderId === item.senderId && item.sentAt - last.sentAt < GROUP_MS && last.type !== 'deleted' && item.type !== 'deleted');
     rows.push({ key: item.id, kind: 'message', item, grouped, reactions: [...(reactions.get(item.id)?.values() ?? [])] });
     last = item;
+    if (item.id === root) {
+      const count = shown.filter((m) => m.id !== root && m.type === 'message' && !(m.expiresAt && m.expiresAt <= now)).length;
+      rows.push({ key: 'replies', kind: 'replies', count });
+      last = null;
+    }
   }
   flush(Number.MAX_SAFE_INTEGER);
   return rows;
