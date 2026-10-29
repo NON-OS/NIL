@@ -29,7 +29,11 @@
     "zk:ballot": "node scripts/zk-ballot.mjs",
     "verifier": "node --disable-warning=ExperimentalWarning server/verifier/index.js",
     "verifier:mainnet-check": "node --disable-warning=ExperimentalWarning scripts/verifier/mainnet-check.mjs",
-    "pools:fetch": "node scripts/pools-fetch.mjs"
+    "pools:fetch": "node scripts/pools-fetch.mjs",
+    "demo": "node --disable-warning=ExperimentalWarning scripts/demo/run.mjs",
+    "demo:server": "node scripts/demo/server.mjs",
+    "demo:seed": "node --disable-warning=ExperimentalWarning scripts/demo/seed.mjs",
+    "demo:shots": "node scripts/demo/shots.mjs"
   },
   "dependencies": {
     "@a16z/helios": "0.12.0",
