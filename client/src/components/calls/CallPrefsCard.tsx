@@ -26,9 +26,11 @@ export default function CallPrefsCard() {
 
   if (!blocks) return null;
   return (
-    <section className="settings-section">
-      <h2>Taking calls</h2>
-      <div className="settings-card">
+    <section className="panel">
+      <div className="panel-head">
+        <h2>Taking calls</h2>
+      </div>
+      <div className="panel-body calls-settings">
         <label className="filter-toggle" style={{ justifyContent: 'space-between' }}>
           <span>
             <strong>Don’t ring me</strong>
@@ -40,9 +42,12 @@ export default function CallPrefsCard() {
         {blocks.blocked.length > 0 && (
           <ul className="call-people" aria-label="People who can’t ring you">
             {blocks.blocked.map((id) => (
-              <li key={id} className="member">
+              <li key={id} className="call-person">
                 <Avatar user={users[id]} size={32} />
-                <div className="member-name">{users[id]?.name ?? 'Someone who left'}</div>
+                <div className="call-person-text">
+                  <span className="call-person-name">{users[id]?.name ?? 'Someone who left'}</span>
+                  <span className="call-person-sub">Can’t ring you</span>
+                </div>
                 <button type="button" className="btn btn-sm" onClick={() => void change({ unblock: id })}>
                   Let them ring me
                 </button>

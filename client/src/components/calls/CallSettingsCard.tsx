@@ -23,9 +23,11 @@ export default function CallSettingsCard() {
   };
 
   return (
-    <section className="settings-section">
-      <h2>Call settings</h2>
-      <div className="settings-card">
+    <section className="panel">
+      <div className="panel-head">
+        <h2>Call settings</h2>
+      </div>
+      <div className="panel-body calls-settings">
         <label className="filter-toggle" style={{ justifyContent: 'space-between' }}>
           <span>
             <strong>Allow direct connections</strong>
