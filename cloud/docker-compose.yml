@@ -202,6 +202,7 @@ services:
       TURN_REALM: ${TURN_HOST:-}
       TURN_USERDB: /db/turndb
       TURN_DB_GID: "1000"
+      TURN_LISTEN_IP: ${TURN_LISTEN_IP:-}
       TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
       TURN_MIN_PORT: ${TURN_MIN_PORT:-}
       TURN_MAX_PORT: ${TURN_MAX_PORT:-}

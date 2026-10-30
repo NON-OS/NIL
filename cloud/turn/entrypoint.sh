@@ -5,6 +5,9 @@
 set -eu
 
 : "${TURN_REALM:?Set TURN_HOST in /opt/nil/.env to the relay host name, the same as CLOUD_TURN_HOST.}"
+# The relay shares the host's network, where it would otherwise also listen on the addresses the
+# host has on each workspace's network, and workspaces have no way out by design.
+: "${TURN_LISTEN_IP:?Set TURN_LISTEN_IP in /opt/nil/.env to the public addresses of this server, such as 203.0.113.10 2001:db8::10.}"
 parent=${TURN_REALM#*.}
 found=/caddy/caddy/certificates/${TURN_ACME_DIR:-acme-v02.api.letsencrypt.org-directory}/wildcard_.$parent/wildcard_.$parent
 certs=/tmp/certs

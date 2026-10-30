@@ -26,6 +26,9 @@ cp /etc/coturn/turnserver.conf "$conf"
   # the public address browsers reach, and the private one behind it when there's NAT, as
   # "public" or "public/private"
   if [ -n "${TURN_EXTERNAL_IP:-}" ]; then echo "external-ip=$TURN_EXTERNAL_IP"; fi
+  # only these addresses, when set: on the host's network coturn otherwise listens on every
+  # address the host has, its Docker networks' too
+  for ip in ${TURN_LISTEN_IP:-}; do echo "listening-ip=$ip"; done
   # the relay's own address when it's private behind NAT, so two people on this relay can
   # still reach each other through it
   for ip in ${TURN_ALLOWED_PEER_IP:-}; do echo "allowed-peer-ip=$ip"; done
