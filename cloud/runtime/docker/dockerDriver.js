@@ -33,6 +33,20 @@ export default function dockerDriver({ config, log, client = dockerClient(config
   };
   const archive = (id) => `/containers/${containerName(id)}/archive`;
 
+  // When a file in a container last changed, from the stat header of the archive API (a HEAD
+  // request reads nothing inside it); null if it doesn't exist.
+  async function fileTime(container, path) {
+    try {
+      const res = await client.stream('HEAD', `/containers/${container}/archive`, { query: { path } });
+      res.resume();
+      const stat = res.headers['x-docker-container-path-stat'];
+      return stat ? Date.parse(JSON.parse(Buffer.from(stat, 'base64').toString('utf8')).mtime) || null : null;
+    } catch (err) {
+      if (err.status === 404) return null;
+      throw err;
+    }
+  }
+
   async function exec(id, cmd) {
     const created = await client.json('POST', `/containers/${containerName(id)}/exec`, { body: { Cmd: cmd, AttachStdout: true, AttachStderr: true } });
     const output = await readExecOutput(await client.stream('POST', `/exec/${created.Id}/start`, { body: { Detach: false, Tty: false } }));
@@ -248,25 +262,24 @@ export default function dockerDriver({ config, log, client = dockerClient(config
     },
 
     // When the workspace's data last changed: the newest modification time of its database
-    // files, from the stat header of the archive API (a HEAD request reads nothing inside them),
-    // and when its container started, so writes the app makes as it starts can be told apart.
+    // files, and when its container started, so writes the app makes as it starts can be told
+    // apart.
     async lastWrite(id) {
       const info = await client.quiet('GET', `/containers/${containerName(id)}/json`);
       if (!info) return null;
-      const mtime = async (path) => {
-        try {
-          const res = await client.stream('HEAD', archive(id), { query: { path } });
-          res.resume();
-          const stat = res.headers['x-docker-container-path-stat'];
-          return stat ? Date.parse(JSON.parse(Buffer.from(stat, 'base64').toString('utf8')).mtime) || null : null;
-        } catch (err) {
-          if (err.status === 404) return null;
-          throw err;
-        }
-      };
-      const times = (await Promise.all([`${mount}/${DB}`, `${mount}/${DB}-wal`].map(mtime))).filter(Boolean);
+      const times = (await Promise.all([`${mount}/${DB}`, `${mount}/${DB}-wal`].map((path) => fileTime(containerName(id), path)))).filter(Boolean);
       return { at: times.length ? Math.max(...times) : null, startedAt: Date.parse(info.State?.StartedAt) || null };
     },
+
+    // The services beside the workspaces, by container name (the relay and Caddy, whose
+    // certificate it uses): whether one runs and since when, when a file in it last changed,
+    // and a restart.
+    async service(container) {
+      const info = await client.quiet('GET', `/containers/${container}/json`);
+      return info ? { running: Boolean(info.State?.Running), startedAt: Date.parse(info.State?.StartedAt) || null } : null;
+    },
+    serviceFileTime: (container, path) => fileTime(container, path),
+    restartService: (container) => client.json('POST', `/containers/${container}/restart`, { query: { t: 5 }, timeout: 60_000 }),
 
     // Disk used by each workspace volume, from Docker's own accounting.
     async usage() {

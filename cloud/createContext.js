@@ -11,6 +11,7 @@ import createTarget from './backups/targets/createTarget.js';
 import backupWorkspace from './backups/backupWorkspace.js';
 import createRoutes from './routing/createRoutes.js';
 import caddyReloader from './routing/caddyReloader.js';
+import createTurnSecrets from './turn/createTurnSecrets.js';
 
 // Everything an operation needs, built once per process. The server and the CLI share it;
 // tests pass their own pieces (a fake driver, an in-memory database, a recording alerter).
@@ -30,6 +31,8 @@ export default function createContext(config, overrides = {}) {
     // who holds a workspace lock: the server or a CLI run, and which one
     lockHolder: `${overrides.role ?? 'cli'}:${randomToken(6)}`,
   };
+  // the relay's list of workspace secrets, kept up with the routes
+  ctx.turn = overrides.turn ?? (config.calls ? createTurnSecrets(ctx) : null);
   ctx.backups = ctx.backupTarget ? { workspace: (workspace, kind) => backupWorkspace(ctx, workspace, kind) } : null;
   ctx.routes = overrides.routes ?? createRoutes(ctx, overrides.reloadProxy ?? caddyReloader(config));
   return ctx;

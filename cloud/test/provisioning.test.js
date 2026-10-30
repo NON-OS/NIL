@@ -57,6 +57,8 @@ test('a new workspace gets its own container, volume and hosted settings, and a 
     AGENT_OUTBOUND: 'off',
     // not marked official, so its votes stay inside the workspace
     PUBLIC_VOTES: 'off',
+    // no relay here, so no calls, whatever the shared env file says
+    CALLS: 'off',
     SOURCE_URL: 'https://source.test/nil',
     SETUP_TOKEN: ws.setupToken,
   });

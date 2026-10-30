@@ -8,6 +8,7 @@ import signupRules from './signupRules.js';
 import backupKeys from '../backups/backupKeys.js';
 import readTelegram from './readTelegram.js';
 import readWalletConnect from './readWalletConnect.js';
+import readCalls from './readCalls.js';
 import checksumAddress from '../lib/checksumAddress.js';
 
 const HOSTNAME = /^(?=.{1,253}$)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$/;
@@ -202,6 +203,8 @@ export default function loadConfig(env = process.env) {
     signup,
     // phone wallets on the sign-up page; null leaves the page and its policy as they always were
     walletConnect: readWalletConnect(read),
+    // calls through the relay; null keeps them off in every workspace
+    calls: readCalls(read, { domain, tls }),
     lifecycle: Object.freeze({
       deleteGraceDays: read.number('CLOUD_DELETE_GRACE_DAYS', 14),
       upgradeMaxFailures: read.number('CLOUD_UPGRADE_MAX_FAILURES', 1),

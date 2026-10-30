@@ -32,6 +32,10 @@ import dockerDriver from './docker/dockerDriver.js';
 //   usage()                     Map of volume name to bytes used
 //   lastWrite(id)               { at, startedAt }: when the database files last changed (their
 //                               modification time only) and when the workload started
+//   service(container)          { running, startedAt } of a service beside the workspaces (the
+//                               relay, Caddy), or null if there's none by that name
+//   serviceFileTime(container, path)  when a file in such a service last changed, or null
+//   restartService(container)
 export default function createDriver(config, log) {
   if (config.runtime === 'docker') return dockerDriver({ config, log });
   throw new Error(`Unknown runtime: ${config.runtime}`);

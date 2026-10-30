@@ -13,7 +13,8 @@ function save(file, content) {
   fs.renameSync(`${file}.tmp`, file);
 }
 
-// Keeps Caddy's configuration in step with the control database. Syncs never overlap: one asked
+// Keeps Caddy's configuration, and the relay's list of workspace secrets, in step with the
+// control database. Syncs never overlap: one asked
 // for while another runs is folded into a single follow-up run, so a burst of sign-ups causes at
 // most two reloads. A configuration Caddy rejects is rolled back on disk, so a later restart of
 // Caddy still finds a file it can load.
@@ -23,6 +24,12 @@ export default function createRoutes(ctx, reload) {
   const generate = () => caddyfile(ctx.config, ctx.store.workspaces.list(), ctx.driver.upstream);
 
   async function once() {
+    // a relay that can't be updated must not hold up the routes
+    try {
+      ctx.turn?.sync();
+    } catch (err) {
+      await ctx.alert('turn.secrets_failed', { message: err.message });
+    }
     const text = generate();
     const file = ctx.config.caddy.file;
     let previous = null;

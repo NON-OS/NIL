@@ -35,6 +35,9 @@ services:
       # the key Nil's verifier (docker-compose.verifier.yml) seals its answers with; every
       # workspace gets it as NOX_VERIFIER_KEY. Without it the verifier stays off.
       CLOUD_VERIFIER_KEY: ${VERIFIER_KEY:-}
+      # the relay for calls (the turn service below) and the database of workspace secrets it reads
+      CLOUD_TURN_CONTAINER: nil-turn
+      CLOUD_TURN_DB: /var/lib/nil-turn/turndb
     # The Docker socket makes this container as powerful as root on the host: it has to be, to
     # create workspaces. Everything else is locked down, and nothing publishes its ports.
     group_add:
@@ -43,6 +46,7 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - control-data:/var/lib/nil-cloud
       - caddy-config:/srv/caddy
+      - turn-db:/var/lib/nil-turn
       - ./workspace.env:/etc/nil/workspace.env:ro
       # The mounted backup share, for CLOUD_BACKUP_TARGET=file:///backups. rslave passes the
       # share through even when it is mounted (or mounted again) after this container started.
@@ -172,6 +176,74 @@ services:
         max-size: 10m
         max-file: "5"
 
+  # The relay for calls, under the calls profile: COMPOSE_PROFILES=calls in .env, with
+  # CLOUD_CALLS=on in cloud.env. Browsers in a call reach each other only through it, so nobody
+  # learns anyone else's address, and their media is encrypted browser to browser before it gets
+  # here. Each login is checked against the workspace secrets the control plane keeps in turn-db;
+  # TLS on 5349 uses Caddy's wildcard certificate. The host's network, for the relay's port range.
+  # Open 3478 (UDP and TCP), 5349 (TCP) and 49160 to 49999 (UDP) in the firewall.
+  turn:
+    image: coturn/coturn:4.18.0@sha256:bbefd3e1fdfdc0d58770fe01b581fd8b00d9f3a5580d00acb77cf719a6bc78e3
+    profiles:
+      - calls
+    container_name: nil-turn
+    restart: unless-stopped
+    depends_on:
+      - control
+    network_mode: host
+    # root only to copy the certificate and set up the database folder; coturn itself runs as
+    # nobody with no capabilities (deploy/coturn/hosted.sh)
+    user: "0:0"
+    entrypoint: ["/bin/sh", "/etc/coturn/hosted.sh"]
+    # only the relay's own settings, never the control plane's. Not required here: Compose reads
+    # every service's settings, also those of profiles that are off; the relay refuses to start
+    # without it.
+    environment:
+      TURN_REALM: ${TURN_HOST:-}
+      TURN_USERDB: /db/turndb
+      TURN_DB_GID: "1000"
+      TURN_EXTERNAL_IP: ${TURN_EXTERNAL_IP:-}
+      TURN_MIN_PORT: ${TURN_MIN_PORT:-}
+      TURN_MAX_PORT: ${TURN_MAX_PORT:-}
+      TURN_LOG: ${TURN_LOG:-off}
+    volumes:
+      - ./deploy/coturn/turnserver.conf:/etc/coturn/turnserver.conf:ro
+      - ./deploy/coturn/entrypoint.sh:/etc/coturn/entrypoint.sh:ro
+      - ./deploy/coturn/hosted.sh:/etc/coturn/hosted.sh:ro
+      - type: volume
+        source: turn-db
+        target: /db
+        volume:
+          nocopy: true
+      - type: volume
+        source: caddy-data
+        target: /caddy
+        read_only: true
+        volume:
+          nocopy: true
+    read_only: true
+    tmpfs:
+      - /tmp:size=1m,mode=1777
+    cap_drop:
+      - ALL
+    # NET_BIND_SERVICE: the coturn image's turnserver carries it as a file capability, and Linux
+    # won't run a program whose file capabilities fall outside the container's set
+    cap_add:
+      - CHOWN
+      - SETUID
+      - SETGID
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    mem_limit: 512m
+    memswap_limit: 512m
+    pids_limit: 256
+    logging:
+      driver: local
+      options:
+        max-size: 10m
+        max-file: "3"
+
 networks:
   # Caddy publishes 80 and 443 from here. With the userland proxy off (see
   # deploy/host/docker-daemon.json), Docker forwards the host's IPv6 ports only to a container's
@@ -192,3 +264,4 @@ volumes:
   caddy-config:
   caddy-data:
   caddy-state:
+  turn-db:

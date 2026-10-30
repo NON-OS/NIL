@@ -179,7 +179,7 @@ fi
 
 step "Deploy bundle"
 bundle_files=(deploy/lib.sh deploy/provision.sh deploy/install.sh deploy/upgrade.sh deploy/rollback.sh deploy/backup.sh deploy/smoke.sh deploy/smoke-check.mjs
-  deploy/hosted.env.example deploy/host deploy/single .env.example cloud/docker-compose.yml cloud/docker-compose.chain.yml cloud/docker-compose.verifier.yml cloud/.env.example cloud/workspace.env.example)
+  deploy/hosted.env.example deploy/host deploy/single deploy/coturn cloud/turn/entrypoint.sh .env.example cloud/docker-compose.yml cloud/docker-compose.chain.yml cloud/docker-compose.verifier.yml cloud/.env.example cloud/workspace.env.example)
 run tar -czf "$OUT/nil-deploy-$VERSION.tar.gz" --owner=0 --group=0 -C "$SRC" "${bundle_files[@]}"
 
 step "Checksums"

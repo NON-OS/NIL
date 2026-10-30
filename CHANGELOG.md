@@ -2,6 +2,17 @@
 
 All notable changes to Nil, the task app made by NØNOS, are listed here, newest first. Versions up to 3.0.0 were released under the NØNOS name.
 
+## Unreleased
+
+### Added
+
+- Hosted: calls. `CLOUD_CALLS=on` runs coturn beside the workspaces (the `turn` service, under the `calls` profile) and turns calls on in every workspace. Each workspace logs in to the relay with a secret of its own, made from `CLOUD_TURN_SECRET` and its id, and the control plane keeps the relay's database holding the secrets of running workspaces and no others, so one that's stopped, suspended or deleted can't use the relay any more, not even with passwords it handed out before, and nothing restarts. The relay runs as `nobody` with no capabilities and takes Caddy's wildcard certificate for TLS on 5349; the hourly check restarts it when Caddy has renewed the certificate and alerts when it isn't running (`turn.down`). Off, every workspace has calls off, whatever `workspace.env` says. `turn`, `turns`, `stun`, `relay` and `sfu` are reserved names. See [cloud/README.md](cloud/README.md#calls).
+
+### Fixed
+
+- coturn didn't start under Docker Compose: the image's `turnserver` carries `NET_BIND_SERVICE` as a file capability, and with every capability dropped Linux refused to run it. The `coturn` service in `docker-compose.yml` now keeps that one.
+- `cloud/workspace.env.example` still priced Nil Pro at $12 and $3 a seat; it now has the 4.0.0 prices, $4 and $1.
+
 ## 4.0.0 (2026-10-29)
 
 ### Docs v2
@@ -353,6 +364,8 @@ Nothing opens what was sealed to the old keys. Docs and private tasks encrypted 
 - In shadow mode, most chain reads were logged as "couldn't be checked through the verifier", because they named the node's newest block, which the light client reaches a few seconds later. A read at a block the verifier can't prove is now asked again of both at the verifier's head, a block at the finalized height, and the log line says why when a read still can't be checked. A busy verifier is asked once more, an answer with nothing in it (no receipt, no logs) isn't reported, and a block too old to prove is an info line rather than a warning. The verifier also restarts itself when its light client aborts inside its WebAssembly code, instead of answering nothing until someone restarts it.
 - Hosted: after an upgrade, a browser that had visited the sign-up page before kept its old script and stylesheet for up to a day and ran them against the new page, which hid the phone wallet option. The page's code and styles now carry an ETag and are checked on every visit, answered with a 304 while the copy is current, and the page, which is never cached, names them with their content tag in the address, so even a copy kept under the old rule is never used again. Fonts and the icon are still kept for a day.
 - Phone wallets weren't offered on tablets: an iPad was treated as a phone, so the sign-up page and the workspace sign-in hid **Use a wallet on your phone** there. Only phones skip it now; a tablet without a wallet shows the code like a computer does.
+- Hosted: a rolling upgrade couldn't take a workspace's pre-migration copy. The checkpoint wrote into the workspace while reading the copy out of that same workspace, and Docker holds a container's lock for the whole of an archive request, so the two waited on each other until the read gave up after two minutes, and every workspace was rolled back. The copy is now read out to a file in the control plane's data folder first, then written back, and the tests' Docker holds the same lock.
+- `body-parser` 1.20.9, for GHSA-27r3-jxmh-p828: trailing bytes after a compressed request body could tie up the server.
 - Hosted: a certificate Caddy failed to renew raised no alert until visitors got errors. The control plane now checks the sign-up host and the wildcard hourly like a visitor would, warns 21 days before expiry, raises a critical alert at 7 days or when a certificate doesn't verify (`CLOUD_CERT_WARN_DAYS`, `CLOUD_CERT_CRITICAL_DAYS`, `CLOUD_CERT_CHECK_ADDRESS`).
 - Hosted: `restore-drill` could leave its throwaway copy, a decrypted backup, on the server while saying it had been removed. Removing a workspace now waits until Docker has really let go, removes helpers left behind and retries what is still in use (`CLOUD_DOCKER_REMOVE_TRIES`, `CLOUD_DOCKER_REMOVE_WAIT_MS`). A drill that still can't remove its copy lists what is left with the commands that remove it, exits with 1 and sends a critical alert.
 - Tasks you make with quick add have no assignee, so My work left them out and never counted them under **Finished this week**. My work, the time page and your calendar feed now treat a task as yours when it is assigned to you or when you made it without giving it to anyone, and the list on My work is called **My tasks**.

@@ -1,3 +1,5 @@
+import workspaceSecret from '../turn/workspaceSecret.js';
+
 // Everything a runtime needs to run one workspace, independent of Docker or any other runtime.
 // The environment is the app's normal configuration (see the root .env.example): the control
 // plane only sets what makes a workspace hosted, and the operator's shared env file fills in
@@ -40,6 +42,13 @@ export default function workspaceSpec(config, workspace) {
   // proxy, named with the workspace's id for its log, or, without one, isn't offered at all
   if (app.egress === 'rpc-only' && app.egressProxy) env.EGRESS_PROXY = `http://${workspace.id}@${app.egressProxy.container}:${app.egressProxy.port}`;
   else if (app.egress === 'rpc-only') env.AGENT_OUTBOUND = 'off';
+  // calls go through the relay with the workspace's own secret, or don't happen at all: never
+  // browser to browser, where everyone in a call would learn the others' addresses
+  if (config.calls) {
+    env.CALLS = 'on';
+    env.TURN_URLS = config.calls.urls.join(',');
+    env.TURN_SECRET = workspaceSecret(config.calls.secret, workspace.id);
+  } else env.CALLS = 'off';
   if (config.links.source) env.SOURCE_URL = config.links.source;
   if (workspace.setupToken) env.SETUP_TOKEN = workspace.setupToken;
 

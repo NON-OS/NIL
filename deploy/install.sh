@@ -48,6 +48,10 @@ run install -m 644 "$RELEASE/deploy/smoke-check.mjs" "$RELEASE/deploy/hosted.env
 run cp -r "$RELEASE/deploy/host/." "$NIL_DIR/deploy/host/"
 run cp -r "$RELEASE/deploy/single/." "$NIL_DIR/deploy/single/"
 if [ "$NIL_MODE" = hosted ]; then
+  # the relay for calls (the turn service, under the calls profile)
+  run install -d -m 755 "$NIL_DIR/deploy/coturn"
+  run install -m 644 "$RELEASE/deploy/coturn/turnserver.conf" "$RELEASE/deploy/coturn/entrypoint.sh" "$NIL_DIR/deploy/coturn/"
+  run install -m 644 "$RELEASE/cloud/turn/entrypoint.sh" "$NIL_DIR/deploy/coturn/hosted.sh"
   run install -m 644 "$RELEASE/cloud/docker-compose.yml" "$RELEASE/cloud/docker-compose.chain.yml" "$RELEASE/cloud/docker-compose.verifier.yml" "$NIL_DIR/"
   run install -m 644 "$RELEASE/cloud/.env.example" "$NIL_DIR/examples/cloud.env.example"
   run install -m 644 "$RELEASE/cloud/workspace.env.example" "$NIL_DIR/examples/workspace.env.example"

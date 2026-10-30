@@ -33,7 +33,9 @@ COPY --from=phone /srv/cloud/dist/phone.js ./dist/phone.js
 
 # The control database and logs live in /var/lib/nil-cloud; the generated Caddyfile in
 # /srv/caddy, a volume Caddy mounts read-only. Both start out owned by the unprivileged user.
-RUN mkdir -p /var/lib/nil-cloud /srv/caddy && chown node:node /var/lib/nil-cloud /srv/caddy && chmod 0700 /var/lib/nil-cloud
+# /var/lib/nil-turn: the relay's database of workspace secrets, on a volume the relay reads as a
+# member of this group
+RUN mkdir -p /var/lib/nil-cloud /srv/caddy /var/lib/nil-turn && chown node:node /var/lib/nil-cloud /srv/caddy /var/lib/nil-turn && chmod 0700 /var/lib/nil-cloud && chmod 2770 /var/lib/nil-turn
 USER node
 EXPOSE 8080 8081
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s CMD wget -qO- http://127.0.0.1:8081/internal/healthz || exit 1

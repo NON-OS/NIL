@@ -5,7 +5,7 @@ The NØNOS foundation runs Nil for anyone who doesn't want to run their own serv
 ## What you get
 
 - Your own copy of Nil, in its own container with its own storage. Other teams' workspaces can't reach it, and it has no network access of its own except to the Ethereum node that checks payments. That is also why push notifications are off: they would have to go through the browser makers' push services.
-- No calls yet. A call needs a relay server so nobody in it learns anyone else's IP address, and hosted workspaces don't have one. Rather than offer calls that either fail or show people's addresses, they're off until a relay with its own secret and limits for each workspace is in place. Self-hosted Nil has calls; see [Calls](calls.md).
+- Calls, one to one and in groups of up to six. Every call goes through the foundation's relay, so nobody in it learns anyone else's IP address, and what's said and shown is encrypted browser to browser before it gets there. Each workspace logs in to the relay with a secret of its own, which stops working the moment the workspace is stopped, suspended or deleted. The relay sees the addresses of the people in a call and how much they send, never what they say, and keeps no log. See [Calls](calls.md) for how they work.
 - The free tier, with Nil Pro paid from inside your workspace (Settings → Plan), in USDC or NOX, straight to the NØNOS DAO treasury. Nothing is charged automatically.
 - Nightly encrypted backups, updates and monitoring done for you.
 

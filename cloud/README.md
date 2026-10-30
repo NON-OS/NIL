@@ -42,6 +42,7 @@ Root on the server would also let NØNOS send a changed web app that reads what 
 **Network and third parties**
 
 - Caddy sees every request's IP address and the address it asks for, as any web server does. It keeps no access log.
+- With calls on, the relay sees the IP addresses of the people in a call and how much each sends, never what's said or shown: that's encrypted browser to browser before it gets there. The names it sees are keyed hashes of the person and the call, so it can't tell who calls whom or tie one call to the next, and it keeps no log (`TURN_LOG=off`).
 - With the default settings a workspace has no network route out at all. Its only connections are Caddy's relays to the Ethereum node and to Nil's verifier, which asks the same node again, so that node sees the addresses and transactions the workspace looks up (for Nil Pro payments, bounties and votes). Run that node on the same server (see [docker-compose.chain.yml](docker-compose.chain.yml)) and those lookups never reach a third party.
 - Nil Pro is paid on-chain inside each workspace, to the foundation's treasury. Payments are public on Ethereum like any transaction.
 - Built-in AI and built-in agents run on each workspace's own key, for Claude, GPT or any OpenAI-compatible provider, which its admin adds in Settings → Connect AI. NØNOS gives no workspace a key of its own: `workspace.env` refuses `ANTHROPIC_API_KEY`, `ANTHROPIC_AUTH_TOKEN` and `ANTHROPIC_BASE_URL`. The provider sees the text of each request, under the workspace's own account. Requests reach it only through the egress proxy, once that's on; with no route out, AI stays off and the app says why.
@@ -96,6 +97,23 @@ The plan for launch: shadow mode, with the verifier on a provider's execution no
 
 What it doesn't do: shadow mode finds a lie after the workspace acted on it, it doesn't stop it. In enforce mode it proves that what the node says is true, not that the node said everything, so a lying node can hide or hold back a payment but can't fake one, and a bounty payment whose transaction the node says doesn't exist is never failed for it. It can't prove blocks older than about 27 hours (EIP-2935 keeps 8,191 block hashes); in enforce mode an older payment waits until an operator decides (see [docs/deploy.md](../docs/deploy.md#a-payment-says-it-is-older-than-nils-verifier-can-check)). Its root of trust is the checkpoint: take it from two beacon APIs that agree; it refuses one older than two weeks, and Nil does that check itself because Helios's own is off by default. Helios is unaudited (0.12.0, pinned). The method-by-method list and the rest are in [Verified chain reads](../docs/self-hosting.md#verified-chain-reads).
 
+### Calls
+
+A call goes through the relay, coturn on this server (the `turn` service in [docker-compose.yml](docker-compose.yml)), so nobody in it learns anyone else's IP address. It's off until you turn it on, and while it's off every workspace has `CALLS=off`, whatever `workspace.env` says.
+
+Each workspace logs in to the relay with a secret of its own, made from `CLOUD_TURN_SECRET` and the workspace's id. The control plane hands it to the workspace as `TURN_SECRET`, and keeps the relay's database (the `turn-db` volume) holding the secret of every workspace that's up and no other. coturn checks every login against that table, so a workspace that is stopped, suspended or deleted can't use the relay from the next routes sync on, not even with passwords it handed out before, and nothing needs a restart. From one workspace's secret nobody can work out another's or `CLOUD_TURN_SECRET`. Changing `CLOUD_TURN_SECRET` (then `refresh --all`) gives every workspace a new one.
+
+The relay's limits are in [deploy/coturn/turnserver.conf](../deploy/coturn/turnserver.conf): 12 sessions per person and call, 1,200 in all, about 4 Mbit/s per session, and no relaying to this machine or any private network. It runs as `nobody` with no capabilities. It starts as root only to copy Caddy's wildcard certificate, which only root may read, into memory for TLS on 5349, and the hourly check restarts it once Caddy has renewed that certificate; calls in progress reconnect within seconds. Calls hold up to six people (`CALL_MAX_PEERS`), browser to browser through the relay; hosted Nil runs no SFU for bigger ones yet.
+
+To turn calls on, with `CLOUD_TLS=wildcard` (the relay uses that certificate; `turn.` under your domain is already covered by the wildcard DNS record):
+
+1. `cloud.env`: `CLOUD_CALLS=on` and `CLOUD_TURN_SECRET=` a new `openssl rand -hex 32`. `CLOUD_TURN_HOST` defaults to `turn.<CLOUD_DOMAIN>`.
+2. `.env`: `TURN_HOST=turn.nil.example` (the same name) and `COMPOSE_PROFILES=calls`.
+3. The firewall: `sudo ufw allow 3478 comment 'turn'`, `sudo ufw allow 5349/tcp comment 'turns'` and `sudo ufw allow 49160:49999/udp comment 'turn relay'`.
+4. `docker compose up -d`, then `docker compose exec control node cli.js refresh --all`, which recreates the workspaces one at a time with calls on.
+
+The hourly check alerts (`turn.down`) when the relay isn't running. To turn calls off again, set `CLOUD_CALLS=off`, `refresh --all`, then stop the relay and close the ports.
+
 Code layout:
 
 ```
@@ -105,6 +123,7 @@ names/        address rules, reserved and blocked      routing/     Caddyfile, r
 backups/      encryption, targets, S3 client           ops/         health, usage, alerts, schedule
 signup/       sign-up flow, SIWE, limits, HTTP         cli/         the operator CLI
 public/       the sign-up page                         test/        node --test cloud/test/
+turn/         the relay's workspace secrets and entrypoint
 ```
 
 ## The server
