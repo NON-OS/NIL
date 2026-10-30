@@ -146,7 +146,7 @@ For calls of more than four, add the SFU, [LiveKit](https://github.com/livekit/l
 
 3. Open 7881 over TCP and 50000 to 50200 over UDP, and run `docker compose up -d`.
 
-If the relay sits behind NAT, as on most cloud servers, set `TURN_EXTERNAL_IP` to the public address and the private one behind it, as `public/private`, and put the private address in `TURN_ALLOWED_PEER_IP` too, so two people on the same relay can still reach each other through it.
+`TURN_EXTERNAL_IP` matters even without NAT: everyone in a call has their relayed address on the relay, coturn refuses to relay to its own addresses unless they're allowed, and the relay allows the ones in `TURN_EXTERNAL_IP` (and `TURN_LISTEN_IP`, when set). Without it, two people on the same relay can't reach each other through it, and the relay says so as it starts. If the relay sits behind NAT, as on many cloud servers, set it to the public address and the private one behind it, as `public/private`.
 
 coturn logs the address of everyone who connects, so its log is off by default. Set `TURN_LOG=on` while you look into a problem, and back to `off` after.
 

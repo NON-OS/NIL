@@ -29,9 +29,15 @@ cp /etc/coturn/turnserver.conf "$conf"
   # only these addresses, when set: on the host's network coturn otherwise listens on every
   # address the host has, its Docker networks' too
   for ip in ${TURN_LISTEN_IP:-}; do echo "listening-ip=$ip"; done
-  # the relay's own address when it's private behind NAT, so two people on this relay can
-  # still reach each other through it
-  for ip in ${TURN_ALLOWED_PEER_IP:-}; do echo "allowed-peer-ip=$ip"; done
+  # The relay's own addresses. Everyone in a call has their relayed address there, and coturn
+  # refuses to relay to its own addresses unless they're allowed, so without them two people on
+  # this relay couldn't reach each other. It only ever sends UDP onward (no-tcp-relay), and what
+  # listens on UDP at a public address is public anyway. TURN_ALLOWED_PEER_IP adds more.
+  own="${TURN_LISTEN_IP:-} $(echo "${TURN_EXTERNAL_IP:-}" | tr / ' ')"
+  for ip in $own ${TURN_ALLOWED_PEER_IP:-}; do echo "allowed-peer-ip=$ip"; done
+  if [ -z "$(echo $own)" ]; then
+    echo "Neither TURN_EXTERNAL_IP nor TURN_LISTEN_IP is set, so two people on this relay can't reach each other through it. Set TURN_EXTERNAL_IP to its public address." >&2
+  fi
   if [ -n "${TURN_MIN_PORT:-}" ]; then echo "min-port=$TURN_MIN_PORT"; fi
   if [ -n "${TURN_MAX_PORT:-}" ]; then echo "max-port=$TURN_MAX_PORT"; fi
   if [ -r "$certs/fullchain.pem" ] && [ -r "$certs/privkey.pem" ]; then

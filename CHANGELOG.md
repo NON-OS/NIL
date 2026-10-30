@@ -10,6 +10,7 @@ All notable changes to Nil, the task app made by NØNOS, are listed here, newest
 
 ### Fixed
 
+- Two people in a call through the same relay couldn't reach each other: each one's relayed address is on the relay, and coturn refuses to relay to its own addresses unless they're allowed, which the bundled relay only did behind NAT, with `TURN_ALLOWED_PEER_IP`. It now allows the addresses in `TURN_EXTERNAL_IP` and `TURN_LISTEN_IP` by itself, and says as it starts when neither is set. The calls check never noticed, as it allows its own relay's address itself.
 - coturn didn't start under Docker Compose: the image's `turnserver` carries `NET_BIND_SERVICE` as a file capability, and with every capability dropped Linux refused to run it. The `coturn` service in `docker-compose.yml` now keeps that one.
 - `cloud/workspace.env.example` still priced Nil Pro at $12 and $3 a seat; it now has the 4.0.0 prices, $4 and $1.
 
